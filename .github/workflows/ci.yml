@@ -12,28 +12,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
 
-      - run: pnpm install --frozen-lockfile
+      - run: npm install
 
       - name: TypeScript
-        run: pnpm typecheck
+        run: npm run typecheck
 
       - name: Lint
-        run: pnpm lint
+        run: npm run lint
 
       - name: Tests
-        run: pnpm test
+        run: npm test
         env:
           ANTHROPIC_API_KEY: dummy
           NEXT_PUBLIC_SUPABASE_URL: http://localhost
           SUPABASE_SERVICE_ROLE_KEY: dummy
           ASAAS_API_KEY: dummy
           ASAAS_WEBHOOK_TOKEN: dummy
+          UPSTASH_REDIS_URL: dummy
+          UPSTASH_REDIS_TOKEN: dummy
