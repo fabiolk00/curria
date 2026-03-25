@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { useSignUp } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
