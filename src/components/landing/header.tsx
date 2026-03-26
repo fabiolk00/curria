@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
 import { useTheme } from "next-themes"
-
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/logo"
 import { Moon, Sun } from "lucide-react"
@@ -14,7 +13,17 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Logo />
+        <div className="flex items-center gap-8">
+          <Logo />
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Como funciona
+            </Link>
+            <Link href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Preços
+            </Link>
+          </nav>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -27,7 +36,7 @@ export default function Header() {
           </Button>
 
           <SignedOut>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="hidden sm:flex">
               <Link href="/login">Entrar</Link>
             </Button>
             <Button asChild>
@@ -36,10 +45,17 @@ export default function Header() {
           </SignedOut>
 
           <SignedIn>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" className="hidden sm:flex">
               <Link href="/dashboard">Dashboard</Link>
             </Button>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: 'h-9 w-9',
+                },
+              }}
+            />
           </SignedIn>
         </div>
       </div>

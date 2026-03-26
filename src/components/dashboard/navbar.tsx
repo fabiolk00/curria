@@ -2,19 +2,34 @@
 
 import { useTheme } from "next-themes"
 import { SignedIn, UserButton } from "@clerk/nextjs"
-
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/logo"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Menu } from "lucide-react"
 
-export default function DashboardNavbar() {
+interface DashboardNavbarProps {
+  pageTitle?: string
+  onMenuClick?: () => void
+}
+
+export function DashboardNavbar({ pageTitle, onMenuClick }: DashboardNavbarProps) {
   const { theme, setTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Logo linkTo="/dashboard" />
-        <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between px-4 lg:px-6">
+        {/* Left side - Logo and page title */}
+        <div className="flex items-center gap-4">
+          <Logo linkTo="/dashboard" />
+          {pageTitle && (
+            <>
+              <span className="text-muted-foreground/50">/</span>
+              <span className="text-sm font-medium text-muted-foreground">{pageTitle}</span>
+            </>
+          )}
+        </div>
+
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -35,6 +50,17 @@ export default function DashboardNavbar() {
               }}
             />
           </SignedIn>
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={onMenuClick}
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </header>

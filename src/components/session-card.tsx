@@ -57,7 +57,7 @@ export default function SessionCard({ session }: SessionCardProps) {
             </>
           ) : (
             <Button asChild size="sm">
-              <Link href={`/chat/${session.id}`}>Continuar</Link>
+              <Link href={`/dashboard?session=${session.id}`}>Continuar</Link>
             </Button>
           )}
         </div>

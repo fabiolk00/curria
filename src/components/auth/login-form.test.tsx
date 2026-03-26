@@ -39,7 +39,7 @@ describe('LoginForm', () => {
     expect(screen.getByText('Entrar na sua conta')).toBeInTheDocument()
     expect(screen.getByLabelText('E-mail')).toBeInTheDocument()
     expect(screen.getByLabelText('Senha')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^entrar$/i })).toBeInTheDocument()
   })
 
   it('has noValidate attribute on form', () => {
@@ -57,7 +57,7 @@ describe('LoginForm', () => {
 
     const emailInput = screen.getByLabelText('E-mail')
     const passwordInput = screen.getByLabelText('Senha')
-    const submitButton = screen.getByRole('button', { name: /entrar/i })
+    const submitButton = screen.getByRole('button', { name: /^entrar$/i })
 
     await user.type(emailInput, 'test@example.com')
     await user.type(passwordInput, 'password123')
@@ -82,7 +82,7 @@ describe('LoginForm', () => {
 
     const emailInput = screen.getByLabelText('E-mail')
     const passwordInput = screen.getByLabelText('Senha')
-    const submitButton = screen.getByRole('button', { name: /entrar/i })
+    const submitButton = screen.getByRole('button', { name: /^entrar$/i })
 
     await user.type(emailInput, 'invalid')
     await user.type(passwordInput, 'password123')
@@ -100,7 +100,7 @@ describe('LoginForm', () => {
 
     const emailInput = screen.getByLabelText('E-mail')
     const passwordInput = screen.getByLabelText('Senha')
-    const submitButton = screen.getByRole('button', { name: /entrar/i })
+    const submitButton = screen.getByRole('button', { name: /^entrar$/i })
 
     await user.type(emailInput, 'test@example.com')
     await user.type(passwordInput, 'short')
@@ -119,7 +119,7 @@ describe('LoginForm', () => {
 
     const emailInput = screen.getByLabelText('E-mail')
     const passwordInput = screen.getByLabelText('Senha')
-    const submitButton = screen.getByRole('button', { name: /entrar/i })
+    const submitButton = screen.getByRole('button', { name: /^entrar$/i })
 
     await user.type(emailInput, 'test@example.com')
     await user.type(passwordInput, 'password123')
