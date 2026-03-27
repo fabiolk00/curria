@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import { currentUser } from "@clerk/nextjs/server"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
 import { db } from "@/lib/db/sessions"
-import { ChatInterface } from "@/components/dashboard/chat-interface"
+import { ResumeWorkspace } from "@/components/dashboard/resume-workspace"
 
 export const metadata: Metadata = {
   title: "Dashboard - CurrIA",
@@ -38,7 +38,5 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     }
   }
 
-  // Pass sessionId (can be undefined for first-time users)
-  // ChatInterface will handle empty state and create session via /api/agent on first message
-  return <ChatInterface sessionId={activeSessionId} userName={userName} />
+  return <ResumeWorkspace initialSessionId={activeSessionId} userName={userName} />
 }
