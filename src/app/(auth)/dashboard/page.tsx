@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 }
 
 interface DashboardPageProps {
-  searchParams: { session?: string }
+  searchParams?: {
+    session?: string | string[]
+  }
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -20,8 +22,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const user = await currentUser()
   const userName = user?.firstName || "Você"
 
-  // If a specific session is requested via query param, use it
-  const requestedSessionId = searchParams.session
+  const rawSessionParam = searchParams?.session
+  const requestedSessionId = Array.isArray(rawSessionParam)
+    ? rawSessionParam[0]
+    : rawSessionParam
 
   // Get user sessions
   const sessions = await db.getUserSessions(appUser.id)
