@@ -71,7 +71,7 @@ SELECT * FROM billing_checkouts WHERE user_id = 'usr_staging_001';
 
 **Critical Validation:**
 - ✅ Checkout record exists BEFORE Asaas call (status='pending' briefly, then 'created')
-- ✅ externalReference is v1 format: `curria:v1:u:usr_staging_001:c:<checkoutReference>`
+- ✅ externalReference is v1 format: `curria:v1:c:<checkoutReference>`
 - ✅ Amount matches plan price (1900 centavos = R$19)
 
 ### Step 2: Simulate Payment in Asaas

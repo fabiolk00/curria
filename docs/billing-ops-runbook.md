@@ -45,9 +45,24 @@ SELECT
 
 ```sql
 -- Step 1: Find the payment event
-SELECT * FROM processed_events
-WHERE event_payload->>'payment'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
-  OR event_payload->>'subscription'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
+SELECT pe.*
+FROM processed_events pe
+LEFT JOIN billing_checkouts bc ON bc.checkout_reference = COALESCE(
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$')
+)
+LEFT JOIN user_quotas uq ON uq.asaas_subscription_id = COALESCE(
+  pe.event_payload->'subscription'->>'id',
+  pe.event_payload->'payment'->>'subscription'
+)
+WHERE bc.user_id = '<user_id>'
+   OR uq.user_id = '<user_id>'
+   OR COALESCE(
+        pe.event_payload->'payment'->>'externalReference',
+        pe.event_payload->'subscription'->>'externalReference'
+      ) = '<user_id>'
 ORDER BY created_at DESC
 LIMIT 10;
 
@@ -61,10 +76,12 @@ ORDER BY created_at DESC LIMIT 5;
 -- Step 4: Check if there's an orphaned payment (processed but checkout not updated)
 SELECT pe.*, bc.status
 FROM processed_events pe
-LEFT JOIN billing_checkouts bc ON bc.checkout_reference =
-  (pe.event_payload->>'externalReference')::text
+LEFT JOIN billing_checkouts bc ON bc.checkout_reference = COALESCE(
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$')
+)
 WHERE pe.event_type = 'PAYMENT_RECEIVED'
-  AND pe.event_payload->>'payment'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
+  AND bc.user_id = '<user_id>'
 ORDER BY pe.created_at DESC LIMIT 1;
 ```
 
@@ -98,7 +115,12 @@ SELECT * FROM billing_checkouts
 WHERE user_id = '<user_id>'
   AND status IN ('created', 'paid')
   AND checkout_reference NOT IN (
-    SELECT event_payload->>'externalReference'
+    SELECT COALESCE(
+      substring(event_payload->'payment'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+      substring(event_payload->'payment'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$'),
+      substring(event_payload->'subscription'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+      substring(event_payload->'subscription'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$')
+    )
     FROM processed_events
     WHERE event_type IN ('PAYMENT_RECEIVED', 'SUBSCRIPTION_CREATED')
   );
@@ -193,9 +215,24 @@ SELECT * FROM credit_accounts WHERE user_id = '<user_id>';
 -- If no row: user never created a session
 
 -- Step 2: Is there a payment/subscription processed?
-SELECT COUNT(*) FROM processed_events
-WHERE event_payload->>'payment'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
-   OR event_payload->>'subscription'->>'externalReference' LIKE 'curria:v1:u:<user_id>%';
+SELECT COUNT(*)
+FROM processed_events pe
+LEFT JOIN billing_checkouts bc ON bc.checkout_reference = COALESCE(
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$')
+)
+LEFT JOIN user_quotas uq ON uq.asaas_subscription_id = COALESCE(
+  pe.event_payload->'subscription'->>'id',
+  pe.event_payload->'payment'->>'subscription'
+)
+WHERE bc.user_id = '<user_id>'
+   OR uq.user_id = '<user_id>'
+   OR COALESCE(
+        pe.event_payload->'payment'->>'externalReference',
+        pe.event_payload->'subscription'->>'externalReference'
+      ) = '<user_id>';
 
 -- Step 3: If subscription, check renewal history
 SELECT * FROM processed_events
@@ -203,11 +240,14 @@ WHERE event_type IN ('SUBSCRIPTION_CREATED', 'SUBSCRIPTION_RENEWED')
   AND event_payload->>'subscription'->>'id' = '<subscription_id>'
 ORDER BY created_at DESC LIMIT 5;
 
--- Step 4: Check for RPC rejection (overflow)
-SELECT * FROM processed_events
-WHERE event_payload->>'payment'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
-  AND event_payload->>'error' IS NOT NULL
-ORDER BY created_at DESC LIMIT 1;
+-- Step 4: Check app logs for a failed webhook or checkout attempt.
+-- Failed webhook/checkouts do not create processed_events rows because the
+-- transaction rolls back before the insert on rejection paths.
+-- Search logs by:
+--   - user_id
+--   - checkout_reference
+--   - payment.id
+--   - asaas_subscription_id
 ```
 
 **Possible Causes:**
@@ -217,10 +257,26 @@ ORDER BY created_at DESC LIMIT 1;
 
 **B) Payment/subscription created but credits never granted (RPC failed)**
 ```sql
--- Check if processed_event shows error
-SELECT event_payload->>'error' FROM processed_events
-WHERE event_payload->>'payment'->>'externalReference' LIKE 'curria:v1:u:<user_id>%'
-LIMIT 1;
+-- Check app logs first; failed RPC attempts do not persist in processed_events.
+-- Then confirm no successful payment/subscription event exists for this user:
+SELECT COUNT(*)
+FROM processed_events pe
+LEFT JOIN billing_checkouts bc ON bc.checkout_reference = COALESCE(
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'payment'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:c:(.+)$'),
+  substring(pe.event_payload->'subscription'->>'externalReference' FROM '^curria:v1:u:[^:]+:c:(.+)$')
+)
+LEFT JOIN user_quotas uq ON uq.asaas_subscription_id = COALESCE(
+  pe.event_payload->'subscription'->>'id',
+  pe.event_payload->'payment'->>'subscription'
+)
+WHERE bc.user_id = '<user_id>'
+   OR uq.user_id = '<user_id>'
+   OR COALESCE(
+        pe.event_payload->'payment'->>'externalReference',
+        pe.event_payload->'subscription'->>'externalReference'
+      ) = '<user_id>';
 ```
 
 **Action:** If error is "Credit balance overflow":
@@ -259,7 +315,10 @@ ORDER BY created_at ASC;
 
 -- For each: was there a failure?
 SELECT * FROM processed_events
-WHERE event_payload->>'externalReference' = '<externalReference>';
+WHERE COALESCE(
+  event_payload->'payment'->>'externalReference',
+  event_payload->'subscription'->>'externalReference'
+) = '<externalReference>';
 -- If no row: Asaas never sent webhook
 
 -- Check Asaas logs/dashboard for this payment link
@@ -501,7 +560,7 @@ curl -X POST https://curria.app/api/webhook/asaas \
     "amount": 1900,
     "payment": {
       "id": "pay_123",
-      "externalReference": "curria:v1:u:usr_abc:c:chk_xyz",
+      "externalReference": "curria:v1:c:chk_xyz",
       "subscription": null,
       "amount": 1900
     }
@@ -583,7 +642,15 @@ WHERE status = 'pending'
 SELECT
   DATE(created_at) as date,
   COUNT(*) as total_webhooks,
-  SUM(CASE WHEN event_payload->>'externalReference' ~ '^usr_' THEN 1 ELSE 0 END) as legacy_count
+  SUM(
+    CASE
+      WHEN COALESCE(
+        event_payload->'payment'->>'externalReference',
+        event_payload->'subscription'->>'externalReference'
+      ) ~ '^usr_[A-Za-z0-9]+$' THEN 1
+      ELSE 0
+    END
+  ) as legacy_count
 FROM processed_events
 WHERE created_at > NOW() - INTERVAL '7 days'
   AND event_type IN ('SUBSCRIPTION_RENEWED', 'SUBSCRIPTION_CANCELED')

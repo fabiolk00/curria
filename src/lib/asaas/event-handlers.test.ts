@@ -177,6 +177,41 @@ describe('Asaas billing event handlers', () => {
     expect(markCheckoutSubscriptionActive).toHaveBeenCalledWith('chk_234', 'sub_123')
   })
 
+  it('uses the checkout amount when Asaas omits amount on subscription creation', async () => {
+    vi.mocked(getCheckoutRecord).mockResolvedValueOnce({
+      id: 'bc_234',
+      userId: 'usr_123',
+      checkoutReference: 'chk_234',
+      plan: 'monthly',
+      amountMinor: 3900,
+      currency: 'BRL',
+      status: 'created',
+      asaasLink: 'https://asaas.test/subscription',
+      asaasPaymentId: null,
+      asaasSubscriptionId: null,
+      createdAt: '2026-03-29T00:00:00.000Z',
+      updatedAt: '2026-03-29T00:00:00.000Z',
+    })
+
+    await handleSubscriptionCreated({
+      event: 'SUBSCRIPTION_CREATED',
+      subscription: {
+        id: 'sub_123',
+        externalReference: 'curria:v1:c:chk_234',
+        nextDueDate: '2099-04-29',
+      },
+    }, 'fp_missing_amount')
+
+    expect(grantCreditsForEvent).toHaveBeenCalledWith(expect.objectContaining({
+      appUserId: 'usr_123',
+      amountMinor: 3900,
+      checkoutReference: 'chk_234',
+      asaasSubscriptionId: 'sub_123',
+      reason: 'subscription_created',
+    }))
+    expect(markCheckoutSubscriptionActive).toHaveBeenCalledWith('chk_234', 'sub_123')
+  })
+
   it('surfaces partial-success failures when subscription credits were granted but activation marking fails', async () => {
     vi.mocked(getCheckoutRecord).mockResolvedValueOnce({
       id: 'bc_234',

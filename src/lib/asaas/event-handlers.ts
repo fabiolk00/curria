@@ -58,6 +58,26 @@ function requireAmount(event: AsaasWebhookEvent, context: string): number {
   return amount
 }
 
+function resolveSubscriptionCreatedAmount(
+  event: AsaasWebhookEvent,
+  checkout: BillingCheckout | null,
+): number {
+  const amount = getWebhookAmount(event)
+
+  if (typeof amount === 'number') {
+    return amount
+  }
+
+  if (checkout) {
+    return checkout.amountMinor
+  }
+
+  throw createBillingError(
+    TOOL_ERROR_CODES.VALIDATION_ERROR,
+    'Subscription event is missing amount.',
+  )
+}
+
 function requireFutureRenewalDate(value: string | undefined, context: string): string {
   if (!value) {
     throw createBillingError(
@@ -215,15 +235,10 @@ export async function handleSubscriptionCreated(
 
   const externalReference = requireExternalReference(subscription.externalReference, 'Subscription')
   const parsedReference = parseExternalReferenceStrict(externalReference, event.event)
-  const amountMinor = requireAmount(event, 'Subscription event')
   const renewsAt = requireFutureRenewalDate(subscription.nextDueDate, 'Subscription event')
-  const checkout = assertInitialCheckout(
-    await getCheckoutRecord(parsedReference.checkoutReference ?? ''),
-    parsedReference,
-    'created',
-    'monthly',
-    amountMinor,
-  )
+  const referencedCheckout = await getCheckoutRecord(parsedReference.checkoutReference ?? '')
+  const amountMinor = resolveSubscriptionCreatedAmount(event, referencedCheckout)
+  const checkout = assertInitialCheckout(referencedCheckout, parsedReference, 'created', 'monthly', amountMinor)
 
   const result = await grantCreditsForEvent({
     appUserId: checkout.userId,
