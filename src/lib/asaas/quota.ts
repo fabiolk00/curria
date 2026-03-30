@@ -48,6 +48,7 @@ export async function grantCredits(
       plan,
       asaas_subscription_id: asaasSubscriptionId ?? null,
       renews_at: renewsAt,
+      status: 'active',
     },
     { onConflict: 'user_id' },
   )
@@ -101,25 +102,11 @@ export async function consumeCredit(appUserId: string): Promise<boolean> {
 
 export async function revokeSubscription(asaasSubscriptionId: string): Promise<void> {
   const supabase = getSupabaseAdminClient()
-  const { data: quotaOwners, error: lookupError } = await supabase
-    .from('user_quotas')
-    .select('user_id')
-    .eq('asaas_subscription_id', asaasSubscriptionId)
-    .returns<UserQuotaOwnerRow[]>()
-
-  if (lookupError) {
-    throw new Error(`Failed to resolve subscription owner: ${lookupError.message}`)
-  }
-
-  const userIds = quotaOwners.map((row) => row.user_id)
-  await Promise.all(userIds.map((userId) => setCreditBalance(userId, 0)))
-
   const { error } = await supabase
     .from('user_quotas')
     .update({
-      plan: 'free',
-      asaas_subscription_id: null,
       renews_at: null,
+      status: 'canceled',
     })
     .eq('asaas_subscription_id', asaasSubscriptionId)
 

@@ -22,14 +22,27 @@ Primary code:
 ### Credits and billing
 - `credit_accounts` is the only runtime source of truth for credits.
 - `user_quotas` is metadata-only for billing state such as plan, Asaas customer, subscription, and renewal information.
+- `billing_checkouts` is the source of truth for post-cutover paid checkout resolution.
 - Credit consumption happens when `/api/agent` creates a new session.
 - Existing sessions do not consume credits per message.
 - Asaas webhook processing is idempotent and stores processed deliveries in `processed_events`.
+- Credits are granted only from trusted Asaas webhook events, never from frontend request bodies.
+- Webhook deduplication is based on a stable payload fingerprint in `processed_events.event_fingerprint`, not on transient delivery IDs.
+- Billing writes must use plan definitions from `src/lib/plans.ts`; credit amounts must not be duplicated elsewhere.
+- New paid checkouts must use `externalReference = curria:v1:u:<appUserId>:c:<checkoutReference>`.
+- Legacy `usr_<id>` external references are temporary migration support for pre-cutover recurring subscriptions only.
+- Processed webhook deliveries are recorded only after billing side effects succeed, so failed deliveries remain retryable.
+- Subscription cancellation updates billing metadata only and does not revoke already-earned credits.
+- `PAYMENT_RECEIVED` and `SUBSCRIPTION_CREATED` resolve from `billing_checkouts`; `SUBSCRIPTION_RENEWED` and cancellation events resolve from `user_quotas.asaas_subscription_id`.
+- Billing RPCs defensively re-validate their trust anchor before mutating state.
 
 Primary code:
 - `src/lib/asaas/quota.ts`
 - `src/app/api/webhook/asaas/route.ts`
 - `src/lib/asaas/webhook.ts`
+- `src/lib/asaas/billing-checkouts.ts`
+- `docs/billing-implementation.md`
+- `docs/billing-migration-guide.md`
 
 ### Session state model
 Sessions are stored as a top-level bundle with explicit versioning:
@@ -65,6 +78,37 @@ Tool flow:
 Primary code:
 - `src/lib/agent/tools/index.ts`
 - `src/lib/db/sessions.ts`
+
+## Error Handling
+
+All structured tool failures use the error codes defined in `src/lib/agent/tool-errors.ts`.
+
+The 8 codes:
+- `VALIDATION_ERROR` (`400`): input or structured-state validation failed
+- `PARSE_ERROR` (`400`): file parsing or extraction failed
+- `LLM_INVALID_OUTPUT` (`500`): model output failed parsing or schema validation
+- `NOT_FOUND` (`404`): required entity was missing
+- `UNAUTHORIZED` (`401`): auth or ownership check failed inside the tool layer
+- `GENERATION_ERROR` (`500`): generation/render/upload/signing failed after validation passed
+- `RATE_LIMITED` (`429`): upstream or resolved rate limit failure
+- `INTERNAL_ERROR` (`500`): unexpected fallback
+
+Key files:
+- `src/lib/agent/tool-errors.ts`
+- `docs/error-codes.md`
+- `docs/logging.md`
+- `.claude/rules/error-handling.md`
+
+Current runtime behavior:
+- tool failures use `{ success: false, code, error }`
+- dispatcher logs `errorCode` and `errorMessage`
+- route adapters preserve structured tool failures and map them to HTTP status codes
+- route-level auth/body validation may still return plain `{ error: ... }` responses outside the tool layer
+
+Developer guidance:
+- use `.claude/rules/error-handling.md` when adding or modifying a tool
+- use `docs/error-codes.md` to choose the right code
+- use `docs/logging.md` to query production failures by `errorCode`
 
 ## Session State Contracts
 

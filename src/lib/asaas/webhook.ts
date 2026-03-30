@@ -1,136 +1,82 @@
-import { createHash } from 'node:crypto'
+import { z } from 'zod'
 
-import { PLANS, type PlanSlug } from '@/lib/plans'
+export const ASAAS_BILLING_EVENTS = [
+  'PAYMENT_RECEIVED',
+  'SUBSCRIPTION_CREATED',
+  'SUBSCRIPTION_RENEWED',
+  'SUBSCRIPTION_DELETED',
+  'SUBSCRIPTION_CANCELED',
+] as const
 
-export type AsaasPayment = {
-  id: string
-  externalReference?: string
-  subscription?: string | null
-}
+export type AsaasBillingEventType = (typeof ASAAS_BILLING_EVENTS)[number]
 
-export type AsaasSubscription = {
-  id: string
-  externalReference?: string
-}
+const AsaasPaymentSchema = z.object({
+  id: z.string(),
+  externalReference: z.string().optional(),
+  subscription: z.string().nullable().optional(),
+  amount: z.number().optional(),
+})
 
-export type AsaasWebhookEvent = {
-  event: string
-  payment?: AsaasPayment
-  subscription?: AsaasSubscription
-}
+const AsaasSubscriptionSchema = z.object({
+  id: z.string(),
+  externalReference: z.string().optional(),
+  status: z.string().optional(),
+  nextDueDate: z.string().optional(),
+})
 
-type JsonPrimitive = string | number | boolean | null
-type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
+export const AsaasWebhookEventSchema = z.object({
+  event: z.enum(ASAAS_BILLING_EVENTS),
+  payment: AsaasPaymentSchema.optional(),
+  subscription: AsaasSubscriptionSchema.optional(),
+  amount: z.number().optional(),
+}).superRefine((value, ctx) => {
+  if (value.event === 'PAYMENT_RECEIVED' && !value.payment) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['payment'],
+      message: 'PAYMENT_RECEIVED events require a payment object.',
+    })
+  }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function toJsonValue(value: unknown): JsonValue {
   if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
+    (value.event === 'SUBSCRIPTION_CREATED'
+      || value.event === 'SUBSCRIPTION_RENEWED'
+      || value.event === 'SUBSCRIPTION_DELETED'
+      || value.event === 'SUBSCRIPTION_CANCELED')
+    && !value.subscription
   ) {
-    return value
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['subscription'],
+      message: `${value.event} events require a subscription object.`,
+    })
+  }
+})
+
+export type AsaasPayment = z.infer<typeof AsaasPaymentSchema>
+export type AsaasSubscription = z.infer<typeof AsaasSubscriptionSchema>
+export type AsaasWebhookEvent = z.infer<typeof AsaasWebhookEventSchema>
+
+function formatWebhookValidationError(error: z.ZodError<AsaasWebhookEvent>): string {
+  const [firstIssue] = error.issues
+
+  if (!firstIssue) {
+    return 'Invalid webhook event.'
   }
 
-  if (Array.isArray(value)) {
-    return value.map(toJsonValue)
-  }
-
-  if (isRecord(value)) {
-    const entries = Object.entries(value).map(([key, nestedValue]) => [key, toJsonValue(nestedValue)] as const)
-    return Object.fromEntries(entries)
-  }
-
-  throw new Error('Asaas webhook payload contains an unsupported value.')
-}
-
-function stableStringify(value: JsonValue): string {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value)
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`
-  }
-
-  const sortedKeys = Object.keys(value).sort()
-  const serializedEntries = sortedKeys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
-  return `{${serializedEntries.join(',')}}`
-}
-
-function isAsaasPayment(value: unknown): value is AsaasPayment {
-  if (!isRecord(value) || typeof value.id !== 'string') {
-    return false
-  }
-
-  return (
-    value.externalReference === undefined ||
-    typeof value.externalReference === 'string'
-  ) && (
-    value.subscription === undefined ||
-    value.subscription === null ||
-    typeof value.subscription === 'string'
-  )
-}
-
-function isAsaasSubscription(value: unknown): value is AsaasSubscription {
-  if (!isRecord(value) || typeof value.id !== 'string') {
-    return false
-  }
-
-  return value.externalReference === undefined || typeof value.externalReference === 'string'
+  return firstIssue.message
 }
 
 export function parseAsaasWebhookEvent(value: unknown): AsaasWebhookEvent {
-  if (!isRecord(value) || typeof value.event !== 'string') {
-    throw new Error('Asaas webhook payload is missing the event type.')
+  const parsed = AsaasWebhookEventSchema.safeParse(value)
+
+  if (!parsed.success) {
+    throw new Error(formatWebhookValidationError(parsed.error))
   }
 
-  if (value.payment !== undefined && !isAsaasPayment(value.payment)) {
-    throw new Error('Asaas webhook payload contains an invalid payment object.')
-  }
-
-  if (value.subscription !== undefined && !isAsaasSubscription(value.subscription)) {
-    throw new Error('Asaas webhook payload contains an invalid subscription object.')
-  }
-
-  return {
-    event: value.event,
-    payment: value.payment,
-    subscription: value.subscription,
-  }
+  return parsed.data
 }
 
-export function createAsaasProcessedEventId(payload: unknown): string {
-  const canonicalPayload = stableStringify(toJsonValue(payload))
-  const digest = createHash('sha256').update(canonicalPayload).digest('hex')
-  return `asaas:${digest}`
-}
-
-export function isPlanSlug(value: string): value is PlanSlug {
-  return value in PLANS
-}
-
-export function parseAsaasExternalReference(reference: string): {
-  referenceUserId: string
-  plan: PlanSlug
-} {
-  const [referenceUserId, rawPlan] = reference.split(':')
-
-  if (!referenceUserId || !rawPlan) {
-    throw new Error('Asaas external reference is missing required fields.')
-  }
-
-  if (!isPlanSlug(rawPlan)) {
-    throw new Error(`Unsupported Asaas plan slug: ${rawPlan}`)
-  }
-
-  return {
-    referenceUserId,
-    plan: rawPlan,
-  }
+export function getWebhookAmount(event: AsaasWebhookEvent): number | undefined {
+  return event.amount ?? event.payment?.amount
 }

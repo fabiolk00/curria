@@ -1,186 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { resolveAppUserIdFromReference } from '@/lib/auth/app-user'
-import { grantCredits, revokeSubscription } from '@/lib/asaas/quota'
-import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
-import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import {
-  createAsaasProcessedEventId,
-  parseAsaasExternalReference,
-  parseAsaasWebhookEvent,
-  type AsaasWebhookEvent,
-} from '@/lib/asaas/webhook'
+  getHttpStatusForToolError,
+  getToolErrorMessage,
+  resolveToolErrorCode,
+  TOOL_ERROR_CODES,
+  toolFailure,
+} from '@/lib/agent/tool-errors'
+import {
+  handlePaymentReceived,
+  handleSubscriptionCanceled,
+  handleSubscriptionCreated,
+  handleSubscriptionRenewed,
+} from '@/lib/asaas/event-handlers'
+import { computeEventFingerprint, getProcessedEvent } from '@/lib/asaas/idempotency'
+import { parseAsaasWebhookEvent, type AsaasWebhookEvent } from '@/lib/asaas/webhook'
+import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 
 export const runtime = 'nodejs'
 
-type ProcessedEventLookupRow = {
-  id: string
+type BillingApplyResult = 'processed' | 'duplicate'
+
+function getExpectedWebhookToken(): string | undefined {
+  return process.env.ASAAS_ACCESS_TOKEN ?? process.env.ASAAS_WEBHOOK_TOKEN
 }
 
-async function findProcessedEvent(eventId: string, eventType: string): Promise<boolean> {
-  const supabase = getSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('processed_events')
-    .select('id')
-    .eq('event_id', eventId)
-    .eq('event_type', eventType)
-    .maybeSingle<ProcessedEventLookupRow>()
-
-  if (error) {
-    throw new Error(`Failed to look up processed Asaas event: ${error.message}`)
-  }
-
-  return Boolean(data?.id)
-}
-
-async function markProcessedEvent(eventId: string, eventType: string): Promise<'inserted' | 'duplicate'> {
-  const supabase = getSupabaseAdminClient()
-  const { error } = await supabase
-    .from('processed_events')
-    .insert({ event_id: eventId, event_type: eventType })
-
-  if (!error) {
-    return 'inserted'
-  }
-
-  if (error.code === '23505') {
-    return 'duplicate'
-  }
-
-  throw new Error(`Failed to persist processed Asaas event: ${error.message}`)
-}
-
-async function resolveAppUserIdOrThrow(referenceUserId: string): Promise<string> {
-  const appUserId = await resolveAppUserIdFromReference(referenceUserId)
-
-  if (!appUserId) {
-    throw new Error(`Could not resolve app user from Asaas reference: ${referenceUserId}`)
-  }
-
-  return appUserId
-}
-
-async function processAsaasEvent(event: AsaasWebhookEvent): Promise<void> {
-  const { event: eventType, payment, subscription } = event
-
-  if (eventType === 'PAYMENT_RECEIVED' || eventType === 'PAYMENT_CONFIRMED') {
-    if (!payment?.subscription) {
-      const { referenceUserId, plan } = parseAsaasExternalReference(payment?.externalReference ?? '')
-      const appUserId = await resolveAppUserIdOrThrow(referenceUserId)
-      await grantCredits(appUserId, plan)
-    }
-
-    return
-  }
-
-  if (eventType === 'SUBSCRIPTION_RENEWED') {
-    const subId = subscription?.id
-    if (!subId) {
-      throw new Error('Asaas subscription renewal is missing subscription.id.')
-    }
-
-    const reference = subscription?.externalReference ?? payment?.externalReference ?? ''
-    const { referenceUserId, plan } = parseAsaasExternalReference(reference)
-    const appUserId = await resolveAppUserIdOrThrow(referenceUserId)
-    await grantCredits(appUserId, plan, subId)
-    return
-  }
-
-  if (eventType === 'SUBSCRIPTION_DELETED') {
-    if (!subscription?.id) {
-      throw new Error('Asaas subscription deletion is missing subscription.id.')
-    }
-
-    await revokeSubscription(subscription.id)
-    return
-  }
-
-  if (eventType === 'PAYMENT_OVERDUE') {
-    if (!payment?.subscription) {
-      throw new Error('Asaas overdue payment event is missing payment.subscription.')
-    }
-
-    await revokeSubscription(payment.subscription)
+async function processAsaasEvent(
+  event: AsaasWebhookEvent,
+  eventFingerprint: string,
+): Promise<BillingApplyResult> {
+  switch (event.event) {
+    case 'PAYMENT_RECEIVED':
+      return handlePaymentReceived(event, eventFingerprint)
+    case 'SUBSCRIPTION_CREATED':
+      return handleSubscriptionCreated(event, eventFingerprint)
+    case 'SUBSCRIPTION_RENEWED':
+      return handleSubscriptionRenewed(event, eventFingerprint)
+    case 'SUBSCRIPTION_DELETED':
+    case 'SUBSCRIPTION_CANCELED':
+      return handleSubscriptionCanceled(event, eventFingerprint)
   }
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const token = req.headers.get('asaas-access-token')
-  if (token !== process.env.ASAAS_WEBHOOK_TOKEN) {
+  const expectedToken = getExpectedWebhookToken()
+
+  if (!expectedToken || token !== expectedToken) {
+    const failure = toolFailure(TOOL_ERROR_CODES.UNAUTHORIZED, 'Unauthorized')
+
     logWarn('asaas.webhook.unauthorized', {
       success: false,
-      processedStatus: 'rejected',
+      errorCode: failure.code,
+      errorMessage: failure.error,
     })
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    return NextResponse.json(failure, {
+      status: getHttpStatusForToolError(failure.code),
+    })
   }
 
-  const rawBody = await req.text()
   let event: AsaasWebhookEvent
-  let processedEventId: string
+  let eventFingerprint: string
 
   try {
-    const parsedBody: unknown = JSON.parse(rawBody)
-    event = parseAsaasWebhookEvent(parsedBody)
-    processedEventId = createAsaasProcessedEventId(parsedBody)
+    event = parseAsaasWebhookEvent(await req.json())
+    eventFingerprint = computeEventFingerprint(event)
   } catch (error) {
+    const failure = toolFailure(
+      TOOL_ERROR_CODES.VALIDATION_ERROR,
+      getToolErrorMessage(error) ?? 'Invalid webhook payload.',
+    )
+
     logWarn('asaas.webhook.invalid_payload', {
       success: false,
-      processedStatus: 'rejected',
+      errorCode: failure.code,
+      errorMessage: failure.error,
       ...serializeError(error),
     })
-    return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 })
+
+    return NextResponse.json(failure, {
+      status: getHttpStatusForToolError(failure.code),
+    })
   }
 
-  const { event: eventType, payment, subscription } = event
-
   try {
-    const alreadyProcessed = await findProcessedEvent(processedEventId, eventType)
+    const alreadyProcessed = await getProcessedEvent(eventFingerprint)
     if (alreadyProcessed) {
       logInfo('asaas.webhook.duplicate_skipped', {
-        eventType,
-        processedEventId,
-        paymentId: payment?.id,
-        subscriptionId: subscription?.id,
+        eventType: event.event,
+        eventFingerprint,
+        paymentId: event.payment?.id,
+        subscriptionId: event.subscription?.id,
         success: true,
         processedStatus: 'skipped_duplicate',
       })
-      return NextResponse.json({ received: true, skipped: true })
+
+      return NextResponse.json({ success: true, cached: true })
     }
 
-    await processAsaasEvent(event)
+    const result = await processAsaasEvent(event, eventFingerprint)
 
-    const markResult = await markProcessedEvent(processedEventId, eventType)
-    if (markResult === 'duplicate') {
+    if (result === 'duplicate') {
       logInfo('asaas.webhook.duplicate_skipped', {
-        eventType,
-        processedEventId,
-        paymentId: payment?.id,
-        subscriptionId: subscription?.id,
+        eventType: event.event,
+        eventFingerprint,
+        paymentId: event.payment?.id,
+        subscriptionId: event.subscription?.id,
         success: true,
         processedStatus: 'skipped_duplicate',
       })
-      return NextResponse.json({ received: true, skipped: true })
+
+      return NextResponse.json({ success: true, cached: true })
     }
 
     logInfo('asaas.webhook.processed', {
-      eventType,
-      processedEventId,
-      paymentId: payment?.id,
-      subscriptionId: subscription?.id,
+      eventType: event.event,
+      eventFingerprint,
+      paymentId: event.payment?.id,
+      subscriptionId: event.subscription?.id,
       success: true,
       processedStatus: 'processed',
     })
-    return NextResponse.json({ received: true })
-  } catch (err) {
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    const errorCode = resolveToolErrorCode(error, TOOL_ERROR_CODES.INTERNAL_ERROR)
+    const errorMessage = getToolErrorMessage(error) ?? 'Failed to process webhook event.'
+
     logError('asaas.webhook.failed', {
-      eventType,
-      processedEventId,
-      paymentId: payment?.id,
-      subscriptionId: subscription?.id,
+      eventType: event.event,
+      eventFingerprint,
+      paymentId: event.payment?.id,
+      subscriptionId: event.subscription?.id,
       success: false,
       processedStatus: 'failed',
-      ...serializeError(err),
+      errorCode,
+      errorMessage,
+      ...serializeError(error),
     })
-    return NextResponse.json({ error: 'Failed to process webhook event' }, { status: 500 })
+
+    return NextResponse.json(
+      toolFailure(errorCode, errorMessage),
+      { status: getHttpStatusForToolError(errorCode) },
+    )
   }
 }

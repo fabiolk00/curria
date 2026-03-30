@@ -7,6 +7,8 @@ type CreateCheckoutLinkInput = {
   userName: string
   userEmail: string
   plan: PlanSlug
+  checkoutReference: string
+  externalReference: string
   successUrl: string
 }
 
@@ -21,33 +23,35 @@ export async function createCheckoutLink({
   userName,
   userEmail,
   plan,
+  checkoutReference,
+  externalReference,
   successUrl,
 }: CreateCheckoutLinkInput): Promise<string> {
   const planConfig = PLANS[plan]
   const customerId = await getOrCreateCustomer({ appUserId, name: userName, email: userEmail })
 
-  // One-time payment (Unitário)
+  void checkoutReference
+
   if (planConfig.billing === 'once') {
     const result = await asaas.post<{ url: string }>('/paymentLinks', {
-      name: `CurrIA — ${planConfig.name}`,
+      name: `CurrIA â€” ${planConfig.name}`,
       billingType: 'UNDEFINED',
       chargeType: 'DETACHED',
-      value: planConfig.price / 100, // Convert cents to reais
+      value: planConfig.price / 100,
       customer: customerId,
-      externalReference: `${appUserId}:${plan}`,
+      externalReference,
       successUrl,
     })
     return result.url
   }
 
-  // Subscription (Mensal/Pro)
   const result = await asaas.post<{ invoiceUrl: string }>('/subscriptions', {
     customer: customerId,
     billingType: 'CREDIT_CARD',
     cycle: 'MONTHLY',
-    value: planConfig.price / 100, // Convert cents to reais
+    value: planConfig.price / 100,
     nextDueDate: tomorrow(),
-    externalReference: `${appUserId}:${plan}`,
+    externalReference,
   })
 
   return result.invoiceUrl
