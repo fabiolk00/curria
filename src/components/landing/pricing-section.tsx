@@ -5,75 +5,92 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PLANS, formatPrice } from "@/lib/plans"
-import { cn } from "@/lib/utils"
 
 const plans = [
-  { slug: "free", href: "/signup", cta: "Comecar gratis" },
-  { slug: "unit", href: "/pricing", cta: "Comprar agora" },
-  { slug: "monthly", href: "/pricing", cta: "Assinar mensal" },
-  { slug: "pro", href: "/pricing", cta: "Assinar pro" },
-] as const
+  {
+    slug: "free" as const,
+    cta: "Começar grátis",
+    href: "/signup",
+  },
+  {
+    slug: "unit" as const,
+    cta: "Comprar agora",
+    href: "/pricing",
+  },
+  {
+    slug: "monthly" as const,
+    cta: "Assinar Mensal",
+    href: "/pricing",
+  },
+  {
+    slug: "pro" as const,
+    cta: "Assinar Pro",
+    href: "/pricing",
+  },
+]
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="py-24">
+    <section id="pricing" className="py-24 bg-background">
       <div className="container mx-auto px-4">
-        <div className="mb-16 text-center">
-          <h2 className="mb-4 text-3xl font-black tracking-tight text-balance md:text-4xl">
-            Precos simples e transparentes
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-balance mb-4">
+            Preços simples e transparentes
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Escolha o plano ideal para suas necessidades. Cancele quando quiser.
           </p>
         </div>
 
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const config = PLANS[plan.slug]
-            const price = formatPrice(config.price)
-            const period = config.billing === "monthly" ? "/mes" : ""
 
             return (
               <Card
-                key={config.slug}
-                className={cn(
-                  "relative flex h-full flex-col rounded-[2rem] border py-0 transition-all duration-200",
+                key={plan.slug}
+                className={`relative flex flex-col h-full transition-all duration-200 ${
                   config.highlighted
-                    ? "z-10 border-primary shadow-[0_32px_100px_-60px_oklch(var(--foreground)/0.85)] lg:scale-[1.03]"
-                    : "border-border/60 bg-card/60 hover:-translate-y-1 hover:border-border hover:shadow-xl",
-                )}
+                    ? "border-primary shadow-xl shadow-primary/10 scale-105 z-10 bg-card"
+                    : "border-border/50 hover:border-border hover:shadow-md bg-card/50"
+                }`}
               >
-                {config.highlighted ? (
-                  <Badge className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-[11px] uppercase tracking-[0.2em]">
-                    Mais popular
-                  </Badge>
-                ) : null}
-
+                {config.highlighted && (
+                  <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                    <Badge
+                      variant="default"
+                      className="text-xs font-bold uppercase tracking-wider py-1 px-3"
+                    >
+                      Mais popular
+                    </Badge>
+                  </div>
+                )}
                 <CardHeader className="pt-8">
                   <CardTitle className="text-2xl">{config.name}</CardTitle>
                   <CardDescription className="min-h-[40px]">{config.description}</CardDescription>
-                  <div className="mt-6 flex items-end gap-1">
-                    <span className="text-4xl font-black tracking-tight">{price}</span>
-                    {period ? (
-                      <span className="pb-1 font-medium text-muted-foreground">{period}</span>
-                    ) : null}
+                  <div className="mt-6 flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold tracking-tight">
+                      {formatPrice(config.price)}
+                    </span>
+                    {config.billing === "monthly" && (
+                      <span className="text-muted-foreground font-medium">/mês</span>
+                    )}
                   </div>
                 </CardHeader>
-
-                <CardContent className="flex flex-1 flex-col justify-between space-y-8 pb-8">
+                <CardContent className="flex-1 flex flex-col justify-between space-y-8">
                   <ul className="space-y-4">
-                    {config.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    {config.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                         <span className="text-sm font-medium">{feature}</span>
                       </li>
                     ))}
                   </ul>
-
                   <Button
                     asChild
-                    className="h-12 w-full rounded-full font-semibold"
+                    className="w-full font-semibold"
                     variant={config.highlighted ? "default" : "outline"}
+                    size="lg"
                   >
                     <Link href={plan.href}>{plan.cta}</Link>
                   </Button>
@@ -83,17 +100,21 @@ export default function PricingSection() {
           })}
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-center gap-4 text-sm font-medium text-muted-foreground sm:flex-row">
-          <div className="flex items-center gap-2 rounded-full border border-border/50 bg-muted/50 px-4 py-2">
-            <ShieldCheck className="h-4 w-4 text-success" />
-            <span>Pagamento seguro via Asaas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Gift className="h-3.5 w-3.5" />
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-16 text-sm text-muted-foreground font-medium">
+          <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-full border border-border/50">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <span>Pagamento 100% seguro via</span>
+            <span className="font-black flex items-center text-[#0030B9] dark:text-[#4270f5] tracking-[-0.05em] text-base ml-0.5">
+              asaas
             </span>
+          </div>
+          <span className="hidden sm:inline text-border">•</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary">
+              <Gift className="w-3.5 h-3.5" />
+            </div>
             <span>
-              1 analise <strong className="text-foreground">totalmente gratuita</strong>
+              1 análise <strong className="text-foreground">totalmente gratuita</strong>
             </span>
           </div>
         </div>

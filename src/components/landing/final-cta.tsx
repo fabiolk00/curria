@@ -5,32 +5,43 @@ import { Button } from "@/components/ui/button"
 
 export default function FinalCta() {
   return (
-    <section className="relative overflow-hidden border-y border-border/50 bg-card py-24">
+    <section className="py-24 bg-card border-y border-border/50 relative overflow-hidden">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
+          backgroundImage: "radial-gradient(circle at 1px 1px, black 1px, transparent 0)",
           backgroundSize: "40px 40px",
         }}
       />
-      <div className="container relative z-10 mx-auto px-4 text-center">
-        <h2 className="mx-auto max-w-3xl text-4xl font-black leading-tight text-balance md:text-5xl">
-          Pare de ser rejeitado por robos.{" "}
-          <span className="mt-2 block bg-gradient-to-r from-primary via-foreground to-chart-2 bg-clip-text text-transparent">
+      <div
+        className="dark:absolute dark:inset-0 dark:opacity-[0.03] dark:pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      <div className="container mx-auto px-4 text-center relative z-10">
+        <h2 className="text-4xl md:text-5xl font-extrabold text-balance max-w-3xl mx-auto leading-tight">
+          Pare de ser rejeitado por robôs.{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60 block mt-2">
             Comece a conseguir entrevistas.
           </span>
         </h2>
         <div className="mt-12">
-          <Button asChild size="lg" className="h-14 gap-3 rounded-full px-8 text-lg font-semibold shadow-lg shadow-primary/20">
+          <Button
+            asChild
+            size="lg"
+            className="text-lg gap-3 h-14 px-8 font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+          >
             <Link href="/signup">
-              Comecar gratuitamente
+              Começar gratuitamente
               <ArrowRight className="h-5 w-5" />
             </Link>
           </Button>
         </div>
         <p className="mt-6 text-sm font-medium text-muted-foreground">
-          Sem cartao de credito. 1 analise gratis incluida.
+          Sem cartão de crédito. 1 análise grátis incluída.
         </p>
       </div>
     </section>

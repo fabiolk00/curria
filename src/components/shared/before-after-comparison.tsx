@@ -1,146 +1,123 @@
 "use client"
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Check, X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
+import { AnimatePresence, motion } from "motion/react"
+import { CheckCircle2, XCircle } from "lucide-react"
 
 export function BeforeAfterComparison() {
-  const [showAfter, setShowAfter] = useState(false)
+  const [isImproved, setIsImproved] = useState(false)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsImproved((prev) => !prev)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <div className="relative w-full max-w-xl mx-auto">
-      {/* Toggle buttons */}
-      <div className="flex gap-2 mb-4 justify-center">
-        <button
-          onClick={() => setShowAfter(false)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-            !showAfter
-              ? "bg-destructive/20 text-destructive"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          Antes
-        </button>
-        <button
-          onClick={() => setShowAfter(true)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-            showAfter
-              ? "bg-success/20 text-success"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          Depois
-        </button>
-      </div>
-
-      {/* Resume card */}
-      <div
-        className={cn(
-          "relative rounded-xl border-2 p-6 transition-all duration-500",
-          showAfter
-            ? "border-success/50 bg-success/5"
-            : "border-destructive/50 bg-destructive/5"
+    <div className="relative w-full max-w-md mx-auto aspect-[3/4] bg-card border rounded-xl overflow-hidden shadow-2xl">
+      <div className="absolute top-0 left-0 w-full p-4 bg-muted/50 border-b flex justify-between items-center z-10">
+        <span className="text-sm font-medium">
+          {isImproved ? "Currículo Otimizado" : "Currículo Original"}
+        </span>
+        {isImproved ? (
+          <span className="flex items-center gap-1 text-xs text-green-500 font-medium">
+            <CheckCircle2 className="w-4 h-4" />
+            ATS Friendly
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-xs text-destructive font-medium">
+            <XCircle className="w-4 h-4" />
+            Baixa Visibilidade
+          </span>
         )}
-      >
-        {/* Score badge */}
-        <div className="absolute -top-3 right-4">
-          <Badge
-            className={cn(
-              "text-sm font-bold px-3 py-1",
-              showAfter
-                ? "bg-success text-success-foreground"
-                : "bg-destructive text-destructive-foreground"
-            )}
-          >
-            ATS Score: {showAfter ? "94%" : "32%"}
-          </Badge>
-        </div>
-
-        {/* Mock resume content */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-              <span className="text-muted-foreground font-semibold">JS</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground">João Silva</h4>
-              <p className="text-sm text-muted-foreground">Desenvolvedor de Software</p>
-            </div>
-          </div>
-
-          <div className="h-px bg-border" />
-
-          {/* Skills section */}
-          <div>
-            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Habilidades
-            </h5>
-            <div className="flex flex-wrap gap-2">
-              {showAfter ? (
-                <>
-                  <Badge variant="secondary" className="text-xs">React</Badge>
-                  <Badge variant="secondary" className="text-xs">TypeScript</Badge>
-                  <Badge variant="secondary" className="text-xs">Node.js</Badge>
-                  <Badge variant="secondary" className="text-xs">AWS</Badge>
-                  <Badge variant="secondary" className="text-xs">PostgreSQL</Badge>
-                </>
-              ) : (
-                <>
-                  <Badge variant="outline" className="text-xs opacity-60">JavaScript</Badge>
-                  <Badge variant="outline" className="text-xs opacity-60">Programação</Badge>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Status indicators */}
-          <div className="space-y-2 pt-2">
-            {showAfter ? (
-              <>
-                <StatusItem success text="Palavras-chave correspondentes" />
-                <StatusItem success text="Formato otimizado" />
-                <StatusItem success text="Seções padronizadas" />
-              </>
-            ) : (
-              <>
-                <StatusItem success={false} text="Faltam palavras-chave" />
-                <StatusItem success={false} text="Formato incorreto" />
-                <StatusItem warning text="Seções não padronizadas" />
-              </>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
-  )
-}
 
-function StatusItem({
-  success,
-  warning,
-  text,
-}: {
-  success?: boolean
-  warning?: boolean
-  text: string
-}) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      {success ? (
-        <Check className="h-4 w-4 text-success" />
-      ) : warning ? (
-        <AlertTriangle className="h-4 w-4 text-warning" />
-      ) : (
-        <X className="h-4 w-4 text-destructive" />
-      )}
-      <span className={cn(
-        success ? "text-success" : warning ? "text-warning" : "text-destructive"
-      )}>
-        {text}
-      </span>
+      <div className="pt-16 p-6 h-full relative">
+        <AnimatePresence mode="wait">
+          {!isImproved ? (
+            <motion.div
+              key="before"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <div>
+                <div className="h-6 w-3/4 bg-muted rounded mb-2" />
+                <div className="h-4 w-1/2 bg-muted/50 rounded" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 w-full bg-muted/50 rounded" />
+                <div className="h-4 w-5/6 bg-muted/50 rounded" />
+                <div className="h-4 w-4/5 bg-muted/50 rounded" />
+              </div>
+              <div className="space-y-4">
+                <div className="h-5 w-1/3 bg-muted rounded" />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="h-2 w-2 rounded-full bg-destructive/50 mt-1.5" />
+                    <div className="h-4 w-[90%] bg-muted/30 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-2 w-2 rounded-full bg-destructive/50 mt-1.5" />
+                    <div className="h-4 w-[85%] bg-muted/30 rounded" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="after"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <div>
+                <div className="h-6 w-3/4 bg-primary/80 rounded mb-2" />
+                <div className="h-4 w-1/2 bg-primary/40 rounded" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 w-full bg-primary/20 rounded" />
+                <div className="h-4 w-5/6 bg-primary/20 rounded" />
+                <div className="h-4 w-4/5 bg-primary/20 rounded" />
+              </div>
+              <div className="space-y-4">
+                <div className="h-5 w-1/3 bg-primary/60 rounded" />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className="h-4 w-[90%] bg-primary/20 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className="h-4 w-[85%] bg-primary/20 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5" />
+                    <div className="h-4 w-[95%] bg-primary/20 rounded" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <motion.div
+        animate={{
+          top: ["0%", "100%", "0%"],
+        }}
+        transition={{
+          duration: 3,
+          ease: "linear",
+          repeat: Infinity,
+        }}
+        className="absolute left-0 w-full h-[2px] bg-primary/50 shadow-[0_0_8px_rgba(var(--primary),0.5)] z-20 pointer-events-none"
+      />
     </div>
   )
 }

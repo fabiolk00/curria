@@ -2,41 +2,48 @@
 
 import Link from "next/link"
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
-import { Moon, Sun } from "lucide-react"
+import { Menu, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4">
-        <div className="flex items-center gap-8">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4 md:gap-8">
+          {onMenuClick && (
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           <Logo />
-          <nav className="hidden items-center gap-2 rounded-full border border-border/60 bg-background/70 p-1 md:flex">
+          <nav className="hidden md:flex items-center gap-6">
             <Link
-              href="/#how-it-works"
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              href="/what-is-ats"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Como funciona
+              O que é o ATS?
             </Link>
-            <Link
+            <a
               href="/#pricing"
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Precos
-            </Link>
+              Preços
+            </a>
           </nav>
         </div>
-
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full border border-border/60 bg-background/70"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label="Alternar tema"
           >
@@ -45,18 +52,15 @@ export default function Header() {
           </Button>
 
           <SignedOut>
-            <Button asChild variant="ghost" className="hidden rounded-full px-5 sm:flex">
+            <Button asChild variant="ghost" className="hidden sm:flex">
               <Link href="/login">Entrar</Link>
             </Button>
-            <Button asChild className="rounded-full px-5 shadow-lg shadow-primary/15">
+            <Button asChild>
               <Link href="/signup">Criar conta</Link>
             </Button>
           </SignedOut>
 
           <SignedIn>
-            <Button asChild variant="ghost" className="hidden rounded-full px-5 sm:flex">
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
             <UserButton
               afterSignOutUrl="/"
               appearance={{

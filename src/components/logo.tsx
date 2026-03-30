@@ -1,70 +1,28 @@
 import Link from "next/link"
 import { Bot } from "lucide-react"
 
-import { cn } from "@/lib/utils"
-
-interface LogoProps {
+export default function Logo({
+  size = "default",
+  linkTo = "/",
+}: {
+  size?: "sm" | "default"
   linkTo?: string
-  className?: string
-  size?: "sm" | "md" | "lg"
-}
-
-const sizeMap = {
-  sm: {
-    wrap: "gap-2",
-    icon: "size-7 rounded-xl",
-    bot: "size-3.5",
-    text: "text-lg",
-  },
-  md: {
-    wrap: "gap-2.5",
-    icon: "size-9 rounded-2xl",
-    bot: "size-4.5",
-    text: "text-xl",
-  },
-  lg: {
-    wrap: "gap-3",
-    icon: "size-11 rounded-[1.35rem]",
-    bot: "size-5",
-    text: "text-2xl",
-  },
-} as const
-
-export default function Logo({ linkTo = "/", className, size = "md" }: LogoProps) {
-  const config = sizeMap[size]
-
-  const content = (
-    <>
-      <span
-        className={cn(
-          "flex items-center justify-center bg-gradient-to-br from-primary via-foreground to-chart-2 text-primary-foreground shadow-[0_20px_45px_-28px_oklch(var(--foreground)/0.8)]",
-          config.icon,
-        )}
+}) {
+  return (
+    <Link href={linkTo} className="flex items-center gap-2">
+      <div
+        className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-md ${
+          size === "sm" ? "w-6 h-6" : "w-8 h-8"
+        }`}
       >
-        <Bot className={config.bot} />
-      </span>
-      <span className={cn("font-black tracking-tight", config.text, className)}>
-        <span className="text-foreground">Curr</span>
-        <span className="bg-gradient-to-r from-primary via-foreground to-chart-2 bg-clip-text text-transparent">
+        <Bot className={size === "sm" ? "w-4 h-4" : "w-5 h-5"} />
+      </div>
+      <span className={`font-bold tracking-tight ${size === "sm" ? "text-lg" : "text-xl"}`}>
+        Curr
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 dark:from-purple-400 dark:to-indigo-400">
           IA
         </span>
       </span>
-    </>
+    </Link>
   )
-
-  if (linkTo) {
-    return (
-      <Link
-        href={linkTo}
-        className={cn(
-          "flex items-center transition-transform duration-200 hover:-translate-y-0.5",
-          config.wrap,
-        )}
-      >
-        {content}
-      </Link>
-    )
-  }
-
-  return <span className={cn("flex items-center", config.wrap)}>{content}</span>
 }

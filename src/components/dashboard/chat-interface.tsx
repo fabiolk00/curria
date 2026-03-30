@@ -29,16 +29,16 @@ interface Message {
 }
 
 function createWelcomeMessage(firstName?: string): Message {
-  const greeting = firstName ? `Ola, ${firstName}!` : "Ola!"
+  const greeting = firstName ? `Olá, ${firstName}!` : "Olá!"
 
   return {
     id: "welcome",
     role: "assistant",
     content: `${greeting} Sou seu consultor especialista em ATS e RH.
 
-Envie seu curriculo em PDF ou DOCX e cole a descricao da vaga para eu iniciar a analise.
+Envie seu currículo em PDF ou DOCX e cole a descrição da vaga para eu iniciar a análise.
 
-Depois disso, vamos melhorar o curriculo, criar variacoes por vaga e gerar os arquivos finais.`,
+Depois disso, vamos melhorar o currículo, criar variações por vaga e gerar os arquivos finais.`,
     timestamp: new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
@@ -57,7 +57,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({
   sessionId: initialSessionId,
-  userName = "Voce",
+  userName = "Você",
   disabled = false,
   onSessionChange,
   onStreamingChange,
@@ -208,10 +208,8 @@ export function ChatInterface({
       })
 
       if (!response.ok || !response.body) {
-        const errorPayload = await response.json().catch(() => null) as
-          | { error?: string }
-          | null
-        throw new Error(errorPayload?.error ?? "Nao foi possivel continuar a conversa.")
+        const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorPayload?.error ?? "Não foi possível continuar a conversa.")
       }
 
       const reader = response.body.getReader()
@@ -281,9 +279,7 @@ export function ChatInterface({
       const message = error instanceof Error ? error.message : "Erro inesperado."
       setMessages((previous) =>
         previous.map((item) =>
-          item.id === assistantMessageId
-            ? { ...item, content: `Aviso: ${message}` }
-            : item,
+          item.id === assistantMessageId ? { ...item, content: `Aviso: ${message}` } : item,
         ),
       )
     } finally {
@@ -325,20 +321,16 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-full min-h-[500px] flex-col relative">
       {messageCount > 0 && (
         <div className="border-b border-border bg-muted/30 px-4 py-2">
           <div className="mx-auto flex max-w-3xl items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Mensagem {messageCount} de {maxMessages} nesta analise
+              Mensagem {messageCount} de {maxMessages} nesta análise
             </span>
             <div className="flex items-center gap-2 text-xs">
-              {phase !== "intake" && (
-                <span className="text-muted-foreground">Fase: {phase}</span>
-              )}
-              {atsScore !== undefined && (
-                <span className="text-muted-foreground">ATS: {atsScore}</span>
-              )}
+              {phase !== "intake" && <span className="text-muted-foreground">Fase: {phase}</span>}
+              {atsScore !== undefined && <span className="text-muted-foreground">ATS: {atsScore}</span>}
             </div>
           </div>
         </div>
@@ -346,17 +338,15 @@ export function ChatInterface({
 
       {messages.length === 1 && (
         <div className="px-4 py-12 text-center">
-          <h1 className="mb-3 text-2xl font-bold md:text-3xl">
-            Ola, {userName}!
-          </h1>
+          <h1 className="mb-3 text-2xl font-bold md:text-3xl">Olá, {userName}!</h1>
           <p className="mx-auto max-w-md text-muted-foreground">
-            Cole a descricao da vaga e envie seu curriculo para iniciar a analise ATS.
+            Cole a descrição da vaga e envie seu currículo para iniciar a análise ATS.
           </p>
         </div>
       )}
 
-      <ScrollArea className="flex-1 px-4 md:px-6">
-        <div className="mx-auto max-w-3xl space-y-6 py-6">
+      <ScrollArea className="flex-1 px-4 md:px-6 absolute inset-0 bottom-[120px]">
+        <div className="mx-auto max-w-3xl space-y-6 py-6 h-full">
           {messages.map((message) => (
             <ChatMessage key={message.id} {...message} />
           ))}
@@ -366,7 +356,7 @@ export function ChatInterface({
 
       <div
         className={cn(
-          "border-t border-border p-4 transition-colors",
+          "border-t border-border p-4 transition-colors absolute bottom-0 left-0 right-0 bg-background",
           isDragging && "border-primary bg-primary/5",
         )}
         onDragOver={handleDragOver}
@@ -410,7 +400,7 @@ export function ChatInterface({
             <Textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Cole a descricao da vaga aqui..."
+              placeholder="Cole a descrição da vaga aqui..."
               className="max-h-[200px] min-h-[44px] resize-none"
               rows={1}
               disabled={isInputDisabled}
@@ -433,11 +423,11 @@ export function ChatInterface({
 
           {sessionLimitReached ? (
             <p className="text-center text-xs text-amber-600">
-              Esta sessao atingiu o limite de mensagens. Inicie uma nova analise para continuar.
+              Esta sessão atingiu o limite de mensagens. Inicie uma nova análise para continuar.
             </p>
           ) : (
             <p className="text-center text-xs text-muted-foreground">
-              Arraste um arquivo PDF ou DOCX, ou clique no botao de upload.
+              Arraste um arquivo PDF ou DOCX, ou clique no botão de upload.
             </p>
           )}
         </div>
