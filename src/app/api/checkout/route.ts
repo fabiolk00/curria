@@ -12,6 +12,8 @@ import { createCheckoutLink } from '@/lib/asaas/checkout'
 import { formatExternalReference } from '@/lib/asaas/external-reference'
 import { getPlan } from '@/lib/plans'
 
+export const runtime = 'nodejs'
+
 const BodySchema = z.object({
   plan: z.enum(['unit', 'monthly', 'pro']),
 })
