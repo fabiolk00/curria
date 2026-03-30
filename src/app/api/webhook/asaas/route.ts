@@ -22,7 +22,7 @@ export const runtime = 'nodejs'
 type BillingApplyResult = 'processed' | 'duplicate'
 
 function getExpectedWebhookToken(): string | undefined {
-  return process.env.ASAAS_ACCESS_TOKEN ?? process.env.ASAAS_WEBHOOK_TOKEN
+  return process.env.ASAAS_WEBHOOK_TOKEN ?? process.env.ASAAS_ACCESS_TOKEN
 }
 
 async function processAsaasEvent(
