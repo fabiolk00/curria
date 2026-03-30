@@ -11,7 +11,10 @@ const isPublicRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware((auth, req) => {
-  if (!isPublicRoute(req)) {
+  // API routes handle their own auth and should not redirect
+  const isApiRoute = req.nextUrl.pathname.startsWith('/api/')
+
+  if (!isPublicRoute(req) && !isApiRoute) {
     auth().protect()
   }
 })
