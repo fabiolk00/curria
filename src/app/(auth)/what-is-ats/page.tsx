@@ -1,336 +1,252 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
 import {
-  FileText,
-  Upload,
-  Search,
-  BarChart3,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
-  Zap,
-  Target,
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  FileText,
+  Search,
   Shield,
   Sparkles,
+  Target,
+  Upload,
+  XCircle,
+  Zap,
 } from "lucide-react"
+import Link from "next/link"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+const workflow = [
+  {
+    icon: FileText,
+    title: "1. A empresa define o filtro",
+    description:
+      "A vaga e carregada no ATS com palavras-chave, senioridade, habilidades obrigatorias e requisitos minimos.",
+  },
+  {
+    icon: Upload,
+    title: "2. O curriculo entra na fila",
+    description:
+      "Seu PDF ou DOCX e enviado pelo portal da empresa e vira a primeira camada de triagem automatica.",
+  },
+  {
+    icon: Search,
+    title: "3. O sistema faz parsing",
+    description:
+      "O ATS tenta entender secoes, cargos, datas, tecnologias e experiencias. Layout confuso reduz a leitura.",
+  },
+  {
+    icon: BarChart3,
+    title: "4. O score e calculado",
+    description:
+      "O sistema compara seu conteudo com a vaga e prioriza os perfis que parecem ter melhor aderencia.",
+  },
+]
+
+const signals = [
+  "Palavras-chave iguais ou muito proximas da descricao da vaga.",
+  "Titulos de secao claros como Experiencia, Educacao e Skills.",
+  "Formato simples, texto selecionavel e sem grafismos que atrapalham o parsing.",
+  "Historico profissional com contexto, impacto e tecnologias nomeadas com clareza.",
+]
+
+const risks = [
+  "Enviar o mesmo curriculo generico para toda vaga.",
+  "Usar tabelas, colunas demais ou elementos visuais que escondem o texto.",
+  "Trocar nomes padrao de secoes por titulos criativos que o ATS nao reconhece.",
+  "Ignorar requisitos obrigatorios e deixar palavras-chave importantes de fora.",
+]
+
+export const metadata = {
+  title: "O que e ATS - CurrIA",
+  description: "Aprenda como funciona a triagem automatica de curriculos e como melhorar seu match",
+}
 
 export default function WhatIsAtsPage() {
   return (
-    <div className="container mx-auto max-w-4xl space-y-8 px-4 py-8">
-      {/* Header */}
-      <div className="space-y-4 text-center">
-        <h1 className="text-4xl font-bold tracking-tight">O que é ATS?</h1>
-        <p className="text-lg text-muted-foreground">
-          Entenda como funcionam os sistemas que filtram currículos antes de chegarem ao recrutador
-        </p>
-      </div>
+    <div className="relative overflow-hidden px-4 py-6 lg:px-8 lg:py-8">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,oklch(var(--primary)/0.16),transparent_62%)]" />
+      <div className="pointer-events-none absolute left-0 top-32 h-64 w-64 bg-[radial-gradient(circle,oklch(var(--chart-2)/0.1),transparent_65%)] blur-3xl" />
 
-      <Separator />
+      <div className="relative space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-border/60 bg-card/90 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]">
+          <div className="grid gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1.15fr)_380px] lg:px-8">
+            <div>
+              <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
+                Guia rapido ATS
+              </Badge>
+              <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight lg:text-5xl">
+                Entenda o filtro que decide se seu curriculo sera lido por alguem.
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
+                ATS significa Applicant Tracking System. Na pratica, e o software que recebe curriculos, extrai o texto, compara com a vaga e prioriza quem parece mais aderente antes do olhar humano.
+              </p>
 
-      {/* Section 1 — O que é ATS */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            O que é um ATS e por que ele importa?
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground leading-relaxed">
-            <strong>ATS (Applicant Tracking System)</strong> é um software usado por mais de 95% das grandes empresas
-            para automaticamente filtrar e classificar currículos antes que um recrutador humano os veja.
-          </p>
-          <p className="text-muted-foreground leading-relaxed">
-            O problema? A maioria dos candidatos não sabe que seu currículo está sendo avaliado por um robô.
-            Currículos perfeitamente qualificados são eliminados todos os dias simplesmente porque não foram
-            otimizados para passar pelo ATS.
-          </p>
-          <div className="rounded-lg bg-warning/10 border border-warning/20 p-4">
-            <p className="text-sm font-medium flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              Cerca de 75% dos currículos são rejeitados automaticamente pelo ATS antes de chegarem a um recrutador.
-            </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild className="rounded-full">
+                  <Link href="/dashboard">
+                    Testar no meu curriculo
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/pricing">Ver planos</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-[1.75rem] border border-border/60 bg-background/75 p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <p className="mt-4 text-sm font-semibold">Triagem automatica</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Empresas grandes usam ATS para organizar milhares de candidaturas e acelerar a selecao.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-border/60 bg-background/75 p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                  <XCircle className="h-5 w-5" />
+                </div>
+                <p className="mt-4 text-sm font-semibold">Eliminacao silenciosa</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Um curriculo forte pode ser descartado cedo se o parser nao entender a estrutura ou o vocabulario.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-border/60 bg-background/75 p-5 sm:col-span-2 lg:col-span-1">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <p className="mt-4 text-sm font-semibold">Ajuste com intencao</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  O melhor caminho nao e encher o curriculo de buzzwords, e alinhar linguagem, clareza e relevancia com a vaga certa.
+                </p>
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Section 2 — Como funciona */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-6 w-6 text-primary" />
-            Como o ATS funciona — Passo a Passo
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+          <Card className="rounded-[2rem] border-border/60 bg-card/90 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]">
+            <CardHeader className="pt-8">
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                Como o ATS funciona
+              </CardTitle>
+              <CardDescription>
+                O processo e menos misterioso quando voce enxerga cada etapa da triagem.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pb-8">
+              {workflow.map((step) => (
+                <div
+                  key={step.title}
+                  className="flex gap-4 rounded-[1.5rem] border border-border/60 bg-background/75 p-4"
+                >
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <step.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold">{step.title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
           <div className="space-y-6">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <FileText className="h-5 w-5 text-primary" />
+            <Card className="rounded-[2rem] border-border/60 bg-card/90 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]">
+              <CardHeader className="pt-8">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  O que aumenta seu match
+                </CardTitle>
+                <CardDescription>
+                  Os sinais abaixo ajudam o ATS a entender rapido que seu perfil conversa com a vaga.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-8">
+                {signals.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.25rem] border border-border/60 bg-background/75 p-4">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" />
+                    <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] border-border/60 bg-card/90 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]">
+              <CardHeader className="pt-8">
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  O que derruba curriculos
+                </CardTitle>
+                <CardDescription>
+                  Nao e so sobre experiencia. Estrutura e linguagem fazem muita diferenca.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-8">
+                {risks.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.25rem] border border-border/60 bg-background/75 p-4">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+                    <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[2rem] border border-primary/20 bg-[linear-gradient(135deg,oklch(var(--primary)/0.08),oklch(var(--chart-2)/0.08))] shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]">
+          <div className="grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight lg:text-3xl">
+                Como o CurrIA transforma essa leitura em vantagem pratica
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
+                Em vez de tentar adivinhar o que falta, voce compara seu curriculo com a vaga, identifica gaps, recebe sugestoes acionaveis e gera uma versao mais competitiva sem perder autenticidade.
+              </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-border/60 bg-background/80 p-4">
+                  <p className="text-sm font-semibold">Analise orientada por vaga</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    A IA procura termos, lacunas e pontos fracos que reduzem seu score.
+                  </p>
                 </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">1. Empresa configura critérios</h3>
-                <p className="text-sm text-muted-foreground">
-                  A empresa cria a vaga e define palavras-chave, habilidades obrigatórias e critérios de filtro no ATS.
-                </p>
+                <div className="rounded-[1.5rem] border border-border/60 bg-background/80 p-4">
+                  <p className="text-sm font-semibold">Reescrita com contexto</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    O texto fica mais alinhado ao mercado sem soar generico ou artificial.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <Upload className="h-5 w-5 text-primary" />
-                </div>
-              </div>
+            <div className="flex flex-col justify-between rounded-[1.75rem] border border-border/60 bg-background/80 p-5">
               <div>
-                <h3 className="font-semibold mb-1">2. Candidato envia currículo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Você envia seu currículo através do portal de vagas da empresa.
+                <p className="text-sm font-semibold">Proximo passo recomendado</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  Abra o workspace, cole a vaga desejada e envie seu curriculo para descobrir onde o ATS esta travando sua candidatura.
                 </p>
               </div>
-            </div>
 
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <Search className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">3. ATS faz parsing do currículo</h3>
-                <p className="text-sm text-muted-foreground">
-                  O sistema extrai o texto, identifica seções (Experiência, Formação, Habilidades) e estrutura os dados.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">4. Sistema calcula compatibilidade</h3>
-                <p className="text-sm text-muted-foreground">
-                  O ATS compara as palavras-chave do seu currículo com os requisitos da vaga e calcula um score.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
-                  <CheckCircle className="h-5 w-5 text-success" />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">5. Currículos são ranqueados</h3>
-                <p className="text-sm text-muted-foreground">
-                  Scores altos vão para o recrutador. Scores baixos são arquivados automaticamente.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-                  <XCircle className="h-5 w-5 text-destructive" />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">6. Decisão automática</h3>
-                <p className="text-sm text-muted-foreground">
-                  Apenas os candidatos no topo da lista recebem entrevistas. Os demais nunca são vistos.
-                </p>
+              <div className="mt-6 space-y-3">
+                <Button asChild className="w-full rounded-full">
+                  <Link href="/dashboard">Analisar meu curriculo</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full rounded-full">
+                  <Link href="/resumes">Ver minhas sessoes</Link>
+                </Button>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Section 3 — O que o ATS procura */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-6 w-6 text-primary" />
-            O que o ATS procura no seu currículo
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Palavras-chave e habilidades:</strong> O sistema busca palavras e frases exatas da descrição da vaga.
-                Se a vaga pede &quot;React&quot; e você escreveu &quot;ReactJS&quot;, pode não contar.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Formatação simples:</strong> Layouts complexos, tabelas e colunas múltiplas confundem o parser.
-                Currículos simples têm parsing mais preciso.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Formato de arquivo:</strong> .docx e .pdf são os mais seguros. PDFs escaneados ou imagens são
-                problemáticos porque o ATS não consegue extrair o texto.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Títulos de seção padrão:</strong> Use &quot;Experiência Profissional&quot;, &quot;Formação Acadêmica&quot;, &quot;Habilidades&quot;.
-                Nomes criativos como &quot;Minha Jornada&quot; confundem o sistema.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-              <div>
-                <strong>Score de relevância:</strong> O ATS calcula a porcentagem de match entre seu currículo e a vaga.
-                Quanto maior o match, maior a chance de ser visto por um humano.
-              </div>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Section 4 — Erros comuns */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <XCircle className="h-6 w-6 text-destructive" />
-            Erros comuns que eliminam currículos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Usar títulos de seção criativos ou não-padronizados (&quot;Sobre Mim&quot;, &quot;Minhas Skills&quot;, &quot;Histórico&quot;)
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Colocar informações importantes em imagens, gráficos ou elementos visuais que o ATS não consegue ler
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Usar layouts com tabelas ou múltiplas colunas que confundem o parser
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Não incluir palavras-chave da descrição da vaga — se a vaga menciona &quot;Python&quot;, seu currículo deve mencionar também
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Enviar o mesmo currículo genérico para todas as vagas sem adaptá-lo para cada oportunidade
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div>
-                Usar formatos de arquivo incompatíveis (.pages, .odt) ou PDFs escaneados onde o texto não é selecionável
-              </div>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Section 5 — Como o ATS Expert ajuda */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            Como o ATS Expert te ajuda a vencer
-          </CardTitle>
-          <CardDescription>
-            Nossa IA analisa e otimiza seu currículo especificamente para a vaga que você quer
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold flex-shrink-0">
-                1
-              </div>
-              <div>
-                <strong>Análise da descrição da vaga:</strong> Cole a descrição e identificamos automaticamente todas as
-                palavras-chave, habilidades obrigatórias e requisitos que o ATS vai buscar.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold flex-shrink-0">
-                2
-              </div>
-              <div>
-                <strong>Score ATS em tempo real:</strong> Calculamos seu score de compatibilidade atual e mostramos exatamente
-                quais palavras-chave estão faltando.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold flex-shrink-0">
-                3
-              </div>
-              <div>
-                <strong>Otimização inteligente:</strong> Sugerimos como incluir naturalmente as palavras-chave que faltam,
-                sem soar forçado ou genérico.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold flex-shrink-0">
-                4
-              </div>
-              <div>
-                <strong>Comparação antes/depois:</strong> Veja a diferença entre seu currículo original e a versão otimizada,
-                com o aumento no score ATS.
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold flex-shrink-0">
-                5
-              </div>
-              <div>
-                <strong>Arquivo pronto para enviar:</strong> Geramos um .docx e .pdf otimizados, formatados de forma simples
-                para garantir parsing perfeito pelo ATS.
-              </div>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Section 6 — CTA */}
-      <Card className="border-primary">
-        <CardContent className="flex flex-col items-center gap-6 py-8 text-center">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Pronto para vencer o ATS?</h2>
-            <p className="text-muted-foreground max-w-2xl">
-              Deixe nossa IA analisar e otimizar seu currículo para a vaga dos seus sonhos.
-              Aumente suas chances de ser chamado para a entrevista.
-            </p>
-          </div>
-          <Button asChild size="lg" className="text-lg px-8">
-            <Link href="/dashboard">
-              Começar agora
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+        </section>
+      </div>
     </div>
   )
 }
