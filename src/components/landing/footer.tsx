@@ -3,7 +3,7 @@ import Link from "next/link"
 import Logo from "@/components/logo"
 
 const links = [
-  { label: "Precos", href: "/#pricing" },
+  { label: "Preços", href: "/#pricing" },
   { label: "Sobre", href: "/about" },
   { label: "Termos", href: "/terms" },
   { label: "Privacidade", href: "/privacy" },
@@ -11,9 +11,9 @@ const links = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-border/60 bg-background py-8">
+    <footer className="py-8 border-t border-border">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <Logo size="sm" />
 
           <nav className="flex items-center gap-6">
@@ -21,7 +21,7 @@ export default function Footer() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link.label}
               </Link>

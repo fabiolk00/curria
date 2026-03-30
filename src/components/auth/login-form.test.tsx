@@ -115,7 +115,7 @@ describe("LoginForm", () => {
     await user.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByText("E-mail invalido")).toBeInTheDocument()
+      expect(screen.getByText("E-mail inválido")).toBeInTheDocument()
     })
   })
 
