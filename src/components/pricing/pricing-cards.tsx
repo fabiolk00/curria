@@ -28,8 +28,6 @@ const plans = [
 ]
 
 const CHECKOUT_ERROR_MESSAGE = "Nao foi possivel iniciar o checkout. Tente novamente."
-const CHECKOUT_RETRY_DELAY_MS = 750
-
 type CheckoutPlan = typeof plans[number]["slug"]
 
 type CheckoutAttemptResult =
@@ -62,12 +60,6 @@ function getCheckoutErrorMessage(payload: unknown): string {
   }
 
   return CHECKOUT_ERROR_MESSAGE
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms)
-  })
 }
 
 export default function PricingCards() {
@@ -133,7 +125,6 @@ export default function PricingCards() {
       let result = await requestCheckout(plan)
 
       if (result.kind !== "success" && (result.kind === "unauthorized" || result.retryable)) {
-        await sleep(CHECKOUT_RETRY_DELAY_MS)
         result = await requestCheckout(plan)
       }
 
