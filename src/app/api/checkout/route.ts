@@ -19,15 +19,26 @@ const BodySchema = z.object({
 })
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const appUser = await getCurrentAppUser()
-  if (!appUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const body = BodySchema.safeParse(await req.json())
-  if (!body.success) return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
-
   let checkoutReference: string | null = null
 
   try {
+    const appUser = await getCurrentAppUser()
+    if (!appUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let rawBody: unknown
+    try {
+      rawBody = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
+    const body = BodySchema.safeParse(rawBody)
+    if (!body.success) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
     const plan = getPlan(body.data.plan)
     if (!plan || plan.price <= 0) {
       return NextResponse.json({ error: 'Invalid paid plan' }, { status: 400 })
@@ -57,10 +68,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ url })
   } catch (err) {
     if (checkoutReference) {
-      await markCheckoutFailed(
-        checkoutReference,
-        err instanceof Error ? err.message : 'Unknown checkout error',
-      )
+      try {
+        await markCheckoutFailed(
+          checkoutReference,
+          err instanceof Error ? err.message : 'Unknown checkout error',
+        )
+      } catch (markCheckoutFailedError) {
+        console.error('[api/checkout] failed to mark checkout failed', markCheckoutFailedError)
+      }
     }
 
     console.error('[api/checkout]', err)

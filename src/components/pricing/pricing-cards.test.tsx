@@ -7,21 +7,27 @@ import React from 'react'
 import PricingCards from './pricing-cards'
 
 const {
+  mockToastError,
   mockPush,
   mockReplace,
   mockSearchParamsGet,
   mockNavigateToUrl,
+  mockFetch,
 } = vi.hoisted(() => ({
+  mockToastError: vi.fn(),
   mockPush: vi.fn(),
   mockReplace: vi.fn(),
   mockSearchParamsGet: vi.fn(),
   mockNavigateToUrl: vi.fn(),
+  mockFetch: vi.fn(),
 }))
 
+let mockIsLoaded = true
 let mockIsSignedIn = false
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({
+    isLoaded: mockIsLoaded,
     isSignedIn: mockIsSignedIn,
   }),
 }))
@@ -40,12 +46,29 @@ vi.mock('@/lib/navigation/external', () => ({
   navigateToUrl: mockNavigateToUrl,
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    error: mockToastError,
+  },
+}))
+
 describe('PricingCards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsLoaded = true
     mockIsSignedIn = false
     mockSearchParamsGet.mockReturnValue(null)
-    vi.stubGlobal('fetch', vi.fn())
+    vi.stubGlobal('fetch', mockFetch)
+  })
+
+  it('disables checkout buttons while Clerk auth is still loading', () => {
+    mockIsLoaded = false
+
+    render(<PricingCards />)
+
+    for (const button of screen.getAllByRole('button', { name: /Come.*agora/i })) {
+      expect(button).toBeDisabled()
+    }
   })
 
   it('redirects signed-out users to signup with the selected checkout plan', async () => {
@@ -61,11 +84,11 @@ describe('PricingCards', () => {
 
   it('redirects signed-in users to the checkout url returned by the API', async () => {
     mockIsSignedIn = true
-    vi.mocked(fetch).mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ url: 'https://sandbox.asaas.com/payment-link/test' }),
-    } as Response)
+    })
     const user = userEvent.setup()
 
     render(<PricingCards />)
@@ -73,7 +96,7 @@ describe('PricingCards', () => {
     await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[1])
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
+      expect(mockFetch).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
         method: 'POST',
       }))
     })
@@ -88,11 +111,11 @@ describe('PricingCards', () => {
     mockSearchParamsGet.mockImplementation((key: string) => (
       key === 'checkoutPlan' ? 'pro' : null
     ))
-    vi.mocked(fetch).mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ url: 'https://sandbox.asaas.com/subscription/test' }),
-    } as Response)
+    })
 
     render(<PricingCards />)
 
@@ -101,7 +124,7 @@ describe('PricingCards', () => {
     })
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
+      expect(mockFetch).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ plan: 'pro' }),
       }))
@@ -109,6 +132,115 @@ describe('PricingCards', () => {
 
     await waitFor(() => {
       expect(mockNavigateToUrl).toHaveBeenCalledWith('https://sandbox.asaas.com/subscription/test')
+    })
+  })
+
+  it('retries once after a transient server error and then redirects to checkout', async () => {
+    mockIsSignedIn = true
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal server error' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ url: 'https://sandbox.asaas.com/payment-link/retry-success' }),
+      })
+    const user = userEvent.setup()
+
+    render(<PricingCards />)
+
+    await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[0])
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockNavigateToUrl).toHaveBeenCalledWith('https://sandbox.asaas.com/payment-link/retry-success')
+    })
+
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it('redirects to login after a repeated unauthorized response', async () => {
+    mockIsSignedIn = true
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      })
+    const user = userEvent.setup()
+
+    render(<PricingCards />)
+
+    await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[1])
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockPush).toHaveBeenCalledWith('/login?redirect_to=%2Fpricing%3FcheckoutPlan%3Dmonthly')
+    })
+
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it('shows a toast when checkout keeps failing with a server error', async () => {
+    mockIsSignedIn = true
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal server error' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal server error' }),
+      })
+    const user = userEvent.setup()
+
+    render(<PricingCards />)
+
+    await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[2])
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockToastError).toHaveBeenCalledWith('Nao foi possivel iniciar o checkout. Tente novamente.')
+    })
+
+    expect(mockNavigateToUrl).not.toHaveBeenCalled()
+  })
+
+  it('shows a generic toast when the checkout API returns malformed JSON', async () => {
+    mockIsSignedIn = true
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('invalid json')
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('invalid json')
+        },
+      })
+    const user = userEvent.setup()
+
+    render(<PricingCards />)
+
+    await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[0])
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Nao foi possivel iniciar o checkout. Tente novamente.')
     })
   })
 })

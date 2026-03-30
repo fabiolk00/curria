@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,25 +27,54 @@ const plans = [
   },
 ]
 
+const CHECKOUT_ERROR_MESSAGE = "Nao foi possivel iniciar o checkout. Tente novamente."
+
+type CheckoutPlan = typeof plans[number]["slug"]
+
+type CheckoutAttemptResult =
+  | { kind: "success"; url: string }
+  | { kind: "unauthorized" }
+  | { kind: "error"; message: string; retryable: boolean }
+
+function getCheckoutRedirectPath(plan: CheckoutPlan): string {
+  return `/pricing?checkoutPlan=${plan}`
+}
+
+function getLoginRedirectPath(plan: CheckoutPlan): string {
+  return `/login?redirect_to=${encodeURIComponent(getCheckoutRedirectPath(plan))}`
+}
+
+function getSignupRedirectPath(plan: CheckoutPlan): string {
+  return `/signup?redirect_to=${encodeURIComponent(getCheckoutRedirectPath(plan))}`
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function getCheckoutErrorMessage(payload: unknown): string {
+  if (isRecord(payload) && typeof payload.error === "string") {
+    const message = payload.error.trim()
+    if (message && message !== "Internal server error" && message !== "Unauthorized") {
+      return message
+    }
+  }
+
+  return CHECKOUT_ERROR_MESSAGE
+}
+
 export default function PricingCards() {
-  const { isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState<string | null>(null)
   const autoCheckoutStartedRef = useRef(false)
 
-  const redirectToAuth = (plan: 'unit' | 'monthly' | 'pro') => {
-    const redirectTo = `/pricing?checkoutPlan=${plan}`
-    router.push(`/signup?redirect_to=${encodeURIComponent(redirectTo)}`)
+  const redirectToAuth = (plan: CheckoutPlan) => {
+    router.push(getSignupRedirectPath(plan))
   }
 
-  const handleCheckout = async (plan: 'unit' | 'monthly' | 'pro') => {
-    if (!isSignedIn) {
-      redirectToAuth(plan)
-      return
-    }
-
-    setLoading(plan)
+  const requestCheckout = async (plan: CheckoutPlan): Promise<CheckoutAttemptResult> => {
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -52,22 +82,64 @@ export default function PricingCards() {
         body: JSON.stringify({ plan }),
       })
 
+      let payload: unknown = null
+      try {
+        payload = await res.json()
+      } catch {
+        payload = null
+      }
+
+      if (res.ok && isRecord(payload) && typeof payload.url === "string" && payload.url.length > 0) {
+        return { kind: "success", url: payload.url }
+      }
+
       if (res.status === 401) {
-        router.push(`/login?redirect_to=${encodeURIComponent(`/pricing?checkoutPlan=${plan}`)}`)
+        return { kind: "unauthorized" }
+      }
+
+      return {
+        kind: "error",
+        message: getCheckoutErrorMessage(payload),
+        retryable: res.status >= 500,
+      }
+    } catch {
+      return {
+        kind: "error",
+        message: CHECKOUT_ERROR_MESSAGE,
+        retryable: true,
+      }
+    }
+  }
+
+  const handleCheckout = async (plan: CheckoutPlan) => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!isSignedIn) {
+      redirectToAuth(plan)
+      return
+    }
+
+    setLoading(plan)
+    try {
+      let result = await requestCheckout(plan)
+
+      if (result.kind !== "success" && (result.kind === "unauthorized" || result.retryable)) {
+        result = await requestCheckout(plan)
+      }
+
+      if (result.kind === "success") {
+        navigateToUrl(result.url)
         return
       }
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Checkout failed')
+      if (result.kind === "unauthorized") {
+        router.push(getLoginRedirectPath(plan))
+        return
       }
 
-      if (data.url) {
-        navigateToUrl(data.url)
-      }
-    } catch (err) {
-      console.error('Checkout error:', err)
+      toast.error(result.message)
     } finally {
       setLoading(null)
     }
@@ -75,7 +147,7 @@ export default function PricingCards() {
 
   useEffect(() => {
     const checkoutPlan = searchParams.get('checkoutPlan')
-    if (!isSignedIn || autoCheckoutStartedRef.current || !checkoutPlan) {
+    if (!isLoaded || !isSignedIn || autoCheckoutStartedRef.current || !checkoutPlan) {
       return
     }
 
@@ -86,7 +158,7 @@ export default function PricingCards() {
     autoCheckoutStartedRef.current = true
     router.replace('/pricing')
     void handleCheckout(checkoutPlan)
-  }, [isSignedIn, router, searchParams])
+  }, [isLoaded, isSignedIn, router, searchParams])
 
   return (
     <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -130,7 +202,7 @@ export default function PricingCards() {
                 className="w-full"
                 variant={plan.popular ? "default" : "outline"}
                 onClick={() => handleCheckout(plan.slug)}
-                disabled={loading !== null}
+                disabled={!isLoaded || loading !== null}
               >
                 {loading === plan.slug ? (
                   <>

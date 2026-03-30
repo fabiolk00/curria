@@ -95,6 +95,34 @@ describe('checkout route billing sequencing', () => {
     expect(markCheckoutFailed).toHaveBeenCalledWith('chk_123', 'asaas down')
   })
 
+  it('returns unauthorized when no active app user is available', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValueOnce(null)
+
+    const response = await POST(new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ plan: 'monthly' }),
+    }))
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(createCheckoutRecordPending).not.toHaveBeenCalled()
+  })
+
+  it('returns a json error when resolving the app user throws', async () => {
+    vi.mocked(getCurrentAppUser).mockRejectedValueOnce(new Error('bootstrap failed'))
+
+    const response = await POST(new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ plan: 'monthly' }),
+    }))
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Internal server error' })
+    expect(markCheckoutFailed).not.toHaveBeenCalled()
+  })
+
   it('marks the checkout failed when persisting the created state fails after Asaas succeeds', async () => {
     vi.mocked(markCheckoutCreated).mockRejectedValueOnce(new Error('failed to mark created'))
 
