@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { useSignIn } from "@clerk/nextjs"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { getSafeRedirectPath } from "@/lib/auth/redirects"
+import { navigateToUrl } from "@/lib/navigation/external"
 import Logo from "@/components/logo"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 
@@ -25,7 +26,6 @@ type FormData = z.infer<typeof schema>
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const { signIn, isLoaded } = useSignIn()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = getSafeRedirectPath(searchParams.get('redirect_to'))
   const { register, handleSubmit, formState: { errors, isSubmitting }, setError } = useForm<FormData>({
@@ -50,7 +50,7 @@ export default function LoginForm() {
     try {
       const result = await signIn.create({ identifier: data.email, password: data.password })
       if (result.status === 'complete') {
-        router.push(redirectTo)
+        navigateToUrl(redirectTo)
       }
     } catch (err: unknown) {
       const message = (err as { errors?: { message: string }[] })?.errors?.[0]?.message ?? 'Erro ao entrar. Tente novamente.'

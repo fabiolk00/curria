@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { useSignUp } from "@clerk/nextjs"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getSafeRedirectPath } from "@/lib/auth/redirects"
+import { navigateToUrl } from "@/lib/navigation/external"
 import Logo from "@/components/logo"
 import { AlertCircle, Eye, EyeOff, Loader2, Mail } from "lucide-react"
 
@@ -56,7 +57,6 @@ export default function SignupForm() {
   const [step, setStep] = useState<'signup' | 'verify'>('signup')
   const [showPassword, setShowPassword] = useState(false)
   const { signUp, isLoaded, setActive } = useSignUp()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = getSafeRedirectPath(searchParams.get('redirect_to'))
 
@@ -112,7 +112,7 @@ export default function SignupForm() {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
-        router.push(redirectTo)
+        navigateToUrl(redirectTo)
       }
     } catch (err: unknown) {
       const message =

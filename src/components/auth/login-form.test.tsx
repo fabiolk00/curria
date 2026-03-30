@@ -5,10 +5,15 @@ import '@testing-library/jest-dom'
 import React from 'react'
 import LoginForm from './login-form'
 
-// Mock Clerk hooks
-const mockSignIn = vi.fn()
-const mockPush = vi.fn()
-const mockSearchParamsGet = vi.fn()
+const {
+  mockSignIn,
+  mockNavigateToUrl,
+  mockSearchParamsGet,
+} = vi.hoisted(() => ({
+  mockSignIn: vi.fn(),
+  mockNavigateToUrl: vi.fn(),
+  mockSearchParamsGet: vi.fn(),
+}))
 
 vi.mock('@clerk/nextjs', () => ({
   useSignIn: () => ({
@@ -20,12 +25,13 @@ vi.mock('@clerk/nextjs', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
+}))
+
+vi.mock('@/lib/navigation/external', () => ({
+  navigateToUrl: mockNavigateToUrl,
 }))
 
 vi.mock('@/components/logo', () => ({
@@ -76,7 +82,7 @@ describe('LoginForm', () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+      expect(mockNavigateToUrl).toHaveBeenCalledWith('/dashboard')
     })
   })
 
@@ -94,7 +100,7 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /^entrar$/i }))
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
+      expect(mockNavigateToUrl).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
     })
   })
 

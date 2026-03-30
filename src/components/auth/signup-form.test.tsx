@@ -6,12 +6,21 @@ import React from 'react'
 
 import SignupForm from './signup-form'
 
-const mockCreate = vi.fn()
-const mockPrepareEmailAddressVerification = vi.fn()
-const mockAttemptEmailAddressVerification = vi.fn()
-const mockSetActive = vi.fn()
-const mockPush = vi.fn()
-const mockSearchParamsGet = vi.fn()
+const {
+  mockCreate,
+  mockPrepareEmailAddressVerification,
+  mockAttemptEmailAddressVerification,
+  mockSetActive,
+  mockNavigateToUrl,
+  mockSearchParamsGet,
+} = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+  mockPrepareEmailAddressVerification: vi.fn(),
+  mockAttemptEmailAddressVerification: vi.fn(),
+  mockSetActive: vi.fn(),
+  mockNavigateToUrl: vi.fn(),
+  mockSearchParamsGet: vi.fn(),
+}))
 
 vi.mock('@clerk/nextjs', () => ({
   useSignUp: () => ({
@@ -27,12 +36,13 @@ vi.mock('@clerk/nextjs', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
+}))
+
+vi.mock('@/lib/navigation/external', () => ({
+  navigateToUrl: mockNavigateToUrl,
 }))
 
 vi.mock('@/components/logo', () => ({
@@ -75,7 +85,7 @@ describe('SignupForm', () => {
 
     await waitFor(() => {
       expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_123' })
-      expect(mockPush).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
+      expect(mockNavigateToUrl).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
     })
   })
 })
