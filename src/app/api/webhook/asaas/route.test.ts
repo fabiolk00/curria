@@ -36,7 +36,7 @@ function createRequest(payload: unknown, token = 'test-token'): NextRequest {
 describe('Asaas webhook route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.ASAAS_ACCESS_TOKEN = 'test-token'
+    process.env.ASAAS_WEBHOOK_TOKEN = 'test-token'
     vi.mocked(getProcessedEvent).mockResolvedValue(false)
     vi.mocked(handlePaymentReceived).mockResolvedValue('processed')
     vi.mocked(handleSubscriptionCreated).mockResolvedValue('processed')
