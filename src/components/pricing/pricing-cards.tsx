@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -77,11 +77,11 @@ export default function PricingCards() {
   const [loading, setLoading] = useState<string | null>(null)
   const autoCheckoutStartedRef = useRef(false)
 
-  const redirectToAuth = (plan: CheckoutPlan) => {
+  const redirectToAuth = useCallback((plan: CheckoutPlan) => {
     router.push(getSignupRedirectPath(plan))
-  }
+  }, [router])
 
-  const requestCheckout = async (plan: CheckoutPlan): Promise<CheckoutAttemptResult> => {
+  const requestCheckout = useCallback(async (plan: CheckoutPlan): Promise<CheckoutAttemptResult> => {
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -116,9 +116,9 @@ export default function PricingCards() {
         retryable: true,
       }
     }
-  }
+  }, [])
 
-  const handleCheckout = async (plan: CheckoutPlan) => {
+  const handleCheckout = useCallback(async (plan: CheckoutPlan) => {
     if (!isLoaded) {
       return
     }
@@ -151,7 +151,7 @@ export default function PricingCards() {
     } finally {
       setLoading(null)
     }
-  }
+  }, [isLoaded, isSignedIn, redirectToAuth, requestCheckout, router])
 
   useEffect(() => {
     const checkoutPlan = searchParams.get('checkoutPlan')
@@ -166,7 +166,7 @@ export default function PricingCards() {
     autoCheckoutStartedRef.current = true
     router.replace('/pricing')
     void handleCheckout(checkoutPlan)
-  }, [isLoaded, isSignedIn, router, searchParams])
+  }, [handleCheckout, isLoaded, isSignedIn, router, searchParams])
 
   return (
     <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
