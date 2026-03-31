@@ -9,8 +9,49 @@ type UserQuotaOwnerRow = {
   user_id: string
 }
 
+type UserQuotaBillingRow = {
+  plan: string | null
+  renews_at: string | null
+  status: string | null
+  asaas_subscription_id: string | null
+}
+
+export type BillingStatus = 'active' | 'canceled' | 'past_due'
+
+export type UserBillingInfo = {
+  plan: PlanSlug
+  creditsRemaining: number
+  maxCredits: number
+  renewsAt: string | null
+  status: BillingStatus | null
+  asaasSubscriptionId: string | null
+  hasActiveRecurringSubscription: boolean
+}
+
+export type ActiveRecurringSubscription = {
+  plan: 'monthly' | 'pro'
+  asaasSubscriptionId: string
+  renewsAt: string | null
+}
+
 function buildCreditAccountId(appUserId: string): string {
   return `cred_${appUserId}`
+}
+
+function resolvePlanSlug(value: string | null): PlanSlug | null {
+  if (!value) {
+    return null
+  }
+
+  return value in PLANS ? (value as PlanSlug) : null
+}
+
+function normalizeBillingStatus(value: string | null): BillingStatus | null {
+  if (value === 'active' || value === 'canceled' || value === 'past_due') {
+    return value
+  }
+
+  return null
 }
 
 async function setCreditBalance(appUserId: string, creditsRemaining: number): Promise<void> {
@@ -88,7 +129,7 @@ export async function consumeCredit(appUserId: string): Promise<boolean> {
         credits_remaining: quotaData.credits_remaining - 1,
       })
       .eq('user_id', appUserId)
-      .eq('credits_remaining', quotaData.credits_remaining)  // Optimistic lock: only update if value hasn't changed
+      .eq('credits_remaining', quotaData.credits_remaining)
       .select('credits_remaining')
 
     // If no data returned, credits changed between read and write (race condition detected)
@@ -136,4 +177,85 @@ export async function checkUserQuota(appUserId: string): Promise<boolean> {
 
   if (!data) return false
   return data.credits_remaining > 0
+}
+
+export async function getActiveRecurringSubscription(
+  appUserId: string,
+): Promise<ActiveRecurringSubscription | null> {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('user_quotas')
+    .select('plan, renews_at, status, asaas_subscription_id')
+    .eq('user_id', appUserId)
+    .maybeSingle<UserQuotaBillingRow>()
+
+  if (error) {
+    throw new Error(`Failed to load recurring subscription state: ${error.message}`)
+  }
+
+  const plan = resolvePlanSlug(data?.plan ?? null)
+  const status = normalizeBillingStatus(data?.status ?? null)
+
+  if (!plan || PLANS[plan].billing !== 'monthly' || status !== 'active' || !data?.asaas_subscription_id) {
+    return null
+  }
+
+  if (plan !== 'monthly' && plan !== 'pro') {
+    return null
+  }
+
+  return {
+    plan,
+    asaasSubscriptionId: data.asaas_subscription_id,
+    renewsAt: data.renews_at,
+  }
+}
+
+export async function getUserBillingInfo(appUserId: string): Promise<UserBillingInfo | null> {
+  const supabase = getSupabaseAdminClient()
+  const [quotaResult, creditResult] = await Promise.all([
+    supabase
+      .from('user_quotas')
+      .select('plan, renews_at, status, asaas_subscription_id')
+      .eq('user_id', appUserId)
+      .maybeSingle<UserQuotaBillingRow>(),
+    supabase
+      .from('credit_accounts')
+      .select('credits_remaining')
+      .eq('user_id', appUserId)
+      .maybeSingle<CreditAccountRow>(),
+  ])
+
+  if (quotaResult.error) {
+    throw new Error(`Failed to load billing metadata: ${quotaResult.error.message}`)
+  }
+
+  if (creditResult.error) {
+    throw new Error(`Failed to load credit balance: ${creditResult.error.message}`)
+  }
+
+  const quotaData = quotaResult.data
+  const creditData = creditResult.data
+  const plan = resolvePlanSlug(quotaData?.plan ?? null)
+
+  if (!plan || !quotaData || !creditData) {
+    return null
+  }
+
+  const status = normalizeBillingStatus(quotaData.status)
+  const hasActiveRecurringSubscription =
+    PLANS[plan].billing === 'monthly' &&
+    status === 'active' &&
+    typeof quotaData.asaas_subscription_id === 'string' &&
+    quotaData.asaas_subscription_id.length > 0
+
+  return {
+    plan,
+    creditsRemaining: creditData.credits_remaining,
+    maxCredits: PLANS[plan].credits,
+    renewsAt: quotaData.renews_at,
+    status,
+    asaasSubscriptionId: quotaData.asaas_subscription_id,
+    hasActiveRecurringSubscription,
+  }
 }

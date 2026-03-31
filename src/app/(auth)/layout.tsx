@@ -2,6 +2,8 @@ import React from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import DashboardShell from '@/components/dashboard/dashboard-shell'
+import { formatRenewalCountdown } from '@/lib/asaas/billing-display'
+import { getUserBillingInfo } from '@/lib/asaas/quota'
 
 export const metadata = {
   title: 'Dashboard - CurrIA',
@@ -16,5 +18,24 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/login')
   }
 
-  return <DashboardShell>{children}</DashboardShell>
+  let billingInfo = null
+  try {
+    billingInfo = await getUserBillingInfo(appUser.id)
+  } catch (error) {
+    console.error('[auth-layout] failed to load billing info', error)
+  }
+
+  const renewsIn = billingInfo?.hasActiveRecurringSubscription
+    ? formatRenewalCountdown(billingInfo.renewsAt)
+    : null
+
+  return (
+    <DashboardShell
+      creditsRemaining={billingInfo?.creditsRemaining}
+      maxCredits={billingInfo?.maxCredits}
+      renewsIn={renewsIn}
+    >
+      {children}
+    </DashboardShell>
+  )
 }

@@ -72,6 +72,7 @@ describe('billing credit grants', () => {
       p_event_fingerprint: 'fp_123',
       p_event_type: 'PAYMENT_RECEIVED',
       p_event_payload: event,
+      p_is_renewal: false,
     })
   })
 
@@ -262,5 +263,64 @@ describe('billing credit grants', () => {
     })).rejects.toThrow(
       'Failed to update subscription metadata: User quota record not found for subscription sub_missing',
     )
+  })
+
+  it('carries over remaining credits when upgrading plans (plan change)', async () => {
+    const event = {
+      event: 'PAYMENT_RECEIVED' as const,
+      amount: 3990,
+      payment: {
+        id: 'pay_upgrade',
+        externalReference: 'curria:v1:c:chk_upgrade',
+        subscription: null,
+        amount: 3990,
+      },
+    }
+
+    await grantCreditsForEvent({
+      appUserId: 'usr_123',
+      eventFingerprint: 'fp_upgrade',
+      eventPayload: event,
+      plan: 'monthly',
+      amountMinor: 3990,
+      checkoutReference: 'chk_upgrade',
+      reason: 'payment_received',
+    })
+
+    // Should call RPC with p_is_renewal = false to enable carryover
+    expect(rpc).toHaveBeenCalledWith('apply_billing_credit_grant_event', expect.objectContaining({
+      p_is_renewal: false,
+      p_plan: 'monthly',
+      p_credits: PLANS.monthly.credits,
+    }))
+  })
+
+  it('replaces credits on subscription renewal (no carryover)', async () => {
+    const event = {
+      event: 'SUBSCRIPTION_RENEWED' as const,
+      amount: 3990,
+      subscription: {
+        id: 'sub_123',
+        externalReference: 'usr_123',
+        nextDueDate: '2026-05-29',
+      },
+    }
+
+    await grantCreditsForEvent({
+      appUserId: 'usr_123',
+      eventFingerprint: 'fp_renewal',
+      eventPayload: event,
+      plan: 'monthly',
+      asaasSubscriptionId: 'sub_123',
+      renewsAt: '2026-05-29',
+      reason: 'subscription_renewed',
+    })
+
+    // Should call RPC with p_is_renewal = true to replace balance
+    expect(rpc).toHaveBeenCalledWith('apply_billing_credit_grant_event', expect.objectContaining({
+      p_is_renewal: true,
+      p_plan: 'monthly',
+      p_credits: PLANS.monthly.credits,
+    }))
   })
 })

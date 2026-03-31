@@ -78,7 +78,8 @@ CREATE OR REPLACE FUNCTION apply_billing_credit_grant_event(
   p_status TEXT DEFAULT 'active',
   p_event_fingerprint TEXT DEFAULT NULL,
   p_event_type TEXT DEFAULT NULL,
-  p_event_payload JSONB DEFAULT NULL
+  p_event_payload JSONB DEFAULT NULL,
+  p_is_renewal BOOLEAN DEFAULT FALSE
 )
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -143,7 +144,10 @@ BEGIN
     END IF;
   END IF;
 
-  IF p_asaas_subscription_id IS NOT NULL THEN
+  -- For SUBSCRIPTION_RENEWED and SUBSCRIPTION_CANCELED, validate the subscription already exists.
+  -- For SUBSCRIPTION_CREATED, trust the checkout record and let the upsert persist the new subscription.
+  IF p_asaas_subscription_id IS NOT NULL
+    AND p_event_type NOT IN ('SUBSCRIPTION_CREATED') THEN
     SELECT plan
     INTO v_user_plan
     FROM user_quotas
@@ -172,7 +176,13 @@ BEGIN
     RAISE EXCEPTION 'Negative existing balance detected for user %', p_app_user_id;
   END IF;
 
-  v_new_balance := COALESCE(v_current_balance, 0) + p_credits;
+  -- For subscription renewals: replace the balance with the plan credits
+  -- For plan changes/initial purchases: add to existing balance (carryover)
+  IF p_is_renewal THEN
+    v_new_balance := p_credits;
+  ELSE
+    v_new_balance := COALESCE(v_current_balance, 0) + p_credits;
+  END IF;
 
   IF v_new_balance < 0 THEN
     RAISE WARNING 'Anomaly: credit grant would result in negative balance for user % (% -> %).',
@@ -399,7 +409,8 @@ GRANT EXECUTE ON FUNCTION apply_billing_credit_grant_event(
   TEXT,
   TEXT,
   TEXT,
-  JSONB
+  JSONB,
+  BOOLEAN
 ) TO authenticated;
 
 GRANT EXECUTE ON FUNCTION apply_billing_credit_grant_event(
@@ -413,7 +424,8 @@ GRANT EXECUTE ON FUNCTION apply_billing_credit_grant_event(
   TEXT,
   TEXT,
   TEXT,
-  JSONB
+  JSONB,
+  BOOLEAN
 ) TO service_role;
 
 GRANT EXECUTE ON FUNCTION apply_billing_subscription_metadata_event(

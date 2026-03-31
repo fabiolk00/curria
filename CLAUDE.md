@@ -19,6 +19,20 @@ This file is the project source of truth for system architecture and engineering
   - `docs/openai-portuguese-quality-gate.md`
   - `docs/portuguese-quality-test-results.md`
 
+## Credit Carryover Behavior
+
+- When users change plans, remaining credits are **preserved and added** to the new plan credits.
+- When monthly subscriptions **renew**, credits are **replaced** (not added) with the plan's credit allocation.
+- **Implementation**: The application code in `src/lib/asaas/credit-grants.ts` detects the event type and sets the `p_is_renewal` parameter sent to the RPC. The RPC then applies the appropriate logic.
+- See `docs/billing-implementation.md` for detailed logic and examples.
+
+## Plan Change Restrictions
+
+- Users with an active monthly subscription cannot contract a second monthly plan in the same transaction
+- This prevents creating duplicate active subscriptions in Asaas
+- Users must cancel their current monthly plan first before purchasing a different monthly plan
+- This restriction is enforced at both the UI (dialog) and API (`/api/checkout`) layers
+
 ## Core Architecture
 
 ### Identity model

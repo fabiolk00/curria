@@ -307,7 +307,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
 **Expected DB State:**
 ```sql
 SELECT * FROM credit_accounts WHERE user_id = 'usr_staging_001';
--- Expected: credits_remaining = 45 (was 25 + 20 from renewal)
+-- Expected: credits_remaining = 20 (renewal replaces the previous balance with the monthly allocation)
 
 SELECT * FROM user_quotas WHERE user_id = 'usr_staging_001';
 -- Expected:
@@ -323,7 +323,7 @@ WHERE asaas_subscription_id = 'sub_staging_001';
 
 **Critical Validations:**
 - ✅ Renewal does NOT use billing_checkouts for trust (uses user_quotas.asaas_subscription_id)
-- ✅ Credits additive: 25 + 20 = 45
+- ✅ Credits are replaced on renewal: 20
 - ✅ renews_at updated to new renewal date
 - ✅ Checkout row untouched by renewal
 
@@ -342,12 +342,12 @@ Send the same renewal again:
 **Expected DB State:**
 ```sql
 SELECT * FROM credit_accounts WHERE user_id = 'usr_staging_001';
--- Expected: credits_remaining = 45 (unchanged, no double-grant)
+-- Expected: credits_remaining = 20 (unchanged, no double-grant)
 ```
 
 **Critical Validations:**
 - ✅ Duplicate renewal is cached
-- ✅ Credits NOT doubled (45, not 65)
+- ✅ Credits NOT changed twice (20, not 40)
 
 ---
 
@@ -381,7 +381,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
 **Expected DB State:**
 ```sql
 SELECT * FROM credit_accounts WHERE user_id = 'usr_staging_001';
--- Expected: credits_remaining = 45 (unchanged - cancellation does NOT revoke)
+-- Expected: credits_remaining = 20 (unchanged - cancellation does NOT revoke)
 
 SELECT * FROM user_quotas WHERE user_id = 'usr_staging_001';
 -- Expected:
@@ -397,7 +397,7 @@ WHERE asaas_subscription_id = 'sub_staging_001';
 
 **Critical Validations:**
 - ✅ Cancellation is metadata-only (no credit change)
-- ✅ Credits preserved: 45
+- ✅ Credits preserved: 20
 - ✅ user_quotas.status = 'canceled'
 - ✅ renews_at cleared
 
@@ -582,7 +582,7 @@ WHERE checkout_reference = '<ref>';
 - [ ] Scenario 1: One-time payment (checkout → webhook → credits increase)
 - [ ] Scenario 1: Duplicate payment (cached, no double-grant)
 - [ ] Scenario 2: Subscription creation (checkout → webhook → subscription_id set)
-- [ ] Scenario 3: Renewal (no checkout lookup, credits additive)
+- [ ] Scenario 3: Renewal (no checkout lookup, credits replaced with plan allocation)
 - [ ] Scenario 3: Duplicate renewal (cached)
 - [ ] Scenario 4: Cancellation (metadata-only, credits preserved)
 - [ ] Scenario 5: Invalid reference (400, not 500)

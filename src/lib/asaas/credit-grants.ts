@@ -154,6 +154,10 @@ export async function grantCreditsForEvent(request: CreditGrantRequest): Promise
   }
 
   const supabase = getSupabaseAdminClient()
+  // For subscription renewals, replace the balance (p_is_renewal = true)
+  // For initial purchases and plan changes, add to existing balance (p_is_renewal = false, carryover)
+  const isRenewal = request.eventPayload.event === 'SUBSCRIPTION_RENEWED'
+
   const { data, error } = await supabase.rpc('apply_billing_credit_grant_event', {
     p_app_user_id: request.appUserId,
     p_plan: request.plan,
@@ -166,6 +170,7 @@ export async function grantCreditsForEvent(request: CreditGrantRequest): Promise
     p_event_fingerprint: request.eventFingerprint,
     p_event_type: request.eventPayload.event,
     p_event_payload: request.eventPayload,
+    p_is_renewal: isRenewal,
   })
 
   if (error) {

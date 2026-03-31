@@ -6,7 +6,19 @@ import Header from "@/components/landing/header"
 
 import { DashboardSidebar } from "./sidebar"
 
-export default function DashboardShell({ children }: { children: React.ReactNode }) {
+interface DashboardShellProps {
+  children: React.ReactNode
+  creditsRemaining?: number
+  maxCredits?: number
+  renewsIn?: string | null
+}
+
+export default function DashboardShell({
+  children,
+  creditsRemaining,
+  maxCredits,
+  renewsIn,
+}: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -20,7 +32,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         />
       )}
 
-      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DashboardSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        creditsRemaining={creditsRemaining}
+        maxCredits={maxCredits}
+        renewsIn={renewsIn ?? undefined}
+      />
 
       <main className="lg:ml-64">{children}</main>
     </div>

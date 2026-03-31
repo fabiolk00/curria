@@ -54,7 +54,7 @@ export const PLANS = {
     name: 'Pro',
     slug: 'pro',
     price: 6990, // centavos
-    credits: 40,
+    credits: 50,
     billing: 'monthly' as const,
     description: 'Para profissionais e recrutadores',
     features: [

@@ -52,7 +52,7 @@ Use these implementation rules when interpreting results:
 
 1. Initial paid events (`PAYMENT_RECEIVED`, `SUBSCRIPTION_CREATED`) resolve from `billing_checkouts`.
 2. Recurring events (`SUBSCRIPTION_RENEWED`, `SUBSCRIPTION_CANCELED`, `SUBSCRIPTION_DELETED`) resolve from `user_quotas.asaas_subscription_id`.
-3. Credits are additive, not reset-based.
+3. Initial paid events and allowed plan purchases are additive, but subscription renewals replace the balance with the renewed plan allocation.
 4. Cancellation is metadata-only and must not revoke credits.
 5. Duplicate protection exists at both the route layer and the SQL RPC layer.
 6. Partial-success is possible if the SQL RPC succeeds but checkout status marking fails afterward.
@@ -130,7 +130,7 @@ Verify these concrete outcomes:
    - `user_quotas.asaas_subscription_id` is set
    - checkout becomes `subscription_active`
 3. Scenario 3:
-   - renewal is additive
+   - renewal replaces the previous remaining balance with the renewed plan allocation
    - recurring trust comes from `user_quotas`
    - duplicate renewal is cached
 4. Scenario 4:

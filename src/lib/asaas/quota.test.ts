@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PLANS } from '@/lib/plans'
-import { checkUserQuota, consumeCredit, grantCredits, revokeSubscription } from './quota'
+import {
+  checkUserQuota,
+  consumeCredit,
+  getActiveRecurringSubscription,
+  getUserBillingInfo,
+  grantCredits,
+  revokeSubscription,
+} from './quota'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
 vi.mock('@/lib/db/supabase-admin', () => ({
@@ -10,12 +17,16 @@ vi.mock('@/lib/db/supabase-admin', () => ({
 
 const creditAccountUpsert = vi.fn()
 const creditAccountSingle = vi.fn()
+const creditAccountMaybeSingle = vi.fn()
 const creditAccountUpdateSelect = vi.fn()
 const userQuotaUpsert = vi.fn()
 const userQuotaUpdateEq = vi.fn()
 const userQuotaUpdate = vi.fn()
-const userQuotaSelectEq = vi.fn()
+const userQuotaSingle = vi.fn()
+const userQuotaMaybeSingle = vi.fn()
 const userQuotaSelect = vi.fn()
+const userQuotaEq = vi.fn()
+const creditAccountEq = vi.fn()
 
 const mockSupabase = {
   rpc: vi.fn(),
@@ -24,9 +35,7 @@ const mockSupabase = {
       return {
         upsert: creditAccountUpsert,
         select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: creditAccountSingle,
-          })),
+          eq: creditAccountEq,
         })),
         update: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -59,17 +68,37 @@ describe('quota credit source of truth', () => {
 
     creditAccountUpsert.mockResolvedValue({ error: null })
     creditAccountSingle.mockResolvedValue({ data: { credits_remaining: 3 } })
+    creditAccountMaybeSingle.mockResolvedValue({
+      data: { credits_remaining: 20 },
+      error: null,
+    })
     creditAccountUpdateSelect.mockResolvedValue({ data: [{ credits_remaining: 2 }], error: null })
     userQuotaUpsert.mockResolvedValue({ error: null })
     userQuotaUpdateEq.mockResolvedValue({ error: null })
     userQuotaUpdate.mockReturnValue({
       eq: userQuotaUpdateEq,
     })
-    userQuotaSelectEq.mockReturnValue({
-      returns: vi.fn().mockResolvedValue({ data: [{ user_id: 'usr_123' }], error: null }),
+    creditAccountEq.mockReturnValue({
+      single: creditAccountSingle,
+      maybeSingle: creditAccountMaybeSingle,
+    })
+    userQuotaSingle.mockResolvedValue({ data: { user_id: 'usr_123' } })
+    userQuotaMaybeSingle.mockResolvedValue({
+      data: {
+        plan: 'monthly',
+        renews_at: '2026-04-30T00:00:00.000Z',
+        status: 'active',
+        asaas_subscription_id: 'sub_123',
+      },
+      error: null,
     })
     userQuotaSelect.mockReturnValue({
-      eq: userQuotaSelectEq,
+      eq: userQuotaEq,
+    })
+    userQuotaEq.mockReturnValue({
+      returns: vi.fn().mockResolvedValue({ data: [{ user_id: 'usr_123' }], error: null }),
+      single: userQuotaSingle,
+      maybeSingle: userQuotaMaybeSingle,
     })
     mockSupabase.rpc.mockResolvedValue({ data: true, error: null })
   })
@@ -137,5 +166,42 @@ describe('quota credit source of truth', () => {
 
     expect(results.filter(Boolean)).toHaveLength(1)
     expect(creditAccountUpdateSelect).toHaveBeenCalledTimes(5)
+  })
+
+  it('returns the full billing view model when metadata and credits exist', async () => {
+    await expect(getUserBillingInfo('usr_123')).resolves.toEqual({
+      plan: 'monthly',
+      creditsRemaining: 20,
+      maxCredits: 20,
+      renewsAt: '2026-04-30T00:00:00.000Z',
+      status: 'active',
+      asaasSubscriptionId: 'sub_123',
+      hasActiveRecurringSubscription: true,
+    })
+  })
+
+  it('returns null for canceled recurring subscriptions in the active recurring lookup', async () => {
+    userQuotaMaybeSingle.mockResolvedValueOnce({
+      data: {
+        plan: 'monthly',
+        renews_at: null,
+        status: 'canceled',
+        asaas_subscription_id: 'sub_123',
+      },
+      error: null,
+    })
+
+    await expect(getActiveRecurringSubscription('usr_123')).resolves.toBeNull()
+  })
+
+  it('throws when billing metadata cannot load the credit balance', async () => {
+    creditAccountMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'credit lookup failed' },
+    })
+
+    await expect(getUserBillingInfo('usr_123')).rejects.toThrow(
+      'Failed to load credit balance: credit lookup failed',
+    )
   })
 })

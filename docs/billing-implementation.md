@@ -85,6 +85,53 @@ CurrIA billing is webhook-driven.
 - Does not revoke credits.
 - Updates subscription metadata only.
 
+## Credit Carryover and Renewal Logic
+
+### Carryover on Plan Change (Initial and Subscriptions)
+
+When a user changes plans—whether from a one-time purchase or upgrading/downgrading their subscription—remaining credits are preserved and **added** to the new plan's credit allocation.
+
+**Implementation**:
+- The RPC function `apply_billing_credit_grant_event` accepts a `p_is_renewal` parameter.
+- For `PAYMENT_RECEIVED` and `SUBSCRIPTION_CREATED` events: `p_is_renewal = FALSE` (default).
+  - Balance calculation: `new_balance = current_balance + plan.credits`
+  - This preserves unused credits from the previous plan.
+- Example:
+  - User on Unitário (3 credits) with 1 remaining.
+  - Upgrades to Mensal (20 credits).
+  - Result: 1 + 20 = 21 credits.
+
+### Replacement on Renewal (No Carryover)
+
+When a monthly subscription renews, credits are **replaced**, not added. This prevents unlimited credit accumulation and ensures predictable monthly allocations.
+
+**Implementation**:
+- For `SUBSCRIPTION_RENEWED` events: `p_is_renewal = TRUE`.
+  - Balance calculation: `new_balance = plan.credits` (no addition).
+  - Previous month's remaining balance is discarded.
+- Example:
+  - User on Mensal (20 credits) with 6 remaining from last month.
+  - Subscription renews.
+  - Result: Exactly 20 credits (previous 6 are discarded).
+
+### Implementation Details
+
+The `p_is_renewal` parameter is set by the application code in `src/lib/asaas/credit-grants.ts`:
+
+```typescript
+const isRenewal = request.eventPayload.event === 'SUBSCRIPTION_RENEWED'
+```
+
+This value is then passed to the RPC, which applies the correct logic:
+- `isRenewal = true`: Replace balance with plan credits (renewal)
+- `isRenewal = false`: Add to existing balance (plan change/purchase)
+
+### Operational Note
+
+- Users upgrading plans mid-cycle preserve their unused credits.
+- Subsequent renewals replace credits, not add to them.
+- The RPC behavior is controlled by application code setting the `p_is_renewal` parameter based on event type.
+
 ## externalReference Formats
 
 ### Standard v1

@@ -6,6 +6,8 @@ import SessionList from "@/components/dashboard/session-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PlanUpdateSection } from "@/components/dashboard/plan-update-section"
+import { getUserBillingInfo } from "@/lib/asaas/quota"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
 import { db } from "@/lib/db/sessions"
 import { PLANS } from "@/lib/plans"
@@ -32,6 +34,13 @@ export default async function SettingsPage() {
 
   if (!appUser) {
     return null
+  }
+
+  let billingInfo = null
+  try {
+    billingInfo = await getUserBillingInfo(appUser.id)
+  } catch (error) {
+    console.error("[settings-page] failed to load billing info", error)
   }
 
   const sessions = await db.getUserSessions(appUser.id, 4)
@@ -88,12 +97,19 @@ export default async function SettingsPage() {
                     Nova analise
                   </Button>
                 </form>
-                <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/pricing">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Ver planos
-                  </Link>
-                </Button>
+                {billingInfo ? (
+                  <PlanUpdateSection
+                    activeRecurringPlan={billingInfo.hasActiveRecurringSubscription ? billingInfo.plan : null}
+                    currentCredits={appUser.creditAccount.creditsRemaining}
+                  />
+                ) : (
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link href="/pricing">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Ver planos
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
 

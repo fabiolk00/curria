@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils"
 interface DashboardSidebarProps {
   isOpen?: boolean
   onClose?: () => void
+  creditsRemaining?: number
+  maxCredits?: number
+  renewsIn?: string
 }
 
 const navItems = [
@@ -36,9 +39,18 @@ const bottomItems = [
   },
 ]
 
-export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  isOpen,
+  onClose,
+  creditsRemaining,
+  maxCredits,
+  renewsIn,
+}: DashboardSidebarProps) {
   const pathname = usePathname()
   const { signOut } = useClerk()
+  const hasBillingData = maxCredits !== undefined && creditsRemaining !== undefined
+  const percentage =
+    hasBillingData && maxCredits > 0 ? (creditsRemaining / maxCredits) * 100 : 0
 
   return (
     <aside
@@ -80,17 +92,23 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         </ScrollArea>
 
         <div className="mt-auto border-t border-border px-3 py-4">
-          <div className="mb-4 space-y-2 px-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <Coins className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium">Creditos</span>
+          {hasBillingData ? (
+            <div className="mb-4 space-y-2 px-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-primary">
+                  <Coins className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm font-medium">Creditos</span>
+                </div>
+                <span className="text-xs font-bold">
+                  {creditsRemaining} / {maxCredits}
+                </span>
               </div>
-              <span className="text-xs font-bold">120 / 200</span>
+              <Progress value={percentage} className="h-2" />
+              {renewsIn && (
+                <p className="text-center text-[10px] text-muted-foreground">Reseta em {renewsIn}</p>
+              )}
             </div>
-            <Progress value={60} className="h-2" />
-            <p className="text-center text-[10px] text-muted-foreground">Reseta em 14 dias</p>
-          </div>
+          ) : null}
 
           <nav className="space-y-1">
             {bottomItems.map((item) => {

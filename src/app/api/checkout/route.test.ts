@@ -11,6 +11,7 @@ import {
   markCheckoutFailed,
 } from '@/lib/asaas/billing-checkouts'
 import { createCheckoutLink } from '@/lib/asaas/checkout'
+import { getActiveRecurringSubscription } from '@/lib/asaas/quota'
 
 vi.mock('@clerk/nextjs/server', () => ({
   currentUser: vi.fn(),
@@ -28,6 +29,10 @@ vi.mock('@/lib/asaas/billing-checkouts', () => ({
 
 vi.mock('@/lib/asaas/checkout', () => ({
   createCheckoutLink: vi.fn(),
+}))
+
+vi.mock('@/lib/asaas/quota', () => ({
+  getActiveRecurringSubscription: vi.fn(),
 }))
 
 describe('checkout route billing sequencing', () => {
@@ -61,6 +66,7 @@ describe('checkout route billing sequencing', () => {
       updatedAt: '2026-03-29T00:00:00.000Z',
     })
     vi.mocked(createCheckoutLink).mockResolvedValue('https://asaas.test/pay')
+    vi.mocked(getActiveRecurringSubscription).mockResolvedValue(null)
   })
 
   it('creates a pending record before calling Asaas and marks it created on success', async () => {
@@ -175,5 +181,64 @@ describe('checkout route billing sequencing', () => {
       'chk_123',
       'Invalid app user id for externalReference: invalid user id',
     )
+  })
+
+  it('blocks a new monthly checkout when the user already has an active recurring subscription', async () => {
+    vi.mocked(getActiveRecurringSubscription).mockResolvedValueOnce({
+      plan: 'monthly',
+      asaasSubscriptionId: 'sub_123',
+      renewsAt: '2026-04-30T00:00:00.000Z',
+    })
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plan: 'pro' }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error:
+        'Voce ja possui um plano mensal ativo. Cancele o plano atual antes de contratar outro plano mensal.',
+    })
+    expect(createCheckoutRecordPending).not.toHaveBeenCalled()
+    expect(createCheckoutLink).not.toHaveBeenCalled()
+  })
+
+  it('allows a new monthly checkout when the previous subscription is not active anymore', async () => {
+    vi.mocked(getActiveRecurringSubscription).mockResolvedValueOnce(null)
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+        body: JSON.stringify({ plan: 'pro' }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(createCheckoutRecordPending).toHaveBeenCalled()
+  })
+
+  it('fails closed when recurring subscription validation is unavailable', async () => {
+    vi.mocked(getActiveRecurringSubscription).mockRejectedValueOnce(
+      new Error('billing lookup unavailable'),
+    )
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plan: 'monthly' }),
+      }),
+    )
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: 'Nao foi possivel validar seu plano atual no momento. Tente novamente em instantes.',
+    })
+    expect(createCheckoutRecordPending).not.toHaveBeenCalled()
   })
 })

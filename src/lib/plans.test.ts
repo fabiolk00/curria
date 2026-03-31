@@ -6,7 +6,7 @@ describe('Plans', () => {
     expect(PLANS.free.credits).toBe(1)
     expect(PLANS.unit.credits).toBe(3)
     expect(PLANS.monthly.credits).toBe(20)
-    expect(PLANS.pro.credits).toBe(40)
+    expect(PLANS.pro.credits).toBe(50)
   })
 
   it('has correct prices in centavos', () => {

@@ -10,6 +10,7 @@ import {
 } from '@/lib/asaas/billing-checkouts'
 import { createCheckoutLink } from '@/lib/asaas/checkout'
 import { formatExternalReference } from '@/lib/asaas/external-reference'
+import { getActiveRecurringSubscription } from '@/lib/asaas/quota'
 import { getPlan } from '@/lib/plans'
 
 export const runtime = 'nodejs'
@@ -42,6 +43,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const plan = getPlan(body.data.plan)
     if (!plan || plan.price <= 0) {
       return NextResponse.json({ error: 'Invalid paid plan' }, { status: 400 })
+    }
+
+    if (plan.billing === 'monthly') {
+      let activeRecurringSubscription = null
+      try {
+        activeRecurringSubscription = await getActiveRecurringSubscription(appUser.id)
+      } catch (error) {
+        console.error('[api/checkout] failed to validate recurring subscription state', error)
+        return NextResponse.json(
+          {
+            error: 'Nao foi possivel validar seu plano atual no momento. Tente novamente em instantes.',
+          },
+          { status: 503 },
+        )
+      }
+
+      if (activeRecurringSubscription) {
+        return NextResponse.json(
+          {
+            error:
+              'Voce ja possui um plano mensal ativo. Cancele o plano atual antes de contratar outro plano mensal.',
+          },
+          { status: 400 },
+        )
+      }
     }
 
     let user = null
