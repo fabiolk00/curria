@@ -325,17 +325,17 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    user_record.id,
-    user_record.status,
-    user_record.created_at,
-    user_record.updated_at,
-    identity.id,
-    identity.provider,
-    identity.provider_subject,
-    account.id,
-    account.credits_remaining,
-    account.created_at,
-    account.updated_at
+    user_record.id::TEXT,
+    user_record.status::TEXT,
+    user_record.created_at::TIMESTAMPTZ,
+    user_record.updated_at::TIMESTAMPTZ,
+    identity.id::TEXT,
+    identity.provider::TEXT,
+    identity.provider_subject::TEXT,
+    account.id::TEXT,
+    account.credits_remaining::INTEGER,
+    account.created_at::TIMESTAMPTZ,
+    account.updated_at::TIMESTAMPTZ
   FROM users AS user_record
   JOIN user_auth_identities AS identity
     ON identity.user_id = user_record.id
