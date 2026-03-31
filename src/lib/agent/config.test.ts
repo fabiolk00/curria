@@ -17,27 +17,27 @@ describe('AGENT_CONFIG', () => {
   it('defines the supported model combinations', () => {
     expect(MODEL_COMBINATIONS).toEqual({
       combo_a: {
-        agent: 'gpt-4o-mini',
-        structured: 'gpt-4o-mini',
-        vision: 'gpt-4o-mini',
+        agent: 'gpt-5-nano',
+        structured: 'gpt-5-nano',
+        vision: 'gpt-5-nano',
       },
       combo_b: {
-        agent: 'gpt-4o',
-        structured: 'gpt-4o-mini',
-        vision: 'gpt-4o-mini',
+        agent: 'gpt-5-nano',
+        structured: 'gpt-5-nano',
+        vision: 'gpt-5-nano',
       },
       combo_c: {
-        agent: 'gpt-4-turbo',
-        structured: 'gpt-4-turbo',
-        vision: 'gpt-4-turbo',
+        agent: 'gpt-5-nano',
+        structured: 'gpt-5-nano',
+        vision: 'gpt-5-nano',
       },
     })
   })
 
-  it('falls back to combo_b for invalid OPENAI_MODEL_COMBO values', () => {
-    expect(resolveModelCombo(undefined)).toBe('combo_b')
+  it('falls back to combo_a for invalid OPENAI_MODEL_COMBO values', () => {
+    expect(resolveModelCombo(undefined)).toBe('combo_a')
     expect(resolveModelCombo('combo_b')).toBe('combo_b')
-    expect(resolveModelCombo('invalid')).toBe('combo_b')
+    expect(resolveModelCombo('invalid')).toBe('combo_a')
   })
 
   it('has maxMessagesPerSession set to 15', () => {

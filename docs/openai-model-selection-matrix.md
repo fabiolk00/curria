@@ -6,13 +6,18 @@ CurrIA already runs on OpenAI. The remaining question is which OpenAI model comb
 
 This document defines the bakeoff that compares three routing combinations across the same 10 resume samples.
 
+Current runtime note:
+- the live app is now pinned to `gpt-5-nano` for `agent`, `structured`, and `vision`
+- the `combo_a` / `combo_b` / `combo_c` names are currently retained only for environment compatibility
+- the matrix below is the historical evaluation framework, not the current production routing
+
 ## Current default
 
 The codebase currently defaults to `combo_a` in [config.ts](/c:/CurrIA/src/lib/agent/config.ts):
 
-- `agent`: `gpt-4o-mini`
-- `structured`: `gpt-4o-mini`
-- `vision`: `gpt-4o-mini`
+- `agent`: `gpt-5-nano`
+- `structured`: `gpt-5-nano`
+- `vision`: `gpt-5-nano`
 
 ## Combinations to test
 

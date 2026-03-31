@@ -4,6 +4,10 @@
 
 This document records the human-evaluated results of the Brazilian Portuguese quality gate for the OpenAI model-selection bakeoff.
 
+Current runtime note:
+- these results record the historical combo bakeoff
+- the live app is currently pinned to `gpt-5-nano` for the cheapest supported runtime path
+
 Use it together with:
 
 - [openai-portuguese-quality-gate.md](/c:/CurrIA/docs/openai-portuguese-quality-gate.md)

@@ -15,15 +15,15 @@ It focuses on:
 Current default routing from [config.ts](/c:/CurrIA/src/lib/agent/config.ts):
 
 - active combo: `combo_a`
-- `agent`: `gpt-4o-mini`
-- `structured`: `gpt-4o-mini`
-- `vision`: `gpt-4o-mini`
+- `agent`: `gpt-5-nano`
+- `structured`: `gpt-5-nano`
+- `vision`: `gpt-5-nano`
 
 Supported combinations:
 
-- `combo_a`: all `gpt-4o-mini`
-- `combo_b`: `gpt-4o` + `gpt-4o-mini` + `gpt-4o-mini`
-- `combo_c`: all `gpt-4-turbo`
+- `combo_a`: all `gpt-5-nano`
+- `combo_b`: all `gpt-5-nano`
+- `combo_c`: all `gpt-5-nano`
 
 ## Metric 1 - API usage by model
 
@@ -73,7 +73,7 @@ ORDER BY day DESC;
 ```
 
 Initial target:
-- expected monthly range: `$80-$160` at current usage assumptions
+- expected monthly range should be recalculated after the cheaper `gpt-5-nano` rollout settles in production
 
 Alert:
 - investigate if the 3-day average projects materially above the expected range

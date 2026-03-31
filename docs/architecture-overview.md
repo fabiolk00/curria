@@ -5,7 +5,8 @@
 ## OpenAI rollout status
 
 - The runtime is fully on OpenAI.
-- The current default routing is `combo_b` from `src/lib/agent/config.ts`.
+- The current default routing is `combo_a` from `src/lib/agent/config.ts`.
+- All combo names currently resolve to `gpt-5-nano` so the runtime always takes the cheapest supported path.
 - The long-term model choice depends on the pt-BR quality and cost bakeoff documented in [openai-model-selection-matrix.md](/c:/CurrIA/docs/openai-model-selection-matrix.md).
 - The approval gate is documented in [openai-portuguese-quality-gate.md](/c:/CurrIA/docs/openai-portuguese-quality-gate.md).
 

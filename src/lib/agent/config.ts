@@ -11,19 +11,19 @@ export const AGENT_CONFIG = {
 
 export const MODEL_COMBINATIONS = {
   combo_a: {
-    agent: 'gpt-4o-mini',
-    structured: 'gpt-4o-mini',
-    vision: 'gpt-4o-mini',
+    agent: 'gpt-5-nano',
+    structured: 'gpt-5-nano',
+    vision: 'gpt-5-nano',
   },
   combo_b: {
-    agent: 'gpt-4o',
-    structured: 'gpt-4o-mini',
-    vision: 'gpt-4o-mini',
+    agent: 'gpt-5-nano',
+    structured: 'gpt-5-nano',
+    vision: 'gpt-5-nano',
   },
   combo_c: {
-    agent: 'gpt-4-turbo',
-    structured: 'gpt-4-turbo',
-    vision: 'gpt-4-turbo',
+    agent: 'gpt-5-nano',
+    structured: 'gpt-5-nano',
+    vision: 'gpt-5-nano',
   },
 } as const
 
@@ -36,7 +36,7 @@ export function resolveModelCombo(value: string | undefined): ModelComboName {
     return normalized as ModelComboName
   }
 
-  return 'combo_b'
+  return 'combo_a'
 }
 
 export const ACTIVE_MODEL_COMBO = resolveModelCombo(process.env.OPENAI_MODEL_COMBO)

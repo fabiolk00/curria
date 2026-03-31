@@ -6,6 +6,10 @@ This document defines the mandatory pt-BR language quality gate before locking t
 
 CurrIA already runs on OpenAI in code. What remains is selecting the best OpenAI model combination for Brazilian Portuguese resume quality and cost.
 
+Current runtime note:
+- the live app is currently pinned to `gpt-5-nano` for the cheapest supported runtime path
+- the combo matrix below is retained as the historical quality-gate framework
+
 Use this document together with:
 
 - [openai-model-selection-matrix.md](/c:/CurrIA/docs/openai-model-selection-matrix.md)

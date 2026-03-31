@@ -1,15 +1,17 @@
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
-const MODEL_PRICING_CENTS_PER_MILLION = {
+export const MODEL_PRICING_CENTS_PER_MILLION = {
+  'gpt-5-nano': { input: 5, output: 40 },
+  'gpt-5.4-nano': { input: 20, output: 125 },
+  'gpt-5-mini': { input: 25, output: 200 },
   'gpt-5': { input: 125, output: 1000 },
   'gpt-5.4': { input: 250, output: 1500 },
   'gpt-5.4-mini': { input: 75, output: 450 },
-  'gpt-5-mini': { input: 25, output: 200 },
 } as const
 
-function getModelPricing(model: string): { input: number; output: number } {
+export function getModelPricing(model: string): { input: number; output: number } {
   return MODEL_PRICING_CENTS_PER_MILLION[model as keyof typeof MODEL_PRICING_CENTS_PER_MILLION]
-    ?? MODEL_PRICING_CENTS_PER_MILLION['gpt-5.4-mini']
+    ?? MODEL_PRICING_CENTS_PER_MILLION['gpt-5-nano']
 }
 
 export async function trackApiUsage(params: {
