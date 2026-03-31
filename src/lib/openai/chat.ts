@@ -8,6 +8,12 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+/**
+ * Wraps an OpenAI API call with exponential backoff retry logic.
+ * @param fn - Function that makes the OpenAI API call
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise resolving to ChatCompletion
+ */
 export async function callOpenAIWithRetry(
   fn: () => Promise<OpenAI.Chat.Completions.ChatCompletion>,
   maxRetries = 3,
@@ -34,6 +40,22 @@ export async function callOpenAIWithRetry(
   }
 
   throw lastError
+}
+
+/**
+ * Calls OpenAI chat completion API with retry logic.
+ * This is the primary method used by API routes.
+ * @param openaiClient - OpenAI client instance
+ * @param params - ChatCompletion creation parameters
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise resolving to ChatCompletion
+ */
+export async function createChatCompletionWithRetry(
+  openaiClient: OpenAI,
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+  maxRetries = 3,
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  return callOpenAIWithRetry(() => openaiClient.chat.completions.create(params), maxRetries)
 }
 
 export function getChatCompletionText(response: OpenAI.Chat.Completions.ChatCompletion): string {

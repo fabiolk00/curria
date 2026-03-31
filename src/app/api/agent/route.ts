@@ -22,9 +22,13 @@ import { trackApiUsage } from '@/lib/agent/usage-tracker'
 import { extractUrl } from '@/lib/agent/url-extractor'
 import { scrapeJobPosting } from '@/lib/agent/scraper'
 import { openai } from '@/lib/openai/client'
-import { getChatCompletionUsage } from '@/lib/openai/chat'
+import { getChatCompletionUsage, createChatCompletionWithRetry } from '@/lib/openai/chat'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 
+/**
+ * Calls OpenAI with retry logic and request tracing/logging.
+ * Uses the unified retry implementation from openai/chat.ts with additional logging.
+ */
 async function callOpenAIWithRetry(
   params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
   maxRetries = 3,
@@ -35,39 +39,21 @@ async function callOpenAIWithRetry(
     stateVersion?: number
   },
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
-  let lastError: Error | null = null
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await openai.chat.completions.create(params)
-    } catch (error) {
-      lastError = error as Error
-
-      const isRetryable =
-        error instanceof APIError &&
-        [429, 500, 502, 503].includes(error.status)
-
-      if (!isRetryable || attempt === maxRetries) {
-        throw error
-      }
-
-      const delay = Math.pow(2, attempt - 1) * 1000
-      logWarn('agent.model.retrying', {
-        sessionId: traceContext?.sessionId,
-        appUserId: traceContext?.appUserId,
-        phase: traceContext?.phase,
-        stateVersion: traceContext?.stateVersion,
-        attempt,
-        maxRetries,
-        retryDelayMs: delay,
-        success: false,
+  try {
+    return await createChatCompletionWithRetry(openai, params, maxRetries)
+  } catch (error) {
+    // Log failures after all retries exhausted
+    if (traceContext) {
+      logWarn('agent.model.failed', {
+        sessionId: traceContext.sessionId,
+        appUserId: traceContext.appUserId,
+        phase: traceContext.phase,
+        stateVersion: traceContext.stateVersion,
         ...serializeError(error),
       })
-      await new Promise((resolve) => setTimeout(resolve, delay))
     }
+    throw error
   }
-
-  throw lastError
 }
 
 const BodySchema = z.object({
