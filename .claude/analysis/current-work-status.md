@@ -10,8 +10,8 @@
 
 ### ✅ Completed Work
 1. **OpenAI Migration** (Complete)
-   - All models moved from Anthropic to OpenAI
-   - Default routing: `combo_b` (gpt-5.4-mini for agent, gpt-5-mini for structured/vision)
+   - All models using OpenAI
+   - Default routing: `combo_a` (gpt-4o-mini for agent, structured, and vision)
    - Portuguese quality gate passed
    - Configuration: `src/lib/agent/config.ts`
 

@@ -28,7 +28,7 @@ Review the current git diff for correctness, invariant safety, and alignment wit
    - `generatedOutput` does not store signed URLs
    - tools do not mutate session directly
    - patches are minimal and merge-safe
-6. For changes touching `src/lib/agent/`, verify the model in `src/lib/agent/config.ts` is still `claude-haiku-4-5-20251001` unless the change explicitly intends to update it.
+6. For changes touching `src/lib/agent/`, verify the model in `src/lib/agent/config.ts` is still `gpt-4o-mini` (combo_a) unless the change explicitly intends to update it.
 7. For changes touching `src/lib/ats/`, verify co-located tests were updated.
 8. For changes touching docs, verify they reflect the live architecture and do not reintroduce removed legacy fields like `cvState.rawText` or `cvState.targetJobDescription`.
 9. Output:

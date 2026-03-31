@@ -9,10 +9,10 @@ This file is the project source of truth for system architecture and engineering
 
 - CurrIA currently runs fully on OpenAI.
 - Default model routing is controlled in `src/lib/agent/config.ts`.
-- The default combo is `combo_b`:
-  - `agent`: `gpt-5.4-mini`
-  - `structured`: `gpt-5-mini`
-  - `vision`: `gpt-5-mini`
+- The default combo is `combo_a`:
+  - `agent`: `gpt-4o-mini`
+  - `structured`: `gpt-4o-mini`
+  - `vision`: `gpt-4o-mini`
 - The active combo can be overridden with `OPENAI_MODEL_COMBO`.
 - Model selection and pt-BR evaluation are documented in:
   - `docs/openai-model-selection-matrix.md`

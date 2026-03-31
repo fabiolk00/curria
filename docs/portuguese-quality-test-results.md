@@ -24,9 +24,9 @@ This report is the source of truth for the final model-routing decision:
 - Evaluator is native pt-BR speaker: Yes / No
 - Test date:
 - Compared combinations:
-  - Combo A: `gpt-5-mini` / `gpt-5-mini` / `gpt-5-mini`
-  - Combo B: `gpt-5.4-mini` / `gpt-5-mini` / `gpt-5-mini`
-  - Combo C: `gpt-5` / `gpt-5` / `gpt-5`
+  - Combo A: `gpt-4o-mini` / `gpt-4o-mini` / `gpt-4o-mini`
+  - Combo B: `gpt-4o` / `gpt-4o-mini` / `gpt-4o-mini`
+  - Combo C: `gpt-4-turbo` / `gpt-4-turbo` / `gpt-4-turbo`
 - Prompts/version tested:
 - Branch / commit:
 - Notes:

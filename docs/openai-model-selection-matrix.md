@@ -8,19 +8,19 @@ This document defines the bakeoff that compares three routing combinations acros
 
 ## Current default
 
-The codebase currently defaults to `combo_b` in [config.ts](/c:/CurrIA/src/lib/agent/config.ts):
+The codebase currently defaults to `combo_a` in [config.ts](/c:/CurrIA/src/lib/agent/config.ts):
 
-- `agent`: `gpt-5.4-mini`
-- `structured`: `gpt-5-mini`
-- `vision`: `gpt-5-mini`
+- `agent`: `gpt-4o-mini`
+- `structured`: `gpt-4o-mini`
+- `vision`: `gpt-4o-mini`
 
 ## Combinations to test
 
 | Combination | Agent | Structured | Vision | Estimated cost per sample |
 | --- | --- | --- | --- | --- |
-| `combo_a` | `gpt-5-mini` | `gpt-5-mini` | `gpt-5-mini` | `$0.08-$0.12` |
-| `combo_b` | `gpt-5.4-mini` | `gpt-5-mini` | `gpt-5-mini` | `$0.12-$0.18` |
-| `combo_c` | `gpt-5` | `gpt-5` | `gpt-5` | `$0.25-$0.35` |
+| `combo_a` | `gpt-4o-mini` | `gpt-4o-mini` | `gpt-4o-mini` | `$0.08-$0.12` |
+| `combo_b` | `gpt-4o` | `gpt-4o-mini` | `gpt-4o-mini` | `$0.15-$0.25` |
+| `combo_c` | `gpt-4-turbo` | `gpt-4-turbo` | `gpt-4-turbo` | `$0.30-$0.60` |
 
 ## Required samples
 

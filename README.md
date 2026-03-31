@@ -27,10 +27,10 @@ CurrIA is an AI-powered resume optimization SaaS. The product combines ATS analy
 ## AI model status
 
 - the runtime is fully on OpenAI
-- the current default routing is `combo_b`
-  - `agent`: `gpt-5.4-mini`
-  - `structured`: `gpt-5-mini`
-  - `vision`: `gpt-5-mini`
+- the current default routing is `combo_a`
+  - `agent`: `gpt-4o-mini`
+  - `structured`: `gpt-4o-mini`
+  - `vision`: `gpt-4o-mini`
 - the active routing can be selected with `OPENAI_MODEL_COMBO`
 - the model bakeoff is documented in [openai-model-selection-matrix.md](/c:/CurrIA/docs/openai-model-selection-matrix.md)
 - the pt-BR quality gate is documented in [openai-portuguese-quality-gate.md](/c:/CurrIA/docs/openai-portuguese-quality-gate.md)

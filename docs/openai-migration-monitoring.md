@@ -14,16 +14,16 @@ It focuses on:
 
 Current default routing from [config.ts](/c:/CurrIA/src/lib/agent/config.ts):
 
-- active combo: `combo_b`
-- `agent`: `gpt-5.4-mini`
-- `structured`: `gpt-5-mini`
-- `vision`: `gpt-5-mini`
+- active combo: `combo_a`
+- `agent`: `gpt-4o-mini`
+- `structured`: `gpt-4o-mini`
+- `vision`: `gpt-4o-mini`
 
 Supported combinations:
 
-- `combo_a`: all `gpt-5-mini`
-- `combo_b`: `gpt-5.4-mini` + `gpt-5-mini` + `gpt-5-mini`
-- `combo_c`: all `gpt-5`
+- `combo_a`: all `gpt-4o-mini`
+- `combo_b`: `gpt-4o` + `gpt-4o-mini` + `gpt-4o-mini`
+- `combo_c`: all `gpt-4-turbo`
 
 ## Metric 1 - API usage by model
 

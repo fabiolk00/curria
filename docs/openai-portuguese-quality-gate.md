@@ -17,9 +17,9 @@ Which OpenAI model combination produces Brazilian Portuguese resume output that 
 
 The tested combinations are:
 
-- `combo_a`: all `gpt-5-mini`
-- `combo_b`: `gpt-5.4-mini` for agent and `gpt-5-mini` for structured and vision
-- `combo_c`: all `gpt-5`
+- `combo_a`: all `gpt-4o-mini`
+- `combo_b`: `gpt-4o` for agent and `gpt-4o-mini` for structured and vision
+- `combo_c`: all `gpt-4-turbo`
 
 ## Mandatory decision rule
 
