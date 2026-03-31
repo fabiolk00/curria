@@ -317,6 +317,10 @@ The project already includes:
 - Asaas checkout and billing
 - operational documentation for staging and production
 
+## Design System
+
+We are modernizing UI components to match the imported Figma design system. Progress is tracked in [design-system-migration.md](/c:/CurrIA/docs/design-system-migration.md).
+
 If you want to run the project now, the best path is:
 
 1. configure `.env`

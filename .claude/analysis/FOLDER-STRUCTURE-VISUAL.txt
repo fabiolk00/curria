@@ -1,0 +1,333 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    CurrIA FOLDER STRUCTURE ANALYSIS                             ║
+║                          Current State vs. Target                               ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+CURRENT STATE (TODAY - March 30, 2026)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CurrIA/
+│
+├─ src/
+│  ├─ app/                          ✅ CLEAN - Well organized
+│  │  ├─ (public)/                     - login, signup, pricing
+│  │  ├─ (auth)/                       - dashboard, chat, resumes
+│  │  └─ api/                          - routes (agent, checkout, webhooks)
+│  │
+│  ├─ components/                    ✅ CLEAN - ~20 files, ready for growth
+│  │  ├─ ui/                           - shadcn/ui wrappers
+│  │  ├─ forms/                        - form components
+│  │  ├─ layout/                       - layout components
+│  │  └─ [others]                      - feature-specific components
+│  │
+│  ├─ lib/                           ✅ CLEAN - Well organized by domain
+│  │  ├─ agent/                        - AI agent & tools (~15 files)
+│  │  ├─ asaas/                        - Billing & webhooks
+│  │  ├─ ats/                          - Resume scoring
+│  │  ├─ auth/                         - Identity & Clerk sync
+│  │  ├─ cv/                           - Resume utilities
+│  │  ├─ db/                           - Database clients
+│  │  ├─ dashboard/                    - Dashboard logic
+│  │  ├─ navigation/                   - Routing utilities
+│  │  ├─ observability/                - Logging
+│  │  ├─ openai/                       - OpenAI integration
+│  │  ├─ resume-targets/               - Target-specific resumes
+│  │  ├─ storage/                      - Supabase Storage
+│  │  ├─ templates/                    - File generation
+│  │  └─ utils/                        - Shared utilities
+│  │
+│  ├─ types/                         ✅ CLEAN - Type definitions
+│  │  ├─ cv.ts                         - Resume types
+│  │  ├─ agent.ts                      - Agent & tool types
+│  │  └─ user.ts                       - User types
+│  │
+│  └─ globals.css                    ✅ CLEAN
+│
+├─ prisma/                           ✅ CLEAN - Database schema
+│  ├─ schema.prisma
+│  └─ migrations/                      - SQL migration files
+│
+├─ docs/                             ⚠️  NEEDS 1 FILE
+│  ├─ architecture-overview.md
+│  ├─ state-model.md
+│  ├─ tool-development.md
+│  ├─ error-codes.md
+│  ├─ billing-*.md (multiple)
+│  ├─ openai-*.md (multiple)
+│  └─ [20+ total files]              ✅ Excellent documentation
+│  └─ ❌ MISSING: design-system-migration.md  (Create by April 4)
+│
+├─ .claude/                          ✅ CLEAN - Configuration
+│  ├─ rules/                           - Code style & conventions
+│  ├─ skills/                          - Custom skills
+│  ├─ agents/                          - Agent definitions
+│  └─ analysis/                        - ⭐ NEW (This analysis directory)
+│     ├─ README.md
+│     ├─ CLEANUP-SUMMARY.md
+│     ├─ codebase-structure-analysis.md
+│     ├─ engineering-prompts.md
+│     ├─ current-work-status.md
+│     ├─ cleanup-checklist.md
+│     └─ FOLDER-STRUCTURE-VISUAL.txt (you are here)
+│
+├─ 🔴 modernize-design-files/        ❌ UNTRACKED - NEEDS DECISION
+│  └─ [7 files, Figma design system reference]
+│
+├─ 🔴 FIGMA_LAYOUT_MIGRATION_PROMPT.md  ❌ DELETED (not committed)
+│
+├─ .gitignore                        ⚠️  NEEDS REVIEW
+├─ CLAUDE.md                         ✅ Architectural source of truth
+├─ README.md                         ✅ Good, needs 1 update
+├─ tsconfig.json                     ✅ Strict mode enabled
+├─ tailwind.config.js                ✅ Configured
+├─ next.config.js                    ✅ Minimal, correct
+├─ vitest.config.ts                  ✅ Configured
+├─ package.json                      ✅ Dependencies clean
+└─ .env / .env.example               ✅ Secrets properly ignored
+
+
+ISSUES FOUND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 ISSUE #1: modernize-design-files/
+   Status:     Untracked in git
+   Size:       ~400 KB (7 files)
+   Content:    Figma design system components
+   Action:     Choose ONE option:
+               A) git add & commit (recommended)
+               B) Add to .gitignore
+               C) Move to separate branch
+   Deadline:   TODAY (March 30)
+   Time:       5 minutes
+   Location:   See CLEANUP-SUMMARY.md for commands
+
+🔴 ISSUE #2: FIGMA_LAYOUT_MIGRATION_PROMPT.md
+   Status:     Deleted but not committed
+   Shows as:   D in git status
+   Action:     Commit the deletion
+   Deadline:   TODAY (March 30)
+   Time:       2 minutes
+   Location:   See cleanup-checklist.md for steps
+
+
+TARGET STATE (AFTER CLEANUP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CurrIA/
+│
+├─ src/                              ✅ UNCHANGED - All clean
+│  ├─ app/
+│  ├─ components/
+│  ├─ lib/
+│  ├─ types/
+│  └─ globals.css
+│
+├─ prisma/                           ✅ UNCHANGED
+├─ .claude/                          ✅ UPDATED - Added analysis/
+│  ├─ rules/
+│  ├─ skills/
+│  ├─ agents/
+│  └─ analysis/                      ⭐ NEW (6 files added)
+│
+├─ docs/                             ✅ UPDATED - Added 1 file
+│  └─ design-system-migration.md     📄 NEW (by April 4)
+│
+├─ modernize-design-files/           ✅ TRACKED (if Option A)
+│  └─ [committed to git]
+│
+├─ .gitignore                        ✅ UPDATED (if Option B)
+├─ CLAUDE.md                         ✅ UNCHANGED
+├─ README.md                         ✅ UPDATED - links to design doc
+├─ [config files]                    ✅ ALL CLEAN
+│
+└─ git status: working tree clean ✅
+
+
+QUALITY ASSESSMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEFORE CLEANUP:          A-        (Very Good)
+┌─────────────────────────────────┐
+│ Architecture     │ ✅ A         │
+│ Type Safety      │ ✅ A         │
+│ Testing          │ ✅ B+        │
+│ Documentation    │ ✅ A         │
+│ Folder Org       │ ✅ A         │
+│ Git Hygiene      │ ⚠️  B        │ ← 2 Issues
+│ Scalability      │ ✅ A         │
+└─────────────────────────────────┘
+
+AFTER CLEANUP:          A        (Excellent)
+┌─────────────────────────────────┐
+│ Architecture     │ ✅ A         │
+│ Type Safety      │ ✅ A         │
+│ Testing          │ ✅ B+        │
+│ Documentation    │ ✅ A         │
+│ Folder Org       │ ✅ A         │
+│ Git Hygiene      │ ✅ A         │ ← Issues Fixed
+│ Scalability      │ ✅ A         │
+└─────────────────────────────────┘
+
+
+WHAT DOESN'T NEED CHANGING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ src/app/                    - Perfect, keep as-is
+✅ src/lib/                    - Modular, clean, keep as-is
+✅ src/components/             - OK now (~20 files), reorganize when >30
+✅ src/types/                  - Well organized, keep as-is
+✅ prisma/                     - Up to date, keep as-is
+✅ All testing structure        - Colocated tests excellent, keep as-is
+✅ All configuration files      - Properly set, keep as-is
+✅ docs/                       - Excellent (add 1 file)
+
+
+FUTURE GROWTH PLAN (When Needed)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When src/components/ > 30 files:
+├─ src/components/
+│  ├─ ui/                (shadcn primitives)
+│  ├─ forms/             (form-specific)
+│  ├─ layout/            (header, sidebar, footer)
+│  ├─ chat/              (chat-specific)
+│  ├─ resume/            (resume-specific)
+│  └─ common/            (shared features)
+
+When src/lib/agent/tools/ > 20 files:
+├─ src/lib/agent/tools/
+│  ├─ core/              (core tools)
+│  ├─ writing/           (rewrite, analysis)
+│  ├─ analysis/          (gap analysis)
+│  └─ generation/        (generate-file)
+
+When Zod schemas duplicate:
+├─ src/lib/validators/   (consolidate schemas)
+
+When constants needed:
+├─ src/lib/constants/    (app-wide constants)
+
+
+CLEANUP ACTIONS (3 STEPS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: DECIDE ON DESIGN FILES (Choose A, B, or C)
+       ┌─────────────────────────────────────────┐
+       │ A) Commit to git (RECOMMENDED)          │
+       │ B) Add to .gitignore                    │
+       │ C) Move to separate branch              │
+       └─────────────────────────────────────────┘
+       Time: 5 minutes | Deadline: TODAY
+
+STEP 2: COMMIT THE DELETION
+       $ git add FIGMA_LAYOUT_MIGRATION_PROMPT.md
+       $ git commit -m "chore: remove design migration reference"
+       Time: 2 minutes | Deadline: TODAY
+
+STEP 3: VERIFY CLEAN STATE
+       $ git status
+       Expected: "nothing to commit, working tree clean"
+       Time: 1 minute | Deadline: TODAY
+
+
+TIMELINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TODAY (March 30):
+  ├─ [5 min]  Decide on design files
+  ├─ [5 min]  Run cleanup commands
+  ├─ [1 min]  Verify git status clean
+  └─ [2 min]  Push to main
+           Total: ~15 minutes
+
+THIS WEEK (by April 4):
+  ├─ [30 min] Create design-system-migration.md
+  ├─ [10 min] Update .gitignore
+  ├─ [5 min]  Share with team
+  └─ [5 min]  Commit docs update
+           Total: ~50 minutes
+
+NEXT MONTH:
+  └─ Monitor directory growth
+    └─ Reorganize when limits exceeded
+
+
+DOCUMENTS REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 START HERE:
+   └─ README.md (this folder)
+   └─ CLEANUP-SUMMARY.md (visual guide, 5 min read)
+
+🔧 DETAILED GUIDANCE:
+   ├─ codebase-structure-analysis.md (deep dive, 20 min read)
+   ├─ cleanup-checklist.md (step-by-step, 10 min read)
+   └─ engineering-prompts.md (task templates, reference)
+
+📊 PROJECT STATUS:
+   └─ current-work-status.md (priorities & onboarding, 15 min read)
+
+🗂️ THIS FILE:
+   └─ FOLDER-STRUCTURE-VISUAL.txt (you are here, quick reference)
+
+
+GIT COMMANDS (COPY-PASTE READY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# See current state
+git status
+
+# OPTION A: Commit design files
+git add modernize-design-files/
+git commit -m "chore: add Figma design system components"
+
+# OR OPTION B: Ignore design files
+echo "modernize-design-files/" >> .gitignore
+git add .gitignore
+git commit -m "chore: ignore local Figma design workspace"
+
+# Clean up deleted file
+git add FIGMA_LAYOUT_MIGRATION_PROMPT.md
+git commit -m "chore: remove design migration reference"
+
+# Verify
+git status  # Should show: working tree clean
+
+# Push
+git push origin main
+
+
+QUICK CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEFORE YOU START:
+ □ Read CLEANUP-SUMMARY.md (5 min)
+ □ Decide on design files option (A/B/C)
+ □ Understand what's being done (no code changes)
+
+DURING CLEANUP:
+ □ Run chosen git commands
+ □ Verify each command completes
+ □ Check git status after each step
+
+AFTER CLEANUP:
+ □ git status shows: working tree clean
+ □ Latest 2 commits are cleanup commits
+ □ No more 🔴 issues in git status
+ □ Team understands design system location
+
+SUCCESS CRITERIA:
+ □ git status ✅ Clean
+ □ git log ✅ Shows cleanup commits
+ □ Team ✅ Knows next steps
+ □ Files ✅ Properly tracked
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+Questions? See: .claude/analysis/README.md
+Time to complete: 15 minutes (cleanup) + 50 minutes (documentation)
+Risk level: 🟢 VERY LOW (git operations only, no code changes)
+Impact: ✅ POSITIVE (cleaner repo, better documentation)
+
+═══════════════════════════════════════════════════════════════════════════════════
