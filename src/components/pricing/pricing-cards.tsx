@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { CHECKOUT_ERROR_MESSAGE, getCheckoutErrorMessage } from "@/lib/asaas/checkout-errors"
 import { navigateToUrl } from "@/lib/navigation/external"
 import { PLANS, formatPrice } from "@/lib/plans"
 import { cn } from "@/lib/utils"
@@ -29,8 +30,6 @@ const plans = [
   },
 ] as const
 
-const CHECKOUT_ERROR_MESSAGE = "Nao foi possivel iniciar o checkout. Tente novamente."
-
 type CheckoutPlan = (typeof plans)[number]["slug"]
 
 type CheckoutAttemptResult =
@@ -48,21 +47,6 @@ function getLoginRedirectPath(plan: CheckoutPlan): string {
 
 function getSignupRedirectPath(plan: CheckoutPlan): string {
   return `/signup?redirect_to=${encodeURIComponent(getCheckoutRedirectPath(plan))}`
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
-function getCheckoutErrorMessage(payload: unknown): string {
-  if (isRecord(payload) && typeof payload.error === "string") {
-    const message = payload.error.trim()
-    if (message && message !== "Internal server error" && message !== "Unauthorized") {
-      return message
-    }
-  }
-
-  return CHECKOUT_ERROR_MESSAGE
 }
 
 export default function PricingCards() {
@@ -94,7 +78,14 @@ export default function PricingCards() {
         payload = null
       }
 
-      if (res.ok && isRecord(payload) && typeof payload.url === "string" && payload.url.length > 0) {
+      if (
+        res.ok &&
+        typeof payload === "object" &&
+        payload !== null &&
+        "url" in payload &&
+        typeof payload.url === "string" &&
+        payload.url.length > 0
+      ) {
         return { kind: "success", url: payload.url }
       }
 

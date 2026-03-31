@@ -15,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
+  CHECKOUT_ERROR_MESSAGE,
+  getCheckoutErrorMessage,
+} from "@/lib/asaas/checkout-errors"
 import { navigateToUrl } from "@/lib/navigation/external"
 import { PLANS, type PlanSlug, formatPrice } from "@/lib/plans"
 import { cn } from "@/lib/utils"
@@ -32,38 +37,9 @@ const plans: Array<{ slug: PlanSlug; popular: boolean }> = [
   { slug: "pro", popular: false },
 ]
 
-const CHECKOUT_ERROR_MESSAGE = "Nao foi possivel iniciar o checkout. Tente novamente."
-const ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE =
-  "Para contratar outro plano mensal, cancele primeiro o seu plano mensal ativo. Contate o suporte se precisar de ajuda."
-
 type CheckoutAttemptResult =
   | { kind: "success"; url: string }
   | { kind: "error"; message: string }
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
-function getCheckoutErrorMessage(payload: unknown): string {
-  if (isRecord(payload) && typeof payload.error === "string") {
-    const message = payload.error.trim()
-
-    // Allow specific error patterns we know about
-    if (message.includes("Voce ja possui")) return message
-    if (message.includes("Para contratar")) return message
-    if (message.includes("plano")) return message
-    if (message.includes("Invalid")) return message
-
-    // Reject generic/unhelpful messages
-    if (!message || message === "Internal server error" || message === "Unauthorized") {
-      return CHECKOUT_ERROR_MESSAGE
-    }
-
-    return message
-  }
-
-  return CHECKOUT_ERROR_MESSAGE
-}
 
 function getPlanPurchaseState(activeRecurringPlan: PlanSlug | null, candidatePlan: PlanSlug): {
   isCurrentActiveRecurringPlan: boolean
@@ -109,7 +85,14 @@ export function PlanUpdateDialog({
         payload = null
       }
 
-      if (res.ok && isRecord(payload) && typeof payload.url === "string" && payload.url.length > 0) {
+      if (
+        res.ok &&
+        typeof payload === "object" &&
+        payload !== null &&
+        "url" in payload &&
+        typeof payload.url === "string" &&
+        payload.url.length > 0
+      ) {
         return { kind: "success", url: payload.url }
       }
 

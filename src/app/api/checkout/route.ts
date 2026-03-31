@@ -9,6 +9,10 @@ import {
   markCheckoutFailed,
 } from '@/lib/asaas/billing-checkouts'
 import { createCheckoutLink } from '@/lib/asaas/checkout'
+import {
+  ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
+  RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
+} from '@/lib/asaas/checkout-errors'
 import { formatExternalReference } from '@/lib/asaas/external-reference'
 import { getActiveRecurringSubscription } from '@/lib/asaas/quota'
 import { getPlan } from '@/lib/plans'
@@ -53,17 +57,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         console.error('[api/checkout] failed to validate recurring subscription state', error)
         return NextResponse.json(
           {
-            error: 'Nao foi possivel validar seu plano atual no momento. Tente novamente.',
+            error: RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
           },
-          { status: 400 },
+          { status: 503 },
         )
       }
 
       if (activeRecurringSubscription) {
         return NextResponse.json(
           {
-            error:
-              'Voce ja possui um plano mensal ativo. Cancele o plano atual antes de contratar outro plano mensal.',
+            error: ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
           },
           { status: 400 },
         )

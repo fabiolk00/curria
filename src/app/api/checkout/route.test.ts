@@ -11,6 +11,10 @@ import {
   markCheckoutFailed,
 } from '@/lib/asaas/billing-checkouts'
 import { createCheckoutLink } from '@/lib/asaas/checkout'
+import {
+  ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
+  RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
+} from '@/lib/asaas/checkout-errors'
 import { getActiveRecurringSubscription } from '@/lib/asaas/quota'
 
 vi.mock('@clerk/nextjs/server', () => ({
@@ -200,8 +204,7 @@ describe('checkout route billing sequencing', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
-      error:
-        'Voce ja possui um plano mensal ativo. Cancele o plano atual antes de contratar outro plano mensal.',
+      error: ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
     })
     expect(createCheckoutRecordPending).not.toHaveBeenCalled()
     expect(createCheckoutLink).not.toHaveBeenCalled()
@@ -235,9 +238,9 @@ describe('checkout route billing sequencing', () => {
       }),
     )
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(503)
     expect(await response.json()).toEqual({
-      error: 'Nao foi possivel validar seu plano atual no momento. Tente novamente.',
+      error: RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
     })
     expect(createCheckoutRecordPending).not.toHaveBeenCalled()
   })
