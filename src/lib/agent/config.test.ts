@@ -17,19 +17,19 @@ describe('AGENT_CONFIG', () => {
   it('defines the supported model combinations', () => {
     expect(MODEL_COMBINATIONS).toEqual({
       combo_a: {
-        agent: 'gpt-5-mini',
-        structured: 'gpt-5-mini',
-        vision: 'gpt-5-mini',
+        agent: 'gpt-4o-mini',
+        structured: 'gpt-4o-mini',
+        vision: 'gpt-4o-mini',
       },
       combo_b: {
-        agent: 'gpt-5.4-mini',
-        structured: 'gpt-5-mini',
-        vision: 'gpt-5-mini',
+        agent: 'gpt-4o',
+        structured: 'gpt-4o-mini',
+        vision: 'gpt-4o-mini',
       },
       combo_c: {
-        agent: 'gpt-5',
-        structured: 'gpt-5',
-        vision: 'gpt-5',
+        agent: 'gpt-4-turbo',
+        structured: 'gpt-4-turbo',
+        vision: 'gpt-4-turbo',
       },
     })
   })
