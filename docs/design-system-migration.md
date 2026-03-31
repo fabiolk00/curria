@@ -7,13 +7,13 @@
 
 ## Overview
 
-CurrIA is migrating its public and authenticated UI to the imported Figma design system currently stored in `modernize-design-files/`.
+CurrIA is migrating its public and authenticated UI to the imported Figma design system archived at `docs/design-system-migration/workspace/`.
 
 ### Progress Snapshot
 
 - Pages completed: 3 core views aligned
 - Pages in progress: dashboard shell and workspace-depth surfaces
-- Design reference source: `modernize-design-files/`
+- Design reference source: `docs/design-system-migration/workspace/`
 - Tracking support: `.claude/analysis/` cleanup and handoff docs
 
 ## Completed Pages
@@ -83,5 +83,5 @@ Each migrated page should ship only after:
 
 1. Finish dashboard workspace visual parity against imported references.
 2. Review landing, pricing, and auth pages for remaining drift.
-3. Decide whether `modernize-design-files/` remains a tracked reference or gets replaced by a formal design-system package later.
+3. Decide whether the archived workspace should stay as long-term reference material or eventually be replaced by a formal design-system package.
 4. Keep this document updated as each page reaches parity.

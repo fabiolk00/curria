@@ -75,6 +75,9 @@ prisma/
   schema.prisma         Prisma schema
   migrations/           SQL migrations
 docs/                   technical, billing, and operational docs
+  design-system-migration.md   current Figma migration tracker
+  design-system-migration/     archived imported workspace files
+scripts/                operational validation and evaluation helpers
 ```
 
 ## Important routes
@@ -216,6 +219,19 @@ npm run db:push
 npm run db:migrate
 npm run db:studio
 ```
+
+## Operational scripts
+
+The `scripts/` directory contains repo-level helpers that are not part of the Next.js runtime:
+
+- [scripts/README.md](/c:/CurrIA/scripts/README.md) documents each operational script and when to use it
+- `npm run phase1:model-selection` runs the OpenAI combo bakeoff and writes blind-review artifacts under `docs/openai-model-selection-runs/`
+- `scripts/verify-staging.sh` checks staging database, webhook, and API preconditions before manual validation
+
+## Design migration references
+
+- [design-system-migration.md](/c:/CurrIA/docs/design-system-migration.md) tracks page-by-page Figma migration status
+- `docs/design-system-migration/workspace/` stores the archived imported design workspace used as the migration reference
 
 ## How billing works
 
