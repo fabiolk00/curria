@@ -507,7 +507,7 @@ SELECT * FROM credit_accounts WHERE user_id = '<user_id>';
 
 **Example: User refund**
 ```sql
--- User refunded R$19 (unit plan)
+-- User refunded R$19.90 (unit plan)
 UPDATE credit_accounts
 SET credits_remaining = credits_remaining - 3  -- unit plan = 3 credits
 WHERE user_id = '<user_id>';
@@ -557,12 +557,12 @@ curl -X POST https://curria.app/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_123",
       "externalReference": "curria:v1:c:chk_xyz",
       "subscription": null,
-      "amount": 1900
+      "amount": 1990
     }
   }'
 ```

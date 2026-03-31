@@ -23,7 +23,7 @@ export const PLANS = {
   unit: {
     name: 'Unitário',
     slug: 'unit',
-    price: 1900, // centavos
+    price: 1990, // centavos
     credits: 3,
     billing: 'once' as const,
     description: 'Para análises pontuais',
@@ -38,7 +38,7 @@ export const PLANS = {
   monthly: {
     name: 'Mensal',
     slug: 'monthly',
-    price: 3900, // centavos
+    price: 3990, // centavos
     credits: 20,
     billing: 'monthly' as const,
     description: 'Ideal para busca ativa de emprego',
@@ -53,8 +53,8 @@ export const PLANS = {
   pro: {
     name: 'Pro',
     slug: 'pro',
-    price: 9700, // centavos
-    credits: 50,
+    price: 6990, // centavos
+    credits: 40,
     billing: 'monthly' as const,
     description: 'Para profissionais e recrutadores',
     features: [
@@ -76,7 +76,8 @@ export type Plan = (typeof PLANS)[PlanSlug]
 export function formatPrice(cents: number, period?: string): string {
   if (cents === 0) return 'R$ 0'
   const reais = cents / 100
-  const formatted = `R$ ${reais.toFixed(0)}`
+  // Format with 2 decimals, then remove .00 if the amount is a whole number
+  const formatted = `R$ ${reais.toFixed(2).replace(/\.00$/, '')}`
   return period ? `${formatted}${period}` : formatted
 }
 

@@ -62,7 +62,7 @@ SELECT * FROM billing_checkouts WHERE user_id = 'usr_staging_001';
 -- Expected row:
 -- checkout_reference: UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
 -- plan: 'unit'
--- amount_minor: 1900
+-- amount_minor: 1990
 -- status: 'created'
 -- asaas_link: 'https://asaas.sandbox/paymentlink/...'
 -- asaas_payment_id: NULL
@@ -72,7 +72,7 @@ SELECT * FROM billing_checkouts WHERE user_id = 'usr_staging_001';
 **Critical Validation:**
 - ✅ Checkout record exists BEFORE Asaas call (status='pending' briefly, then 'created')
 - ✅ externalReference is v1 format: `curria:v1:c:<checkoutReference>`
-- ✅ Amount matches plan price (1900 centavos = R$19)
+- ✅ Amount matches plan price (1990 centavos = R$19.90)
 
 ### Step 2: Simulate Payment in Asaas
 
@@ -85,12 +85,12 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_staging_001",
       "externalReference": "curria:v1:c:550e8400-e29b-41d4-a716-446655440000",
       "subscription": null,
-      "amount": 1900
+      "amount": 1990
     }
   }'
 ```
@@ -105,7 +105,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
 **Expected DB State:**
 ```sql
 SELECT * FROM credit_accounts WHERE user_id = 'usr_staging_001';
--- Expected: credits_remaining = 8 (was 5 + 3 from unit plan)
+-- Expected: credits_remaining = 8 (was 5 + 3 from updated unit plan)
 
 SELECT * FROM processed_events
 WHERE event_type = 'PAYMENT_RECEIVED'
@@ -133,12 +133,12 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_staging_001",
       "externalReference": "curria:v1:c:550e8400-e29b-41d4-a716-446655440000",
       "subscription": null,
-      "amount": 1900
+      "amount": 1990
     }
   }'
 ```
@@ -216,7 +216,7 @@ WHERE user_id = 'usr_staging_001'
 ORDER BY created_at DESC LIMIT 1;
 -- Expected:
 -- plan: 'monthly'
--- amount_minor: 3900
+-- amount_minor: 3990
 -- status: 'created'
 -- asaas_subscription_id: NULL (not set yet)
 ```
@@ -231,7 +231,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d "{
     \"event\": \"SUBSCRIPTION_CREATED\",
-    \"amount\": 3900,
+    \"amount\": 3990,
     \"subscription\": {
       \"id\": \"sub_staging_001\",
       \"externalReference\": \"curria:v1:c:${CHECKOUT_REF}\",
@@ -287,7 +287,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "SUBSCRIPTION_RENEWED",
-    "amount": 3900,
+    "amount": 3990,
     "subscription": {
       "id": "sub_staging_001",
       "externalReference": "usr_staging_001",
@@ -417,7 +417,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_staging_002",
       "externalReference": "usr_staging_001",
@@ -457,7 +457,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_staging_002",
       "externalReference": "curria:v1:c:<new_checkout_ref>",
@@ -505,7 +505,7 @@ curl -X POST http://localhost:3000/api/webhook/asaas \
   -H "Content-Type: application/json" \
   -d '{
     "event": "PAYMENT_RECEIVED",
-    "amount": 1900,
+    "amount": 1990,
     "payment": {
       "id": "pay_staging_003",
       "externalReference": "curria:v1:c:<checkout_ref>",

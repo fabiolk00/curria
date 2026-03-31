@@ -38,7 +38,7 @@ describe('Asaas checkout link creation', () => {
       description: PLANS.unit.description,
       billingType: 'UNDEFINED',
       chargeType: 'DETACHED',
-      value: 19,
+      value: 19.90,
       externalReference: 'curria:v1:c:chk_unit',
       callback: {
         successUrl: 'https://curria.test/pricing',
@@ -76,7 +76,7 @@ describe('Asaas checkout link creation', () => {
           name: `CurrIA - ${PLANS.monthly.name}`,
           description: PLANS.monthly.description,
           quantity: 1,
-          value: 39,
+          value: 39.90,
         },
       ],
       subscription: {

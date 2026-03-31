@@ -6,14 +6,14 @@ describe('Plans', () => {
     expect(PLANS.free.credits).toBe(1)
     expect(PLANS.unit.credits).toBe(3)
     expect(PLANS.monthly.credits).toBe(20)
-    expect(PLANS.pro.credits).toBe(50)
+    expect(PLANS.pro.credits).toBe(40)
   })
 
   it('has correct prices in centavos', () => {
     expect(PLANS.free.price).toBe(0)
-    expect(PLANS.unit.price).toBe(1900)
-    expect(PLANS.monthly.price).toBe(3900)
-    expect(PLANS.pro.price).toBe(9700)
+    expect(PLANS.unit.price).toBe(1990)
+    expect(PLANS.monthly.price).toBe(3990)
+    expect(PLANS.pro.price).toBe(6990)
   })
 
   it('only monthly and pro are subscription plans', () => {
@@ -50,14 +50,14 @@ describe('Plans', () => {
     })
 
     it('formats prices without decimals', () => {
-      expect(formatPrice(1900)).toBe('R$ 19')
-      expect(formatPrice(3900)).toBe('R$ 39')
-      expect(formatPrice(9700)).toBe('R$ 97')
+      expect(formatPrice(1990)).toBe('R$ 19.90')
+      expect(formatPrice(3990)).toBe('R$ 39.90')
+      expect(formatPrice(6990)).toBe('R$ 69.90')
     })
 
     it('adds period suffix when provided', () => {
-      expect(formatPrice(3900, '/mês')).toBe('R$ 39/mês')
-      expect(formatPrice(9700, '/mês')).toBe('R$ 97/mês')
+      expect(formatPrice(3990, '/mês')).toBe('R$ 39.90/mês')
+      expect(formatPrice(6990, '/mês')).toBe('R$ 69.90/mês')
     })
   })
 
