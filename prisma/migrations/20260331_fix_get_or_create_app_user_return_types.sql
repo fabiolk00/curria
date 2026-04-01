@@ -94,7 +94,7 @@ BEGIN
     NOW(),
     NOW()
   )
-  ON CONFLICT (user_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT credit_accounts_user_id_key DO NOTHING;
 
   INSERT INTO user_quotas (
     id,
@@ -116,7 +116,7 @@ BEGIN
     NOW(),
     NOW()
   )
-  ON CONFLICT (user_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT user_quotas_user_id_key DO NOTHING;
 
   RETURN QUERY
   SELECT
