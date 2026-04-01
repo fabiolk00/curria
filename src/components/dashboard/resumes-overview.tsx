@@ -20,7 +20,7 @@ type ResumesOverviewProps = {
 
 export function ResumesOverview({ sessions, createSessionAction }: ResumesOverviewProps) {
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-5xl space-y-8">
         <div className="flex flex-col items-center justify-center text-center">
           <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { Menu } from "lucide-react"
 
-import Header from "@/components/landing/header"
+import { Button } from "@/components/ui/button"
 
 import { DashboardSidebar } from "./sidebar"
 
@@ -23,7 +24,17 @@ export default function DashboardShell({
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onMenuClick={() => setSidebarOpen(true)} />
+      {!sidebarOpen ? (
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed left-4 top-4 z-50 rounded-full bg-background/95 shadow-lg backdrop-blur lg:hidden"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      ) : null}
 
       {sidebarOpen && (
         <div
@@ -40,7 +51,7 @@ export default function DashboardShell({
         renewsIn={renewsIn ?? undefined}
       />
 
-      <main className="lg:ml-64">{children}</main>
+      <main className="min-h-screen lg:ml-64">{children}</main>
     </div>
   )
 }

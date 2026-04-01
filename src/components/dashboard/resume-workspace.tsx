@@ -334,7 +334,7 @@ export function ResumeWorkspace({ initialSessionId, userName }: ResumeWorkspaceP
 
   return (
     <>
-      <div className="grid min-h-[calc(100vh-5rem)] gap-6 p-4 lg:grid-cols-[minmax(0,1.15fr)_420px] lg:p-8">
+      <div className="grid min-h-screen gap-6 p-4 lg:grid-cols-[minmax(0,1.15fr)_420px] lg:p-8">
         <div className="overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur">
           <ChatInterface
             sessionId={sessionId}
