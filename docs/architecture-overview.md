@@ -22,8 +22,10 @@ Back to [Documentation Index](./INDEX.md) | Start with [Concepts](./CONCEPTS.md)
 ## OpenAI Rollout Status
 
 - The runtime is fully on OpenAI.
-- The current default routing is `combo_a` from `src/lib/agent/config.ts`.
-- All combo names currently resolve to `gpt-5-nano` so the runtime always takes the cheapest supported path.
+- The runtime model is standardized in `src/lib/agent/config.ts`.
+- The current default runtime model is `gpt-5-nano`.
+- `OPENAI_MODEL` is the runtime override knob.
+- `OPENAI_MODEL_COMBO` is retained only for backward compatibility and model-selection workflows.
 - The long-term model choice depends on the pt-BR quality and cost bakeoff documented in [Model Selection Matrix](./openai/MODEL_SELECTION_MATRIX.md).
 - The approval gate is documented in [Portuguese Quality Gate](./openai/PORTUGUESE_QUALITY_GATE.md).
 

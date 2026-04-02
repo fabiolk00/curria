@@ -11,22 +11,31 @@ export const AGENT_CONFIG = {
   maxSystemPromptChars: 24_000,
 } as const
 
+export const DEFAULT_OPENAI_MODEL = 'gpt-5-nano' as const
+
+export const SUPPORTED_OPENAI_MODELS = [
+  DEFAULT_OPENAI_MODEL,
+  'gpt-5.4-nano',
+  'gpt-5-mini',
+  'gpt-5',
+  'gpt-5.4',
+  'gpt-5.4-mini',
+] as const
+
+export type OpenAIModelName = typeof SUPPORTED_OPENAI_MODELS[number]
+
+function createUniformModelConfig(model: OpenAIModelName) {
+  return {
+    agent: model,
+    structured: model,
+    vision: model,
+  } as const
+}
+
 export const MODEL_COMBINATIONS = {
-  combo_a: {
-    agent: 'gpt-5-nano',
-    structured: 'gpt-5-nano',
-    vision: 'gpt-5-nano',
-  },
-  combo_b: {
-    agent: 'gpt-5-nano',
-    structured: 'gpt-5-nano',
-    vision: 'gpt-5-nano',
-  },
-  combo_c: {
-    agent: 'gpt-5-nano',
-    structured: 'gpt-5-nano',
-    vision: 'gpt-5-nano',
-  },
+  combo_a: createUniformModelConfig(DEFAULT_OPENAI_MODEL),
+  combo_b: createUniformModelConfig(DEFAULT_OPENAI_MODEL),
+  combo_c: createUniformModelConfig(DEFAULT_OPENAI_MODEL),
 } as const
 
 export type ModelComboName = keyof typeof MODEL_COMBINATIONS
@@ -42,7 +51,29 @@ export function resolveModelCombo(value: string | undefined): ModelComboName {
 }
 
 export const ACTIVE_MODEL_COMBO = resolveModelCombo(process.env.OPENAI_MODEL_COMBO)
-export const MODEL_CONFIG = MODEL_COMBINATIONS[ACTIVE_MODEL_COMBO]
+
+export function resolveOpenAIModel(
+  value: string | undefined,
+  fallback: OpenAIModelName = DEFAULT_OPENAI_MODEL,
+): OpenAIModelName {
+  const normalized = value?.trim()
+
+  if (!normalized) {
+    return fallback
+  }
+
+  if (SUPPORTED_OPENAI_MODELS.includes(normalized as OpenAIModelName)) {
+    return normalized as OpenAIModelName
+  }
+
+  return fallback
+}
+
+export const ACTIVE_OPENAI_MODEL = resolveOpenAIModel(
+  process.env.OPENAI_MODEL,
+  MODEL_COMBINATIONS[ACTIVE_MODEL_COMBO].agent,
+)
+export const MODEL_CONFIG = createUniformModelConfig(ACTIVE_OPENAI_MODEL)
 
 export type AgentConfig = typeof AGENT_CONFIG
 export type ModelConfig = typeof MODEL_CONFIG

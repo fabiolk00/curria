@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { DEFAULT_OPENAI_MODEL } from '@/lib/agent/config'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
 import {
@@ -25,10 +26,10 @@ describe('usage tracker pricing', () => {
     insert.mockResolvedValue(null)
   })
 
-  it('tracks gpt-5-nano usage using the cheapest configured pricing table', async () => {
+  it('tracks the default standardized model using the pricing table', async () => {
     await trackApiUsage({
       userId: 'usr_123',
-      model: 'gpt-5-nano',
+      model: DEFAULT_OPENAI_MODEL,
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
       endpoint: 'agent',
@@ -36,17 +37,17 @@ describe('usage tracker pricing', () => {
 
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-5-nano',
+        model: DEFAULT_OPENAI_MODEL,
         cost_cents:
-          MODEL_PRICING_CENTS_PER_MILLION['gpt-5-nano'].input
-          + MODEL_PRICING_CENTS_PER_MILLION['gpt-5-nano'].output,
+          MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL].input
+          + MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL].output,
       }),
     )
   })
 
-  it('falls back unknown models to gpt-5-nano pricing', () => {
+  it('falls back unknown models to the standardized default pricing', () => {
     expect(getModelPricing('unknown-model')).toEqual(
-      MODEL_PRICING_CENTS_PER_MILLION['gpt-5-nano'],
+      MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL],
     )
   })
 })

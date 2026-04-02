@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import OpenAI from 'openai'
 
-import { MODEL_COMBINATIONS, type ModelComboName } from '../src/lib/agent/config'
+import { DEFAULT_OPENAI_MODEL, MODEL_COMBINATIONS, type ModelComboName } from '../src/lib/agent/config'
 import { callOpenAIWithRetry, getChatCompletionText, getChatCompletionUsage } from '../src/lib/openai/chat'
 
 type ModelRole = 'agent' | 'structured'
@@ -36,6 +36,7 @@ type SampleRun = {
 }
 
 const MODEL_PRICING_CENTS_PER_MILLION = {
+  [DEFAULT_OPENAI_MODEL]: { input: 5, output: 40 },
   'gpt-5': { input: 125, output: 1000 },
   'gpt-5.4': { input: 250, output: 1500 },
   'gpt-5.4-mini': { input: 75, output: 450 },
@@ -244,7 +245,7 @@ async function loadRootEnvFile(): Promise<void> {
 
 function getPricingForModel(model: string): { input: number; output: number } {
   return MODEL_PRICING_CENTS_PER_MILLION[model as keyof typeof MODEL_PRICING_CENTS_PER_MILLION]
-    ?? MODEL_PRICING_CENTS_PER_MILLION['gpt-5.4-mini']
+    ?? MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL]
 }
 
 function calculateCostCents(model: string, inputTokens: number, outputTokens: number): number {

@@ -1,7 +1,8 @@
+import { DEFAULT_OPENAI_MODEL } from '@/lib/agent/config'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
 export const MODEL_PRICING_CENTS_PER_MILLION = {
-  'gpt-5-nano': { input: 5, output: 40 },
+  [DEFAULT_OPENAI_MODEL]: { input: 5, output: 40 },
   'gpt-5.4-nano': { input: 20, output: 125 },
   'gpt-5-mini': { input: 25, output: 200 },
   'gpt-5': { input: 125, output: 1000 },
@@ -11,7 +12,7 @@ export const MODEL_PRICING_CENTS_PER_MILLION = {
 
 export function getModelPricing(model: string): { input: number; output: number } {
   return MODEL_PRICING_CENTS_PER_MILLION[model as keyof typeof MODEL_PRICING_CENTS_PER_MILLION]
-    ?? MODEL_PRICING_CENTS_PER_MILLION['gpt-5-nano']
+    ?? MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL]
 }
 
 export async function trackApiUsage(params: {
