@@ -17,6 +17,12 @@ import { extractUrl } from '@/lib/agent/url-extractor'
 import { scrapeJobPosting } from '@/lib/agent/scraper'
 import { logError, logInfo, logWarn } from '@/lib/observability/structured-log'
 
+// DEBUG: Log immediately after imports to catch initialization errors
+console.log('[api/agent] Route file loaded at', new Date().toISOString())
+console.log('[api/agent] OPENAI_BASE_URL env:', process.env.OPENAI_BASE_URL)
+console.log('[api/agent] OPENAI_API_KEY exists:', Boolean(process.env.OPENAI_API_KEY))
+console.log('[api/agent] AGENT_CONFIG:', AGENT_CONFIG)
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -201,11 +207,14 @@ async function handleFileAttachment(
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+  console.log('[api/agent:POST] Handler called at', new Date().toISOString())
   const requestStartedAt = Date.now()
   const requestId = crypto.randomUUID()
 
   // ── Auth ────────────────────────────────────────────────────────────
+  console.log('[api/agent:POST] Getting app user...')
   const appUser = await getCurrentAppUser()
+  console.log('[api/agent:POST] App user retrieved:', Boolean(appUser))
   if (!appUser) {
     logWarn('agent.request.unauthorized', {
       requestId,
