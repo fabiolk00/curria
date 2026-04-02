@@ -29,10 +29,17 @@ export function resolveOpenAIBaseUrl(envValue = process.env.OPENAI_BASE_URL): st
 
 export function getOpenAIClient(): OpenAI {
   if (!openaiInstance) {
+    const baseURL = resolveOpenAIBaseUrl()
+    console.log('[openai:getOpenAIClient] Initializing OpenAI client')
+    console.log('[openai:getOpenAIClient] baseURL:', baseURL)
+    console.log('[openai:getOpenAIClient] OPENAI_API_KEY exists:', Boolean(process.env.OPENAI_API_KEY))
+
     openaiInstance = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY ?? 'test-key',
-      baseURL: resolveOpenAIBaseUrl(),
+      baseURL,
     })
+
+    console.log('[openai:getOpenAIClient] Client created successfully')
   }
 
   return openaiInstance

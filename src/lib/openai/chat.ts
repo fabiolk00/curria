@@ -40,9 +40,11 @@ export async function callOpenAIWithRetry(
   timeoutMs?: number,
   externalSignal?: AbortSignal,
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  console.log('[openai:callOpenAIWithRetry] Starting with maxRetries:', maxRetries, 'timeoutMs:', timeoutMs)
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log('[openai:callOpenAIWithRetry] Attempt', attempt, 'of', maxRetries)
     // Check if already cancelled before starting an attempt
     if (externalSignal?.aborted) {
       throw new DOMException('Request aborted', 'AbortError')
@@ -112,12 +114,32 @@ export async function createChatCompletionWithRetry(
   timeoutMs?: number,
   externalSignal?: AbortSignal,
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
-  return callOpenAIWithRetry(
-    (signal) => openaiClient.chat.completions.create(params, { signal }),
-    maxRetries,
-    timeoutMs,
-    externalSignal,
-  )
+  // DEBUG: Log client configuration and request details
+  console.log('[openai:createChatCompletionWithRetry] Starting')
+  console.log('[openai] Model:', params.model)
+  console.log('[openai] Client baseURL:', (openaiClient as any).baseURL || 'not set')
+  console.log('[openai] Client apiKey exists:', Boolean((openaiClient as any).apiKey))
+
+  try {
+    console.log('[openai] About to call openaiClient.chat.completions.create()')
+    const result = await callOpenAIWithRetry(
+      (signal) => {
+        console.log('[openai] Inside callOpenAIWithRetry - about to create completion')
+        return openaiClient.chat.completions.create(params, { signal })
+      },
+      maxRetries,
+      timeoutMs,
+      externalSignal,
+    )
+    console.log('[openai] Completion created successfully')
+    return result
+  } catch (error) {
+    console.error('[openai] Error during createChatCompletionWithRetry:', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    })
+    throw error
+  }
 }
 
 export function getChatCompletionText(response: OpenAI.Chat.Completions.ChatCompletion): string {
