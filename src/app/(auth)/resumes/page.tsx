@@ -22,6 +22,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
+const BILLING_ACCESS_UNAVAILABLE_TITLE = "Nao foi possivel validar seu plano"
+const BILLING_ACCESS_UNAVAILABLE_EYEBROW = "Acesso indisponivel"
+const BILLING_ACCESS_UNAVAILABLE_MESSAGE =
+  "Nao foi possivel verificar seu acesso ao gerenciamento de vagas agora. Atualize a pagina ou tente novamente em instantes."
+
 function serializeJobApplication(application: JobApplication): SerializedJobApplication {
   return {
     ...application,
@@ -38,16 +43,43 @@ export default async function ResumesPage() {
     return null
   }
 
-  const [applications, billingInfo] = await Promise.all([
-    getJobApplicationsForUser(appUser.id),
-    getUserBillingInfo(appUser.id).catch(() => null),
-  ])
-  const hasPaidAccess = billingInfo !== null && billingInfo.plan !== "free"
+  const accessResult = await getUserBillingInfo(appUser.id)
+    .then((billingInfo) => ({
+      locked: billingInfo === null || billingInfo.plan === "free",
+      lockedEyebrow: undefined as string | undefined,
+      lockedTitle: undefined as string | undefined,
+      lockedMessage: undefined as string | undefined,
+    }))
+    .catch(() => ({
+      locked: true,
+      lockedEyebrow: BILLING_ACCESS_UNAVAILABLE_EYEBROW,
+      lockedTitle: BILLING_ACCESS_UNAVAILABLE_TITLE,
+      lockedMessage: BILLING_ACCESS_UNAVAILABLE_MESSAGE,
+    }))
+
+  const applicationsResult = accessResult.locked
+    ? {
+        applications: [] as JobApplication[],
+        loadErrorMessage: null as string | null,
+      }
+    : await getJobApplicationsForUser(appUser.id)
+        .then((applications) => ({ applications, loadErrorMessage: null as string | null }))
+        .catch((error: unknown) => ({
+          applications: [] as JobApplication[],
+          loadErrorMessage:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar suas vagas agora. Tente novamente em instantes.",
+        }))
 
   return (
     <JobApplicationsTracker
-      applications={applications.map(serializeJobApplication)}
-      locked={!hasPaidAccess}
+      applications={applicationsResult.applications.map(serializeJobApplication)}
+      loadErrorMessage={applicationsResult.loadErrorMessage}
+      locked={accessResult.locked}
+      lockedEyebrow={accessResult.lockedEyebrow}
+      lockedTitle={accessResult.lockedTitle}
+      lockedMessage={accessResult.lockedMessage}
       createApplicationAction={createJobApplicationAction}
       updateApplicationDetailsAction={updateJobApplicationDetailsAction}
       updateApplicationStatusAction={updateJobApplicationStatusAction}

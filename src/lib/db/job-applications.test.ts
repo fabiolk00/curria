@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
 import {
+  JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE,
   createJobApplication,
   deleteJobApplication,
   getJobApplicationSummaryForUser,
@@ -135,6 +136,38 @@ describe('job applications db helpers', () => {
     expect(applications[0].benefits).toEqual([{ name: 'VA/VR Flexivel', value: 'R$ 1.200/mes' }])
   })
 
+  it('returns a friendly unavailable error when the table is missing from the schema cache', async () => {
+    const returns = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error("Could not find the table 'public.job_applications' in the schema cache"),
+    })
+    const order = vi.fn(() => ({
+      returns,
+    }))
+    const eqUser = vi.fn(() => ({
+      order,
+    }))
+    const select = vi.fn(() => ({
+      eq: eqUser,
+    }))
+
+    vi.mocked(getSupabaseAdminClient).mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table !== 'job_applications') {
+          throw new Error(`Unexpected table: ${table}`)
+        }
+
+        return {
+          select,
+        }
+      }),
+    } as unknown as ReturnType<typeof getSupabaseAdminClient>)
+
+    await expect(getJobApplicationsForUser('usr_123')).rejects.toThrow(
+      JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE,
+    )
+  })
+
   it('updates and deletes records scoped to the owning user', async () => {
     const updateEqId = vi.fn().mockResolvedValue({ error: null })
     const updateEqUser = vi.fn(() => ({
@@ -183,6 +216,64 @@ describe('job applications db helpers', () => {
     expect(del).toHaveBeenCalledTimes(1)
     expect(deleteEqUser).toHaveBeenCalledWith('user_id', 'usr_123')
     expect(deleteEqId).toHaveBeenCalledWith('id', 'app_123')
+  })
+
+  it('returns a friendly unavailable error for writes when the table is missing', async () => {
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error("Could not find the table 'public.job_applications' in the schema cache"),
+    })
+    const insertSelect = vi.fn(() => ({
+      single: insertSingle,
+    }))
+    const insert = vi.fn(() => ({
+      select: insertSelect,
+    }))
+
+    const updateEqId = vi.fn().mockResolvedValue({
+      error: new Error("Could not find the table 'public.job_applications' in the schema cache"),
+    })
+    const updateEqUser = vi.fn(() => ({
+      eq: updateEqId,
+    }))
+    const update = vi.fn(() => ({
+      eq: updateEqUser,
+    }))
+
+    const deleteEqId = vi.fn().mockResolvedValue({
+      error: new Error('relation "job_applications" does not exist'),
+    })
+    const deleteEqUser = vi.fn(() => ({
+      eq: deleteEqId,
+    }))
+    const del = vi.fn(() => ({
+      eq: deleteEqUser,
+    }))
+
+    vi.mocked(getSupabaseAdminClient).mockReturnValue({
+      from: vi.fn(() => ({
+        insert,
+        update,
+        delete: del,
+      })),
+    } as unknown as ReturnType<typeof getSupabaseAdminClient>)
+
+    await expect(
+      createJobApplication({
+        userId: 'usr_123',
+        role: 'Desenvolvedor Front-end Senior',
+        company: 'Fintech Corp',
+        resumeVersionLabel: 'Curriculo_Fintech_v2.pdf',
+      }),
+    ).rejects.toThrow(JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE)
+
+    await expect(
+      updateJobApplication('usr_123', 'app_123', { status: 'entrevista' }),
+    ).rejects.toThrow(JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE)
+
+    await expect(
+      deleteJobApplication('usr_123', 'app_123'),
+    ).rejects.toThrow(JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE)
   })
 
   it('summarizes application counts by status', async () => {

@@ -140,6 +140,10 @@ function buildApplication(
 function renderTracker(options?: {
   applications?: SerializedJobApplication[]
   locked?: boolean
+  lockedEyebrow?: string
+  lockedTitle?: string
+  lockedMessage?: string | null
+  loadErrorMessage?: string | null
   createApplicationAction?: (input: JobApplicationFormInput) => Promise<ActionResult>
   updateApplicationDetailsAction?: (input: {
     applicationId: string
@@ -155,6 +159,10 @@ function renderTracker(options?: {
     <JobApplicationsTracker
       applications={options?.applications ?? [buildApplication()]}
       locked={options?.locked ?? false}
+      lockedEyebrow={options?.lockedEyebrow}
+      lockedTitle={options?.lockedTitle}
+      lockedMessage={options?.lockedMessage}
+      loadErrorMessage={options?.loadErrorMessage ?? null}
       createApplicationAction={options?.createApplicationAction ?? vi.fn().mockResolvedValue({ success: true })}
       updateApplicationDetailsAction={
         options?.updateApplicationDetailsAction ?? vi.fn().mockResolvedValue({ success: true })
@@ -364,5 +372,38 @@ describe("JobApplicationsTracker", () => {
         button.textContent?.match(/Adicionar Vaga|Editar|Excluir/i) && (button as HTMLButtonElement).disabled,
     )
     expect(disabledButtons).toHaveLength(3)
+  })
+
+  it("shows a load error banner when applications fail to load", () => {
+    renderTracker({
+      applications: [],
+      loadErrorMessage: "Could not find the table 'public.job_applications' in the schema cache",
+    })
+
+    expect(screen.getByText(/nao foi possivel carregar suas candidaturas agora/i)).toBeInTheDocument()
+    expect(screen.getByText(/schema cache/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/gerenciamento de vagas ainda nao esta disponivel neste ambiente/i),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /adicionar vaga/i })).toBeDisabled()
+    expect(screen.getByPlaceholderText(/buscar por empresa ou cargo/i)).toBeDisabled()
+    expect(screen.queryByRole("button", { name: /adicionar primeira vaga/i })).not.toBeInTheDocument()
+  })
+
+  it("renders a custom locked message when access validation is unavailable", () => {
+    renderTracker({
+      applications: [],
+      locked: true,
+      lockedEyebrow: "Acesso indisponivel",
+      lockedTitle: "Nao foi possivel validar seu plano",
+      lockedMessage:
+        "Nao foi possivel verificar seu acesso ao gerenciamento de vagas agora. Atualize a pagina ou tente novamente em instantes.",
+    })
+
+    expect(screen.getByText(/acesso indisponivel/i)).toBeInTheDocument()
+    expect(screen.getByText(/nao foi possivel validar seu plano/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/nao foi possivel verificar seu acesso ao gerenciamento de vagas agora/i),
+    ).toBeInTheDocument()
   })
 })

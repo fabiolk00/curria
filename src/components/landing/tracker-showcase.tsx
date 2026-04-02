@@ -91,7 +91,7 @@ export default function TrackerShowcase() {
         style={{ animationDelay: "2s" }}
       />
 
-      <div className="container relative z-10 px-4 md:px-6">
+      <div className="container relative z-10 mx-auto px-4 md:px-6">
         <div className="mx-auto mb-20 max-w-3xl text-center">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -109,7 +109,7 @@ export default function TrackerShowcase() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-muted-foreground md:text-xl"
+            className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl"
           >
             Acompanhe o status de todas as vagas que voce se candidatou em um so lugar.
             Organize salarios, beneficios e saiba exatamente qual versao de curriculo foi enviada.

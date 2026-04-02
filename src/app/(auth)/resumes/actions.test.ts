@@ -9,12 +9,14 @@ import {
 
 const {
   mockGetCurrentAppUser,
+  mockGetUserBillingInfo,
   mockCreateJobApplication,
   mockUpdateJobApplication,
   mockDeleteJobApplication,
   mockRevalidatePath,
 } = vi.hoisted(() => ({
   mockGetCurrentAppUser: vi.fn(),
+  mockGetUserBillingInfo: vi.fn(),
   mockCreateJobApplication: vi.fn(),
   mockUpdateJobApplication: vi.fn(),
   mockDeleteJobApplication: vi.fn(),
@@ -23,6 +25,10 @@ const {
 
 vi.mock("@/lib/auth/app-user", () => ({
   getCurrentAppUser: mockGetCurrentAppUser,
+}))
+
+vi.mock("@/lib/asaas/quota", () => ({
+  getUserBillingInfo: mockGetUserBillingInfo,
 }))
 
 vi.mock("@/lib/db/job-applications", () => ({
@@ -40,6 +46,7 @@ describe("resumes actions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetCurrentAppUser.mockResolvedValue({ id: "usr_123" })
+    mockGetUserBillingInfo.mockResolvedValue({ plan: "monthly" })
   })
 
   it("creates a manual application, normalizes optional fields, and revalidates /resumes", async () => {
@@ -166,6 +173,40 @@ describe("resumes actions", () => {
       error: "Unauthorized",
     })
     expect(mockDeleteJobApplication).not.toHaveBeenCalled()
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects free users before touching the database", async () => {
+    mockGetUserBillingInfo.mockResolvedValue(null)
+
+    const result = await createJobApplicationAction({
+      role: "Frontend Engineer",
+      company: "Fintech Corp",
+      resumeVersionLabel: "curriculo_v1.pdf",
+      benefits: [],
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: "O gerenciamento de vagas faz parte dos planos pagos.",
+    })
+    expect(mockCreateJobApplication).not.toHaveBeenCalled()
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("returns a neutral access error when billing lookup fails", async () => {
+    mockGetUserBillingInfo.mockRejectedValue(new Error("billing down"))
+
+    const result = await updateJobApplicationStatusAction({
+      applicationId: "app_123",
+      status: "entrevista",
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: "Nao foi possivel verificar seu acesso ao gerenciamento de vagas agora. Tente novamente em instantes.",
+    })
+    expect(mockUpdateJobApplication).not.toHaveBeenCalled()
     expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 })

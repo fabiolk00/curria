@@ -11,6 +11,8 @@ import type {
 } from '@/types/dashboard'
 
 export const JOB_APPLICATION_STATUSES = ['entrevista', 'aguardando', 'sem_retorno', 'negativa'] as const
+export const JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE =
+  'O gerenciamento de vagas ainda nao esta disponivel neste ambiente.'
 
 const JobApplicationStatusSchema = z.enum(JOB_APPLICATION_STATUSES)
 
@@ -67,6 +69,35 @@ const UpdateJobApplicationInputSchema = z.object({
 })
 
 type JobApplicationRow = z.infer<typeof JobApplicationRowSchema>
+
+function isMissingJobApplicationsTableError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+  return (
+    message.includes("job_applications") &&
+    (
+      message.includes("schema cache") ||
+      message.includes("does not exist") ||
+      message.includes("relation") ||
+      message.includes("not found")
+    )
+  )
+}
+
+function toJobApplicationsError(action: string, error: unknown): Error {
+  if (isMissingJobApplicationsTableError(error)) {
+    return new Error(JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE)
+  }
+
+  if (error instanceof Error) {
+    return new Error(`Failed to ${action}: ${error.message}`)
+  }
+
+  return new Error(`Failed to ${action}.`)
+}
 
 function cloneBenefits(benefits: JobApplicationBenefit[]): JobApplicationBenefit[] {
   return structuredClone(benefits)
@@ -168,7 +199,7 @@ export async function createJobApplication(input: CreateJobApplicationInput): Pr
     .single()
 
   if (error || !data) {
-    throw new Error(`Failed to create job application: ${error?.message}`)
+    throw toJobApplicationsError('create job application', error)
   }
 
   return mapJobApplicationRow(data as JobApplicationRow)
@@ -184,7 +215,7 @@ export async function getJobApplicationsForUser(userId: string): Promise<JobAppl
     .returns<JobApplicationRow[]>()
 
   if (error || !data) {
-    throw new Error(`Failed to load job applications: ${error?.message}`)
+    throw toJobApplicationsError('load job applications', error)
   }
 
   return data.map(mapJobApplicationRow)
@@ -203,7 +234,7 @@ export async function getJobApplicationForUser(
     .maybeSingle<JobApplicationRow>()
 
   if (error) {
-    throw new Error(`Failed to load job application: ${error.message}`)
+    throw toJobApplicationsError('load job application', error)
   }
 
   if (!data) {
@@ -226,7 +257,7 @@ export async function updateJobApplication(
     .eq('id', applicationId)
 
   if (error) {
-    throw new Error(`Failed to update job application: ${error.message}`)
+    throw toJobApplicationsError('update job application', error)
   }
 }
 
@@ -239,7 +270,7 @@ export async function deleteJobApplication(userId: string, applicationId: string
     .eq('id', applicationId)
 
   if (error) {
-    throw new Error(`Failed to delete job application: ${error.message}`)
+    throw toJobApplicationsError('delete job application', error)
   }
 }
 

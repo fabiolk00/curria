@@ -3,9 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
+import { getUserBillingInfo } from '@/lib/asaas/quota'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { JOB_APPLICATION_STATUSES, createJobApplication, deleteJobApplication, updateJobApplication } from '@/lib/db/job-applications'
 import type { JobApplication, JobApplicationFormInput, SerializedJobApplication } from '@/types/dashboard'
+
+const JOB_APPLICATIONS_PAID_PLAN_MESSAGE =
+  'O gerenciamento de vagas faz parte dos planos pagos.'
+const JOB_APPLICATIONS_ACCESS_UNAVAILABLE_MESSAGE =
+  'Nao foi possivel verificar seu acesso ao gerenciamento de vagas agora. Tente novamente em instantes.'
 
 const JobApplicationBenefitSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -85,6 +91,26 @@ async function requireAppUserId(): Promise<string> {
   return appUser.id
 }
 
+async function requirePaidJobApplicationsAccess(): Promise<string> {
+  const userId = await requireAppUserId()
+
+  try {
+    const billingInfo = await getUserBillingInfo(userId)
+
+    if (!billingInfo || billingInfo.plan === 'free') {
+      throw new Error(JOB_APPLICATIONS_PAID_PLAN_MESSAGE)
+    }
+
+    return userId
+  } catch (error) {
+    if (error instanceof Error && error.message === JOB_APPLICATIONS_PAID_PLAN_MESSAGE) {
+      throw error
+    }
+
+    throw new Error(JOB_APPLICATIONS_ACCESS_UNAVAILABLE_MESSAGE)
+  }
+}
+
 function revalidateTrackerPath(): void {
   revalidatePath('/resumes')
 }
@@ -93,7 +119,7 @@ export async function createJobApplicationAction(
   input: JobApplicationFormInput,
 ): Promise<ActionResult<SerializedJobApplication>> {
   try {
-    const userId = await requireAppUserId()
+    const userId = await requirePaidJobApplicationsAccess()
     const normalizedInput = normalizeFormInput(input)
 
     const created = await createJobApplication({
@@ -121,7 +147,7 @@ export async function updateJobApplicationDetailsAction(input: {
 }): Promise<ActionResult<SerializedJobApplication>> {
   try {
     const parsed = UpdateJobApplicationDetailsSchema.parse(input)
-    const userId = await requireAppUserId()
+    const userId = await requirePaidJobApplicationsAccess()
     const normalizedValues = normalizeFormInput(parsed.values)
 
     await updateJobApplication(userId, parsed.applicationId, normalizedValues)
@@ -143,7 +169,7 @@ export async function updateJobApplicationStatusAction(input: {
 }): Promise<ActionResult> {
   try {
     const parsed = UpdateJobApplicationStatusSchema.parse(input)
-    const userId = await requireAppUserId()
+    const userId = await requirePaidJobApplicationsAccess()
 
     await updateJobApplication(userId, parsed.applicationId, {
       status: parsed.status,
@@ -165,7 +191,7 @@ export async function deleteJobApplicationAction(input: {
 }): Promise<ActionResult> {
   try {
     const parsed = DeleteJobApplicationSchema.parse(input)
-    const userId = await requireAppUserId()
+    const userId = await requirePaidJobApplicationsAccess()
 
     await deleteJobApplication(userId, parsed.applicationId)
 

@@ -34,9 +34,17 @@ vi.mock("@/components/dashboard/job-applications-tracker", () => ({
   JobApplicationsTracker: ({
     applications,
     locked,
+    lockedEyebrow,
+    lockedTitle,
+    lockedMessage,
+    loadErrorMessage,
   }: {
     applications: Array<{ id: string; appliedAt: string }>
     locked?: boolean
+    lockedEyebrow?: string
+    lockedTitle?: string
+    lockedMessage?: string | null
+    loadErrorMessage?: string | null
   }) => (
     <div
       data-testid="job-applications-tracker"
@@ -44,6 +52,10 @@ vi.mock("@/components/dashboard/job-applications-tracker", () => ({
       data-first-id={applications[0]?.id ?? ""}
       data-first-applied-at={applications[0]?.appliedAt ?? ""}
       data-locked={locked ? "true" : "false"}
+      data-locked-eyebrow={lockedEyebrow ?? ""}
+      data-locked-title={lockedTitle ?? ""}
+      data-locked-message={lockedMessage ?? ""}
+      data-load-error={loadErrorMessage ?? ""}
     />
   ),
 }))
@@ -104,12 +116,50 @@ describe("ResumesPage", () => {
 
   it("locks the tracker when the user is on free access", async () => {
     mockGetCurrentAppUser.mockResolvedValue({ id: "usr_123" })
-    mockGetJobApplicationsForUser.mockResolvedValue([])
     mockGetUserBillingInfo.mockResolvedValue(null)
 
     const jsx = await ResumesPage()
     render(jsx)
 
     expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute("data-locked", "true")
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute("data-locked-eyebrow", "")
+    expect(mockGetJobApplicationsForUser).not.toHaveBeenCalled()
+  })
+
+  it("locks the tracker with a neutral message when billing lookup fails", async () => {
+    mockGetCurrentAppUser.mockResolvedValue({ id: "usr_123" })
+    mockGetUserBillingInfo.mockRejectedValue(new Error("billing down"))
+
+    const jsx = await ResumesPage()
+    render(jsx)
+
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute("data-locked", "true")
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute(
+      "data-locked-eyebrow",
+      "Acesso indisponivel",
+    )
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute(
+      "data-locked-title",
+      "Nao foi possivel validar seu plano",
+    )
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute(
+      "data-locked-message",
+      "Nao foi possivel verificar seu acesso ao gerenciamento de vagas agora. Atualize a pagina ou tente novamente em instantes.",
+    )
+    expect(mockGetJobApplicationsForUser).not.toHaveBeenCalled()
+  })
+
+  it("shows a graceful load error when job applications cannot be loaded", async () => {
+    mockGetCurrentAppUser.mockResolvedValue({ id: "usr_123" })
+    mockGetJobApplicationsForUser.mockRejectedValue(new Error("Could not find the table"))
+
+    const jsx = await ResumesPage()
+    render(jsx)
+
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute("data-count", "0")
+    expect(screen.getByTestId("job-applications-tracker")).toHaveAttribute(
+      "data-load-error",
+      "Could not find the table",
+    )
   })
 })

@@ -62,6 +62,8 @@ import type {
 
 const LOCKED_TRACKER_MESSAGE =
   "O gerenciamento de vagas faz parte dos planos pagos. Faca upgrade para registrar candidaturas, curriculos enviados e acompanhar cada status em um so lugar."
+const LOCKED_TRACKER_TITLE = "Gerenciamento de vagas bloqueado"
+const LOCKED_TRACKER_EYEBROW = "Recurso Premium"
 
 const STATUS_OPTIONS: { value: JobApplicationStatus; label: string }[] = [
   { value: "entrevista", label: "Em Entrevista" },
@@ -103,6 +105,10 @@ type ActionResult =
 type TrackerProps = {
   applications: SerializedJobApplication[]
   locked?: boolean
+  lockedEyebrow?: string
+  lockedTitle?: string
+  lockedMessage?: string | null
+  loadErrorMessage?: string | null
   createApplicationAction: (input: JobApplicationFormInput) => Promise<ActionResult>
   updateApplicationDetailsAction: (input: {
     applicationId: string
@@ -234,6 +240,10 @@ function getDetailsPreview(application: SerializedJobApplication): string | null
 export function JobApplicationsTracker({
   applications,
   locked = false,
+  lockedEyebrow = LOCKED_TRACKER_EYEBROW,
+  lockedTitle = LOCKED_TRACKER_TITLE,
+  lockedMessage = LOCKED_TRACKER_MESSAGE,
+  loadErrorMessage = null,
   createApplicationAction,
   updateApplicationDetailsAction,
   updateApplicationStatusAction,
@@ -265,10 +275,10 @@ export function JobApplicationsTracker({
   const waiting = applications.filter((application) => application.status === "aguardando").length
   const rejected = applications.filter((application) => application.status === "negativa").length
   const isBusy = pendingAction !== null
-  const interactionsDisabled = isBusy || locked
+  const interactionsDisabled = isBusy || locked || loadErrorMessage !== null
 
   const openCreateDialog = (): void => {
-    if (locked) {
+    if (interactionsDisabled) {
       return
     }
 
@@ -279,7 +289,7 @@ export function JobApplicationsTracker({
   }
 
   const openEditDialog = (application: SerializedJobApplication): void => {
-    if (locked) {
+    if (interactionsDisabled) {
       return
     }
 
@@ -301,7 +311,7 @@ export function JobApplicationsTracker({
   const handleSaveApplication = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
 
-    if (locked) {
+    if (interactionsDisabled) {
       return
     }
 
@@ -339,7 +349,7 @@ export function JobApplicationsTracker({
     applicationId: string,
     status: JobApplicationStatus,
   ): Promise<void> => {
-    if (locked) {
+    if (interactionsDisabled) {
       return
     }
 
@@ -364,7 +374,7 @@ export function JobApplicationsTracker({
   }
 
   const handleDeleteApplication = async (): Promise<void> => {
-    if (locked || !deleteTarget) {
+    if (interactionsDisabled || !deleteTarget) {
       return
     }
 
@@ -395,18 +405,18 @@ export function JobApplicationsTracker({
           <div className="absolute inset-0 z-20 flex items-start justify-center px-4 pt-24">
             <div className="max-w-xl rounded-3xl border border-border/60 bg-background/95 px-6 py-5 text-center shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)] backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-                Recurso Premium
+                {lockedEyebrow}
               </p>
-              <h2 className="mt-3 text-2xl font-bold tracking-tight">Gerenciamento de vagas bloqueado</h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{LOCKED_TRACKER_MESSAGE}</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight">{lockedTitle}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{lockedMessage}</p>
             </div>
           </div>
         ) : null}
 
-        <div
-          aria-hidden={locked}
-          className={locked ? "pointer-events-none select-none blur-[4px]" : undefined}
-        >
+      <div
+        aria-hidden={locked}
+        className={locked ? "pointer-events-none select-none blur-[4px]" : undefined}
+      >
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -428,6 +438,13 @@ export function JobApplicationsTracker({
             ) : (
               <p className="text-muted-foreground">{statusMessage}</p>
             )}
+          </div>
+        ) : null}
+
+        {loadErrorMessage ? (
+          <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 shadow-sm dark:text-amber-200">
+            <p className="font-semibold">Nao foi possivel carregar suas candidaturas agora.</p>
+            <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">{loadErrorMessage}</p>
           </div>
         ) : null}
 
@@ -478,7 +495,7 @@ export function JobApplicationsTracker({
               placeholder="Buscar por empresa ou cargo..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              disabled={locked}
+              disabled={interactionsDisabled}
               className="w-full border-none bg-transparent py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-0"
             />
           </div>
@@ -488,7 +505,7 @@ export function JobApplicationsTracker({
               variant={filter === "todas" ? "secondary" : "ghost"}
               size="sm"
                 onClick={() => setFilter("todas")}
-                disabled={locked}
+                disabled={interactionsDisabled}
                 className="shrink-0 rounded-full"
               >
                 Todas
@@ -499,7 +516,7 @@ export function JobApplicationsTracker({
                 variant={filter === status.value ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setFilter(status.value)}
-                disabled={locked}
+                disabled={interactionsDisabled}
                 className="shrink-0 rounded-full"
               >
                 {status.label}
@@ -678,17 +695,19 @@ export function JobApplicationsTracker({
             </div>
             <h3 className="mb-1 text-lg font-medium">Nenhuma vaga encontrada</h3>
             <p className="mb-6 max-w-sm text-muted-foreground">
-              {applications.length === 0
+              {loadErrorMessage
+                ? "O gerenciamento de vagas ainda nao esta disponivel neste ambiente. Tente novamente em instantes."
+                : applications.length === 0
                 ? "Comece adicionando sua primeira vaga para acompanhar a busca."
                 : "Nao encontramos nenhuma candidatura com esse status ou termo de busca."}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              {applications.length === 0 ? (
-                <Button onClick={openCreateDialog} disabled={locked}>Adicionar primeira vaga</Button>
+              {applications.length === 0 && !loadErrorMessage ? (
+                <Button onClick={openCreateDialog} disabled={interactionsDisabled}>Adicionar primeira vaga</Button>
               ) : null}
               <Button
                 variant="outline"
-                disabled={locked}
+                disabled={interactionsDisabled}
                 onClick={() => {
                   setFilter("todas")
                   setSearchQuery("")

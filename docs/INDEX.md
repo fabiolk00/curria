@@ -62,6 +62,12 @@ This index is the main directory for the active documentation set.
 - [developer-rules/ERROR_HANDLING.md](./developer-rules/ERROR_HANDLING.md)
 - [developer-rules/TESTING.md](./developer-rules/TESTING.md)
 
+## Features and Access Control
+
+- [features/FEATURE_ACCESS_CONTROL.md](./features/FEATURE_ACCESS_CONTROL.md) - Plan-based feature gating (dual-layer verification)
+- [features/IMPLEMENTING_GATED_FEATURES.md](./features/IMPLEMENTING_GATED_FEATURES.md) - Step-by-step runbook for adding gated features
+- [features/ACCESS_CONTROL_DEBUGGING.md](./features/ACCESS_CONTROL_DEBUGGING.md) - Systematic debugging guide for permission issues
+
 ## Reference and Workstreams
 
 - [design-system-migration.md](./design-system-migration.md)
