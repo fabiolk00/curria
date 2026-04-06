@@ -15,6 +15,7 @@ import { ChatMessage } from "./chat-message"
 type AgentDoneChunk = Extract<AgentStreamChunk, { done: true }>
 
 const CREDIT_EXHAUSTED_ERROR_PATTERN = /cr[eé]ditos acabaram/i
+const CREDIT_EXHAUSTED_MESSAGE = "Seus créditos acabaram. Faça upgrade do seu plano para continuar."
 
 interface Message {
   id: string
@@ -28,6 +29,10 @@ interface Message {
     missingKeywords: string[]
     suggestions: string[]
   }
+}
+
+function hasConversationMessages(items: Message[]): boolean {
+  return items.some((message) => message.id !== "welcome")
 }
 
 type ChatCopy = {
@@ -84,6 +89,7 @@ interface ChatInterfaceProps {
   sessionId?: string
   userName?: string
   disabled?: boolean
+  currentCredits?: number
   onSessionChange?: (sessionId: string) => void
   onStreamingChange?: (isStreaming: boolean) => void
   onAgentTurnCompleted?: (payload: AgentDoneChunk) => void
@@ -94,6 +100,7 @@ export function ChatInterface({
   sessionId: initialSessionId,
   userName = "Você",
   disabled = false,
+  currentCredits,
   onSessionChange,
   onStreamingChange,
   onAgentTurnCompleted,
@@ -122,8 +129,28 @@ export function ChatInterface({
   const bottomRef = useRef<HTMLDivElement>(null)
   const isInputDisabled = disabled || isStreaming || sessionLimitReached || sessionExpired
 
+  const applySessionState = (nextSessionId: string | undefined): void => {
+    setSessionId(nextSessionId)
+    if (nextSessionId) {
+      setSessionExpired(false)
+      setSessionLimitReached(false)
+    }
+  }
+
+  const replaceAssistantMessage = (assistantMessageId: string, content: string): void => {
+    setMessages((previous) =>
+      previous.map((item) =>
+        item.id === assistantMessageId ? { ...item, content } : item,
+      ),
+    )
+  }
+
   useEffect(() => {
     setSessionId(initialSessionId)
+    if (initialSessionId) {
+      setSessionExpired(false)
+      setSessionLimitReached(false)
+    }
   }, [initialSessionId])
 
   useEffect(() => {
@@ -134,7 +161,7 @@ export function ChatInterface({
     const welcomeMessage = createWelcomeMessage(user?.firstName?.trim() || userName.trim() || undefined)
 
     if (!sessionId) {
-      setMessages([welcomeMessage])
+      setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
       return
     }
 
@@ -148,8 +175,7 @@ export function ChatInterface({
         }
 
         if (data.messages?.length) {
-          setMessages(
-            data.messages.map(
+          const nextMessages = data.messages.map(
               (
                 message: { role: string; content: string; createdAt: string },
                 index: number,
@@ -162,16 +188,23 @@ export function ChatInterface({
                   minute: "2-digit",
                 }),
               }),
-            ),
-          )
+            )
+
+          setMessages((previous) => {
+            if (hasConversationMessages(previous) && nextMessages.length < previous.length) {
+              return previous
+            }
+
+            return nextMessages
+          })
           return
         }
 
-        setMessages([welcomeMessage])
+        setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
       })
       .catch(() => {
         if (!cancelled) {
-          setMessages([welcomeMessage])
+          setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
         }
       })
 
@@ -207,6 +240,28 @@ export function ChatInterface({
     setUploadedFile(null)
     setIsStreaming(true)
 
+    const assistantMessageId = `${Date.now() + 1}`
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        content: copy.thinkingText,
+        timestamp: new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ])
+
+    const canReuseCurrentSession = Boolean(sessionId) && !sessionExpired && !sessionLimitReached
+    if (!canReuseCurrentSession && currentCredits !== undefined && currentCredits <= 0) {
+      onCreditsExhausted?.()
+      replaceAssistantMessage(assistantMessageId, `Aviso: ${CREDIT_EXHAUSTED_MESSAGE}`)
+      setIsStreaming(false)
+      return
+    }
+
     let fileBase64: string | undefined
     let fileMime: string | undefined
 
@@ -221,20 +276,6 @@ export function ChatInterface({
       })
       fileMime = fileToSend.type
     }
-
-    const assistantMessageId = `${Date.now() + 1}`
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: assistantMessageId,
-        role: "assistant",
-        content: copy.thinkingText,
-        timestamp: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ])
 
     try {
       const response = await fetch("/api/agent", {
@@ -252,11 +293,16 @@ export function ChatInterface({
         const errorPayload = (await response.json().catch(() => null)) as AgentStreamChunk | null
 
         if (errorPayload && "error" in errorPayload) {
+          const sessionEnded = response.status === 404 || errorPayload.action === "new_session"
+          const shouldOpenCreditsModal =
+            (response.status === 402 && isCreditExhaustedError(errorPayload.error))
+            || (sessionEnded && currentCredits !== undefined && currentCredits <= 0)
           if (response.status === 404) {
             setSessionExpired(true)
           } else if (errorPayload.action === "new_session") {
             setSessionLimitReached(true)
-          } else if (response.status === 402 && isCreditExhaustedError(errorPayload.error)) {
+          }
+          if (shouldOpenCreditsModal) {
             onCreditsExhausted?.()
           }
           if (errorPayload.messageCount !== undefined) {
@@ -276,7 +322,7 @@ export function ChatInterface({
       // preserves the session.
       const headerSessionId = response.headers.get("X-Session-Id")
       if (headerSessionId) {
-        setSessionId(headerSessionId)
+        applySessionState(headerSessionId)
         onSessionChange?.(headerSessionId)
       }
 
@@ -319,7 +365,7 @@ export function ChatInterface({
               }
 
               if ("sessionCreated" in chunk && chunk.sessionCreated) {
-                setSessionId(chunk.sessionId)
+                applySessionState(chunk.sessionId)
                 onSessionChange?.(chunk.sessionId)
                 continue
               }
@@ -333,7 +379,7 @@ export function ChatInterface({
                   setMessageCount(chunk.messageCount)
                 }
                 if (chunk.sessionId) {
-                  setSessionId(chunk.sessionId)
+                  applySessionState(chunk.sessionId)
                   onSessionChange?.(chunk.sessionId)
                 }
                 onAgentTurnCompleted?.(chunk)
@@ -341,11 +387,15 @@ export function ChatInterface({
               }
 
               if ("error" in chunk) {
+                const shouldOpenCreditsModal =
+                  isCreditExhaustedError(chunk.error)
+                  || (chunk.action === "new_session" && currentCredits !== undefined && currentCredits <= 0)
+
                 if (chunk.action === "new_session") {
                   setSessionLimitReached(true)
                 }
 
-                if (isCreditExhaustedError(chunk.error)) {
+                if (shouldOpenCreditsModal) {
                   onCreditsExhausted?.()
                 }
 
@@ -413,7 +463,7 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-full min-h-[500px] flex-col relative">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {messageCount > 0 && (
         <div className="border-b border-border bg-muted/30 px-4 py-2">
           <div className="mx-auto flex max-w-3xl items-center justify-between text-sm">
@@ -437,18 +487,20 @@ export function ChatInterface({
         </div>
       )}
 
-      <ScrollArea className="flex-1 px-4 md:px-6 absolute inset-0 bottom-[120px]">
-        <div className="mx-auto max-w-3xl space-y-6 py-6 h-full">
-          {messages.map((message) => (
-            <ChatMessage key={message.id} {...message} />
-          ))}
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
+      <div className="min-h-0 flex-1">
+        <ScrollArea className="h-full px-4 md:px-6">
+          <div className="mx-auto w-full max-w-3xl space-y-6 py-6">
+            {messages.map((message) => (
+              <ChatMessage key={message.id} {...message} />
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        </ScrollArea>
+      </div>
 
       <div
         className={cn(
-          "border-t border-border p-4 transition-colors absolute bottom-0 left-0 right-0 bg-background",
+          "border-t border-border bg-background p-4 transition-colors",
           isDragging && "border-primary bg-primary/5",
         )}
         onDragOver={handleDragOver}

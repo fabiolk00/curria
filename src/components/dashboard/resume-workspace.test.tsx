@@ -33,9 +33,17 @@ vi.mock("./chat-interface", () => ({
   ChatInterface: ({
     onCreditsExhausted,
     onSessionChange,
+    onAgentTurnCompleted,
+    currentCredits,
   }: {
     onCreditsExhausted?: () => void
     onSessionChange?: (sessionId: string) => void
+    onAgentTurnCompleted?: (payload: {
+      sessionId: string
+      isNewSession: boolean
+      phase: string
+    }) => void
+    currentCredits?: number
   }) => (
     <>
       <button type="button" onClick={() => onCreditsExhausted?.()}>
@@ -44,13 +52,28 @@ vi.mock("./chat-interface", () => ({
       <button type="button" onClick={() => onSessionChange?.("sess_new_from_agent")}>
         Simulate new session
       </button>
+      <button
+        type="button"
+        onClick={() => onAgentTurnCompleted?.({
+          sessionId: "sess_new_from_agent",
+          isNewSession: true,
+          phase: "intake",
+        })}
+      >
+        Simulate new session done
+      </button>
+      <div data-testid="chat-current-credits">{currentCredits ?? 0}</div>
     </>
   ),
 }))
 
 vi.mock("./plan-update-dialog", () => ({
-  PlanUpdateDialog: ({ isOpen }: { isOpen: boolean }) => (
-    <div data-testid="plan-update-dialog" data-open={String(isOpen)} />
+  PlanUpdateDialog: ({ isOpen, currentCredits }: { isOpen: boolean; currentCredits: number }) => (
+    <div
+      data-testid="plan-update-dialog"
+      data-open={String(isOpen)}
+      data-credits={String(currentCredits)}
+    />
   ),
 }))
 
@@ -114,7 +137,7 @@ describe("ResumeWorkspace", () => {
 
     render(<ResumeWorkspace initialSessionId={undefined} userName="Fabio" />)
 
-    await userEvent.click(screen.getByRole("button", { name: /simulate new session/i }))
+    await userEvent.click(screen.getByRole("button", { name: /^simulate new session$/i }))
 
     await waitFor(() => {
       expect(replaceStateSpy).toHaveBeenCalled()
@@ -166,5 +189,26 @@ describe("ResumeWorkspace", () => {
     await waitFor(() => {
       expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-open", "true")
     })
+  })
+
+  it("decrements local credits after the first completed turn of a new session", async () => {
+    render(
+      <ResumeWorkspace
+        initialSessionId={undefined}
+        userName="Fabio"
+        currentCredits={1}
+      />,
+    )
+
+    expect(screen.getByTestId("chat-current-credits")).toHaveTextContent("1")
+    expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-credits", "1")
+
+    await userEvent.click(screen.getByRole("button", { name: /simulate new session done/i }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-current-credits")).toHaveTextContent("0")
+    })
+
+    expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-credits", "0")
   })
 })

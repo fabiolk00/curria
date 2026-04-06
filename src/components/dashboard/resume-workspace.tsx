@@ -129,6 +129,11 @@ export function ResumeWorkspace({
   currentCredits = 0,
 }: ResumeWorkspaceProps) {
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
+  const [availableCredits, setAvailableCredits] = useState(currentCredits)
+
+  useEffect(() => {
+    setAvailableCredits(currentCredits)
+  }, [currentCredits])
 
   useEffect(() => {
     if (!sessionId) return
@@ -354,14 +359,18 @@ export function ResumeWorkspace({
   return (
     <>
       <div className="grid min-h-screen gap-6 p-4 lg:grid-cols-[minmax(0,1.15fr)_420px] lg:p-8">
-        <div className="overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur">
+        <div className="flex min-h-[72svh] flex-col overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur lg:h-[calc(100svh-4rem)]">
           <ChatInterface
             sessionId={sessionId}
             userName={userName}
             disabled={activeMutation !== null}
+            currentCredits={availableCredits}
             onSessionChange={(nextSessionId) => setSessionId(nextSessionId)}
             onStreamingChange={setIsStreaming}
             onAgentTurnCompleted={(payload) => {
+              if (payload.isNewSession) {
+                setAvailableCredits((previous) => Math.max(previous - 1, 0))
+              }
               setSessionId(payload.sessionId)
               void refreshWorkspace(payload.sessionId)
             }}
@@ -794,7 +803,7 @@ export function ResumeWorkspace({
         isOpen={planUpdateOpen}
         onOpenChange={setPlanUpdateOpen}
         activeRecurringPlan={activeRecurringPlan}
-        currentCredits={currentCredits}
+        currentCredits={availableCredits}
       />
     </>
   )

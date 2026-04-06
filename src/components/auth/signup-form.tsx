@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { getSafeRedirectPath } from "@/lib/auth/redirects"
+import { buildDefaultCheckoutOnboardingPath } from "@/lib/billing/checkout-navigation"
 import { navigateToUrl } from "@/lib/navigation/external"
 
 const signUpSchema = z.object({
@@ -52,7 +53,10 @@ export default function SignupForm() {
   const [showPassword, setShowPassword] = useState(false)
   const { signUp, isLoaded, setActive } = useSignUp()
   const searchParams = useSearchParams()
-  const redirectTo = getSafeRedirectPath(searchParams.get("redirect_to"))
+  const redirectTo = getSafeRedirectPath(
+    searchParams.get("redirect_to"),
+    buildDefaultCheckoutOnboardingPath(),
+  )
 
   const signUpForm = useForm<SignUpData>({
     resolver: zodResolver(signUpSchema),

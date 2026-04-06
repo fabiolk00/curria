@@ -364,6 +364,101 @@ describe("ChatInterface", () => {
     })
   })
 
+  it("preserves optimistic chat messages when the first history fetch returns empty", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { sessionCreated: true, sessionId: "sess_preserve" },
+            { done: true, sessionId: "sess_preserve", phase: "intake", messageCount: 1 },
+          ]),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "X-Session-Id": "sess_preserve",
+            },
+          },
+        )
+      }
+
+      if (typeof url === "string" && url.includes("/api/session/sess_preserve/messages")) {
+        return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Minha primeira mensagem")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(screen.getByText(/Minha primeira mensagem/i)).toBeInTheDocument()
+    })
+  })
+
+  it("opens the credits modal immediately when there are no credits and no reusable session", async () => {
+    const onCreditsExhausted = vi.fn()
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    render(
+      <ChatInterface
+        userName="Fabio"
+        currentCredits={0}
+        onCreditsExhausted={onCreditsExhausted}
+      />,
+    )
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Quero iniciar uma análise")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
+    })
+
+    expect(fetchSpy).not.toHaveBeenCalledWith("/api/agent", expect.anything())
+    expect(screen.getByText(/créditos acabaram/i)).toBeInTheDocument()
+  })
+
+  it("opens the credits modal when the session ends and no credits remain", async () => {
+    const onCreditsExhausted = vi.fn()
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          JSON.stringify({
+            error: "Sessão não encontrada. Inicie uma nova análise.",
+            action: "new_session",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(
+      <ChatInterface
+        sessionId="sess_stale"
+        userName="Fabio"
+        currentCredits={0}
+        onCreditsExhausted={onCreditsExhausted}
+      />,
+    )
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Continuar")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it("shows generic error when fetch fails with network error", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (typeof url === "string" && url.includes("/api/agent")) {

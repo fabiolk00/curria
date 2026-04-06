@@ -5,6 +5,7 @@ import '@testing-library/jest-dom'
 import React from 'react'
 
 import SignupForm from './signup-form'
+import { buildDefaultCheckoutOnboardingPath } from '@/lib/billing/checkout-navigation'
 
 const {
   mockCreate,
@@ -86,6 +87,30 @@ describe('SignupForm', () => {
     await waitFor(() => {
       expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_123' })
       expect(mockNavigateToUrl).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
+    })
+  })
+
+  it('redirects to the default onboarding flow when no redirect_to is provided', async () => {
+    const user = userEvent.setup()
+
+    render(<SignupForm />)
+
+    await user.type(screen.getByLabelText('Nome completo'), 'Test User')
+    await user.type(screen.getByLabelText('E-mail'), 'test@example.com')
+    await user.type(screen.getByLabelText('Senha'), 'password123')
+    await user.click(screen.getByRole('button', { name: 'Criar conta grátis' }))
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalled()
+      expect(mockPrepareEmailAddressVerification).toHaveBeenCalled()
+    })
+
+    await user.type(screen.getByLabelText(/C.digo de verifica..o/i), '123456')
+    await user.click(screen.getByRole('button', { name: /Confirmar e entrar/i }))
+
+    await waitFor(() => {
+      expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_123' })
+      expect(mockNavigateToUrl).toHaveBeenCalledWith(buildDefaultCheckoutOnboardingPath())
     })
   })
 })
