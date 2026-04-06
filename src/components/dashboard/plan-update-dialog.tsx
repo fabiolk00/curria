@@ -1,20 +1,10 @@
 "use client"
 
-import React, { useCallback, useState } from "react"
+import { useCallback, useState } from "react"
 
 import { Check, Loader2, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
   CHECKOUT_ERROR_MESSAGE,
@@ -24,6 +14,11 @@ import { navigateToUrl } from "@/lib/navigation/external"
 import { PLANS, type PlanSlug, formatPrice } from "@/lib/plans"
 import { cn } from "@/lib/utils"
 
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
 interface PlanUpdateDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
@@ -31,7 +26,7 @@ interface PlanUpdateDialogProps {
   currentCredits: number
 }
 
-const plans: Array<{ slug: PlanSlug; popular: boolean }> = [
+const planCards: Array<{ slug: PlanSlug; popular: boolean }> = [
   { slug: "unit", popular: false },
   { slug: "monthly", popular: true },
   { slug: "pro", popular: false },
@@ -72,7 +67,7 @@ export function PlanUpdateDialog({
 
   const requestCheckout = useCallback(async (plan: PlanSlug): Promise<CheckoutAttemptResult> => {
     try {
-      const res = await fetch("/api/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -80,13 +75,13 @@ export function PlanUpdateDialog({
 
       let payload: unknown = null
       try {
-        payload = await res.json()
+        payload = await response.json()
       } catch {
         payload = null
       }
 
       if (
-        res.ok &&
+        response.ok &&
         typeof payload === "object" &&
         payload !== null &&
         "url" in payload &&
@@ -99,7 +94,7 @@ export function PlanUpdateDialog({
       return {
         kind: "error",
         message: getCheckoutErrorMessage(payload),
-        retryable: res.status >= 500,
+        retryable: response.status >= 500,
       }
     } catch {
       return {
@@ -133,6 +128,7 @@ export function PlanUpdateDialog({
         }
 
         if (result.kind === "success") {
+          onOpenChange(false)
           navigateToUrl(result.url)
           return
         }
@@ -142,127 +138,138 @@ export function PlanUpdateDialog({
         setLoading(null)
       }
     },
-    [activeRecurringPlan, requestCheckout],
+    [activeRecurringPlan, onOpenChange, requestCheckout],
   )
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[min(98vw,112rem)] max-w-none overflow-y-auto sm:rounded-[2rem]">
-        <DialogHeader className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
-              Atualização de plano
-            </Badge>
-            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              Créditos preservados
+      <DialogContent className="w-[min(98vw,1200px)] max-w-none overflow-hidden p-0 sm:rounded-[2rem]">
+        <div className="max-h-[92vh] overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
+          <div className="mx-auto max-w-7xl">
+            <DialogHeader className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
+                  Atualização de plano
+                </Badge>
+                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                  Créditos preservados
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <DialogTitle className="text-3xl font-black tracking-tight sm:text-4xl">
+                  Escolha seu novo plano
+                </DialogTitle>
+                <DialogDescription className="max-w-3xl text-base leading-7">
+                  Recriamos o modal com a mesma estrutura visual dos cards da página de preços. Seu saldo atual continua
+                  na conta enquanto o checkout é iniciado.
+                </DialogDescription>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-border/60 bg-muted/20 p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  Créditos atuais: {currentCredits}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Se você já possui um plano mensal ativo, outro plano mensal ficará indisponível até o cancelamento do
+                  plano atual.
+                </p>
+              </div>
+            </DialogHeader>
+
+            <div className="mt-8 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {planCards.map((planCard) => {
+                const config = PLANS[planCard.slug]
+                const purchaseState = getPlanPurchaseState(activeRecurringPlan, planCard.slug)
+                const isCurrent = purchaseState.isCurrentActiveRecurringPlan
+                const estimatedCredits = currentCredits + config.credits
+                const period = config.billing === "monthly" ? "/mês" : ""
+
+                return (
+                  <Card
+                    key={config.name}
+                    className={cn(
+                      "relative flex h-full flex-col rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-65px_oklch(var(--foreground)/0.8)] transition-all",
+                      planCard.popular
+                        ? "border-primary/70 lg:scale-[1.02]"
+                        : "hover:-translate-y-1 hover:border-border hover:shadow-xl",
+                      isCurrent ? "ring-2 ring-primary/20" : undefined,
+                    )}
+                  >
+                    {planCard.popular ? (
+                      <Badge className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-[11px] uppercase tracking-[0.2em]">
+                        Mais popular
+                      </Badge>
+                    ) : null}
+
+                    {isCurrent ? (
+                      <Badge
+                        variant="secondary"
+                        className="absolute right-3 top-3 rounded-full text-[10px] uppercase tracking-[0.15em]"
+                      >
+                        Plano atual
+                      </Badge>
+                    ) : null}
+
+                    <CardHeader className="pb-2 pt-8 text-center">
+                      <CardTitle className="text-2xl">{config.name}</CardTitle>
+                      <CardDescription>{config.description}</CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="flex flex-1 flex-col justify-between text-center">
+                      <div className="mb-8">
+                        <span className="text-5xl font-black tracking-tight">{formatPrice(config.price)}</span>
+                        <span className="text-muted-foreground">{period}</span>
+                      </div>
+
+                      <ul className="space-y-4 text-left">
+                        <li className="flex items-start gap-3">
+                          <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                          <span className="text-sm font-medium">Créditos do plano: {config.credits}</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                          <span className="text-sm font-medium">
+                            {isCurrent ? `Créditos atuais: ${currentCredits}` : `Após a compra: ${estimatedCredits}`}
+                          </span>
+                        </li>
+                        {config.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-3">
+                            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                            <span className="text-sm font-medium">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+
+                    <CardFooter className="pb-8">
+                      <Button
+                        className="h-12 w-full rounded-full font-semibold"
+                        variant={isCurrent ? "secondary" : planCard.popular ? "default" : "outline"}
+                        onClick={() => void handleCheckout(planCard.slug)}
+                        disabled={loading !== null || isCurrent}
+                        title={purchaseState.cannotPurchasePlan ? ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE : undefined}
+                      >
+                        {loading === planCard.slug ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                          </>
+                        ) : isCurrent ? (
+                          "Plano atual"
+                        ) : purchaseState.cannotPurchasePlan ? (
+                          "Ver restrição"
+                        ) : (
+                          "Selecionar"
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
             </div>
           </div>
-          <DialogTitle className="text-3xl font-black tracking-tight">Escolha seu novo plano</DialogTitle>
-          <DialogDescription className="max-w-2xl text-base leading-7">
-            O modal segue a mesma estrutura visual dos cards da página de preços. Seu saldo atual continua na conta
-            enquanto o checkout é iniciado.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-8 py-6 md:grid-cols-3">
-          {plans.map((plan) => {
-            const config = PLANS[plan.slug]
-            const purchaseState = getPlanPurchaseState(activeRecurringPlan, plan.slug)
-            const isCurrent = purchaseState.isCurrentActiveRecurringPlan
-            const estimatedCredits = currentCredits + config.credits
-            const period = config.billing === "monthly" ? "/mês" : ""
-
-            return (
-              <Card
-                key={config.name}
-                className={cn(
-                  "relative flex h-full flex-col rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-65px_oklch(var(--foreground)/0.8)] transition-all",
-                  plan.popular
-                    ? "border-primary/70 lg:scale-[1.03]"
-                    : "hover:-translate-y-1 hover:border-border hover:shadow-xl",
-                  isCurrent ? "ring-2 ring-primary/20" : undefined,
-                )}
-              >
-                {plan.popular ? (
-                  <Badge className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-[11px] uppercase tracking-[0.2em]">
-                    Mais popular
-                  </Badge>
-                ) : null}
-
-                {isCurrent ? (
-                  <Badge
-                    variant="secondary"
-                    className="absolute right-3 top-3 rounded-full text-[10px] uppercase tracking-[0.15em]"
-                  >
-                    Plano atual
-                  </Badge>
-                ) : null}
-
-                <CardHeader className="pb-2 pt-8 text-center">
-                  <CardTitle className="text-2xl">{config.name}</CardTitle>
-                  <CardDescription>{config.description}</CardDescription>
-                  <div className="mt-6 flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-black tracking-tight">{formatPrice(config.price)}</span>
-                    <span className="text-muted-foreground">{period}</span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="flex flex-1 flex-col justify-between space-y-8 px-6 pb-4">
-                  <ul className="space-y-4 text-left">
-                    <li className="flex items-start gap-3">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                      <span className="text-sm font-medium">Créditos do plano: {config.credits}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                      <span className="text-sm font-medium">
-                        {isCurrent ? `Créditos atuais: ${currentCredits}` : `Após a compra: ${estimatedCredits}`}
-                      </span>
-                    </li>
-                    {config.features.slice(0, 3).map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                        <span className="text-sm font-medium">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="rounded-[1.5rem] border border-border/60 bg-background/75 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      O que acontece no checkout
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Selecionar este plano abre o checkout da Asaas e preserva os créditos restantes da conta.
-                    </p>
-                  </div>
-                </CardContent>
-
-                <CardFooter className="pb-8">
-                  <Button
-                    className="h-12 w-full rounded-full font-semibold"
-                    variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
-                    onClick={() => void handleCheckout(plan.slug)}
-                    disabled={loading !== null || isCurrent || purchaseState.cannotPurchasePlan}
-                    title={purchaseState.cannotPurchasePlan ? ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE : undefined}
-                  >
-                    {loading === plan.slug ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processando...
-                      </>
-                    ) : isCurrent ? (
-                      "Plano atual"
-                    ) : purchaseState.cannotPurchasePlan ? (
-                      "Cancele o atual primeiro"
-                    ) : (
-                      "Selecionar"
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            )
-          })}
         </div>
       </DialogContent>
     </Dialog>
