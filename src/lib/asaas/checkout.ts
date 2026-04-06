@@ -33,11 +33,12 @@ function buildCustomerData(
   userName: string,
   userEmail?: string | null,
   billingInfo?: BillingInfo,
+  includeAddress: boolean = false,
 ) {
   return {
     name: userName,
     email: userEmail ?? undefined,
-    ...(billingInfo && {
+    ...(billingInfo && includeAddress && {
       cpfCnpj: billingInfo.cpfCnpj,
       phoneNumber: billingInfo.phoneNumber,
       address: billingInfo.address,
@@ -71,6 +72,7 @@ export async function createCheckoutLink({
   void checkoutReference
 
   if (planConfig.billing === 'once') {
+    // Unit (one-time payment): PIX + CREDIT_CARD with full billing info
     const detachedCheckout = await asaas.post<{ id: string }>('/checkouts', {
       billingTypes: ['PIX', 'CREDIT_CARD'],
       chargeTypes: ['DETACHED'],
@@ -80,7 +82,7 @@ export async function createCheckoutLink({
         cancelUrl: cancelUrl ?? successUrl,
         expiredUrl: expiredUrl ?? cancelUrl ?? successUrl,
       },
-      customerData: buildCustomerData(userName, userEmail, billingInfo),
+      customerData: buildCustomerData(userName, userEmail, billingInfo, true),
       items: [
         {
           name: buildPaymentLinkName(planConfig.name),
@@ -95,6 +97,7 @@ export async function createCheckoutLink({
     return buildCheckoutSessionUrl(detachedCheckout.id)
   }
 
+  // Monthly/Pro (recurring): CREDIT_CARD only, no address in payload
   const recurringCheckout = await asaas.post<{ id: string }>('/checkouts', {
     billingTypes: ['CREDIT_CARD'],
     chargeTypes: ['RECURRENT'],
@@ -104,7 +107,7 @@ export async function createCheckoutLink({
       cancelUrl: cancelUrl ?? successUrl,
       expiredUrl: expiredUrl ?? cancelUrl ?? successUrl,
     },
-    customerData: buildCustomerData(userName, userEmail, billingInfo),
+    customerData: buildCustomerData(userName, userEmail, billingInfo, false),
     items: [
       {
         name: buildPaymentLinkName(planConfig.name),
