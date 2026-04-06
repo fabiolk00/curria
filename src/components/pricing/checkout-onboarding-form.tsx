@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { BillingInfo } from '@/lib/billing/customer-info'
-import { buildCheckoutOnboardingPath, type PaidPlanSlug } from '@/lib/billing/checkout-navigation'
+import { buildCheckoutResumePath, type PaidPlanSlug } from '@/lib/billing/checkout-navigation'
 import { getCheckoutErrorMessage } from '@/lib/asaas/checkout-errors'
 import { navigateToUrl } from '@/lib/navigation/external'
 import { PLANS, formatPrice } from '@/lib/plans'
@@ -115,7 +115,7 @@ export function CheckoutOnboardingForm({
     }
 
     if (response.status === 401) {
-      router.push(`/login?redirect_to=${encodeURIComponent(buildCheckoutOnboardingPath(normalizedValues.plan))}`)
+      router.push(`/login?redirect_to=${encodeURIComponent(buildCheckoutResumePath(normalizedValues.plan))}`)
       return
     }
 

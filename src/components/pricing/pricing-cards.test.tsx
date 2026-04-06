@@ -80,7 +80,7 @@ describe('PricingCards', () => {
 
     await user.click(screen.getAllByRole('button', { name: /Come.*agora/i })[0])
 
-    expect(mockPush).toHaveBeenCalledWith('/signup?redirect_to=%2Fcheckout%3Fplan%3Dunit')
+    expect(mockPush).toHaveBeenCalledWith('/signup?redirect_to=%2Fpricing%3FcheckoutPlan%3Dunit')
   })
 
   it('redirects signed-in users to the intermediate checkout onboarding route', async () => {

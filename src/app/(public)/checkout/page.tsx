@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { CheckoutOnboardingForm } from '@/components/pricing/checkout-onboarding-form'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getBillingInfo } from '@/lib/billing/customer-info'
-import { buildCheckoutOnboardingPath, isPaidPlanSlug } from '@/lib/billing/checkout-navigation'
+import { buildCheckoutResumePath, isPaidPlanSlug } from '@/lib/billing/checkout-navigation'
 
 export const metadata: Metadata = {
   title: 'Checkout - CurrIA',
@@ -30,7 +30,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
   const appUser = await getCurrentAppUser()
   if (!appUser) {
-    redirect(`/login?redirect_to=${encodeURIComponent(buildCheckoutOnboardingPath(selectedPlan))}`)
+    redirect(`/login?redirect_to=${encodeURIComponent(buildCheckoutResumePath(selectedPlan))}`)
   }
 
   let billingInfo = null

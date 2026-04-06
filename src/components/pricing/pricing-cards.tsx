@@ -9,7 +9,12 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { buildCheckoutOnboardingPath, isPaidPlanSlug, type PaidPlanSlug } from "@/lib/billing/checkout-navigation"
+import {
+  buildCheckoutOnboardingPath,
+  buildCheckoutResumePath,
+  isPaidPlanSlug,
+  type PaidPlanSlug,
+} from "@/lib/billing/checkout-navigation"
 import { PLANS, formatPrice } from "@/lib/plans"
 import { cn } from "@/lib/utils"
 
@@ -35,7 +40,7 @@ const plans = [
 type DisplayPlan = (typeof plans)[number]["slug"]
 
 function getSignupRedirectPath(plan: PaidPlanSlug): string {
-  return `/signup?redirect_to=${encodeURIComponent(buildCheckoutOnboardingPath(plan))}`
+  return `/signup?redirect_to=${encodeURIComponent(buildCheckoutResumePath(plan))}`
 }
 
 export default function PricingCards() {
