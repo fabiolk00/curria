@@ -1,22 +1,23 @@
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 
-import { ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE, CHECKOUT_ERROR_MESSAGE } from "@/lib/asaas/checkout-errors"
+import { ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE } from "@/lib/asaas/checkout-errors"
 
 import { PlanUpdateDialog } from "./plan-update-dialog"
 
-const { mockNavigateToUrl, mockToastError, mockToastInfo, mockFetch } = vi.hoisted(() => ({
-  mockNavigateToUrl: vi.fn(),
+const { mockPush, mockToastError, mockToastInfo } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
-  mockFetch: vi.fn(),
 }))
 
-vi.mock("@/lib/navigation/external", () => ({
-  navigateToUrl: mockNavigateToUrl,
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }))
 
 vi.mock("@/components/ui/dialog", () => ({
@@ -40,7 +41,6 @@ vi.mock("sonner", () => ({
 describe("PlanUpdateDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal("fetch", mockFetch)
   })
 
   it("renders pricing-style plan cards inside the modal", () => {
@@ -60,21 +60,9 @@ describe("PlanUpdateDialog", () => {
     expect(screen.getAllByRole("button", { name: "Selecionar" })).toHaveLength(3)
   })
 
-  it("retries once after a transient checkout error before redirecting", async () => {
+  it("closes the modal and redirects to pricing checkout for the selected plan", async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
-
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ error: "Internal server error" }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ url: "https://sandbox.asaas.com/payment-link/retry-success" }),
-      })
 
     render(
       <PlanUpdateDialog
@@ -87,49 +75,12 @@ describe("PlanUpdateDialog", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Selecionar" })[0])
 
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2)
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("https://sandbox.asaas.com/payment-link/retry-success")
-      expect(onOpenChange).toHaveBeenCalledWith(false)
-    })
-
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(mockPush).toHaveBeenCalledWith("/pricing?checkoutPlan=unit")
     expect(mockToastError).not.toHaveBeenCalled()
   })
 
-  it("shows the shared checkout error when checkout keeps failing", async () => {
-    const user = userEvent.setup()
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ error: "Unexpected gateway response" }),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ error: "Unexpected gateway response" }),
-      })
-
-    render(
-      <PlanUpdateDialog
-        isOpen
-        onOpenChange={vi.fn()}
-        activeRecurringPlan={null}
-        currentCredits={4}
-      />,
-    )
-
-    await user.click(screen.getAllByRole("button", { name: "Selecionar" })[1])
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2)
-      expect(mockToastError).toHaveBeenCalledWith(CHECKOUT_ERROR_MESSAGE)
-    })
-
-    expect(mockNavigateToUrl).not.toHaveBeenCalled()
-  })
-
-  it("explains the monthly restriction instead of silently disabling the button", async () => {
+  it("explains the monthly restriction instead of navigating when another monthly plan is blocked", async () => {
     const user = userEvent.setup()
 
     render(
@@ -143,7 +94,22 @@ describe("PlanUpdateDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "Ver restrição" }))
 
-    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockPush).not.toHaveBeenCalled()
     expect(mockToastError).toHaveBeenCalledWith(ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE)
+  })
+
+  it("disables the current active monthly plan button", () => {
+    render(
+      <PlanUpdateDialog
+        isOpen
+        onOpenChange={vi.fn()}
+        activeRecurringPlan="pro"
+        currentCredits={50}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Plano atual" })).toBeDisabled()
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockToastInfo).not.toHaveBeenCalled()
   })
 })

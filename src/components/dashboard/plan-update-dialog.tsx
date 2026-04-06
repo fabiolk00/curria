@@ -1,16 +1,12 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
+import { useRouter } from "next/navigation"
 import { Check, Loader2, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 
-import {
-  ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
-  CHECKOUT_ERROR_MESSAGE,
-  getCheckoutErrorMessage,
-} from "@/lib/asaas/checkout-errors"
-import { navigateToUrl } from "@/lib/navigation/external"
+import { ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE } from "@/lib/asaas/checkout-errors"
 import { PLANS, type PlanSlug, formatPrice } from "@/lib/plans"
 import { cn } from "@/lib/utils"
 
@@ -32,9 +28,11 @@ const planCards: Array<{ slug: PlanSlug; popular: boolean }> = [
   { slug: "pro", popular: false },
 ]
 
-type CheckoutAttemptResult =
-  | { kind: "success"; url: string }
-  | { kind: "error"; message: string; retryable: boolean }
+const CURRENT_MONTHLY_PLAN_MESSAGE = "Você já possui este plano mensal ativo"
+
+function getCheckoutRedirectPath(plan: PlanSlug): string {
+  return `/pricing?checkoutPlan=${plan}`
+}
 
 function getPlanPurchaseState(activeRecurringPlan: PlanSlug | null, candidatePlan: PlanSlug): {
   isCurrentActiveRecurringPlan: boolean
@@ -64,53 +62,20 @@ export function PlanUpdateDialog({
   currentCredits,
 }: PlanUpdateDialogProps) {
   const [loading, setLoading] = useState<PlanSlug | null>(null)
+  const router = useRouter()
 
-  const requestCheckout = useCallback(async (plan: PlanSlug): Promise<CheckoutAttemptResult> => {
-    try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      })
-
-      let payload: unknown = null
-      try {
-        payload = await response.json()
-      } catch {
-        payload = null
-      }
-
-      if (
-        response.ok &&
-        typeof payload === "object" &&
-        payload !== null &&
-        "url" in payload &&
-        typeof payload.url === "string" &&
-        payload.url.length > 0
-      ) {
-        return { kind: "success", url: payload.url }
-      }
-
-      return {
-        kind: "error",
-        message: getCheckoutErrorMessage(payload),
-        retryable: response.status >= 500,
-      }
-    } catch {
-      return {
-        kind: "error",
-        message: CHECKOUT_ERROR_MESSAGE,
-        retryable: true,
-      }
+  useEffect(() => {
+    if (!isOpen) {
+      setLoading(null)
     }
-  }, [])
+  }, [isOpen])
 
   const handleCheckout = useCallback(
-    async (plan: PlanSlug) => {
+    (plan: PlanSlug) => {
       const purchaseState = getPlanPurchaseState(activeRecurringPlan, plan)
 
       if (purchaseState.isCurrentActiveRecurringPlan) {
-        toast.info("Você já possui este plano mensal ativo")
+        toast.info(CURRENT_MONTHLY_PLAN_MESSAGE)
         return
       }
 
@@ -120,30 +85,15 @@ export function PlanUpdateDialog({
       }
 
       setLoading(plan)
-      try {
-        let result = await requestCheckout(plan)
-
-        if (result.kind !== "success" && result.retryable) {
-          result = await requestCheckout(plan)
-        }
-
-        if (result.kind === "success") {
-          onOpenChange(false)
-          navigateToUrl(result.url)
-          return
-        }
-
-        toast.error(result.message)
-      } finally {
-        setLoading(null)
-      }
+      onOpenChange(false)
+      router.push(getCheckoutRedirectPath(plan))
     },
-    [activeRecurringPlan, onOpenChange, requestCheckout],
+    [activeRecurringPlan, onOpenChange, router],
   )
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(98vw,1200px)] max-w-none overflow-hidden p-0 sm:rounded-[2rem]">
+      <DialogContent className="!w-[min(96vw,1320px)] !max-w-[min(96vw,1320px)] overflow-hidden !p-0 sm:!max-w-[min(96vw,1320px)] sm:rounded-[2rem]">
         <div className="max-h-[92vh] overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto max-w-7xl">
             <DialogHeader className="space-y-4">
@@ -162,8 +112,8 @@ export function PlanUpdateDialog({
                   Escolha seu novo plano
                 </DialogTitle>
                 <DialogDescription className="max-w-3xl text-base leading-7">
-                  Recriamos o modal com a mesma estrutura visual dos cards da página de preços. Seu saldo atual continua
-                  na conta enquanto o checkout é iniciado.
+                  Este modal agora usa a mesma seleção de planos do fluxo de preços e envia você direto para o checkout
+                  validado da aplicação.
                 </DialogDescription>
               </div>
 
@@ -245,9 +195,10 @@ export function PlanUpdateDialog({
 
                     <CardFooter className="pb-8">
                       <Button
+                        type="button"
                         className="h-12 w-full rounded-full font-semibold"
                         variant={isCurrent ? "secondary" : planCard.popular ? "default" : "outline"}
-                        onClick={() => void handleCheckout(planCard.slug)}
+                        onClick={() => handleCheckout(planCard.slug)}
                         disabled={loading !== null || isCurrent}
                         title={purchaseState.cannotPurchasePlan ? ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE : undefined}
                       >
