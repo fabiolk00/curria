@@ -39,7 +39,7 @@ function buildCustomerData(
     email: userEmail ?? undefined,
     ...(billingInfo && {
       cpfCnpj: billingInfo.cpfCnpj,
-      phoneNumber: billingInfo.phoneNumber,
+      phone: billingInfo.phoneNumber,
       address: billingInfo.address,
       addressNumber: billingInfo.addressNumber,
       postalCode: billingInfo.postalCode,
