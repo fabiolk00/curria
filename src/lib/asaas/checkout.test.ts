@@ -114,7 +114,7 @@ describe('Asaas checkout link creation', () => {
     })
   })
 
-  it('creates recurring hosted checkouts with CREDIT_CARD only, no address in payload', async () => {
+  it('creates recurring hosted checkouts with CREDIT_CARD only and full billing info', async () => {
     mockPost.mockResolvedValueOnce({ id: 'checkout_123' })
 
     await expect(createCheckoutLink({
@@ -149,6 +149,12 @@ describe('Asaas checkout link creation', () => {
       customerData: {
         name: 'Test User',
         email: 'test@example.com',
+        cpfCnpj: '12345678901234',
+        phoneNumber: '11999999999',
+        address: 'Rua Test',
+        addressNumber: '123',
+        postalCode: '01234567',
+        province: 'SP',
       },
       items: [
         {
@@ -164,9 +170,5 @@ describe('Asaas checkout link creation', () => {
       },
       externalReference: 'curria:v1:u:usr_123:c:chk_monthly',
     })
-    expect(mockPost).not.toHaveBeenCalledWith('/checkouts', expect.objectContaining({
-      chargeTypes: ['RECURRENT'],
-      billingTypes: ['PIX', 'CREDIT_CARD'],
-    }))
   })
 })
