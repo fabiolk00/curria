@@ -292,6 +292,78 @@ describe("ChatInterface", () => {
     })
   })
 
+  it("reads X-Session-Id header and fires onSessionChange before SSE parsing", async () => {
+    const onSessionChange = vi.fn()
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { sessionCreated: true, sessionId: "sess_hdr" },
+            { done: true, sessionId: "sess_hdr", phase: "intake" },
+          ]),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "X-Session-Id": "sess_hdr",
+            },
+          },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(
+      <ChatInterface userName="Fabio" onSessionChange={onSessionChange} />,
+    )
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Nova sessão")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onSessionChange).toHaveBeenCalledWith("sess_hdr")
+    })
+
+    // Called at least once from header, possibly again from sessionCreated/done SSE
+    expect(onSessionChange.mock.calls[0][0]).toBe("sess_hdr")
+  })
+
+  it("fires onSessionChange from sessionCreated SSE event even without X-Session-Id header", async () => {
+    const onSessionChange = vi.fn()
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { sessionCreated: true, sessionId: "sess_sse_only" },
+            { done: true, sessionId: "sess_sse_only", phase: "intake" },
+          ]),
+          {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(
+      <ChatInterface userName="Fabio" onSessionChange={onSessionChange} />,
+    )
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Fallback test")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onSessionChange).toHaveBeenCalledWith("sess_sse_only")
+    })
+  })
+
   it("shows generic error when fetch fails with network error", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (typeof url === "string" && url.includes("/api/agent")) {

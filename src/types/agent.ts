@@ -271,6 +271,7 @@ export type AgentRequest = {
 }
 
 export type AgentStreamChunk =
+  | { sessionCreated: true; sessionId: string }
   | { delta: string }
   | {
       done: true

@@ -32,12 +32,19 @@ vi.mock("@/lib/dashboard/workspace-client", () => ({
 vi.mock("./chat-interface", () => ({
   ChatInterface: ({
     onCreditsExhausted,
+    onSessionChange,
   }: {
     onCreditsExhausted?: () => void
+    onSessionChange?: (sessionId: string) => void
   }) => (
-    <button type="button" onClick={() => onCreditsExhausted?.()}>
-      Trigger credits exhausted
-    </button>
+    <>
+      <button type="button" onClick={() => onCreditsExhausted?.()}>
+        Trigger credits exhausted
+      </button>
+      <button type="button" onClick={() => onSessionChange?.("sess_new_from_agent")}>
+        Simulate new session
+      </button>
+    </>
   ),
 }))
 
@@ -100,6 +107,49 @@ describe("ResumeWorkspace", () => {
     mockIsGeneratedOutputReady.mockReturnValue(true)
     mockGetSessionWorkspace.mockResolvedValue(buildWorkspace())
     mockListVersions.mockResolvedValue([])
+  })
+
+  it("syncs sessionId to URL via replaceState when session changes", async () => {
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    render(<ResumeWorkspace initialSessionId={undefined} userName="Fabio" />)
+
+    await userEvent.click(screen.getByRole("button", { name: /simulate new session/i }))
+
+    await waitFor(() => {
+      expect(replaceStateSpy).toHaveBeenCalled()
+    })
+
+    const lastCall = replaceStateSpy.mock.calls[replaceStateSpy.mock.calls.length - 1]
+    const updatedUrl = lastCall[2] as string
+    expect(updatedUrl).toContain("session=sess_new_from_agent")
+
+    replaceStateSpy.mockRestore()
+  })
+
+  it("does not call replaceState when the URL already has the same session param", async () => {
+    // Set the current URL to already include the session param (same origin)
+    const base = new URL(window.location.href)
+    base.searchParams.set("session", "sess_existing")
+    window.history.replaceState({}, "", base.toString())
+
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    render(<ResumeWorkspace initialSessionId="sess_existing" userName="Fabio" />)
+
+    // Wait for initial effects to settle
+    await waitFor(() => {
+      expect(mockGetSessionWorkspace).toHaveBeenCalledWith("sess_existing")
+    })
+
+    // replaceState should not have been called since URL already matches
+    expect(replaceStateSpy).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
+    // Clean up URL
+    const clean = new URL(window.location.href)
+    clean.searchParams.delete("session")
+    window.history.replaceState({}, "", clean.toString())
   })
 
   it("opens the plan update modal when the chat reports exhausted credits", async () => {

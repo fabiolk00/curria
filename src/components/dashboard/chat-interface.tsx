@@ -271,6 +271,15 @@ export function ChatInterface({
         throw new Error(errorMessage)
       }
 
+      // Read session ID from header immediately — available before any SSE
+      // chunk is parsed, so a refresh right after fetch resolves still
+      // preserves the session.
+      const headerSessionId = response.headers.get("X-Session-Id")
+      if (headerSessionId) {
+        setSessionId(headerSessionId)
+        onSessionChange?.(headerSessionId)
+      }
+
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ""
@@ -306,6 +315,12 @@ export function ChatInterface({
                       : message,
                   ),
                 )
+                continue
+              }
+
+              if ("sessionCreated" in chunk && chunk.sessionCreated) {
+                setSessionId(chunk.sessionId)
+                onSessionChange?.(chunk.sessionId)
                 continue
               }
 

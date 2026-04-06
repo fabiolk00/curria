@@ -5,6 +5,7 @@ import { POST } from './route'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getSession, createSessionWithCredit, checkUserQuota, incrementMessageCount } from '@/lib/db/sessions'
 import { agentLimiter } from '@/lib/rate-limit'
+import { dispatchTool } from '@/lib/agent/tools'
 
 const { createCompletion } = vi.hoisted(() => ({
   createCompletion: vi.fn(),
@@ -203,6 +204,54 @@ describe('agent route billing guard', () => {
     expect(incrementMessageCount).not.toHaveBeenCalled()
   })
 
+  it('does not consume an existing-session message when file preprocessing fails', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      id: 'sess_existing_file_fail',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'dialog',
+      cvState: {
+        fullName: 'Test',
+        email: 'test@test.com',
+        phone: '123',
+        summary: 'test',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 2,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(dispatchTool).mockRejectedValue(new Error('Storage unavailable'))
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sessionId: 'sess_existing_file_fail',
+        message: 'Continue',
+        file: 'base64data',
+        fileMime: 'application/pdf',
+      }),
+    }))
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({
+      error: 'Algo deu errado. Por favor, tente novamente.',
+    })
+    expect(incrementMessageCount).not.toHaveBeenCalled()
+  })
+
   it('streams SSE done event for a valid new session', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
@@ -256,5 +305,301 @@ describe('agent route billing guard', () => {
     expect(doneData.sessionId).toBe('s1')
     expect(doneData.phase).toBe('intake')
     expect(doneData.isNewSession).toBe(true)
+  })
+
+  it('emits sessionCreated as the very first SSE event for new sessions', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_early',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello' }),
+    }))
+
+    expect(response.status).toBe(200)
+
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+    expect(events.length).toBeGreaterThanOrEqual(2)
+
+    const firstData = JSON.parse(events[0].replace('data: ', ''))
+    expect(firstData).toEqual({ sessionCreated: true, sessionId: 'sess_early' })
+  })
+
+  it('returns X-Session-Id header for new sessions', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_header',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello' }),
+    }))
+
+    expect(response.headers.get('X-Session-Id')).toBe('sess_header')
+  })
+
+  it('does not emit sessionCreated for existing sessions', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      id: 'sess_existing',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'dialog',
+      cvState: {
+        fullName: 'Test',
+        email: 'test@test.com',
+        phone: '123',
+        summary: 'test',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 2,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'sess_existing',
+        message: 'Continue',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Session-Id')).toBeNull()
+
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+    const hasSessionCreated = events.some((e) => e.includes('"sessionCreated"'))
+    expect(hasSessionCreated).toBe(false)
+  })
+
+  it('aborts new-session stream with error when incrementMessageCount fails', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_inc_fail',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(false)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello' }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Session-Id')).toBe('sess_inc_fail')
+
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+
+    // sessionCreated is still the first event (frontend already has the ID)
+    const firstData = JSON.parse(events[0].replace('data: ', ''))
+    expect(firstData).toEqual({ sessionCreated: true, sessionId: 'sess_inc_fail' })
+
+    // Second event is the error, stream closes without a done event
+    const secondData = JSON.parse(events[1].replace('data: ', ''))
+    expect(secondData.error).toBe('Erro interno ao registrar mensagem. Tente novamente.')
+
+    const hasDone = events.some((e) => e.includes('"done":true'))
+    expect(hasDone).toBe(false)
+  })
+
+  it('sends SSE error and closes stream when incrementMessageCount throws', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_throw_inc',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: { fullName: '', email: '', phone: '', summary: '', experience: [], skills: [], education: [] },
+      agentState: { parseStatus: 'empty', rewriteHistory: {} },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockRejectedValue(new Error('DB connection lost'))
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello' }),
+    }))
+
+    expect(response.status).toBe(200)
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+
+    const firstData = JSON.parse(events[0].replace('data: ', ''))
+    expect(firstData).toEqual({ sessionCreated: true, sessionId: 'sess_throw_inc' })
+
+    const secondData = JSON.parse(events[1].replace('data: ', ''))
+    expect(secondData.error).toBe('Algo deu errado. Por favor, tente novamente.')
+
+    expect(events.some((e) => e.includes('"done":true'))).toBe(false)
+  })
+
+  it('sends SSE error and closes stream when handleFileAttachment throws', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_throw_file',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: { fullName: '', email: '', phone: '', summary: '', experience: [], skills: [], education: [] },
+      agentState: { parseStatus: 'empty', rewriteHistory: {} },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+    vi.mocked(dispatchTool).mockRejectedValue(new Error('Storage unavailable'))
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello', file: 'base64data', fileMime: 'application/pdf' }),
+    }))
+
+    expect(response.status).toBe(200)
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+
+    const firstData = JSON.parse(events[0].replace('data: ', ''))
+    expect(firstData).toEqual({ sessionCreated: true, sessionId: 'sess_throw_file' })
+
+    const secondData = JSON.parse(events[1].replace('data: ', ''))
+    expect(secondData.error).toBe('Algo deu errado. Por favor, tente novamente.')
+
+    expect(incrementMessageCount).not.toHaveBeenCalled()
+    expect(events.some((e) => e.includes('"done":true'))).toBe(false)
+  })
+
+  it('sends AbortError-specific message when pre-loop work is aborted', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_abort',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: { fullName: '', email: '', phone: '', summary: '', experience: [], skills: [], education: [] },
+      agentState: { parseStatus: 'empty', rewriteHistory: {} },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const abortError = new DOMException('The operation was aborted.', 'AbortError')
+    vi.mocked(incrementMessageCount).mockRejectedValue(abortError)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Hello' }),
+    }))
+
+    const text = await response.text()
+    const events = text.split('\n\n').filter(Boolean)
+
+    const secondData = JSON.parse(events[1].replace('data: ', ''))
+    expect(secondData.error).toBe('A requisição demorou muito. Por favor, tente novamente.')
   })
 })

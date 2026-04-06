@@ -363,30 +363,44 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // ── Message cap ─────────────────────────────────────────────────────
-  const messageCountIncremented = await incrementMessageCount(session.id)
-  if (!messageCountIncremented) {
-    logWarn('agent.session.message_cap_reached', {
-      requestId,
-      sessionId: session.id,
-      appUserId,
-      phase: session.phase,
-      stateVersion: session.stateVersion,
-      messageCount: AGENT_CONFIG.maxMessagesPerSession,
-      maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-      success: false,
-    })
-    return new Response(JSON.stringify({
-      error: 'Esta sessão atingiu o limite de 15 mensagens. Inicie uma nova análise para continuar.',
-      action: 'new_session',
-      messageCount: AGENT_CONFIG.maxMessagesPerSession,
-      maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-    }), { status: 429 })
-  }
+  // ── Pre-stream work for existing sessions ───────────────────────────
+  // For existing sessions, message cap and file attachment run before the
+  // stream so failures can return proper HTTP status codes (e.g. 429).
+  // For new sessions these run INSIDE the stream, after the early
+  // sessionCreated event, so the frontend gets the sessionId as fast as
+  // possible and a refresh can never lose it.
+  if (!isNewSession) {
+    try {
+      if (file && fileMime) {
+        message = await handleFileAttachment(message, file, fileMime, session!, appUserId, requestId, req.signal)
+      }
 
-  // ── File attachment ─────────────────────────────────────────────────
-  if (file && fileMime) {
-    message = await handleFileAttachment(message, file, fileMime, session, appUserId, requestId, req.signal)
+      const messageCountIncremented = await incrementMessageCount(session!.id)
+      if (!messageCountIncremented) {
+        logWarn('agent.session.message_cap_reached', {
+          requestId,
+          sessionId: session!.id,
+          appUserId,
+          phase: session!.phase,
+          stateVersion: session!.stateVersion,
+          messageCount: AGENT_CONFIG.maxMessagesPerSession,
+          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+          success: false,
+        })
+        return new Response(JSON.stringify({
+          error: 'Esta sessão atingiu o limite de 15 mensagens. Inicie uma nova análise para continuar.',
+          action: 'new_session',
+          messageCount: AGENT_CONFIG.maxMessagesPerSession,
+          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+        }), { status: 429 })
+      }
+    } catch (err) {
+      const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
+      const errorMessage = isAbort
+        ? 'A requisição demorou muito. Por favor, tente novamente.'
+        : 'Algo deu errado. Por favor, tente novamente.'
+      return new Response(JSON.stringify({ error: errorMessage }), { status: 500 })
+    }
   }
 
   // ── SSE stream ──────────────────────────────────────────────────────
@@ -396,6 +410,38 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const send = (chunk: unknown) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
+      }
+
+      function sendStreamError(errorMessage: string) {
+        send({ error: errorMessage, requestId })
+        controller.close()
+      }
+
+      // For new sessions, emit sessionCreated immediately so the frontend
+      // can persist the sessionId (URL + state) before any slow work runs.
+      if (isNewSession) {
+        send({ sessionCreated: true, sessionId: session!.id })
+
+        try {
+          // For brand-new sessions with attachments, avoid consuming the first
+          // message count until attachment preprocessing has succeeded.
+          if (file && fileMime) {
+            message = await handleFileAttachment(message, file, fileMime, session!, appUserId, requestId, req.signal)
+          }
+
+          const messageCountIncremented = await incrementMessageCount(session!.id)
+          if (!messageCountIncremented) {
+            sendStreamError('Erro interno ao registrar mensagem. Tente novamente.')
+            return
+          }
+        } catch (err) {
+          const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
+          const errorMessage = isAbort
+            ? 'A requisição demorou muito. Por favor, tente novamente.'
+            : 'Algo deu errado. Por favor, tente novamente.'
+          sendStreamError(errorMessage)
+          return
+        }
       }
 
       const loop = runAgentLoop({
@@ -455,11 +501,15 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  })
+  const headers: Record<string, string> = {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  }
+
+  if (isNewSession && session) {
+    headers['X-Session-Id'] = session.id
+  }
+
+  return new Response(stream, { headers })
 }

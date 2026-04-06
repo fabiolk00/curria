@@ -129,6 +129,15 @@ export function ResumeWorkspace({
   currentCredits = 0,
 }: ResumeWorkspaceProps) {
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
+
+  useEffect(() => {
+    if (!sessionId) return
+    const url = new URL(window.location.href)
+    if (url.searchParams.get("session") === sessionId) return
+    url.searchParams.set("session", sessionId)
+    window.history.replaceState(window.history.state, "", url.toString())
+  }, [sessionId])
+
   const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null)
   const [versions, setVersions] = useState<SerializedTimelineEntry[]>([])
   const [activeMutation, setActiveMutation] = useState<MutationKind>("workspace-refresh")
