@@ -5,18 +5,32 @@ import '@testing-library/jest-dom'
 
 import DashboardPage, { dynamic, revalidate } from './page'
 
+vi.mock('@/lib/auth/app-user', () => ({
+  getCurrentAppUser: vi.fn().mockResolvedValue(null),
+}))
+
+vi.mock('@/lib/asaas/quota', () => ({
+  getUserBillingInfo: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('@/components/dashboard/resume-workspace', () => ({
   ResumeWorkspace: ({
     initialSessionId,
     userName,
+    activeRecurringPlan,
+    currentCredits,
   }: {
     initialSessionId?: string
     userName?: string
+    activeRecurringPlan?: string | null
+    currentCredits?: number
   }) => (
     <div
       data-testid="resume-workspace"
       data-session-id={initialSessionId ?? ''}
       data-user-name={userName ?? ''}
+      data-plan={activeRecurringPlan ?? ''}
+      data-credits={currentCredits ?? 0}
     />
   ),
 }))
@@ -31,8 +45,10 @@ describe('DashboardPage', () => {
     const jsx = await DashboardPage({})
     render(jsx)
 
-    expect(screen.getByTestId('resume-workspace')).toHaveAttribute('data-session-id', '')
-    expect(screen.getByTestId('resume-workspace')).toHaveAttribute('data-user-name', 'Voc\u00EA')
+    const workspace = screen.getByTestId('resume-workspace')
+    expect(workspace).toHaveAttribute('data-session-id', '')
+    expect(workspace).toHaveAttribute('data-user-name', 'Voc\u00EA')
+    expect(workspace).toHaveAttribute('data-credits', '0')
   })
 
   it('passes through a valid-looking session id without server-side resolution', async () => {
