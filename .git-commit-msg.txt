@@ -1,0 +1,20 @@
+fix: add comprehensive logging to checkout flow for debugging
+
+Add detailed logging at each step of the checkout process to enable proper
+debugging of Asaas API errors. This addresses the generic checkout failed
+error message by exposing the actual API responses, request payloads, and
+failure points.
+
+Changes:
+- Checkout route: log app user resolution, plan validation, record creation,
+  external reference formatting, and API calls
+- Asaas client: log request method/path/body and response status/body
+- Checkout link creation: log plan type and checkout session creation
+
+Also fix checkout.test.ts to match the new externalReference format that
+includes appUserId (curria:v1:u:usr_123:c:checkoutReference).
+
+This makes production debugging straightforward: check server logs for
+[asaas.request] entries to see exactly what Asaas returned and why.
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>

@@ -28,10 +28,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let checkoutReference: string | null = null
 
   try {
+    console.log('[api/checkout] POST request started')
     const appUser = await getCurrentAppUser()
     if (!appUser) {
+      console.warn('[api/checkout] no app user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log('[api/checkout] appUser:', appUser.id)
 
     let rawBody: unknown
     try {
@@ -46,7 +49,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const plan = getPlan(body.data.plan)
+    console.log('[api/checkout] plan:', body.data.plan, plan)
     if (!plan || plan.price <= 0) {
+      console.error('[api/checkout] invalid plan:', body.data.plan)
       return NextResponse.json({ error: 'Invalid paid plan' }, { status: 400 })
     }
 
@@ -89,10 +94,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const origin = req.headers.get('origin') ?? 'http://localhost:3000'
     const successUrl = `${origin}/dashboard`
     const pricingUrl = `${origin}/pricing`
+    console.log('[api/checkout] creating checkout record')
     const checkout = await createCheckoutRecordPending(appUser.id, plan.slug, plan.price)
     checkoutReference = checkout.checkoutReference
-    const externalReference = formatExternalReference(appUser.id, checkout.checkoutReference)
+    console.log('[api/checkout] checkout record created:', checkoutReference)
 
+    const externalReference = formatExternalReference(appUser.id, checkout.checkoutReference)
+    console.log('[api/checkout] externalReference:', externalReference)
+
+    console.log('[api/checkout] calling createCheckoutLink')
     const url = await createCheckoutLink({
       appUserId: appUser.id,
       userName,
@@ -104,17 +114,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       cancelUrl: pricingUrl,
       expiredUrl: pricingUrl,
     })
+    console.log('[api/checkout] createCheckoutLink returned:', url)
 
     await markCheckoutCreated(checkout.checkoutReference, url)
 
+    console.log('[api/checkout] checkout successful')
     return NextResponse.json({ url })
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown checkout error'
+    console.error('[api/checkout] error:', errorMessage, err)
 
     if (checkoutReference) {
       try {
         await markCheckoutFailed(checkoutReference, errorMessage)
       } catch (markCheckoutFailedError) {
+        console.error('[api/checkout] failed to mark checkout as failed:', markCheckoutFailedError)
         logError('checkout.mark_failed_error', {
           checkoutReference,
           originalError: errorMessage,

@@ -56,7 +56,7 @@ describe('Asaas checkout link creation', () => {
       userEmail: 'test@example.com',
       plan: 'monthly',
       checkoutReference: 'chk_monthly',
-      externalReference: 'curria:v1:c:chk_monthly',
+      externalReference: 'curria:v1:u:usr_123:c:chk_monthly',
       successUrl: 'https://curria.test/dashboard',
       cancelUrl: 'https://curria.test/pricing',
       expiredUrl: 'https://curria.test/pricing',
@@ -83,7 +83,7 @@ describe('Asaas checkout link creation', () => {
         cycle: 'MONTHLY',
         nextDueDate: expect.any(String),
       },
-      externalReference: 'curria:v1:c:chk_monthly',
+      externalReference: 'curria:v1:u:usr_123:c:chk_monthly',
     })
     expect(mockPost).not.toHaveBeenCalledWith('/paymentLinks', expect.objectContaining({
       chargeType: 'RECURRENT',

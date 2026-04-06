@@ -52,6 +52,7 @@ export async function createCheckoutLink({
   expiredUrl,
 }: CreateCheckoutLinkInput): Promise<string> {
   const planConfig = PLANS[plan]
+  console.log('[createCheckoutLink] called with plan:', plan, 'billing:', planConfig.billing)
 
   // Hosted payment links capture the payer's data directly in Asaas.
   void appUserId
@@ -60,7 +61,8 @@ export async function createCheckoutLink({
   void checkoutReference
 
   if (planConfig.billing === 'once') {
-  const result = await asaas.post<{ url: string }>('/paymentLinks', {
+    console.log('[createCheckoutLink] creating one-time payment link')
+    const result = await asaas.post<{ url: string }>('/paymentLinks', {
       name: buildPaymentLinkName(planConfig.name),
       description: planConfig.description,
       billingType: 'UNDEFINED',
@@ -70,9 +72,11 @@ export async function createCheckoutLink({
       callback: buildCallback(successUrl),
     })
 
+    console.log('[createCheckoutLink] one-time payment link created:', result.url)
     return result.url
   }
 
+  console.log('[createCheckoutLink] creating recurring checkout')
   const recurringCheckout = await asaas.post<{ id: string }>('/checkouts', {
     billingTypes: ['CREDIT_CARD'],
     chargeTypes: ['RECURRENT'],
@@ -97,5 +101,7 @@ export async function createCheckoutLink({
     externalReference,
   })
 
-  return buildCheckoutSessionUrl(recurringCheckout.id)
+  const url = buildCheckoutSessionUrl(recurringCheckout.id)
+  console.log('[createCheckoutLink] recurring checkout created:', url)
+  return url
 }
