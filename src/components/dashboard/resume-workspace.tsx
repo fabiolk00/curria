@@ -33,6 +33,8 @@ import type {
 import { ChatInterface } from "./chat-interface"
 import { CompareDrawer } from "./compare-drawer"
 import { ManualEditDialog } from "./manual-edit-dialog"
+import { PlanUpdateDialog } from "./plan-update-dialog"
+import type { PlanSlug } from "@/lib/plans"
 
 type MutationKind =
   | "workspace-refresh"
@@ -45,6 +47,8 @@ type MutationKind =
 type ResumeWorkspaceProps = {
   initialSessionId?: string
   userName?: string
+  activeRecurringPlan?: PlanSlug | null
+  currentCredits?: number
 }
 
 function getErrorMessage(error: unknown): string {
@@ -118,7 +122,12 @@ function buildCompareDefaultsForTarget(targetId: string): {
 const panelClassName =
   "rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]"
 
-export function ResumeWorkspace({ initialSessionId, userName }: ResumeWorkspaceProps) {
+export function ResumeWorkspace({
+  initialSessionId,
+  userName,
+  activeRecurringPlan = null,
+  currentCredits = 0,
+}: ResumeWorkspaceProps) {
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
   const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null)
   const [versions, setVersions] = useState<SerializedTimelineEntry[]>([])
@@ -136,6 +145,7 @@ export function ResumeWorkspace({ initialSessionId, userName }: ResumeWorkspaceP
   const [targetJobDescription, setTargetJobDescription] = useState("")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [planUpdateOpen, setPlanUpdateOpen] = useState(false)
 
   const isBusy = activeMutation !== null || isStreaming
   const gapAnalysis = workspace?.session.agentState.gapAnalysis?.result
@@ -346,6 +356,7 @@ export function ResumeWorkspace({ initialSessionId, userName }: ResumeWorkspaceP
               setSessionId(payload.sessionId)
               void refreshWorkspace(payload.sessionId)
             }}
+            onCreditsExhausted={() => setPlanUpdateOpen(true)}
           />
         </div>
 
@@ -768,6 +779,13 @@ export function ResumeWorkspace({ initialSessionId, userName }: ResumeWorkspaceP
         result={compareResult}
         onOpenChange={setCompareOpen}
         onCompare={handleCompare}
+      />
+
+      <PlanUpdateDialog
+        isOpen={planUpdateOpen}
+        onOpenChange={setPlanUpdateOpen}
+        activeRecurringPlan={activeRecurringPlan}
+        currentCredits={currentCredits}
       />
     </>
   )

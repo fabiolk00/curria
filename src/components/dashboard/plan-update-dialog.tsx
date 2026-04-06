@@ -141,7 +141,7 @@ export function PlanUpdateDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Alterar Plano</DialogTitle>
           <DialogDescription>
@@ -149,7 +149,7 @@ export function PlanUpdateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-6 md:grid-cols-3">
+        <div className="grid gap-8 py-6 md:grid-cols-3">
           {plans.map((plan) => {
             const config = PLANS[plan.slug]
             const purchaseState = getPlanPurchaseState(activeRecurringPlan, plan.slug)
@@ -161,7 +161,7 @@ export function PlanUpdateDialog({
               <Card
                 key={config.name}
                 className={cn(
-                  "relative flex h-full flex-col rounded-[1.5rem] border border-border/60 bg-card/85 py-0 transition-all",
+                  "relative flex h-full flex-col rounded-[1.5rem] border border-border/60 bg-card/85 transition-all",
                   isCurrent
                     ? "border-primary/70 ring-2 ring-primary/20"
                     : "hover:-translate-y-1 hover:border-border",
@@ -182,50 +182,53 @@ export function PlanUpdateDialog({
                   </Badge>
                 ) : null}
 
-                <CardHeader className="pb-2 pt-6 text-center">
-                  <CardTitle className="text-xl">{config.name}</CardTitle>
-                  <CardDescription className="text-xs">{config.description}</CardDescription>
+                <CardHeader className="pb-4 pt-8 text-center">
+                  <CardTitle className="text-2xl font-bold">{config.name}</CardTitle>
+                  <CardDescription className="text-xs leading-relaxed">{config.description}</CardDescription>
                 </CardHeader>
 
-                <CardContent className="flex flex-1 flex-col justify-between text-center">
-                  <div className="mb-6">
-                    <span className="text-4xl font-black tracking-tight">
+                <CardContent className="flex flex-1 flex-col px-6 pb-4">
+                  <div className="mb-8 text-center">
+                    <span className="text-5xl font-black tracking-tight">
                       {formatPrice(config.price)}
                     </span>
-                    <span className="text-xs text-muted-foreground">{period}</span>
+                    <span className="ml-1 text-xs font-medium text-muted-foreground">{period}</span>
                   </div>
 
-                  <div className="mb-6 space-y-2 text-left text-sm">
-                    <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
-                      <span className="text-xs font-medium">Creditos do plano:</span>
-                      <span className="font-semibold">{config.credits}</span>
+                  <div className="mb-8 space-y-3">
+                    <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3">
+                      <span className="text-xs font-semibold">Creditos do plano:</span>
+                      <span className="font-bold text-base">{config.credits}</span>
                     </div>
                     {isCurrent ? (
-                      <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
-                        <span className="text-xs font-medium">Creditos atuais:</span>
-                        <span className="font-semibold">{currentCredits}</span>
+                      <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3">
+                        <span className="text-xs font-semibold">Creditos atuais:</span>
+                        <span className="font-bold text-base">{currentCredits}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
-                        <span className="text-xs font-medium">Apos a compra:</span>
-                        <span className="font-semibold text-primary">{estimatedCredits}</span>
+                      <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/8 px-4 py-3">
+                        <span className="text-xs font-semibold">Apos a compra:</span>
+                        <span className="font-bold text-base text-primary">{estimatedCredits}</span>
                       </div>
                     )}
                   </div>
 
-                  <ul className="space-y-2">
-                    {config.features.slice(0, 3).map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-3 w-3 flex-shrink-0 text-primary" />
-                        <span className="text-xs font-medium leading-tight">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mb-6">
+                    <p className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Incluso no plano</p>
+                    <ul className="space-y-2.5">
+                      {config.features.slice(0, 3).map((feature) => (
+                        <li key={feature} className="flex items-start gap-3">
+                          <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                          <span className="text-sm font-medium leading-snug">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </CardContent>
 
-                <CardFooter className="pb-6">
+                <CardFooter className="border-t border-border/40 px-6 py-4">
                   <Button
-                    className="h-10 w-full rounded-lg text-sm font-semibold"
+                    className="h-11 w-full rounded-lg text-sm font-semibold transition-all"
                     variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
                     onClick={() => handleCheckout(plan.slug)}
                     disabled={loading !== null || isCurrent || purchaseState.cannotPurchasePlan}

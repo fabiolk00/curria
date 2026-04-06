@@ -53,6 +53,7 @@ interface ChatInterfaceProps {
   onSessionChange?: (sessionId: string) => void
   onStreamingChange?: (isStreaming: boolean) => void
   onAgentTurnCompleted?: (payload: AgentDoneChunk) => void
+  onCreditsExhausted?: () => void
 }
 
 export function ChatInterface({
@@ -62,6 +63,7 @@ export function ChatInterface({
   onSessionChange,
   onStreamingChange,
   onAgentTurnCompleted,
+  onCreditsExhausted,
 }: ChatInterfaceProps) {
   const { user } = useUser()
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
@@ -216,6 +218,8 @@ export function ChatInterface({
             setSessionExpired(true)
           } else if (errorPayload.action === "new_session") {
             setSessionLimitReached(true)
+          } else if (response.status === 402 && errorPayload.error.includes("creditos acabaram")) {
+            onCreditsExhausted?.()
           }
           if (errorPayload.messageCount !== undefined) {
             setMessageCount(errorPayload.messageCount)
