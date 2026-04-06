@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
 import {
   BriefcaseBusiness,
-  Coins,
   FileText,
   HelpCircle,
   LogOut,
@@ -17,6 +16,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import Logo from "@/components/logo"
+import { SiteFaviconIcon } from "@/components/site-favicon-icon"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -159,7 +159,7 @@ export function DashboardSidebar({
             <div className="mb-4 space-y-2 px-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-primary">
-                  <Coins className="h-4 w-4 text-yellow-500" />
+                  <SiteFaviconIcon className="h-4 w-4 shadow-sm" />
                   <span className="text-sm font-medium">Créditos</span>
                 </div>
                 <span className="text-xs font-bold">
