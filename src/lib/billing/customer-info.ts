@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import { z } from 'zod'
 
@@ -31,9 +33,11 @@ export async function saveBillingInfo(
 ): Promise<void> {
   const parsedInfo = BillingInfoSchema.parse(info)
   const supabase = getSupabaseAdminClient()
+  const now = new Date().toISOString()
 
   const { error } = await supabase.from('customer_billing_info').upsert(
     {
+      id: randomUUID(),
       user_id: appUserId,
       cpf_cnpj: parsedInfo.cpfCnpj,
       phone_number: parsedInfo.phoneNumber,
@@ -41,6 +45,7 @@ export async function saveBillingInfo(
       address_number: parsedInfo.addressNumber,
       postal_code: parsedInfo.postalCode,
       province: parsedInfo.province,
+      updated_at: now,
     },
     { onConflict: 'user_id' },
   )

@@ -82,7 +82,6 @@ function getBillingInfoSaveErrorResponse(error: unknown): { logMessage: string; 
     normalized.includes('customer_billing_info')
     && (
       normalized.includes('does not exist')
-      || normalized.includes('relation')
       || normalized.includes('code=42p01')
     )
   )
