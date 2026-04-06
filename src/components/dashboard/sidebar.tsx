@@ -8,12 +8,15 @@ import {
   HelpCircle,
   LogOut,
   MessageSquare,
+  Moon,
   Settings,
   Sparkles,
+  Sun,
   X,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 
 import Logo from "@/components/logo"
 import { SiteFaviconIcon } from "@/components/site-favicon-icon"
@@ -94,6 +97,7 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
   const pathname = usePathname()
+  const { theme, setTheme } = useTheme()
   const { signOut } = useClerk()
   const { user } = useUser()
   const hasBillingData = maxCredits !== undefined && creditsRemaining !== undefined
@@ -119,15 +123,26 @@ export function DashboardSidebar({
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <Logo size="sm" linkTo="/dashboard" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onClose}
-            aria-label="Fechar menu"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="Alternar tema"
+            >
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={onClose}
+              aria-label="Fechar menu"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 px-3 py-4">
