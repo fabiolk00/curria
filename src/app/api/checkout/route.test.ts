@@ -14,6 +14,7 @@ import {
 import { createCheckoutLink } from '@/lib/asaas/checkout'
 import {
   ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
+  CHECKOUT_BILLING_SETUP_ERROR_MESSAGE,
   RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
 } from '@/lib/asaas/checkout-errors'
 import { getActiveRecurringSubscription } from '@/lib/asaas/quota'
@@ -126,6 +127,25 @@ describe('checkout route billing sequencing', () => {
       postalCode: '08061022',
       province: 'SP',
     }))
+  })
+
+  it('returns a known checkout setup error when the billing table is missing', async () => {
+    vi.mocked(saveBillingInfo).mockRejectedValueOnce({
+      code: '42P01',
+      message: 'relation "customer_billing_info" does not exist',
+    })
+
+    const response = await POST(new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+      body: JSON.stringify(mockBillingBody),
+    }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: CHECKOUT_BILLING_SETUP_ERROR_MESSAGE,
+    })
+    expect(createCheckoutRecordPending).not.toHaveBeenCalled()
   })
 
   it('marks the checkout failed when Asaas creation fails', async () => {

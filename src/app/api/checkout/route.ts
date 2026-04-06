@@ -18,6 +18,7 @@ import {
 import { createCheckoutLink } from '@/lib/asaas/checkout'
 import {
   ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
+  CHECKOUT_BILLING_SETUP_ERROR_MESSAGE,
   RECURRING_SUBSCRIPTION_VALIDATION_ERROR_MESSAGE,
 } from '@/lib/asaas/checkout-errors'
 import { formatExternalReference } from '@/lib/asaas/external-reference'
@@ -44,7 +45,25 @@ const BodySchema = z.object({
 })
 
 function sanitizeCheckoutErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : 'Unknown checkout error'
+  let message = 'Unknown checkout error'
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    message = error.trim()
+  } else if (error instanceof Error && error.message.trim().length > 0) {
+    message = error.message.trim()
+  } else if (typeof error === 'object' && error !== null) {
+    const record = error as Record<string, unknown>
+    const parts = [
+      typeof record.code === 'string' ? `code=${record.code}` : null,
+      typeof record.message === 'string' ? record.message : null,
+      typeof record.details === 'string' ? `details=${record.details}` : null,
+      typeof record.hint === 'string' ? `hint=${record.hint}` : null,
+    ].filter((value): value is string => Boolean(value && value.trim().length > 0))
+
+    if (parts.length > 0) {
+      message = parts.join(' | ')
+    }
+  }
 
   if (
     message.startsWith('Invalid app user id for externalReference:')
@@ -54,6 +73,32 @@ function sanitizeCheckoutErrorMessage(error: unknown): string {
   }
 
   return message
+}
+
+function getBillingInfoSaveErrorResponse(error: unknown): { logMessage: string; clientMessage: string } {
+  const logMessage = sanitizeCheckoutErrorMessage(error)
+  const normalized = logMessage.toLowerCase()
+  const isMissingBillingTable = (
+    normalized.includes('customer_billing_info')
+    && (
+      normalized.includes('does not exist')
+      || normalized.includes('relation')
+      || normalized.includes('code=42p01')
+    )
+  )
+
+  if (isMissingBillingTable) {
+    return {
+      logMessage: 'customer_billing_info table is missing. Run the customer_billing_info migration. '
+        + `Original error: ${logMessage}`,
+      clientMessage: CHECKOUT_BILLING_SETUP_ERROR_MESSAGE,
+    }
+  }
+
+  return {
+    logMessage,
+    clientMessage: 'Failed to save billing information.',
+  }
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -114,17 +159,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         province: body.data.province,
       })
     } catch (error) {
-      const errorMessage = sanitizeCheckoutErrorMessage(error)
+      const { logMessage, clientMessage } = getBillingInfoSaveErrorResponse(error)
 
       logError('checkout.save_billing_info_failed', {
         plan: plan.slug,
-        errorMessage,
+        errorMessage: logMessage,
         success: false,
       })
 
       return NextResponse.json(
         {
-          error: 'Failed to save billing information.',
+          error: clientMessage,
         },
         { status: 400 },
       )
