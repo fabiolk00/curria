@@ -96,14 +96,6 @@ export function PlanUpdateDialog({
         return { kind: "success", url: payload.url }
       }
 
-      if (res.status === 401) {
-        return {
-          kind: "error",
-          message: ACTIVE_MONTHLY_PLAN_ERROR_MESSAGE,
-          retryable: false,
-        }
-      }
-
       return {
         kind: "error",
         message: getCheckoutErrorMessage(payload),

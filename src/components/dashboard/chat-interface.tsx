@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useUser } from "@clerk/nextjs"
-import { FileText, Send, Upload, X } from "lucide-react"
+import { FileText, Loader2, Send, Upload, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -13,6 +13,8 @@ import type { AgentStreamChunk, Phase } from "@/types/agent"
 import { ChatMessage } from "./chat-message"
 
 type AgentDoneChunk = Extract<AgentStreamChunk, { done: true }>
+
+const CREDIT_EXHAUSTED_ERROR_PATTERN = /creditos acabaram/i
 
 interface Message {
   id: string
@@ -46,6 +48,10 @@ Depois disso, vamos melhorar o currículo, criar variações por vaga e gerar os
   }
 }
 
+function isCreditExhaustedError(message?: string): boolean {
+  return Boolean(message && CREDIT_EXHAUSTED_ERROR_PATTERN.test(message))
+}
+
 interface ChatInterfaceProps {
   sessionId?: string
   userName?: string
@@ -66,6 +72,10 @@ export function ChatInterface({
   onCreditsExhausted,
 }: ChatInterfaceProps) {
   const { user } = useUser()
+  const greetingName = useMemo(
+    () => user?.firstName?.trim() || userName.trim() || "Você",
+    [user?.firstName, userName],
+  )
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
   const [messages, setMessages] = useState<Message[]>([
     createWelcomeMessage(user?.firstName ?? undefined),
@@ -218,7 +228,7 @@ export function ChatInterface({
             setSessionExpired(true)
           } else if (errorPayload.action === "new_session") {
             setSessionLimitReached(true)
-          } else if (response.status === 402 && errorPayload.error.includes("creditos acabaram")) {
+          } else if (response.status === 402 && isCreditExhaustedError(errorPayload.error)) {
             onCreditsExhausted?.()
           }
           if (errorPayload.messageCount !== undefined) {
@@ -287,6 +297,10 @@ export function ChatInterface({
               if ("error" in chunk) {
                 if (chunk.action === "new_session") {
                   setSessionLimitReached(true)
+                }
+
+                if (isCreditExhaustedError(chunk.error)) {
+                  onCreditsExhausted?.()
                 }
 
                 setMessages((previous) =>
@@ -366,7 +380,7 @@ export function ChatInterface({
 
       {messages.length === 1 && (
         <div className="px-4 py-12 text-center">
-          <h1 className="mb-3 text-2xl font-bold md:text-3xl">Olá, {userName}!</h1>
+          <h1 className="mb-3 text-2xl font-bold md:text-3xl">Olá, {greetingName}!</h1>
           <p className="mx-auto max-w-md text-muted-foreground">
             Cole a descrição da vaga e envie seu currículo para iniciar a análise ATS.
           </p>
@@ -378,6 +392,26 @@ export function ChatInterface({
           {messages.map((message) => (
             <ChatMessage key={message.id} {...message} />
           ))}
+          {isStreaming ? (
+            <div className="flex justify-start">
+              <div
+                aria-live="polite"
+                aria-label="Processando resposta do agente"
+                role="status"
+                className="max-w-[85%] rounded-2xl rounded-tl-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="font-medium text-foreground/80">Pensando</span>
+                  <span className="flex items-center gap-1" aria-hidden="true">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div ref={bottomRef} />
         </div>
       </ScrollArea>

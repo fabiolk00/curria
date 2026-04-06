@@ -91,6 +91,12 @@ describe("ChatInterface", () => {
     expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 
+  it("shows the visible greeting with the Clerk first name", () => {
+    render(<ChatInterface />)
+
+    expect(screen.getByRole("heading", { name: "Olá, Fabio!" })).toBeInTheDocument()
+  })
+
   it("sends agent POST with correct payload when user presses Enter", async () => {
     const fetchSpy = vi.fn()
 
@@ -127,6 +133,25 @@ describe("ChatInterface", () => {
     })
   })
 
+  it("shows a thinking animation while the agent request is pending", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Promise<Response>(() => {})
+      }
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface sessionId="sess_waiting" userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Ainda estou pensando")
+    await userEvent.keyboard("{Enter}")
+
+    expect(
+      screen.getByRole("status", { name: /processando resposta do agente/i }),
+    ).toBeInTheDocument()
+  })
+
   it("locks the session when API returns 429 with action: new_session", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (typeof url === "string" && url.includes("/api/agent")) {
@@ -158,6 +183,61 @@ describe("ChatInterface", () => {
     // Input should be disabled after session lock
     await waitFor(() => {
       expect(textarea).toBeDisabled()
+    })
+  })
+
+  it("opens the credits exhausted flow when the agent returns a 402 error", async () => {
+    const onCreditsExhausted = vi.fn()
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          JSON.stringify({
+            error: "Seus creditos acabaram. Faca upgrade do seu plano para continuar.",
+          }),
+          { status: 402, headers: { "Content-Type": "application/json" } },
+        )
+      }
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface sessionId="sess_credits" userName="Fabio" onCreditsExhausted={onCreditsExhausted} />)
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Preciso de mais creditos")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("opens the credits exhausted flow when the streamed error chunk arrives", async () => {
+    const onCreditsExhausted = vi.fn()
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            {
+              error: "Seus creditos acabaram. Faca upgrade do seu plano para continuar.",
+              action: "new_session",
+            },
+          ]),
+          { status: 200, headers: { "Content-Type": "text/event-stream" } },
+        )
+      }
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface sessionId="sess_stream" userName="Fabio" onCreditsExhausted={onCreditsExhausted} />)
+
+    const textarea = screen.getByPlaceholderText("Cole a descrição da vaga aqui...")
+    await userEvent.type(textarea, "Streamed credit error")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
     })
   })
 
