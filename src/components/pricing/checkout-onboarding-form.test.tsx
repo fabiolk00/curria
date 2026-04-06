@@ -69,10 +69,10 @@ describe('CheckoutOnboardingForm', () => {
     await user.click(screen.getByRole('button', { name: /Mensal/ }))
     await user.type(screen.getByLabelText('CPF ou CNPJ'), '123.456.789-01')
     await user.type(screen.getByLabelText('Telefone / WhatsApp'), '(11) 99999-9999')
-    await user.type(screen.getByLabelText('CEP'), '01001-000')
+    await user.type(screen.getByLabelText('CEP'), '8061022')
     await user.type(screen.getByLabelText('Rua / Avenida'), ' Rua das Flores ')
     await user.type(screen.getByLabelText('Número'), '123')
-    await user.type(screen.getByLabelText('Estado (UF)'), 'sp')
+    await user.selectOptions(screen.getByLabelText('Estado (UF)'), 'SP')
     await user.click(screen.getByRole('button', { name: /Finalizar cadastro/i }))
 
     await waitFor(() => {
@@ -83,7 +83,7 @@ describe('CheckoutOnboardingForm', () => {
           plan: 'monthly',
           cpfCnpj: '12345678901',
           phoneNumber: '11999999999',
-          postalCode: '01001000',
+          postalCode: '08061022',
           address: 'Rua das Flores',
           addressNumber: '123',
           province: 'SP',

@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import {
+  isValidBrazilStateCode,
+  isValidPostalCodeInput,
+  normalizePostalCode,
+  normalizeProvince,
+} from '@/lib/billing/address'
 import { getBillingInfo, saveBillingInfo } from '@/lib/billing/customer-info'
 import {
   createCheckoutRecordPending,
@@ -27,8 +33,14 @@ const BodySchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required'),
   address: z.string().min(1, 'Address is required'),
   addressNumber: z.string().min(1, 'Address number is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  province: z.string().length(2, 'Province must be 2 characters'),
+  postalCode: z.string()
+    .trim()
+    .refine(isValidPostalCodeInput, 'Postal code must have 7 or 8 digits')
+    .transform(normalizePostalCode),
+  province: z.string()
+    .trim()
+    .transform(normalizeProvince)
+    .refine(isValidBrazilStateCode, 'Province must be a valid state code'),
 })
 
 function sanitizeCheckoutErrorMessage(error: unknown): string {

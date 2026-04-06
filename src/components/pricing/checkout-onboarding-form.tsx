@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AlertCircle, CreditCard, Loader2, MapPin, ShieldCheck, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
@@ -13,6 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  BRAZIL_STATE_CODES,
+  isValidBrazilStateCode,
+  isValidPostalCodeInput,
+  normalizePostalCode,
+  normalizeProvince,
+} from '@/lib/billing/address'
 import type { BillingInfo } from '@/lib/billing/customer-info'
 import { buildCheckoutResumePath, type PaidPlanSlug } from '@/lib/billing/checkout-navigation'
 import { getCheckoutErrorMessage } from '@/lib/asaas/checkout-errors'
@@ -26,10 +33,10 @@ const checkoutOnboardingSchema = z.object({
   plan: z.enum(['unit', 'monthly', 'pro']),
   cpfCnpj: z.string().min(11, 'CPF/CNPJ inválido').max(14, 'CPF/CNPJ inválido'),
   phoneNumber: z.string().min(10, 'Telefone inválido').max(11, 'Telefone inválido'),
-  postalCode: z.string().length(8, 'CEP inválido'),
+  postalCode: z.string().refine(isValidPostalCodeInput, 'CEP inválido'),
   address: z.string().trim().min(3, 'Endereço obrigatório'),
   addressNumber: z.string().trim().min(1, 'Número obrigatório'),
-  province: z.string().trim().length(2, 'Estado obrigatório'),
+  province: z.string().refine(isValidBrazilStateCode, 'Selecione um estado'),
 })
 
 type CheckoutOnboardingFormValues = z.infer<typeof checkoutOnboardingSchema>
@@ -50,6 +57,7 @@ export function CheckoutOnboardingForm({
   const router = useRouter()
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const {
+    control,
     handleSubmit,
     register,
     setValue,
@@ -64,7 +72,7 @@ export function CheckoutOnboardingForm({
       postalCode: initialBillingInfo?.postalCode ?? '',
       address: initialBillingInfo?.address ?? '',
       addressNumber: initialBillingInfo?.addressNumber ?? '',
-      province: initialBillingInfo?.province ?? '',
+      province: initialBillingInfo?.province ? normalizeProvince(initialBillingInfo.province) : '',
     },
   })
 
@@ -72,7 +80,6 @@ export function CheckoutOnboardingForm({
   const cpfCnpjField = register('cpfCnpj')
   const phoneField = register('phoneNumber')
   const postalCodeField = register('postalCode')
-  const provinceField = register('province')
 
   async function onSubmit(values: CheckoutOnboardingFormValues) {
     setSubmissionError(null)
@@ -81,10 +88,10 @@ export function CheckoutOnboardingForm({
       ...values,
       cpfCnpj: onlyDigits(values.cpfCnpj),
       phoneNumber: onlyDigits(values.phoneNumber),
-      postalCode: onlyDigits(values.postalCode),
+      postalCode: normalizePostalCode(values.postalCode),
       address: values.address.trim(),
       addressNumber: values.addressNumber.trim(),
-      province: values.province.trim().toUpperCase(),
+      province: normalizeProvince(values.province),
     }
 
     const response = await fetch('/api/checkout', {
@@ -280,18 +287,35 @@ export function CheckoutOnboardingForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="province">Estado (UF)</Label>
-                    <Input
-                      id="province"
-                      placeholder="Ex: SP"
-                      maxLength={2}
-                      aria-invalid={!!errors.province}
-                      className="uppercase"
-                      {...provinceField}
-                      onChange={(event) => {
-                        setValue('province', event.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase(), {
-                          shouldValidate: true,
-                        })
-                      }}
+                    <Controller
+                      name="province"
+                      control={control}
+                      render={({ field }) => (
+                        <select
+                          id="province"
+                          ref={field.ref}
+                          name={field.name}
+                          value={field.value ?? ''}
+                          aria-invalid={!!errors.province}
+                          className={cn(
+                            'border-input bg-transparent h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none',
+                            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                            'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
+                            'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+                          )}
+                          onBlur={field.onBlur}
+                          onChange={(event) => {
+                            field.onChange(normalizeProvince(event.target.value))
+                          }}
+                        >
+                          <option value="">Selecione o estado</option>
+                          {BRAZIL_STATE_CODES.map((stateCode) => (
+                            <option key={stateCode} value={stateCode}>
+                              {stateCode}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     />
                     {errors.province ? (
                       <p className="text-sm font-medium text-destructive">{errors.province.message}</p>

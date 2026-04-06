@@ -110,6 +110,24 @@ describe('checkout route billing sequencing', () => {
     expect(await response.json()).toEqual({ url: 'https://asaas.test/pay' })
   })
 
+  it('normalizes a 7-digit cep and lowercase state before saving billing info', async () => {
+    const response = await POST(new NextRequest('http://localhost/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+      body: JSON.stringify({
+        ...mockBillingBody,
+        postalCode: '8061022',
+        province: 'sp',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(saveBillingInfo).toHaveBeenCalledWith('usr_123', expect.objectContaining({
+      postalCode: '08061022',
+      province: 'SP',
+    }))
+  })
+
   it('marks the checkout failed when Asaas creation fails', async () => {
     vi.mocked(createCheckoutLink).mockRejectedValueOnce(new Error('asaas down'))
 
