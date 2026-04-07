@@ -92,8 +92,10 @@ function toJobApplicationsError(action: string, error: unknown): Error {
     return new Error(JOB_APPLICATIONS_FEATURE_UNAVAILABLE_MESSAGE)
   }
 
-  if (error instanceof Error) {
-    return new Error(`Failed to ${action}: ${error.message}`)
+  const errorMessage = error instanceof Error ? error.message : (error as { message?: string })?.message
+
+  if (errorMessage) {
+    return new Error(`Failed to ${action}: ${errorMessage}`)
   }
 
   return new Error(`Failed to ${action}.`)
