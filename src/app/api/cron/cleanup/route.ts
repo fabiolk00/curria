@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logInfo, logWarn, logError } from '@/lib/observability/structured-log'
+import { cleanupOldLinkedInJobs } from '@/lib/linkedin/queue'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,32 +26,50 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  let results: { processedEvents: number; linkedInJobs: number } = {
+    processedEvents: 0,
+    linkedInJobs: 0,
+  }
+
+  // Cleanup processed webhook events (>30 days)
   const { data, error } = await supabase.rpc(
     'cleanup_old_processed_events',
     { p_days_old: 30 }
   )
 
   if (error) {
-    logError('cron.cleanup.failed', {
+    logError('cron.cleanup.webhook_events_failed', {
       error: error.message,
       daysOld: 30,
     })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const deletedCount = data?.[0]?.deleted_count ?? 0
+  results.processedEvents = data?.[0]?.deleted_count ?? 0
 
-  if (deletedCount > 0) {
+  // Cleanup old LinkedIn extraction jobs (>1 day)
+  try {
+    results.linkedInJobs = await cleanupOldLinkedInJobs(1)
+  } catch (error) {
+    logError('cron.cleanup.linkedin_jobs_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    // Don't fail the entire cron if LinkedIn cleanup fails
+    // Log it but continue
+  }
+
+  const totalDeleted = results.processedEvents + results.linkedInJobs
+
+  if (totalDeleted > 0) {
     logInfo('cron.cleanup.completed', {
-      deletedCount,
-      daysOld: 30,
+      ...results,
+      totalDeleted,
     })
   } else {
     logWarn('cron.cleanup.no_deletes', {
-      daysOld: 30,
-      message: 'No records older than 30 days found for cleanup',
+      message: 'No old records found for cleanup',
     })
   }
 
-  return NextResponse.json({ deleted: deletedCount })
+  return NextResponse.json(results)
 }

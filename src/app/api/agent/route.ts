@@ -531,7 +531,9 @@ export async function POST(req: NextRequest) {
   // For new sessions these run INSIDE the stream, after the early
   // sessionCreated event, so the frontend gets the sessionId as fast as
   // possible and a refresh can never lose it.
-  await persistDetectedTargetJobDescription(session!, message, appUserId, requestId)
+  if (!isNewSession) {
+    await persistDetectedTargetJobDescription(session!, message, appUserId, requestId)
+  }
 
   if (!isNewSession) {
     try {
@@ -600,6 +602,10 @@ export async function POST(req: NextRequest) {
             sendStreamError('Erro interno ao registrar mensagem. Tente novamente.')
             return
           }
+
+          // After sessionId is safe, detect target job and run gap analysis
+          // (this may be expensive, but sessionId is already persisted)
+          await persistDetectedTargetJobDescription(session!, message, appUserId, requestId)
         } catch (err) {
           const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
           const errorMessage = isAbort

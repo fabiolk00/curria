@@ -147,6 +147,41 @@ linkedinWorker.on('error', (error) => {
   })
 })
 
+/**
+ * Cleanup old LinkedIn extraction jobs (>24 hours).
+ * Called by the cron endpoint /api/cron/cleanup daily.
+ *
+ * BullMQ jobs stay in queue indefinitely with removeOnComplete: false,
+ * so we need explicit cleanup to prevent unbounded queue growth.
+ */
+export async function cleanupOldLinkedInJobs(daysOld: number = 1): Promise<number> {
+  try {
+    const allJobs = await linkedinQueue.getJobs(['completed', 'failed'], 0, -1)
+    const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000)
+    let deletedCount = 0
+
+    for (const job of allJobs) {
+      if (job.finishedOn && job.finishedOn < cutoffTime) {
+        await job.remove()
+        deletedCount++
+      }
+    }
+
+    logInfo('[linkedin-queue-cleanup] Old jobs removed', {
+      deletedCount,
+      daysOld,
+    })
+
+    return deletedCount
+  } catch (error) {
+    logError('[linkedin-queue-cleanup] Cleanup failed', {
+      error: error instanceof Error ? error.message : String(error),
+      daysOld,
+    })
+    throw error
+  }
+}
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   await linkedinWorker.close()

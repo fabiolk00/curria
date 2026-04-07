@@ -14,7 +14,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = BodySchema.safeParse(await req.json())
+  let rawBody: unknown
+  try {
+    rawBody = await req.json()
+  } catch {
+    logError('[api/profile/extract] Invalid JSON in request', { appUserId: appUser.id })
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const body = BodySchema.safeParse(rawBody)
   if (!body.success) {
     return NextResponse.json(
       { error: body.error.flatten() },
