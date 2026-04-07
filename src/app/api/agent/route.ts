@@ -176,61 +176,30 @@ function hasResumeContextForAutoGap(session: Pick<Session, 'cvState' | 'agentSta
   )
 }
 
-async function persistDetectedTargetJobDescription(
-  session: Pick<Session, 'id' | 'phase' | 'stateVersion' | 'agentState' | 'updatedAt' | 'cvState' | 'userId'>,
-  message: string,
-  appUserId: string,
-  requestId: string,
-): Promise<void> {
-  const detection = detectTargetJobDescription(message)
-  if (!detection) {
-    return
-  }
-
-  if (session.agentState.targetJobDescription?.trim() === detection.targetJobDescription) {
-    return
-  }
-
-  const nextAgentState: Session['agentState'] = {
+function buildDetectedTargetJobAgentState(
+  session: Pick<Session, 'agentState'>,
+  detection: TargetJobDetection,
+): Session['agentState'] {
+  return {
     ...session.agentState,
     targetJobDescription: detection.targetJobDescription,
     gapAnalysis: undefined,
     targetFitAssessment: undefined,
   }
+}
 
-  if (detection.confidence === 'high' && hasResumeContextForAutoGap(session)) {
-    const analyzedAt = new Date().toISOString()
-    const gapAnalysisResult = await analyzeGap(
-      session.cvState,
-      detection.targetJobDescription,
-      session.userId,
-      session.id,
-    )
-
-    if ('success' in gapAnalysisResult.output && gapAnalysisResult.output.success && gapAnalysisResult.result) {
-      nextAgentState.gapAnalysis = {
-        result: gapAnalysisResult.result,
-        analyzedAt,
-      }
-      nextAgentState.targetFitAssessment = deriveTargetFitAssessment(gapAnalysisResult.result, analyzedAt)
-    } else {
-      logWarn('agent.target_job_detection.auto_gap_failed', {
-        requestId,
-        sessionId: session.id,
-        appUserId,
-        phase: session.phase,
-        stateVersion: session.stateVersion,
-        success: false,
-      })
-    }
-  }
-
-  session.agentState = nextAgentState
+async function persistTargetJobAgentState(
+  session: Pick<Session, 'id' | 'phase' | 'stateVersion'> & { agentState: Session['agentState']; updatedAt: Date },
+  agentState: Session['agentState'],
+  appUserId: string,
+  requestId: string,
+): Promise<void> {
+  session.agentState = agentState
   session.updatedAt = new Date()
 
   try {
     await updateSession(session.id, {
-      agentState: nextAgentState,
+      agentState,
     })
   } catch (error) {
     logWarn('agent.target_job_detection.persist_failed', {
@@ -243,6 +212,76 @@ async function persistDetectedTargetJobDescription(
       errorMessage: error instanceof Error ? error.message : String(error),
     })
   }
+}
+
+async function persistDetectedTargetJobDescriptionBase(
+  session: Pick<Session, 'id' | 'phase' | 'stateVersion' | 'agentState' | 'updatedAt' | 'cvState' | 'userId'>,
+  message: string,
+  appUserId: string,
+  requestId: string,
+): Promise<TargetJobDetection | undefined> {
+  const detection = detectTargetJobDescription(message)
+  if (!detection) {
+    return undefined
+  }
+
+  if (session.agentState.targetJobDescription?.trim() === detection.targetJobDescription) {
+    return detection
+  }
+
+  const nextAgentState = buildDetectedTargetJobAgentState(session, detection)
+  await persistTargetJobAgentState(session, nextAgentState, appUserId, requestId)
+
+  return detection
+}
+
+async function maybeAutoGenerateGapAnalysisForDetectedTarget(
+  session: Pick<Session, 'id' | 'phase' | 'stateVersion' | 'agentState' | 'updatedAt' | 'cvState' | 'userId'>,
+  detection: TargetJobDetection | undefined,
+  appUserId: string,
+  requestId: string,
+): Promise<void> {
+  if (!detection || detection.confidence !== 'high' || !hasResumeContextForAutoGap(session)) {
+    return
+  }
+
+  if (
+    session.agentState.targetJobDescription?.trim() === detection.targetJobDescription
+    && session.agentState.gapAnalysis
+  ) {
+    return
+  }
+
+  const analyzedAt = new Date().toISOString()
+  const gapAnalysisResult = await analyzeGap(
+    session.cvState,
+    detection.targetJobDescription,
+    session.userId,
+    session.id,
+  )
+
+  if (!('success' in gapAnalysisResult.output) || !gapAnalysisResult.output.success || !gapAnalysisResult.result) {
+    logWarn('agent.target_job_detection.auto_gap_failed', {
+      requestId,
+      sessionId: session.id,
+      appUserId,
+      phase: session.phase,
+      stateVersion: session.stateVersion,
+      success: false,
+    })
+    return
+  }
+
+  const nextAgentState: Session['agentState'] = {
+    ...buildDetectedTargetJobAgentState(session, detection),
+    gapAnalysis: {
+      result: gapAnalysisResult.result,
+      analyzedAt,
+    },
+    targetFitAssessment: deriveTargetFitAssessment(gapAnalysisResult.result, analyzedAt),
+  }
+
+  await persistTargetJobAgentState(session, nextAgentState, appUserId, requestId)
 }
 
 function parseJsonObject(value: string): Record<string, unknown> | null {
@@ -528,11 +567,22 @@ export async function POST(req: NextRequest) {
   // ── Pre-stream work for existing sessions ───────────────────────────
   // For existing sessions, message cap and file attachment run before the
   // stream so failures can return proper HTTP status codes (e.g. 429).
-  // For new sessions these run INSIDE the stream, after the early
-  // sessionCreated event, so the frontend gets the sessionId as fast as
-  // possible and a refresh can never lose it.
+  // For new sessions, we still persist a detected target job immediately,
+  // but defer any expensive auto-gap analysis until after sessionCreated.
+  const detectedTargetJob = await persistDetectedTargetJobDescriptionBase(
+    session!,
+    message,
+    appUserId,
+    requestId,
+  )
+
   if (!isNewSession) {
-    await persistDetectedTargetJobDescription(session!, message, appUserId, requestId)
+    await maybeAutoGenerateGapAnalysisForDetectedTarget(
+      session!,
+      detectedTargetJob,
+      appUserId,
+      requestId,
+    )
   }
 
   if (!isNewSession) {
@@ -603,9 +653,13 @@ export async function POST(req: NextRequest) {
             return
           }
 
-          // After sessionId is safe, detect target job and run gap analysis
-          // (this may be expensive, but sessionId is already persisted)
-          await persistDetectedTargetJobDescription(session!, message, appUserId, requestId)
+          // After sessionId is safe, complete any expensive target-job work.
+          await maybeAutoGenerateGapAnalysisForDetectedTarget(
+            session!,
+            detectedTargetJob,
+            appUserId,
+            requestId,
+          )
         } catch (err) {
           const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
           const errorMessage = isAbort
