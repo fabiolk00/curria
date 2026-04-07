@@ -86,6 +86,7 @@ describe('quota credit source of truth', () => {
     userQuotaMaybeSingle.mockResolvedValue({
       data: {
         plan: 'monthly',
+        credits_remaining: 20,
         renews_at: '2026-04-30T00:00:00.000Z',
         status: 'active',
         asaas_subscription_id: 'sub_123',
@@ -103,7 +104,7 @@ describe('quota credit source of truth', () => {
     mockSupabase.rpc.mockResolvedValue({ data: true, error: null })
   })
 
-  it('grants credits through credit_accounts and stores metadata only in user_quotas', async () => {
+  it('grants credits through credit_accounts and stores matching display totals in user_quotas', async () => {
     await grantCredits('usr_123', 'monthly', 'sub_123')
 
     expect(creditAccountUpsert).toHaveBeenCalledWith(
@@ -119,10 +120,10 @@ describe('quota credit source of truth', () => {
     expect(quotaPayload).toMatchObject({
       user_id: 'usr_123',
       plan: 'monthly',
+      credits_remaining: PLANS.monthly.credits,
       asaas_subscription_id: 'sub_123',
       status: 'active',
     })
-    expect(quotaPayload).not.toHaveProperty('credits_remaining')
   })
 
   it('checks quota from credit_accounts only', async () => {
@@ -177,6 +178,33 @@ describe('quota credit source of truth', () => {
       status: 'active',
       asaasSubscriptionId: 'sub_123',
       hasActiveRecurringSubscription: true,
+    })
+  })
+
+  it('uses the persisted display total when preserved credits exceed the base plan allowance', async () => {
+    creditAccountMaybeSingle.mockResolvedValueOnce({
+      data: { credits_remaining: 4 },
+      error: null,
+    })
+    userQuotaMaybeSingle.mockResolvedValueOnce({
+      data: {
+        plan: 'unit',
+        credits_remaining: 4,
+        renews_at: null,
+        status: 'active',
+        asaas_subscription_id: null,
+      },
+      error: null,
+    })
+
+    await expect(getUserBillingInfo('usr_123')).resolves.toEqual({
+      plan: 'unit',
+      creditsRemaining: 4,
+      maxCredits: 4,
+      renewsAt: null,
+      status: 'active',
+      asaasSubscriptionId: null,
+      hasActiveRecurringSubscription: false,
     })
   })
 

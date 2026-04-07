@@ -28,6 +28,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const renewsIn = billingInfo?.hasActiveRecurringSubscription
     ? formatRenewalCountdown(billingInfo.renewsAt)
     : null
+  const currentPlan = billingInfo?.plan ?? null
   const activeRecurringPlan = billingInfo?.hasActiveRecurringSubscription
     ? billingInfo.plan
     : null
@@ -37,6 +38,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       creditsRemaining={billingInfo?.creditsRemaining}
       maxCredits={billingInfo?.maxCredits}
       renewsIn={renewsIn}
+      currentPlan={currentPlan}
       activeRecurringPlan={activeRecurringPlan}
     >
       {children}

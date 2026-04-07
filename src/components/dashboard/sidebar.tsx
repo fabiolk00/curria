@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PlanUpdateDialog } from "@/components/dashboard/plan-update-dialog"
-import { PlanSlug } from "@/lib/plans"
+import { PLANS, PlanSlug } from "@/lib/plans"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -41,6 +41,7 @@ interface DashboardSidebarProps {
   creditsRemaining?: number
   maxCredits?: number
   renewsIn?: string
+  currentPlan?: PlanSlug | null
   activeRecurringPlan?: PlanSlug | null
 }
 
@@ -93,6 +94,7 @@ export function DashboardSidebar({
   creditsRemaining,
   maxCredits,
   renewsIn,
+  currentPlan,
   activeRecurringPlan,
 }: DashboardSidebarProps) {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
@@ -108,6 +110,7 @@ export function DashboardSidebar({
   const email = user?.primaryEmailAddress?.emailAddress || ""
   const initials = getInitials(displayName, email)
   const currentCredits = creditsRemaining ?? 0
+  const planLabel = currentPlan ? `Plano ${PLANS[currentPlan].name}` : "Plano indisponível"
   const handleSignOut = (): void => {
     onClose?.()
     void signOut({ redirectUrl: "/" })
@@ -205,7 +208,7 @@ export function DashboardSidebar({
                     {displayName}
                   </p>
                   <p className="truncate text-xs text-sidebar-foreground/60">
-                    {email || "Area autenticada"}
+                    {planLabel}
                   </p>
                 </div>
                 <Settings className="h-4 w-4 text-sidebar-foreground/60" />
@@ -214,7 +217,7 @@ export function DashboardSidebar({
             <DropdownMenuContent align="end" side="top" className="w-56">
               <div className="px-2 py-1.5">
                 <p className="text-sm font-medium">{displayName}</p>
-                {email ? <p className="text-xs text-muted-foreground">{email}</p> : null}
+                <p className="text-xs text-muted-foreground">{planLabel}</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem

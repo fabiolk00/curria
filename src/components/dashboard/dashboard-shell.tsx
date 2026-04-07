@@ -13,6 +13,7 @@ interface DashboardShellProps {
   creditsRemaining?: number
   maxCredits?: number
   renewsIn?: string | null
+  currentPlan?: PlanSlug | null
   activeRecurringPlan?: PlanSlug | null
 }
 
@@ -21,6 +22,7 @@ export default function DashboardShell({
   creditsRemaining,
   maxCredits,
   renewsIn,
+  currentPlan,
   activeRecurringPlan,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -52,6 +54,7 @@ export default function DashboardShell({
         creditsRemaining={creditsRemaining}
         maxCredits={maxCredits}
         renewsIn={renewsIn ?? undefined}
+        currentPlan={currentPlan ?? null}
         activeRecurringPlan={activeRecurringPlan ?? null}
       />
 

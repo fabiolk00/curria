@@ -24,8 +24,16 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/components/dashboard/dashboard-shell', () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dashboard-shell">{children}</div>
+  default: ({
+    children,
+    currentPlan,
+  }: {
+    children: React.ReactNode
+    currentPlan?: string | null
+  }) => (
+    <div data-testid="dashboard-shell" data-plan={currentPlan ?? ''}>
+      {children}
+    </div>
   ),
 }))
 
@@ -75,6 +83,7 @@ describe('AuthLayout', () => {
     render(jsx)
 
     expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-plan', 'monthly')
     expect(screen.getByText('Child')).toBeInTheDocument()
   })
 

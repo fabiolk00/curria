@@ -11,6 +11,7 @@ type UserQuotaOwnerRow = {
 
 type UserQuotaBillingRow = {
   plan: string | null
+  credits_remaining: number | null
   renews_at: string | null
   status: string | null
   asaas_subscription_id: string | null
@@ -87,6 +88,7 @@ export async function grantCredits(
     {
       user_id: appUserId,
       plan,
+      credits_remaining: planConfig.credits,
       asaas_subscription_id: asaasSubscriptionId ?? null,
       renews_at: renewsAt,
       status: 'active',
@@ -216,7 +218,7 @@ export async function getUserBillingInfo(appUserId: string): Promise<UserBilling
   const [quotaResult, creditResult] = await Promise.all([
     supabase
       .from('user_quotas')
-      .select('plan, renews_at, status, asaas_subscription_id')
+      .select('plan, credits_remaining, renews_at, status, asaas_subscription_id')
       .eq('user_id', appUserId)
       .maybeSingle<UserQuotaBillingRow>(),
     supabase
@@ -248,11 +250,16 @@ export async function getUserBillingInfo(appUserId: string): Promise<UserBilling
     status === 'active' &&
     typeof quotaData.asaas_subscription_id === 'string' &&
     quotaData.asaas_subscription_id.length > 0
+  const maxCredits = Math.max(
+    quotaData.credits_remaining ?? 0,
+    creditData.credits_remaining,
+    PLANS[plan].credits,
+  )
 
   return {
     plan,
     creditsRemaining: creditData.credits_remaining,
-    maxCredits: PLANS[plan].credits,
+    maxCredits,
     renewsAt: quotaData.renews_at,
     status,
     asaasSubscriptionId: quotaData.asaas_subscription_id,
