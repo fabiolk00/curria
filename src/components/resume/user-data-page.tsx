@@ -104,7 +104,9 @@ export default function UserDataPage() {
 
     const loadProfile = async (): Promise<void> => {
       try {
-        const response = await fetch("/api/profile")
+        const response = await fetch("/api/profile", {
+          credentials: "include",
+        })
         if (!response.ok) {
           throw new Error("N\u00e3o foi poss\u00edvel carregar seu perfil.")
         }
@@ -159,6 +161,7 @@ export default function UserDataPage() {
     try {
       const response = await fetch("/api/profile", {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

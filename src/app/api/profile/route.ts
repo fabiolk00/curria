@@ -60,7 +60,11 @@ async function getExistingProfile(appUserId: string): Promise<UserProfileRow | n
 export async function GET() {
   const appUser = await getCurrentAppUser()
   if (!appUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logError('[api/profile] Unauthorized GET attempt')
+    return NextResponse.json(
+      { error: 'Você precisa estar autenticado para acessar seu perfil.' },
+      { status: 401 },
+    )
   }
 
   try {
@@ -99,7 +103,11 @@ export async function GET() {
 export async function PUT(request: Request) {
   const appUser = await getCurrentAppUser()
   if (!appUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logError('[api/profile] Unauthorized PUT attempt')
+    return NextResponse.json(
+      { error: 'Você precisa estar autenticado para salvar seu perfil.' },
+      { status: 401 },
+    )
   }
 
   let rawBody: unknown

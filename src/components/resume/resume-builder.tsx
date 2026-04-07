@@ -48,7 +48,9 @@ export function ImportResumeModal({
 
     const interval = window.setInterval(async () => {
       try {
-        const response = await fetch(`/api/profile/status/${jobId}`)
+        const response = await fetch(`/api/profile/status/${jobId}`, {
+          credentials: "include",
+        })
         if (!response.ok) {
           throw new Error("N\u00e3o foi poss\u00edvel acompanhar a importa\u00e7\u00e3o.")
         }
@@ -59,7 +61,9 @@ export function ImportResumeModal({
         if (data.status === "completed") {
           window.clearInterval(interval)
 
-          const profileResponse = await fetch("/api/profile")
+          const profileResponse = await fetch("/api/profile", {
+            credentials: "include",
+          })
           if (!profileResponse.ok) {
             throw new Error("A importa\u00e7\u00e3o terminou, mas o perfil n\u00e3o p\u00f4de ser carregado.")
           }
@@ -101,6 +105,7 @@ export function ImportResumeModal({
     try {
       const response = await fetch("/api/profile/extract", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

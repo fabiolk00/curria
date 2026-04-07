@@ -12,7 +12,11 @@ const BodySchema = z.object({
 export async function POST(req: NextRequest) {
   const appUser = await getCurrentAppUser()
   if (!appUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logError('[api/profile/extract] Unauthorized access attempt')
+    return NextResponse.json(
+      { error: 'Você precisa estar autenticado para importar um perfil do LinkedIn.' },
+      { status: 401 },
+    )
   }
 
   let rawBody: unknown

@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  User,
   X,
 } from "lucide-react"
 import Link from "next/link"
@@ -50,6 +51,11 @@ const navItems = [
     label: "Chat",
     href: "/dashboard",
     icon: MessageSquare,
+  },
+  {
+    label: "Meu Perfil",
+    href: "/dashboard/resumes/new",
+    icon: User,
   },
   {
     label: "Gerenciamento de Vagas",

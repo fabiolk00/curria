@@ -3,8 +3,9 @@ import { NextRequest } from 'next/server'
 import { GET } from './route'
 
 // Use vi.hoisted to create mock at module scope
-const { mockRpcFn } = vi.hoisted(() => ({
+const { mockRpcFn, mockCleanupImportJobs } = vi.hoisted(() => ({
   mockRpcFn: vi.fn(),
+  mockCleanupImportJobs: vi.fn(),
 }))
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -13,12 +14,17 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
+vi.mock('@/lib/linkedin/import-jobs', () => ({
+  cleanupOldImportJobs: mockCleanupImportJobs,
+}))
+
 describe('GET /api/cron/cleanup', () => {
   const originalCronSecret = process.env.CRON_SECRET
 
   beforeEach(() => {
     process.env.CRON_SECRET = 'test-secret-123'
     vi.clearAllMocks()
+    mockCleanupImportJobs.mockResolvedValue(0)
   })
 
   afterEach(() => {
@@ -81,7 +87,8 @@ describe('GET /api/cron/cleanup', () => {
 
       expect(res.status).toBe(200)
       const body = await res.json()
-      expect(body.deleted).toBe(1500)
+      expect(body.processedEvents).toBe(1500)
+      expect(body.linkedInJobs).toBe(0)
     })
 
     it('returns 0 when no records are deleted', async () => {
@@ -99,7 +106,8 @@ describe('GET /api/cron/cleanup', () => {
 
       expect(res.status).toBe(200)
       const body = await res.json()
-      expect(body.deleted).toBe(0)
+      expect(body.processedEvents).toBe(0)
+      expect(body.linkedInJobs).toBe(0)
     })
 
     it('handles gracefully when deleted_count is missing', async () => {
@@ -117,7 +125,8 @@ describe('GET /api/cron/cleanup', () => {
 
       expect(res.status).toBe(200)
       const body = await res.json()
-      expect(body.deleted).toBe(0) // Falls back to 0
+      expect(body.processedEvents).toBe(0)
+      expect(body.linkedInJobs).toBe(0)
     })
   })
 

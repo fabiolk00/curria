@@ -12,6 +12,17 @@ import {
   handleSubscriptionUpdated,
 } from '@/lib/asaas/event-handlers'
 
+// Mock rate limiter before importing the route
+const mockWebhookLimiter = vi.hoisted(() => ({
+  limit: vi.fn(async () => ({ success: true })),
+}))
+
+vi.mock('@/lib/rate-limit', () => ({
+  webhookLimiter: mockWebhookLimiter,
+  agentLimiter: vi.fn(),
+  publicLimiter: vi.fn(),
+}))
+
 vi.mock('@/lib/asaas/idempotency', () => ({
   computeEventFingerprint: vi.fn(() => 'fp_123'),
   getProcessedEvent: vi.fn(),
@@ -41,6 +52,7 @@ describe('Asaas webhook route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.ASAAS_WEBHOOK_TOKEN = 'test-token'
+    mockWebhookLimiter.limit.mockResolvedValue({ success: true })
     vi.mocked(getProcessedEvent).mockResolvedValue(false)
     vi.mocked(handlePaymentSettlement).mockResolvedValue('processed')
     vi.mocked(reconcileProcessedEventState).mockResolvedValue()
