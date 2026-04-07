@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth, useSignIn } from "@clerk/nextjs"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -11,6 +11,7 @@ import { z } from "zod"
 
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,6 +29,7 @@ type FormData = z.infer<typeof schema>
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
+  const [authReadySlow, setAuthReadySlow] = useState(false)
   const { isSignedIn } = useAuth()
   const { signIn, isLoaded } = useSignIn()
   const searchParams = useSearchParams()
@@ -49,8 +51,26 @@ export default function LoginForm() {
     navigateToUrl(redirectTo)
   }, [isLoaded, isSignedIn, redirectTo])
 
+  useEffect(() => {
+    if (isLoaded) {
+      setAuthReadySlow(false)
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setAuthReadySlow(true)
+    }, 4000)
+
+    return () => window.clearTimeout(timeout)
+  }, [isLoaded])
+
   const handleGoogleSignIn = async () => {
-    if (!isLoaded) return
+    if (!isLoaded) {
+      setError("root", {
+        message: "Ainda estamos carregando a autenticação. Aguarde alguns segundos e tente novamente.",
+      })
+      return
+    }
 
     if (isSignedIn) {
       navigateToUrl(redirectTo)
@@ -64,12 +84,18 @@ export default function LoginForm() {
         redirectUrlComplete: redirectTo,
       })
     } catch (error) {
-      console.error("Google sign-in error:", error)
+      const message = getClerkErrorMessage(error, "Erro ao entrar com Google. Tente novamente.")
+      setError("root", { message })
     }
   }
 
   const onSubmit = async (data: FormData) => {
-    if (!isLoaded) return
+    if (!isLoaded) {
+      setError("root", {
+        message: "Ainda estamos carregando a autenticação. Aguarde alguns segundos e tente novamente.",
+      })
+      return
+    }
 
     try {
       const result = await signIn.create({ identifier: data.email, password: data.password })
@@ -175,17 +201,36 @@ export default function LoginForm() {
             ) : null}
           </div>
 
+          {!isLoaded ? (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {authReadySlow
+                  ? "A autenticação está demorando para carregar neste navegador. Verifique bloqueadores, rede ou extensões e tente novamente."
+                  : "Carregando autenticação..."}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           {errors.root ? (
-            <p className="text-center text-sm font-medium text-destructive">{errors.root.message}</p>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{errors.root.message}</AlertDescription>
+            </Alert>
           ) : null}
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-6 pb-8">
-          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isSubmitting}>
+        <CardFooter className="flex flex-col gap-6 pb-8 pt-2">
+          <Button type="submit" className="mt-1 h-11 w-full text-base font-semibold" disabled={isSubmitting || !isLoaded}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Entrando...
+              </>
+            ) : !isLoaded ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Carregando...
               </>
             ) : (
               "Entrar"

@@ -52,6 +52,7 @@ function StepIndicator({ step }: { step: "signup" | "verify" }) {
 export default function SignupForm() {
   const [step, setStep] = useState<"signup" | "verify">("signup")
   const [showPassword, setShowPassword] = useState(false)
+  const [authReadySlow, setAuthReadySlow] = useState(false)
   const { isSignedIn } = useAuth()
   const { signUp, isLoaded, setActive } = useSignUp()
   const searchParams = useSearchParams()
@@ -78,8 +79,26 @@ export default function SignupForm() {
     navigateToUrl(authenticatedRedirectTo)
   }, [authenticatedRedirectTo, isLoaded, isSignedIn])
 
+  useEffect(() => {
+    if (isLoaded) {
+      setAuthReadySlow(false)
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setAuthReadySlow(true)
+    }, 4000)
+
+    return () => window.clearTimeout(timeout)
+  }, [isLoaded])
+
   const handleGoogleSignUp = async () => {
-    if (!isLoaded) return
+    if (!isLoaded) {
+      signUpForm.setError("root", {
+        message: "Ainda estamos carregando a autenticação. Aguarde alguns segundos e tente novamente.",
+      })
+      return
+    }
 
     if (isSignedIn) {
       navigateToUrl(authenticatedRedirectTo)
@@ -93,12 +112,18 @@ export default function SignupForm() {
         redirectUrlComplete: redirectTo,
       })
     } catch (error) {
-      console.error("Google sign-up error:", error)
+      const message = getClerkErrorMessage(error, "Erro ao criar conta com Google. Tente novamente.")
+      signUpForm.setError("root", { message })
     }
   }
 
   const onSignUp = async (data: SignUpData) => {
-    if (!isLoaded) return
+    if (!isLoaded) {
+      signUpForm.setError("root", {
+        message: "Ainda estamos carregando a autenticação. Aguarde alguns segundos e tente novamente.",
+      })
+      return
+    }
 
     try {
       await signUp.create({
@@ -349,14 +374,30 @@ export default function SignupForm() {
               <AlertDescription>{errors.root.message}</AlertDescription>
             </Alert>
           ) : null}
+
+          {!isLoaded ? (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {authReadySlow
+                  ? "A autenticação está demorando para carregar neste navegador. Verifique bloqueadores, rede ou extensões e tente novamente."
+                  : "Carregando autenticação..."}
+              </AlertDescription>
+            </Alert>
+          ) : null}
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-6 pb-8">
-          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={isSubmitting}>
+        <CardFooter className="flex flex-col gap-6 pb-8 pt-2">
+          <Button type="submit" className="mt-1 h-11 w-full text-base font-semibold" disabled={isSubmitting || !isLoaded}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Criando conta...
+              </>
+            ) : !isLoaded ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Carregando...
               </>
             ) : (
               "Criar conta grátis"

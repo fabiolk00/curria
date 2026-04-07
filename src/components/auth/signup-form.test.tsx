@@ -15,6 +15,7 @@ const {
   mockNavigateToUrl,
   mockIsSignedIn,
   mockSearchParamsGet,
+  mockIsLoaded,
 } = vi.hoisted(() => ({
   mockCreate: vi.fn(),
   mockPrepareEmailAddressVerification: vi.fn(),
@@ -23,6 +24,7 @@ const {
   mockNavigateToUrl: vi.fn(),
   mockIsSignedIn: vi.fn(),
   mockSearchParamsGet: vi.fn(),
+  mockIsLoaded: vi.fn(),
 }))
 
 vi.mock('@clerk/nextjs', () => ({
@@ -30,7 +32,7 @@ vi.mock('@clerk/nextjs', () => ({
     isSignedIn: mockIsSignedIn(),
   }),
   useSignUp: () => ({
-    isLoaded: true,
+    isLoaded: mockIsLoaded(),
     signUp: {
       create: mockCreate,
       prepareEmailAddressVerification: mockPrepareEmailAddressVerification,
@@ -60,6 +62,7 @@ describe('SignupForm', () => {
     vi.clearAllMocks()
     mockIsSignedIn.mockReturnValue(false)
     mockSearchParamsGet.mockReturnValue(null)
+    mockIsLoaded.mockReturnValue(true)
     mockCreate.mockResolvedValue(undefined)
     mockPrepareEmailAddressVerification.mockResolvedValue(undefined)
     mockAttemptEmailAddressVerification.mockResolvedValue({
@@ -152,5 +155,14 @@ describe('SignupForm', () => {
     await waitFor(() => {
       expect(mockNavigateToUrl).toHaveBeenCalledWith('/pricing?checkoutPlan=monthly')
     })
+  })
+
+  it('disables signup submission and shows loading feedback while Clerk is not ready', () => {
+    mockIsLoaded.mockReturnValue(false)
+
+    render(<SignupForm />)
+
+    expect(screen.getByRole('button', { name: /carregando/i })).toBeDisabled()
+    expect(screen.getByText(/Carregando autenticação/i)).toBeInTheDocument()
   })
 })

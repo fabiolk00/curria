@@ -6,11 +6,12 @@ import React from "react"
 
 import LoginForm from "./login-form"
 
-const { mockSignIn, mockNavigateToUrl, mockIsSignedIn, mockSearchParamsGet } = vi.hoisted(() => ({
+const { mockSignIn, mockNavigateToUrl, mockIsSignedIn, mockSearchParamsGet, mockIsLoaded } = vi.hoisted(() => ({
   mockSignIn: vi.fn(),
   mockNavigateToUrl: vi.fn(),
   mockIsSignedIn: vi.fn(),
   mockSearchParamsGet: vi.fn(),
+  mockIsLoaded: vi.fn(),
 }))
 
 vi.mock("@clerk/nextjs", () => ({
@@ -18,7 +19,7 @@ vi.mock("@clerk/nextjs", () => ({
     isSignedIn: mockIsSignedIn(),
   }),
   useSignIn: () => ({
-    isLoaded: true,
+    isLoaded: mockIsLoaded(),
     signIn: {
       create: mockSignIn,
       authenticateWithRedirect: vi.fn(),
@@ -45,6 +46,7 @@ describe("LoginForm", () => {
     vi.clearAllMocks()
     mockIsSignedIn.mockReturnValue(false)
     mockSearchParamsGet.mockReturnValue(null)
+    mockIsLoaded.mockReturnValue(true)
   })
 
   it("renders the login form", () => {
@@ -162,6 +164,15 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(submitButton).toBeDisabled()
     })
+  })
+
+  it("disables email sign in and shows loading feedback while Clerk is not ready", () => {
+    mockIsLoaded.mockReturnValue(false)
+
+    render(<LoginForm />)
+
+    expect(screen.getByRole("button", { name: /carregando/i })).toBeDisabled()
+    expect(screen.getByText(/Carregando autenticação/i)).toBeInTheDocument()
   })
 
   it("redirects authenticated visitors away from login", async () => {
