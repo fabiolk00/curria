@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { linkedinQueue } from '@/lib/linkedin/queue'
+import { createImportJob } from '@/lib/linkedin/import-jobs'
 import { logError, logInfo } from '@/lib/observability/structured-log'
 
 const BodySchema = z.object({
@@ -26,50 +27,41 @@ export async function POST(req: NextRequest) {
   if (!body.success) {
     return NextResponse.json(
       { error: body.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   const { linkedinUrl } = body.data
 
-  // Validate LinkedIn URL
   if (!linkedinUrl.includes('linkedin.com/in/')) {
     return NextResponse.json(
       { error: 'Invalid LinkedIn profile URL. Must be in format: https://www.linkedin.com/in/username/' },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   try {
-    // Add job to queue
-    const job = await linkedinQueue.add('extract', {
-      appUserId: appUser.id,
-      linkedinUrl,
-    })
+    const { jobId } = await createImportJob(appUser.id, linkedinUrl)
 
-    logInfo('[api/profile/extract] Job queued', {
-      jobId: job.id,
+    logInfo('[api/profile/extract] Job created', {
+      jobId,
       appUserId: appUser.id,
     })
-
-    // Get current queue position
-    const position = await linkedinQueue.count()
 
     return NextResponse.json({
       success: true,
-      jobId: job.id,
-      position,
+      jobId,
       message: 'Profile extraction started',
     })
   } catch (error) {
-    logError('[api/profile/extract] Failed to queue job', {
+    logError('[api/profile/extract] Failed to create job', {
       appUserId: appUser.id,
       error: error instanceof Error ? error.message : String(error),
     })
 
     return NextResponse.json(
       { error: 'Failed to start profile extraction' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

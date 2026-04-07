@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { linkedinQueue } from '@/lib/linkedin/queue'
+import { claimAndProcessJob, getImportJob } from '@/lib/linkedin/import-jobs'
 import { logError, logInfo } from '@/lib/observability/structured-log'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: { jobId: string } },
 ) {
   const appUser = await getCurrentAppUser()
   if (!appUser) {
@@ -15,28 +16,32 @@ export async function GET(
   const { jobId } = params
 
   try {
-    const job = await linkedinQueue.getJob(jobId)
+    const job = await getImportJob(jobId, appUser.id)
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
     }
 
-    // Verify ownership - job data should contain the app user ID
-    if (job.data.appUserId !== appUser.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // If still pending, atomically claim and process it now.
+    // This is the on-demand extraction pattern for serverless.
+    if (job.status === 'pending') {
+      const result = await claimAndProcessJob(jobId, appUser.id)
+
+      logInfo('[api/profile/status] Job processed on-demand', {
+        jobId,
+        status: result.status,
+        appUserId: appUser.id,
+      })
+
+      return NextResponse.json({
+        jobId,
+        status: result.status,
+      })
     }
-
-    const state = await job.getState()
-
-    logInfo('[api/profile/status] Job status checked', {
-      jobId,
-      state,
-      appUserId: appUser.id,
-    })
 
     return NextResponse.json({
       jobId,
-      status: state,
+      status: job.status,
     })
   } catch (error) {
     logError('[api/profile/status] Failed to get job status', {
@@ -47,7 +52,7 @@ export async function GET(
 
     return NextResponse.json(
       { error: 'Failed to get job status' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

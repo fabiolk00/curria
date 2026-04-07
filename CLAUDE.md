@@ -116,7 +116,8 @@ Primary code:
 
 Primary code:
 - `src/lib/linkedin/linkdapi.ts`
-- `src/lib/linkedin/queue.ts`
+- `src/lib/linkedin/extract-profile.ts`
+- `src/lib/linkedin/import-jobs.ts`
 - `src/lib/db/sessions.ts` (seedCvStateFromProfile function)
 
 ### Tool architecture
@@ -277,10 +278,10 @@ Rules:
 
 ### Profile setup flow — LinkedIn path
 1. User submits LinkedIn URL via `POST /api/profile/extract`
-2. Route validates URL and adds a BullMQ job to the `linkedin-profile-extract` queue
-3. Worker calls LinkdAPI `GET /api/v1/profile/full`
-4. Worker maps the response to the `cvState` shape via `mapLinkdAPIToCvState()`
-5. Worker saves the result to `UserProfile` with source `linkedin`
+2. Route validates URL and inserts a pending row in `linkedin_import_jobs`
+3. Frontend polls `GET /api/profile/status/:jobId`
+4. Status route atomically claims the pending job and extracts inline
+5. Extraction calls LinkdAPI, maps response to `cvState`, and saves to `UserProfile`
 6. User reviews extracted fields in the structured profile form and edits any incomplete or incorrect fields
 7. User saves the final profile via `PUT /api/profile`
 8. On next session creation, `sessions.ts` seeds `cvState` from `UserProfile.cvState`
@@ -406,7 +407,8 @@ Rules:
 
 ### Profile setup
 - `src/lib/linkedin/linkdapi.ts`
-- `src/lib/linkedin/queue.ts`
+- `src/lib/linkedin/extract-profile.ts`
+- `src/lib/linkedin/import-jobs.ts`
 - `src/app/api/profile/extract/route.ts`
 - `src/app/api/profile/status/[jobId]/route.ts`
 - `src/app/api/profile/route.ts`

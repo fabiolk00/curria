@@ -62,7 +62,7 @@ Response:
 
 ### `GET /api/profile/status/[jobId]`
 
-Polls BullMQ job state.
+Polls import job state. If the job is still pending, the status endpoint atomically claims and processes it on-demand.
 
 Response:
 
@@ -162,8 +162,8 @@ This tells the agent to skip `parse_file` and start helping immediately.
 
 Implemented now:
 
-- LinkedIn extraction
-- BullMQ processing
+- LinkedIn extraction via LinkdAPI
+- DB-backed import jobs with on-demand processing
 - saved profile retrieval
 - manual review and save
 - canonical profile screen at `/dashboard/resumes/new`

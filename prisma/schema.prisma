@@ -211,6 +211,7 @@ model User {
   jobApplications JobApplication[]
   billingInfo    CustomerBillingInfo?
   profile        UserProfile?
+  linkedInImportJobs LinkedInImportJob[]
 
   @@map("users")
 }
@@ -229,6 +230,24 @@ model UserProfile {
 
   @@index([userId])
   @@map("user_profiles")
+}
+
+model LinkedInImportJob {
+  id           String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  userId       String    @map("user_id")
+  linkedinUrl  String    @map("linkedin_url")
+  status       String    @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  errorMessage String?   @map("error_message")
+  claimedAt    DateTime? @map("claimed_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("linkedin_import_jobs")
 }
 
 model UserAuthIdentity {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logInfo, logWarn, logError } from '@/lib/observability/structured-log'
-import { cleanupOldLinkedInJobs } from '@/lib/linkedin/queue'
+import { cleanupOldImportJobs } from '@/lib/linkedin/import-jobs'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // Cleanup old LinkedIn extraction jobs (>1 day)
   try {
-    results.linkedInJobs = await cleanupOldLinkedInJobs(1)
+    results.linkedInJobs = await cleanupOldImportJobs(1)
   } catch (error) {
     logError('cron.cleanup.linkedin_jobs_failed', {
       error: error instanceof Error ? error.message : String(error),
