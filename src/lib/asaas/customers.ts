@@ -1,5 +1,6 @@
 import { asaas } from '@/lib/asaas/client'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 
 type GetOrCreateCustomerInput = {
   appUserId: string
@@ -32,7 +33,11 @@ export async function getOrCreateCustomer({
 
   await supabase
     .from('user_quotas')
-    .upsert({ user_id: appUserId, asaas_customer_id: customer.id }, { onConflict: 'user_id' })
+    .upsert({
+      user_id: appUserId,
+      asaas_customer_id: customer.id,
+      ...createUpdatedAtTimestamp(),
+    }, { onConflict: 'user_id' })
 
   return customer.id
 }

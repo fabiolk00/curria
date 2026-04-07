@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { parseExternalReference } from '@/lib/asaas/external-reference'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createCreatedAtTimestamp, currentTimestamp } from '@/lib/db/timestamps'
 import { getWebhookAmount, type AsaasWebhookEvent } from '@/lib/asaas/webhook'
 
 type ProcessedEventLookupRow = {
@@ -133,15 +134,17 @@ export async function recordProcessedEvent(
   event: AsaasWebhookEvent,
 ): Promise<void> {
   const supabase = getSupabaseAdminClient()
+  const now = currentTimestamp()
   const { error } = await supabase
     .from('processed_events')
     .insert({
       id: createDatabaseId(),
+      ...createCreatedAtTimestamp(now),
       event_id: fingerprint,
       event_fingerprint: fingerprint,
       event_type: event.event,
       event_payload: event,
-      processed_at: new Date().toISOString(),
+      processed_at: now,
     })
 
   if (error) {

@@ -1,6 +1,7 @@
 import { DEFAULT_OPENAI_MODEL } from '@/lib/agent/config'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createCreatedAtTimestamp } from '@/lib/db/timestamps'
 
 export const MODEL_PRICING_CENTS_PER_MILLION = {
   [DEFAULT_OPENAI_MODEL]: { input: 5, output: 40 },
@@ -35,6 +36,7 @@ export async function trackApiUsage(params: {
   try {
     await supabase.from('api_usage').insert({
       id: createDatabaseId(),
+      ...createCreatedAtTimestamp(),
       user_id: params.userId,
       session_id: params.sessionId ?? null,
       model: params.model,

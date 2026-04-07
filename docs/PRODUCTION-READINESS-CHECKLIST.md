@@ -10,6 +10,7 @@ Status: billing webhook contract updated for settlement-based processing.
 - [ ] `20260406_fix_billing_checkout_timestamp_defaults.sql` applied
 - [ ] `20260407_persist_billing_display_totals.sql` applied
 - [ ] `20260407_harden_text_id_generation.sql` applied
+- [ ] `20260407_harden_standard_timestamps.sql` applied
 - [ ] Old overload of `apply_billing_credit_grant_event` removed
 - [ ] Focused billing tests passing
 - [ ] Typecheck passing
@@ -54,6 +55,31 @@ ORDER BY table_name;
 Expected:
 
 - every listed generic text-ID table returns a `gen_random_uuid()::text` default or equivalent expression
+
+### Timestamp defaults
+
+```sql
+SELECT table_name, column_name, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name IN ('created_at', 'updated_at')
+  AND table_name IN (
+    'users',
+    'user_auth_identities',
+    'credit_accounts',
+    'user_quotas',
+    'sessions',
+    'billing_checkouts',
+    'customer_billing_info',
+    'job_applications',
+    'resume_targets'
+  )
+ORDER BY table_name, column_name;
+```
+
+Expected:
+
+- every mutable table listed above returns `NOW()` or equivalent defaults for both timestamps
 
 ### Function signatures
 

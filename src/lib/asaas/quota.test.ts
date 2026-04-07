@@ -108,11 +108,12 @@ describe('quota credit source of truth', () => {
     await grantCredits('usr_123', 'monthly', 'sub_123')
 
     expect(creditAccountUpsert).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         id: 'cred_usr_123',
         user_id: 'usr_123',
         credits_remaining: PLANS.monthly.credits,
-      },
+        updated_at: expect.any(String),
+      }),
       { onConflict: 'user_id' },
     )
 
@@ -123,6 +124,7 @@ describe('quota credit source of truth', () => {
       credits_remaining: PLANS.monthly.credits,
       asaas_subscription_id: 'sub_123',
       status: 'active',
+      updated_at: expect.any(String),
     })
   })
 
@@ -137,6 +139,7 @@ describe('quota credit source of truth', () => {
     expect(userQuotaUpdate).toHaveBeenCalledWith({
       renews_at: null,
       status: 'canceled',
+      updated_at: expect.any(String),
     })
     expect(creditAccountUpsert).not.toHaveBeenCalled()
   })

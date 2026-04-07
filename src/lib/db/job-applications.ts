@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createInsertTimestamps, createUpdatedAtTimestamp, currentTimestamp } from '@/lib/db/timestamps'
 import type {
   CreateJobApplicationInput,
   JobApplication,
@@ -69,6 +70,8 @@ const CreateJobApplicationPayloadSchema = z.object({
   job_description: z.string().nullable(),
   notes: z.string().nullable(),
   applied_at: z.string().min(1),
+  created_at: z.string().min(1),
+  updated_at: z.string().min(1),
 })
 
 const UpdateJobApplicationInputSchema = z.object({
@@ -170,6 +173,7 @@ function buildJobApplicationStats(): JobApplicationSummary {
 
 function normalizeCreatePayload(input: CreateJobApplicationInput) {
   const parsed = CreateJobApplicationInputSchema.parse(input)
+  const now = currentTimestamp()
 
   const payload = {
     id: createDatabaseId(),
@@ -183,7 +187,8 @@ function normalizeCreatePayload(input: CreateJobApplicationInput) {
     resume_version_label: parsed.resumeVersionLabel,
     job_description: normalizeNullableString(parsed.jobDescription),
     notes: normalizeNullableString(parsed.notes),
-    applied_at: toIsoTimestamp(parsed.appliedAt ?? new Date()),
+    applied_at: toIsoTimestamp(parsed.appliedAt ?? now),
+    ...createInsertTimestamps(now),
   }
 
   return CreateJobApplicationPayloadSchema.parse(payload)
@@ -192,7 +197,7 @@ function normalizeCreatePayload(input: CreateJobApplicationInput) {
 function normalizeUpdatePayload(input: UpdateJobApplicationInput) {
   const parsed = UpdateJobApplicationInputSchema.parse(input)
   const update: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
+    ...createUpdatedAtTimestamp(),
   }
 
   if (parsed.role !== undefined) update.role = parsed.role

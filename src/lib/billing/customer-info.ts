@@ -10,6 +10,7 @@ import {
   normalizeProvince,
 } from '@/lib/billing/address'
 import { createDatabaseId } from '@/lib/db/ids'
+import { createUpdatedAtTimestamp, currentTimestamp } from '@/lib/db/timestamps'
 
 export const BillingInfoSchema = z.object({
   cpfCnpj: z.string().min(1, 'CPF/CNPJ is required'),
@@ -37,7 +38,7 @@ export async function saveBillingInfo(
 ): Promise<void> {
   const parsedInfo = BillingInfoSchema.parse(info)
   const supabase = getSupabaseAdminClient()
-  const now = new Date().toISOString()
+  const now = currentTimestamp()
 
   const { error } = await supabase.from('customer_billing_info').upsert(
     {
@@ -49,7 +50,7 @@ export async function saveBillingInfo(
       address_number: parsedInfo.addressNumber,
       postal_code: parsedInfo.postalCode,
       province: parsedInfo.province,
-      updated_at: now,
+      ...createUpdatedAtTimestamp(now),
     },
     { onConflict: 'user_id' },
   )

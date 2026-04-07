@@ -38,6 +38,7 @@ describe('usage tracker pricing', () => {
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({
         id: expect.any(String),
+        created_at: expect.any(String),
         model: DEFAULT_OPENAI_MODEL,
         cost_cents:
           MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL].input

@@ -14,6 +14,7 @@ npx prisma db execute --file prisma/migrations/20260406_align_asaas_webhook_cont
 npx prisma db execute --file prisma/migrations/20260406_fix_billing_checkout_timestamp_defaults.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_persist_billing_display_totals.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_text_id_generation.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260407_harden_standard_timestamps.sql --schema prisma/schema.prisma
 ```
 
 If your deployment flow requires manual SQL execution, run the contents of:
@@ -23,6 +24,7 @@ If your deployment flow requires manual SQL execution, run the contents of:
 - `prisma/migrations/20260406_fix_billing_checkout_timestamp_defaults.sql`
 - `prisma/migrations/20260407_persist_billing_display_totals.sql`
 - `prisma/migrations/20260407_harden_text_id_generation.sql`
+- `prisma/migrations/20260407_harden_standard_timestamps.sql`
 
 against the target database before deploying code that depends on `billing_checkouts`, the updated RPC signatures, and the persisted dashboard display totals.
 
@@ -63,6 +65,33 @@ ORDER BY table_name;
 Expected result:
 
 - every generic text-ID table has a `gen_random_uuid()::text` default or equivalent expression
+
+### Timestamp default checks
+
+```sql
+SELECT table_name, column_name, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name IN ('created_at', 'updated_at')
+  AND table_name IN (
+    'billing_checkouts',
+    'processed_events',
+    'user_quotas',
+    'credit_accounts',
+    'customer_billing_info',
+    'job_applications',
+    'sessions',
+    'api_usage',
+    'resume_targets',
+    'user_auth_identities',
+    'users'
+  )
+ORDER BY table_name, column_name;
+```
+
+Expected result:
+
+- mutable tables return `NOW()` or equivalent defaults for `updated_at`
 
 ### Index checks
 

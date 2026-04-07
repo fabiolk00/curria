@@ -84,6 +84,8 @@ describe('job applications db helpers', () => {
       status: 'aguardando',
       resume_version_label: 'Curriculo_Fintech_v2.pdf',
       benefits: [{ name: 'VA/VR Flexivel', value: 'R$ 1.200/mes' }],
+      created_at: expect.any(String),
+      updated_at: expect.any(String),
     }))
     expect(created.status).toBe('aguardando')
     expect(created.resumeVersionLabel).toBe('Curriculo_Fintech_v2.pdf')

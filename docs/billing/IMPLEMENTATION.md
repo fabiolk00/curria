@@ -220,6 +220,7 @@ This gives both fast duplicate skips and race-safe final protection.
 ## Migration Notes
 
 - `20260407_harden_text_id_generation.sql` hardens generic text primary-key tables and the SQL write paths that create billing-adjacent rows.
+- `20260407_harden_standard_timestamps.sql` hardens mutable timestamp columns so billing and dashboard writes do not fail when `updated_at` defaults drift.
 - Billing tables affected directly by this standard include:
   - `billing_checkouts`
   - `processed_events`

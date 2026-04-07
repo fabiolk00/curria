@@ -308,6 +308,8 @@ describe('session state versioning', () => {
 
     expect(insert).toHaveBeenCalledWith({
       id: expect.any(String),
+      created_at: expect.any(String),
+      updated_at: expect.any(String),
       user_id: 'usr_123',
       state_version: CURRENT_SESSION_STATE_VERSION,
       phase: 'intake',
@@ -324,6 +326,7 @@ describe('session state versioning', () => {
 
     expect(messageInsert).toHaveBeenCalledWith({
       id: expect.any(String),
+      created_at: expect.any(String),
       session_id: 'sess_123',
       role: 'user',
       content: 'Ola',

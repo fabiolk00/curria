@@ -1,5 +1,6 @@
 import { PLANS, type PlanSlug } from '@/lib/plans'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 
 type CreditAccountRow = {
   credits_remaining: number
@@ -62,6 +63,7 @@ async function setCreditBalance(appUserId: string, creditsRemaining: number): Pr
       id: buildCreditAccountId(appUserId),
       user_id: appUserId,
       credits_remaining: creditsRemaining,
+      ...createUpdatedAtTimestamp(),
     },
     { onConflict: 'user_id' },
   )
@@ -92,6 +94,7 @@ export async function grantCredits(
       asaas_subscription_id: asaasSubscriptionId ?? null,
       renews_at: renewsAt,
       status: 'active',
+      ...createUpdatedAtTimestamp(),
     },
     { onConflict: 'user_id' },
   )
@@ -129,6 +132,7 @@ export async function consumeCredit(appUserId: string): Promise<boolean> {
       .from('credit_accounts')
       .update({
         credits_remaining: quotaData.credits_remaining - 1,
+        ...createUpdatedAtTimestamp(),
       })
       .eq('user_id', appUserId)
       .eq('credits_remaining', quotaData.credits_remaining)
@@ -150,6 +154,7 @@ export async function revokeSubscription(asaasSubscriptionId: string): Promise<v
     .update({
       renews_at: null,
       status: 'canceled',
+      ...createUpdatedAtTimestamp(),
     })
     .eq('asaas_subscription_id', asaasSubscriptionId)
 

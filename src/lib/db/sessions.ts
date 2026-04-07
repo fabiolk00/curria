@@ -11,6 +11,11 @@ import type {
 import type { ATSScoreResult, CVState } from '@/types/cv'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import {
+  createCreatedAtTimestamp,
+  createInsertTimestamps,
+  createUpdatedAtTimestamp,
+} from '@/lib/db/timestamps'
 
 // Increment only when the top-level session state bundle shape or interpretation changes.
 export const CURRENT_SESSION_STATE_VERSION = 1
@@ -205,10 +210,12 @@ export async function getSession(sessionId: string, appUserId: string): Promise<
 
 export async function createSession(appUserId: string): Promise<Session> {
   const supabase = getSupabaseAdminClient()
+  const timestamps = createInsertTimestamps()
   const { data, error } = await supabase
     .from('sessions')
     .insert({
       id: createDatabaseId(),
+      ...timestamps,
       user_id:      appUserId,
       state_version: CURRENT_SESSION_STATE_VERSION,
       phase:        'intake',
@@ -272,7 +279,7 @@ export async function updateSession(
   }>,
 ): Promise<void> {
   const supabase = getSupabaseAdminClient()
-  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  const update: Record<string, unknown> = { ...createUpdatedAtTimestamp() }
   if (patch.phase           !== undefined) update.phase            = patch.phase
   if (patch.cvState         !== undefined) update.cv_state         = patch.cvState
   if (patch.agentState      !== undefined) update.agent_state      = patch.agentState
@@ -377,7 +384,10 @@ export async function incrementMessageCount(sessionId: string): Promise<boolean>
     // Atomic update with optimistic lock
     const { data: updateData } = await supabase
       .from('sessions')
-      .update({ message_count: sessionData.message_count + 1 })
+      .update({
+        message_count: sessionData.message_count + 1,
+        ...createUpdatedAtTimestamp(),
+      })
       .eq('id', sessionId)
       .eq('message_count', sessionData.message_count)  // Only update if value hasn't changed
       .lt('message_count', 15)  // Only update if below cap
@@ -414,6 +424,7 @@ export async function appendMessage(
   const supabase = getSupabaseAdminClient()
   await supabase.from('messages').insert({
     id: createDatabaseId(),
+    ...createCreatedAtTimestamp(),
     session_id: sessionId,
     role,
     content,
