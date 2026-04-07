@@ -13,6 +13,7 @@ npx prisma db execute --file prisma/migrations/billing_webhook_hardening.sql --s
 npx prisma db execute --file prisma/migrations/20260406_align_asaas_webhook_contract.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260406_fix_billing_checkout_timestamp_defaults.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_persist_billing_display_totals.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260407_harden_text_id_generation.sql --schema prisma/schema.prisma
 ```
 
 If your deployment flow requires manual SQL execution, run the contents of:
@@ -21,6 +22,7 @@ If your deployment flow requires manual SQL execution, run the contents of:
 - `prisma/migrations/20260406_align_asaas_webhook_contract.sql`
 - `prisma/migrations/20260406_fix_billing_checkout_timestamp_defaults.sql`
 - `prisma/migrations/20260407_persist_billing_display_totals.sql`
+- `prisma/migrations/20260407_harden_text_id_generation.sql`
 
 against the target database before deploying code that depends on `billing_checkouts`, the updated RPC signatures, and the persisted dashboard display totals.
 
@@ -34,6 +36,33 @@ FROM information_schema.tables
 WHERE table_schema = 'public'
   AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts');
 ```
+
+### ID default checks
+
+```sql
+SELECT table_name, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name = 'id'
+  AND table_name IN (
+    'billing_checkouts',
+    'processed_events',
+    'user_quotas',
+    'customer_billing_info',
+    'job_applications',
+    'sessions',
+    'messages',
+    'api_usage',
+    'cv_versions',
+    'resume_targets',
+    'user_auth_identities'
+  )
+ORDER BY table_name;
+```
+
+Expected result:
+
+- every generic text-ID table has a `gen_random_uuid()::text` default or equivalent expression
 
 ### Index checks
 

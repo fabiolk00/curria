@@ -6,7 +6,7 @@ related:
   - CONCEPTS.md
   - FEATURES.md
 status: current
-updated: 2026-04-06
+updated: 2026-04-07
 ---
 
 # CurrIA Documentation Index
@@ -26,6 +26,7 @@ This index is the main directory for the active documentation set.
 ## Architecture and Runtime
 
 - [architecture-overview.md](./architecture-overview.md)
+- [database-conventions.md](./database-conventions.md)
 - [agent-approach.md](./agent-approach.md)
 - [state-model.md](./state-model.md)
 - [tool-development.md](./tool-development.md)

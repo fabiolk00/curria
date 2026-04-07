@@ -22,9 +22,11 @@ Recent additions covered by these docs:
 - checkout billing-info normalization and Asaas `customerData.phone` mapping
 - webhook reconciliation for one-time payments that arrive with `checkoutSession` but no `externalReference`
 - UI display-total persistence for dynamic credit denominators in the dashboard
+- hardening of generic text primary-key generation so billing and app writes do not depend on missing schema defaults
 
 Historical validation snapshots were removed on purpose. For current rollout verification, use:
 
 - [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)
 - [../staging/VALIDATION_PLAN.md](../staging/VALIDATION_PLAN.md)
 - [../PRODUCTION-READINESS-CHECKLIST.md](../PRODUCTION-READINESS-CHECKLIST.md)
+- [../database-conventions.md](../database-conventions.md)
