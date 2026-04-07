@@ -22,9 +22,7 @@
       "Bash(curl * | bash)",
       "Bash(wget * | sh)",
       "Write(.env)",
-      "Write(.env.local)",
-      "Bash(git push *)",
-      "Bash(git commit *)"
+      "Write(.env.local)"
     ]
   },
   "rules": [

@@ -99,6 +99,14 @@ export const TABLE_CONVENTIONS: Record<string, TableConvention> = {
     id: 'generic',
     timestamps: 'mutable',
   },
+  user_profiles: {
+    id: 'domain',
+    timestamps: 'mutable',
+  },
+  linkedin_import_jobs: {
+    id: 'generic',
+    timestamps: 'mutable',
+  },
 }
 
 function normalizeIdentifier(value: string): string {

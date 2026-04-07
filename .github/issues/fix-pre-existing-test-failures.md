@@ -1,8 +1,10 @@
-# Fix 14 pre-existing test failures across 4 test suites
+# Fix 13 pre-existing test failures across 4 test suites
 
 ## Summary
 
-14 tests are failing across 4 test suites. These failures predate the import-jobs lease/reclaim work and are unrelated to it.
+13 tests are failing across 4 test suites. These failures predate the import-jobs lease/reclaim work and are unrelated to it.
+
+The `schema-guardrails.test.ts` failure was already fixed by classifying `linkedin_import_jobs` and `user_profiles` in `TABLE_CONVENTIONS`.
 
 ## Failing suites
 
@@ -29,12 +31,6 @@ Tests don't account for the LinkedIn import job cleanup step added alongside the
 `persists a pasted job description into agentState before the agent loop starts` — related to `persistDetectedTargetJobDescription` being moved inside the SSE stream for new sessions.
 
 **Fix:** Update the test expectation to match the new call timing.
-
-### `src/lib/db/schema-guardrails.test.ts` (1 failure)
-
-Schema guardrails test needs updating for the new `linkedin_import_jobs` table.
-
-**Fix:** Add the new table to the guardrails test expectations.
 
 ## Context
 
