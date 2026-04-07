@@ -65,6 +65,16 @@ const mockSupabase = {
       }
     }
 
+    if (table === 'user_profiles') {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          })),
+        })),
+      }
+    }
+
     throw new Error(`Unexpected table: ${table}`)
   }),
   rpc,
