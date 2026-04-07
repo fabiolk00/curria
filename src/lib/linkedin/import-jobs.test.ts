@@ -51,7 +51,6 @@ import { extractAndSaveProfile } from './extract-profile'
  * returns a thenable from non-terminal methods so awaiting the chain
  * without .single() also works (e.g. delete → in → lt → select).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createChainMock(result: { data: unknown; error: unknown }): any {
   const calls: { method: string; args: unknown[] }[] = []
 
