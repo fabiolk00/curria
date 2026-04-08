@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
+import { UserButton, useAuth } from "@clerk/nextjs"
 import { Menu, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
@@ -14,6 +14,8 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme()
+  const { isLoaded, isSignedIn } = useAuth()
+  const showAuthButtons = !isLoaded || !isSignedIn
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,16 +53,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
-          <SignedOut>
+          {showAuthButtons ? (
             <Button asChild variant="ghost" className="hidden sm:flex">
               <Link href="/login">Entrar</Link>
             </Button>
+          ) : null}
+          {showAuthButtons ? (
             <Button asChild>
               <Link href="/signup">Criar conta</Link>
             </Button>
-          </SignedOut>
+          ) : null}
 
-          <SignedIn>
+          {isLoaded && isSignedIn ? (
             <UserButton
               afterSignOutUrl="/"
               appearance={{
@@ -69,7 +73,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 },
               }}
             />
-          </SignedIn>
+          ) : null}
         </div>
       </div>
     </header>

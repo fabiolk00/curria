@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+import { decodeClerkFrontendApi } from '@/lib/auth/clerk-frontend-api'
 import { getAppUrl, isCanonicalAppHost } from '@/lib/config/app-url'
 
 const isPublicRoute = createRouteMatcher([
@@ -15,44 +16,18 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhook/clerk(.*)',
 ])
 
-function decodeClerkFrontendApi(): string | null {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim()
-  if (!publishableKey) {
-    return null
-  }
-
-  const [, encodedPart = ''] = publishableKey.split('_', 3)
-  if (!encodedPart) {
-    return null
-  }
-
-  try {
-    const normalizedBase64 = encodedPart.replace(/-/g, '+').replace(/_/g, '/')
-    const paddedBase64 = normalizedBase64.padEnd(Math.ceil(normalizedBase64.length / 4) * 4, '=')
-    const decoded = atob(paddedBase64).replace(/\$/g, '').trim()
-    if (!decoded) {
-      return null
-    }
-
-    return decoded.startsWith('http://') || decoded.startsWith('https://')
-      ? decoded
-      : `https://${decoded}`
-  } catch {
-    return null
-  }
-}
-
 /**
  * Security headers applied to all responses.
  * See: OWASP, ARCHITECTURE_REVIEW.md
  */
 function addSecurityHeaders(response: NextResponse): NextResponse {
-  const clerkFrontendApi = decodeClerkFrontendApi()
+  const clerkFrontendApi = decodeClerkFrontendApi(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
   const clerkScriptSrc = [
     "'self'",
     "'unsafe-inline'",
     "'unsafe-eval'",
     clerkFrontendApi,
+    'https://*.clerk.accounts.dev',
     'https://challenges.cloudflare.com',
   ].filter(Boolean).join(' ')
 
@@ -60,6 +35,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "'self'",
     clerkFrontendApi,
     'https:',
+  ].filter(Boolean).join(' ')
+
+  const clerkFrameSrc = [
+    "'self'",
+    clerkFrontendApi,
+    'https://*.clerk.accounts.dev',
+    'https://challenges.cloudflare.com',
   ].filter(Boolean).join(' ')
 
   // Prevent clickjacking attacks
@@ -88,7 +70,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "font-src 'self'",
       `connect-src ${clerkConnectSrc}`,
       "worker-src 'self' blob:",
-      "frame-src 'self' https://challenges.cloudflare.com",
+      `frame-src ${clerkFrameSrc}`,
       "frame-ancestors 'none'",
       "form-action 'self'",
     ].join('; ') + ';',
