@@ -259,7 +259,7 @@ export function ResumeWorkspace({
             onLayoutChanged={onLayoutChanged}
             className="items-stretch"
           >
-            <ResizablePanel id="workspace-chat-panel" defaultSize={68} minSize={44}>
+            <ResizablePanel id="workspace-chat-panel" defaultSize="68%" minSize="44%">
               <div className="h-full min-w-0 pr-0.5">
                 {chatPane}
               </div>
@@ -269,9 +269,9 @@ export function ResumeWorkspace({
 
             <ResizablePanel
               id="workspace-preview-panel"
-              defaultSize={32}
-              minSize={24}
-              maxSize={56}
+              defaultSize="32%"
+              minSize="24%"
+              maxSize="56%"
             >
               <div className="h-full min-w-0 pl-0.5">
                 {viewerPane}
