@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { PreviewFile } from '@/context/preview-panel-context'
 
 import { PreviewPanel } from './preview-panel'
@@ -11,9 +10,6 @@ type WorkspaceSidePanelProps = {
   previewFile: PreviewFile | null
   baseOutputReady: boolean
 }
-
-const panelClassName =
-  'flex h-full flex-col rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]'
 
 export function WorkspaceSidePanel({
   sessionId,
@@ -33,16 +29,17 @@ export function WorkspaceSidePanel({
   const inlinePreviewFile = previewFile ?? defaultPreviewFile
 
   return (
-    <Card className={panelClassName}>
-      <CardHeader className="shrink-0 pt-8">
-        <CardTitle>Template viewer</CardTitle>
-        <CardDescription>
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+      <div className="shrink-0 px-4 pb-3 pt-3">
+        <p className="text-sm font-semibold text-foreground">Template viewer</p>
+        <p className="mt-1 text-xs text-muted-foreground">
           Aqui aparece a pre-visualizacao do PDF gerado.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col pb-8">
+        </p>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
         {showInlinePreview && inlinePreviewFile ? (
-          <div className="min-h-[32rem] flex-1 overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/70">
+          <div className="min-h-[32rem] flex-1 overflow-hidden rounded-[1.25rem] border border-border/50 bg-background">
             <PreviewPanel
               inline
               fileOverride={inlinePreviewFile}
@@ -50,11 +47,11 @@ export function WorkspaceSidePanel({
             />
           </div>
         ) : (
-          <div className="flex flex-1 items-center rounded-[1.5rem] border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center rounded-[1.25rem] border border-dashed border-border/50 bg-muted/20 p-6 text-sm text-muted-foreground">
             Gere um arquivo.
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

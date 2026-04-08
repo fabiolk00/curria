@@ -583,7 +583,7 @@ export function ChatInterface({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {messageCount > 0 && (
-        <div className="border-b border-border bg-muted/30 px-4 py-2">
+        <div className="px-4 py-2">
           <div className="mx-auto flex max-w-3xl items-center justify-between text-sm">
             <span className="text-muted-foreground">
               Mensagem {messageCount} de {maxMessages} {copy.sessionCounterLabel}
@@ -597,7 +597,7 @@ export function ChatInterface({
       )}
 
       {messages.length === 1 && (
-        <div className="px-4 py-12 text-center">
+        <div className="px-4 pb-10 pt-8 text-center">
           <h1 className="mb-3 text-2xl font-bold md:text-3xl">{copy.heading}</h1>
           <p className="mx-auto max-w-md text-muted-foreground">
             {copy.description}
@@ -607,7 +607,7 @@ export function ChatInterface({
 
       <div className="min-h-0 flex-1">
         <ScrollArea className="h-full px-4 md:px-6">
-          <div className="mx-auto w-full max-w-3xl space-y-6 py-6">
+          <div className="mx-auto w-full max-w-3xl space-y-6 py-4">
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -626,8 +626,8 @@ export function ChatInterface({
 
       <div
         className={cn(
-          "border-t border-border bg-background p-4 transition-colors",
-          isDragging && "border-primary bg-primary/5",
+          "bg-background px-4 pb-4 pt-2 transition-colors",
+          isDragging && "bg-primary/5",
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -650,49 +650,51 @@ export function ChatInterface({
             </div>
           )}
 
-          <div className="flex gap-2">
-            {copy.allowFileUpload ? (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  disabled={isInputDisabled}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
-              </>
-            ) : null}
-            <Textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder={copy.placeholder}
-              className="max-h-[200px] min-h-[44px] resize-none"
-              rows={1}
-              disabled={isInputDisabled}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault()
-                  void handleSend()
-                }
-              }}
-            />
-            <Button
-              size="icon"
-              className="shrink-0"
-              disabled={(!input.trim() && !uploadedFile) || isInputDisabled}
-              onClick={() => void handleSend()}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+          <div className="rounded-[1.75rem] border border-border/45 bg-background/85 p-3 shadow-[0_18px_45px_-38px_oklch(var(--foreground)/0.7)] backdrop-blur">
+            <div className="flex items-end gap-2">
+              {copy.allowFileUpload ? (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 rounded-2xl"
+                    disabled={isInputDisabled}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
+              <Textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder={copy.placeholder}
+                className="max-h-[220px] min-h-[54px] resize-none border-0 bg-transparent px-1 py-3 shadow-none focus-visible:ring-0"
+                rows={1}
+                disabled={isInputDisabled}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault()
+                    void handleSend()
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-2xl"
+                disabled={(!input.trim() && !uploadedFile) || isInputDisabled}
+                onClick={() => void handleSend()}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {sessionExpired ? (

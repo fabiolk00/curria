@@ -213,7 +213,7 @@ export function ResumeWorkspace({
   }
 
   const chatPane = (
-    <div className="flex min-h-[72svh] flex-col overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur lg:h-full lg:min-h-0">
+    <div className="flex min-h-[72svh] min-w-0 flex-col overflow-hidden lg:h-full lg:min-h-0">
       <ChatInterface
         sessionId={sessionId}
         userName={userName}
@@ -251,7 +251,7 @@ export function ResumeWorkspace({
           {viewerPane}
         </div>
       ) : (
-        <div className="h-[calc(100svh-4rem)] p-8">
+        <div className="h-[calc(100svh-4rem)] px-4 py-4">
           <ResizablePanelGroup
             id="resume-workspace-split-view"
             orientation="horizontal"
@@ -260,7 +260,7 @@ export function ResumeWorkspace({
             className="items-stretch"
           >
             <ResizablePanel id="workspace-chat-panel" defaultSize={68} minSize={44}>
-              <div className="h-full pr-2">
+              <div className="h-full min-w-0 pr-0.5">
                 {chatPane}
               </div>
             </ResizablePanel>
@@ -273,7 +273,7 @@ export function ResumeWorkspace({
               minSize={24}
               maxSize={56}
             >
-              <div className="h-full pl-2">
+              <div className="h-full min-w-0 pl-0.5">
                 {viewerPane}
               </div>
             </ResizablePanel>
