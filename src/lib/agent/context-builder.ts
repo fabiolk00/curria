@@ -22,13 +22,11 @@ O usuário pode enviar links de vagas de emprego (LinkedIn, Gupy, Catho, etc.). 
 
 Se a extração falhar, você verá uma [Nota do sistema: ...] explicando o motivo. Nesse caso, informe o usuário de forma amigável e peça que cole o texto da vaga diretamente no chat.`
 
-function buildPreloadedResumeContext(session: Session): string {
-  // Only show this context if cvState has meaningful data and no source resume text exists yet
-  // (meaning it was seeded from a profile, not parsed from a file in this session)
-  const hasData = session.cvState.fullName && session.cvState.email
-  const notFromFile = !session.agentState.sourceResumeText
-
-  if (!hasData || !notFromFile) {
+export function buildPreloadedResumeContext(session: Session): string {
+  // Include preloaded context if:
+  // - the user has at least a name in canonical profile state
+  // - and there is no freshly uploaded resume text that should take priority
+  if (!session.cvState?.fullName || session.agentState.sourceResumeText) {
     return ''
   }
 
@@ -200,6 +198,7 @@ export function buildSystemPrompt(session: Session): string {
   const staticOverhead =
     ROLE_PREAMBLE.length +
     PHASE_INSTRUCTIONS[session.phase].length +
+    preloadedCtx.length +
     200 + // wrappers around cvState
     scoreCtx.length + 50 +
     STATIC_SUFFIX.length + 100 // separators

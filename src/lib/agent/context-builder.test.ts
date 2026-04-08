@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest'
 
+import { AGENT_CONFIG } from '@/lib/agent/config'
 import type { Session } from '@/types/agent'
 
-import { buildSystemPrompt } from './context-builder'
+import { buildPreloadedResumeContext, buildSystemPrompt } from './context-builder'
 import { CURRENT_SESSION_STATE_VERSION } from '@/lib/db/sessions'
 
-function buildSession(): Session {
-  return {
+type SessionOverrides =
+  Omit<Partial<Session>, 'cvState' | 'agentState' | 'generatedOutput' | 'atsScore'> & {
+    cvState?: Partial<Session['cvState']>
+    agentState?: Partial<Session['agentState']>
+    generatedOutput?: Partial<Session['generatedOutput']>
+    atsScore?: Session['atsScore']
+  }
+
+function buildSession(overrides: SessionOverrides = {}): Session {
+  const session: Session = {
     id: 'sess_123',
     userId: 'usr_123',
     stateVersion: CURRENT_SESSION_STATE_VERSION,
@@ -53,7 +62,70 @@ function buildSession(): Session {
     createdAt: new Date('2026-03-25T12:00:00.000Z'),
     updatedAt: new Date('2026-03-25T12:00:00.000Z'),
   }
+
+  return {
+    ...session,
+    ...overrides,
+    cvState: {
+      ...session.cvState,
+      ...overrides.cvState,
+    },
+    agentState: {
+      ...session.agentState,
+      ...overrides.agentState,
+    },
+    generatedOutput: {
+      ...session.generatedOutput,
+      ...overrides.generatedOutput,
+    },
+    atsScore: overrides.atsScore === undefined
+      ? session.atsScore
+      : overrides.atsScore,
+  }
 }
+
+describe('buildPreloadedResumeContext', () => {
+  it('excludes preloaded context when fullName is empty', () => {
+    const ctx = buildPreloadedResumeContext(buildSession({
+      cvState: {
+        fullName: '',
+      },
+      agentState: {
+        sourceResumeText: undefined,
+      },
+    }))
+
+    expect(ctx).toBe('')
+  })
+
+  it('includes preloaded context when fullName exists and there is no fresh upload text', () => {
+    const ctx = buildPreloadedResumeContext(buildSession({
+      cvState: {
+        fullName: 'John Smith',
+        email: '',
+      },
+      agentState: {
+        sourceResumeText: undefined,
+      },
+    }))
+
+    expect(ctx).toContain("The user's resume is already loaded from their saved profile.")
+    expect(ctx).toContain('Do not ask the user to upload a resume. Do not call parse_file.')
+  })
+
+  it('excludes preloaded context when sourceResumeText exists so fresh uploads take priority', () => {
+    const ctx = buildPreloadedResumeContext(buildSession({
+      cvState: {
+        fullName: 'John Smith',
+      },
+      agentState: {
+        sourceResumeText: 'John Smith\nFreshly parsed resume text',
+      },
+    }))
+
+    expect(ctx).toBe('')
+  })
+})
 
 describe('buildSystemPrompt', () => {
   it('uses canonical cvState plus explicit agent context', () => {
@@ -71,6 +143,60 @@ describe('buildSystemPrompt', () => {
 
     expect(prompt).not.toContain('rawText')
     expect(prompt).not.toContain('targetJobDescription')
+  })
+
+  it('includes preloaded context for partial profile data when there is no source resume text', () => {
+    const prompt = buildSystemPrompt(buildSession({
+      cvState: {
+        fullName: 'John Smith',
+        email: '',
+      },
+      agentState: {
+        sourceResumeText: undefined,
+      },
+    }))
+
+    expect(prompt).toContain('## Resume Context')
+    expect(prompt).toContain('Do not ask the user to upload a resume. Do not call parse_file.')
+  })
+
+  it('excludes preloaded context and keeps extracted resume text when a fresh upload exists', () => {
+    const prompt = buildSystemPrompt(buildSession({
+      cvState: {
+        fullName: 'John Smith',
+        email: '',
+      },
+      agentState: {
+        sourceResumeText: 'John Smith\nFreshly uploaded and parsed resume text',
+      },
+    }))
+
+    expect(prompt).not.toContain('## Resume Context')
+    expect(prompt).toContain('Freshly uploaded and parsed resume text')
+  })
+
+  it('still truncates long prompts correctly when preloaded context is included', () => {
+    const originalMax = AGENT_CONFIG.maxSystemPromptChars
+    ;(AGENT_CONFIG as any).maxSystemPromptChars = 5_000
+
+    try {
+      const prompt = buildSystemPrompt(buildSession({
+        cvState: {
+          fullName: 'John Smith',
+          email: '',
+          summary: 'Summary '.repeat(800),
+        },
+        agentState: {
+          sourceResumeText: undefined,
+          targetJobDescription: 'Target job '.repeat(800),
+        },
+      }))
+
+      expect(prompt).toContain('## Resume Context')
+      expect(prompt).toContain('[truncated]')
+    } finally {
+      ;(AGENT_CONFIG as any).maxSystemPromptChars = originalMax
+    }
   })
 
   it('instructs the agent to treat a pasted vacancy as an immediate target job', () => {
