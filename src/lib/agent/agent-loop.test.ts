@@ -87,17 +87,29 @@ describe('runAgentLoop', () => {
   })
 
   it('persists and streams a fallback reply when the model finishes without assistant text', async () => {
-    mockCreateChatCompletionWithRetry.mockResolvedValue({
-      choices: [
-        {
-          finish_reason: 'stop',
-          message: {
-            content: '',
-            tool_calls: [],
+    mockCreateChatCompletionWithRetry
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              content: '',
+              tool_calls: [],
+            },
           },
-        },
-      ],
-    })
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              content: 'Aqui está uma resposta final útil.',
+              tool_calls: [],
+            },
+          },
+        ],
+      })
 
     const session = {
       id: 'sess_123',
@@ -139,7 +151,7 @@ describe('runAgentLoop', () => {
 
     const deltaEvents = events.filter((event) => event.type === 'delta')
     expect(deltaEvents.length).toBeGreaterThan(0)
-    expect(deltaEvents.map((event) => event.text).join('')).toContain('Analisei sua mensagem')
+    expect(deltaEvents.map((event) => event.text).join('')).toContain('Aqui está uma resposta final útil.')
     expect(events.at(-1)).toMatchObject({
       type: 'done',
       sessionId: 'sess_123',
@@ -149,7 +161,7 @@ describe('runAgentLoop', () => {
       2,
       'sess_123',
       'assistant',
-      expect.stringContaining('Analisei sua mensagem'),
+      'Aqui está uma resposta final útil.',
     )
   })
 })

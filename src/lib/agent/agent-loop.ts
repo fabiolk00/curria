@@ -12,6 +12,7 @@ import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/
 import type { Session } from '@/types/agent'
 
 const EMPTY_ASSISTANT_RESPONSE_FALLBACK = 'Analisei sua mensagem, mas não consegui concluir a resposta desta vez. Tente enviar novamente e eu continuo a partir do contexto já salvo.'
+const EMPTY_ASSISTANT_RECOVERY_PROMPT = 'The previous completion returned no visible assistant text. Respond to the user now with a direct, helpful plain-text answer. Do not call tools. Do not leave the content empty.'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,6 +84,51 @@ function buildAssistantToolCallMessage(
     content: message.content ?? '',
     tool_calls: message.tool_calls,
   }
+}
+
+async function recoverEmptyAssistantResponse(params: {
+  cachedSystemPrompt: string
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+  requestId: string
+  sessionId: string
+  appUserId: string
+  phase: string
+  stateVersion: number
+  signal?: AbortSignal
+}): Promise<string> {
+  const response = await callOpenAIWithRetry(
+    {
+      model: MODEL_CONFIG.agent,
+      max_completion_tokens: Math.min(AGENT_CONFIG.maxTokens, 900),
+      tool_choice: 'none',
+      messages: [
+        { role: 'system', content: params.cachedSystemPrompt },
+        ...params.messages,
+        { role: 'system', content: EMPTY_ASSISTANT_RECOVERY_PROMPT },
+      ],
+    },
+    2,
+    {
+      requestId: params.requestId,
+      sessionId: params.sessionId,
+      appUserId: params.appUserId,
+      phase: params.phase,
+      stateVersion: params.stateVersion,
+    },
+    params.signal,
+  )
+
+  const usage = getChatCompletionUsage(response)
+  trackApiUsage({
+    userId: params.appUserId,
+    sessionId: params.sessionId,
+    model: MODEL_CONFIG.agent,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    endpoint: 'agent',
+  }).catch(() => {})
+
+  return response.choices[0]?.message?.content?.trim() ?? ''
 }
 
 async function callOpenAIWithRetry(
@@ -257,11 +303,24 @@ export async function* runAgentLoop(
     }
 
     if (!assistantResponded && !signal?.aborted) {
-      for (const word of EMPTY_ASSISTANT_RESPONSE_FALLBACK.split(' ')) {
+      const recoveredText = await recoverEmptyAssistantResponse({
+        cachedSystemPrompt,
+        messages,
+        requestId,
+        sessionId: session.id,
+        appUserId,
+        phase: session.phase,
+        stateVersion: session.stateVersion,
+        signal,
+      })
+
+      const finalAssistantText = recoveredText || EMPTY_ASSISTANT_RESPONSE_FALLBACK
+
+      for (const word of finalAssistantText.split(' ')) {
         yield { type: 'delta', text: word + ' ' }
       }
-      await appendMessage(session.id, 'assistant', EMPTY_ASSISTANT_RESPONSE_FALLBACK)
-      logWarn('agent.response.empty_fallback', {
+      await appendMessage(session.id, 'assistant', finalAssistantText)
+      logWarn(recoveredText ? 'agent.response.empty_recovered' : 'agent.response.empty_fallback', {
         requestId,
         sessionId: session.id,
         appUserId,
