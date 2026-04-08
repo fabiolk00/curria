@@ -418,6 +418,7 @@ export async function executeTool(
         target
           ? { type: 'target', targetId: target.id }
           : { type: 'session' },
+        target?.targetJobDescription ?? session.agentState,
       )
 
       if (target && result.generatedOutput) {

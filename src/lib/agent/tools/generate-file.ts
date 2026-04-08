@@ -1,15 +1,19 @@
-import { readFileSync } from 'fs'
-import path from 'path'
-
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import Docxtemplater from 'docxtemplater'
-import PizZip from 'pizzip'
+﻿import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import {
+  BorderStyle,
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun,
+} from 'docx'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { z } from 'zod'
 
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import { CVStateSchema } from '@/lib/cv/schema'
-import type { GenerateFileInput, GenerateFileOutput, GeneratedOutput, ToolPatch } from '@/types/agent'
+import { cvStateToTemplateData, type TemplateData } from '@/lib/templates/cv-state-to-template-data'
+import type { AgentState, GenerateFileInput, GenerateFileOutput, GeneratedOutput, ToolPatch } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
 type GenerateFileExecutionResult = {
@@ -23,6 +27,9 @@ type SignedResumeArtifactUrls = {
   docxUrl: string
   pdfUrl: string
 }
+
+type ResumeTemplateSource = CVState | TemplateData
+type TemplateTargetSource = Pick<AgentState, 'targetJobDescription'> | string | null | undefined
 
 type ArtifactScope =
   | { type: 'session' }
@@ -237,6 +244,7 @@ export async function generateFile(
   userId: string,
   sessionId: string,
   scope: ArtifactScope = { type: 'session' },
+  templateTargetSource?: TemplateTargetSource,
 ): Promise<GenerateFileExecutionResult> {
   let docxPath: string | undefined
   let pdfPath: string | undefined
@@ -254,10 +262,11 @@ export async function generateFile(
 
   try {
     const supabase = generateFileDeps.getSupabase()
+    const templateData = cvStateToTemplateData(validation.cvState, templateTargetSource)
 
     const [docxBuffer, pdfBuffer] = await Promise.all([
-      generateFileDeps.generateDOCX(validation.cvState),
-      generateFileDeps.generatePDF(validation.cvState),
+      generateFileDeps.generateDOCX(templateData),
+      generateFileDeps.generatePDF(templateData),
     ])
 
     const artifactPaths = buildArtifactPaths(userId, sessionId, scope)
@@ -301,32 +310,241 @@ export async function generateFile(
   }
 }
 
-export async function generateDOCX(cv: CVState): Promise<Buffer> {
-  const templatePath = path.join(process.cwd(), 'src/lib/templates/ats-standard.docx')
-  const content = readFileSync(templatePath, 'binary')
-  const zip = new PizZip(content)
-  const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true })
-
-  doc.render({
-    full_name: cv.fullName,
-    email: cv.email,
-    phone: cv.phone,
-    linkedin: cv.linkedin ?? '',
-    location: cv.location ?? '',
-    summary: cv.summary,
-    experience: cv.experience.map(entry => ({
-      ...entry,
-      bullets_text: entry.bullets.join('\n'),
-    })),
-    skills: cv.skills.join(', '),
-    education: cv.education,
-    certifications: cv.certifications ?? [],
-  })
-
-  return doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+function toTemplateData(source: ResumeTemplateSource): TemplateData {
+  return isTemplateData(source)
+    ? source
+    : cvStateToTemplateData(source)
 }
 
-export async function generatePDF(cv: CVState): Promise<Buffer> {
+function isTemplateData(source: ResumeTemplateSource): source is TemplateData {
+  return typeof source === 'object' && source !== null && 'experiences' in source
+}
+
+function createDocxHeading(text: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text: text.toUpperCase(),
+        font: 'Helvetica',
+        size: 22,
+        bold: true,
+        color: '000000',
+      }),
+    ],
+    spacing: { before: 240, after: 120 },
+    border: {
+      bottom: {
+        color: 'BBBBBB',
+        space: 1,
+        style: BorderStyle.SINGLE,
+        size: 6,
+      },
+    },
+    heading: HeadingLevel.HEADING_2,
+  })
+}
+
+function createDocxBody(
+  text: string,
+  options: { bold?: boolean; italics?: boolean; color?: string } = {},
+): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        font: 'Helvetica',
+        size: 18,
+        bold: options.bold ?? false,
+        italics: options.italics ?? false,
+        color: options.color ?? '1A1A1A',
+      }),
+    ],
+    spacing: { after: 120 },
+  })
+}
+
+function createDocxBullet(text: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        font: 'Helvetica',
+        size: 18,
+        color: '1A1A1A',
+      }),
+    ],
+    bullet: { level: 0 },
+    indent: { left: 360, hanging: 120 },
+    spacing: { after: 80 },
+  })
+}
+
+function buildDocxDocument(templateData: TemplateData): Document {
+  const contactLine = [
+    templateData.email,
+    templateData.phone,
+    templateData.linkedin,
+    templateData.location,
+  ].filter(Boolean).join('  |  ')
+
+  const children: Paragraph[] = [
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: templateData.fullName,
+          font: 'Helvetica',
+          size: 28,
+          bold: true,
+          color: '000000',
+        }),
+      ],
+      spacing: { after: 60 },
+    }),
+  ]
+
+  if (templateData.jobTitle) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: templateData.jobTitle,
+            font: 'Helvetica',
+            size: 18,
+            italics: true,
+            color: '555555',
+          }),
+        ],
+        spacing: { after: 60 },
+      }),
+    )
+  }
+
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: contactLine,
+          font: 'Helvetica',
+          size: 18,
+          color: '555555',
+        }),
+      ],
+      spacing: { after: 180 },
+      border: {
+        bottom: {
+          color: 'BBBBBB',
+          space: 1,
+          style: BorderStyle.SINGLE,
+          size: 6,
+        },
+      },
+    }),
+    createDocxHeading('Resumo Profissional'),
+    createDocxBody(templateData.summary),
+    createDocxHeading('Habilidades'),
+    createDocxBody(templateData.skills),
+  )
+
+  if (templateData.experiences.length > 0) {
+    children.push(createDocxHeading('ExperiÃªncia Profissional'))
+
+    for (const experience of templateData.experiences) {
+      children.push(
+        createDocxBody(`${experience.title}${experience.company ? ` - ${experience.company}` : ''}`, {
+          bold: true,
+        }),
+        createDocxBody(experience.period, {
+          color: '555555',
+        }),
+      )
+
+      if (experience.techStack) {
+        children.push(
+          createDocxBody(`Tech stack: ${experience.techStack}`, {
+            color: '555555',
+          }),
+        )
+      }
+
+      for (const bullet of experience.bullets) {
+        children.push(createDocxBullet(bullet.text))
+      }
+    }
+  }
+
+  if (templateData.education.length > 0) {
+    children.push(createDocxHeading('EducaÃ§Ã£o'))
+
+    for (const education of templateData.education) {
+      children.push(
+        createDocxBody(
+          `${education.degree}${education.institution ? ` - ${education.institution}` : ''}${education.period ? ` - ${education.period}` : ''}`,
+        ),
+      )
+    }
+  }
+
+  if (templateData.hasCertifications) {
+    children.push(createDocxHeading('CertificaÃ§Ãµes'))
+
+    for (const certification of templateData.certifications) {
+      children.push(createDocxBody(certification.name))
+    }
+  }
+
+  if (templateData.hasLanguages) {
+    children.push(createDocxHeading('Idiomas'))
+
+    for (const language of templateData.languages) {
+      children.push(
+        createDocxBody(language.level ? `${language.language} - ${language.level}` : language.language),
+      )
+    }
+  }
+
+  return new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Helvetica',
+            size: 18,
+            color: '1A1A1A',
+          },
+          paragraph: {
+            spacing: {
+              line: 240,
+            },
+          },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 1134,
+              right: 1134,
+              bottom: 1134,
+              left: 1134,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  })
+}
+
+export async function generateDOCX(source: ResumeTemplateSource): Promise<Buffer> {
+  const templateData = toTemplateData(source)
+  const doc = buildDocxDocument(templateData)
+  return Packer.toBuffer(doc)
+}
+
+export async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
+  const templateData = toTemplateData(source)
   const pdfDoc = await PDFDocument.create()
   let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT])
 
@@ -404,20 +622,29 @@ export async function generatePDF(cv: CVState): Promise<Buffer> {
     return page
   }
 
-  currentY = drawText(page, cv.fullName, MARGIN, currentY, 18, fontBold)
+  currentY = drawText(page, templateData.fullName, MARGIN, currentY, 18, fontBold)
 
-  const contactParts = [cv.email, cv.phone, cv.linkedin, cv.location].filter(Boolean)
+  if (templateData.jobTitle) {
+    currentY = drawText(page, templateData.jobTitle, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
+  }
+
+  const contactParts = [
+    templateData.email,
+    templateData.phone,
+    templateData.linkedin,
+    templateData.location,
+  ].filter(Boolean)
   const contactLine = contactParts.join('  |  ')
-  currentY = drawText(page, contactLine, MARGIN, currentY, 10, font)
+  currentY = drawText(page, contactLine, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
   currentY -= 6
   drawLine(page, currentY)
   currentY -= 12
 
-  if (cv.summary) {
+  if (templateData.summary) {
     page = checkPageOverflow(currentY)
     currentY = drawSectionHeading(page, 'Resumo Profissional', currentY)
 
-    const summaryLines = wrapText(cv.summary, font, 10, USABLE_WIDTH)
+    const summaryLines = wrapText(templateData.summary, font, 10, USABLE_WIDTH)
     for (const line of summaryLines) {
       page = checkPageOverflow(currentY)
       currentY = drawText(page, line, MARGIN, currentY, 10, font)
@@ -425,22 +652,36 @@ export async function generatePDF(cv: CVState): Promise<Buffer> {
     currentY -= 6
   }
 
-  if (cv.experience.length > 0) {
+  if (templateData.skills.trim().length > 0) {
+    page = checkPageOverflow(currentY)
+    currentY = drawSectionHeading(page, 'Habilidades', currentY)
+
+    const skillsLines = wrapText(templateData.skills, font, 10, USABLE_WIDTH)
+    for (const line of skillsLines) {
+      page = checkPageOverflow(currentY)
+      currentY = drawText(page, line, MARGIN, currentY, 10, font)
+    }
+    currentY -= 6
+  }
+
+  if (templateData.experiences.length > 0) {
     page = checkPageOverflow(currentY)
     currentY = drawSectionHeading(page, 'Experiência Profissional', currentY)
 
-    for (const experience of cv.experience) {
+    for (const experience of templateData.experiences) {
       page = checkPageOverflow(currentY)
-      const titleLine = `${experience.title} - ${experience.company}`
+      const titleLine = `${experience.title}${experience.company ? ` - ${experience.company}` : ''}`
       currentY = drawText(page, titleLine, MARGIN, currentY, 12, fontBold)
 
-      const dateRange = `${experience.startDate} - ${experience.endDate}`
-      currentY = drawText(page, dateRange, MARGIN, currentY, 10, font, rgb(0.3, 0.3, 0.3))
+      currentY = drawText(page, experience.period, MARGIN, currentY, 10, font, rgb(0.3, 0.3, 0.3))
+      if (experience.techStack) {
+        currentY = drawText(page, `Tech stack: ${experience.techStack}`, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
+      }
       currentY -= 2
 
       for (const bullet of experience.bullets) {
         page = checkPageOverflow(currentY)
-        const bulletLines = wrapText(bullet, font, 10, USABLE_WIDTH - 15)
+        const bulletLines = wrapText(bullet.text, font, 10, USABLE_WIDTH - 15)
 
         for (let lineIndex = 0; lineIndex < bulletLines.length; lineIndex++) {
           page = checkPageOverflow(currentY)
@@ -452,39 +693,37 @@ export async function generatePDF(cv: CVState): Promise<Buffer> {
     }
   }
 
-  if (cv.skills.length > 0) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Habilidades', currentY)
-
-    const skillsText = cv.skills.join(', ')
-    const skillsLines = wrapText(skillsText, font, 10, USABLE_WIDTH)
-    for (const line of skillsLines) {
-      page = checkPageOverflow(currentY)
-      currentY = drawText(page, line, MARGIN, currentY, 10, font)
-    }
-    currentY -= 6
-  }
-
-  if (cv.education.length > 0) {
+  if (templateData.education.length > 0) {
     page = checkPageOverflow(currentY)
     currentY = drawSectionHeading(page, 'Formação Acadêmica', currentY)
 
-    for (const education of cv.education) {
+    for (const education of templateData.education) {
       page = checkPageOverflow(currentY)
-      const educationLine = `${education.degree} - ${education.institution} - ${education.year}`
+      const educationLine = `${education.degree}${education.institution ? ` - ${education.institution}` : ''}${education.period ? ` - ${education.period}` : ''}`
       currentY = drawText(page, educationLine, MARGIN, currentY, 10, font)
     }
     currentY -= 6
   }
 
-  if (cv.certifications && cv.certifications.length > 0) {
+  if (templateData.hasCertifications) {
     page = checkPageOverflow(currentY)
     currentY = drawSectionHeading(page, 'Certificações', currentY)
 
-    for (const certification of cv.certifications) {
+    for (const certification of templateData.certifications) {
       page = checkPageOverflow(currentY)
-      const certificationLine = `${certification.name} - ${certification.issuer}${certification.year ? `  ${certification.year}` : ''}`
-      currentY = drawText(page, certificationLine, MARGIN, currentY, 10, font)
+      currentY = drawText(page, certification.name, MARGIN, currentY, 10, font)
+    }
+    currentY -= 6
+  }
+
+  if (templateData.hasLanguages) {
+    page = checkPageOverflow(currentY)
+    currentY = drawSectionHeading(page, 'Idiomas', currentY)
+
+    for (const language of templateData.languages) {
+      page = checkPageOverflow(currentY)
+      const languageLine = language.level ? `${language.language} - ${language.level}` : language.language
+      currentY = drawText(page, languageLine, MARGIN, currentY, 10, font)
     }
   }
 
@@ -515,3 +754,4 @@ export const generateFileDeps = {
 }
 
 export type { GenerateFileExecutionResult, SupabaseStorageClient }
+

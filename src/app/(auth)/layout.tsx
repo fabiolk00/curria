@@ -1,6 +1,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import { PreviewPanelProvider } from '@/context/preview-panel-context'
 import { SidebarProvider } from '@/context/sidebar-context'
 import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { formatRenewalCountdown } from '@/lib/asaas/billing-display'
@@ -36,15 +37,17 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
   return (
     <SidebarProvider>
-      <DashboardShell
-        creditsRemaining={billingInfo?.creditsRemaining}
-        maxCredits={billingInfo?.maxCredits}
-        renewsIn={renewsIn}
-        currentPlan={currentPlan}
-        activeRecurringPlan={activeRecurringPlan}
-      >
-        {children}
-      </DashboardShell>
+      <PreviewPanelProvider>
+        <DashboardShell
+          creditsRemaining={billingInfo?.creditsRemaining}
+          maxCredits={billingInfo?.maxCredits}
+          renewsIn={renewsIn}
+          currentPlan={currentPlan}
+          activeRecurringPlan={activeRecurringPlan}
+        >
+          {children}
+        </DashboardShell>
+      </PreviewPanelProvider>
     </SidebarProvider>
   )
 }

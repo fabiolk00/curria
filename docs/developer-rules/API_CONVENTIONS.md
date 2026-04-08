@@ -90,6 +90,13 @@ export async function POST(req: NextRequest) {
 - `GET` lists target-specific derived resumes
 - `POST` creates a target-derived resume without overwriting base `cvState`
 
+## `/api/file/[sessionId]`
+- Requires auth
+- Verifies ownership through `getSession()`
+- Returns transient signed URLs as JSON: `{ docxUrl, pdfUrl }`
+- Accepts `?targetId=<id>` for target-specific generated files
+- Must not persist signed URLs in session state or target state
+
 ## `/api/checkout`
 - Requires auth
 - Validates the requested plan with Zod

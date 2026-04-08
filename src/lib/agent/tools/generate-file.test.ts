@@ -152,6 +152,33 @@ describe('generateFile', () => {
     })
   })
 
+  it('passes targeting context into the ATS template mapping step', async () => {
+    vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
+      buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
+    )
+    const generateDOCX = vi.fn().mockResolvedValue(Buffer.from('docx'))
+    const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
+    vi.spyOn(generateFileDeps, 'generateDOCX').mockImplementation(generateDOCX)
+    vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
+    vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
+
+    await generateFile({
+      cv_state: {
+        ...buildCvState(),
+        skills: ['TypeScript', 'React', 'PostgreSQL'],
+      },
+    }, 'usr_123', 'sess_123', { type: 'session' }, {
+      targetJobDescription: 'React engineer with PostgreSQL experience',
+    })
+
+    expect(generateDOCX).toHaveBeenCalledWith(expect.objectContaining({
+      skills: 'React, PostgreSQL, TypeScript',
+    }))
+    expect(generatePDF).toHaveBeenCalledWith(expect.objectContaining({
+      skills: 'React, PostgreSQL, TypeScript',
+    }))
+  })
+
   it('returns a validation error for malformed generation input', async () => {
     const result = await generateFile({
       cv_state: {

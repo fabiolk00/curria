@@ -270,11 +270,12 @@ Rules:
 
 ### File generation flow
 1. Read canonical `session.cvState`
-2. Generate DOCX via Docxtemplater
-3. Generate PDF via `pdf-lib`
-4. Upload both to Supabase Storage bucket `resumes`
-5. Return signed URLs to the client
-6. Persist only `generatedOutput` metadata
+2. Map `cvState` plus optional targeting context into the locked ATS template data shape
+3. Generate DOCX via `docx`
+4. Generate PDF via `pdf-lib`
+5. Upload both to Supabase Storage bucket `resumes`
+6. Return signed URLs to the client
+7. Persist only `generatedOutput` metadata
 
 ### Profile setup flow — LinkedIn path
 1. User submits LinkedIn URL via `POST /api/profile/extract`
@@ -302,6 +303,7 @@ Rules:
 - `GET /api/session`
 - `POST /api/session` returns `403` by design
 - `GET /api/session/[id]/messages`
+- `GET /api/file/[sessionId]`
 - `POST /api/checkout`
 - `POST /api/webhook/asaas`
 - `POST /api/webhook/clerk`
@@ -314,8 +316,9 @@ Rules:
 
 ### Important route realities
 - `/api/agent` uses true OpenAI streaming. Text chunks are forwarded to client SSE in real time, tool call deltas are accumulated server-side until the stream ends, and persisted tool patches are emitted only after the DB write succeeds. Multi-turn tool flows remain iterative and generate follow-up streaming calls with tool results in the message history.
-- `/api/file/[sessionId]` is not implemented.
-- File delivery currently happens through signed URLs returned by `generate_file`.
+- `/api/file/[sessionId]` is implemented and verifies auth plus session ownership before returning signed URLs.
+- `/api/file/[sessionId]` also accepts `?targetId=<id>` for target-specific generated files.
+- File delivery can happen from either `generate_file` tool output or `/api/file/[sessionId]`.
 - `POST /api/profile/upload` is planned but not implemented yet, even though the broader profile setup flow already exists.
 
 ## Engineering Invariants
@@ -345,7 +348,16 @@ Rules:
 - Processed Asaas webhook deliveries are recorded only after successful side effects.
 
 ### Generation invariants
-- `generate_file` reads only canonical `cvState`.
+- `generate_file` reads canonical base `cvState` by default and target-derived `cvState` only when an explicit `target_id` is selected.
+- ATS output structure is locked to a single-column seven-block template:
+  - header
+  - resumo profissional
+  - habilidades
+  - experiencia profissional
+  - educacao
+  - certificacoes when present
+  - idiomas when present
+- Targeting may reorder existing skills and bullets, but must never fabricate new resume content.
 - `generatedOutput` must not store signed URLs.
 - Durable storage paths belong in `generatedOutput`; signed URLs belong only in tool output.
 

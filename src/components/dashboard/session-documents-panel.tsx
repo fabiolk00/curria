@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Download,
+  ExternalLink,
   FileText,
   Target,
 } from 'lucide-react'
@@ -15,13 +16,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { usePreviewPanel } from '@/context/preview-panel-context'
 import { getDownloadUrls } from '@/lib/dashboard/workspace-client'
 import { cn } from '@/lib/utils'
 import type { SerializedResumeTarget, SerializedTimelineEntry } from '@/types/dashboard'
 
-import { VersionPreviewSheet } from './version-preview-sheet'
-
 import { useSessionDocuments } from '@/hooks/use-session-documents'
+
+import { VersionPreviewSheet } from './version-preview-sheet'
 
 type SectionKey = 'files' | 'versions' | 'targets'
 
@@ -100,38 +102,55 @@ function DownloadItem({
   label,
   badge,
   dateLabel,
-  onDownload,
+  downloadUrl,
+  onPreviewClick,
+  isActive = false,
 }: {
   label: string
-  badge: string
+  badge: 'PDF' | 'DOCX'
   dateLabel?: string
-  onDownload: () => Promise<void>
+  downloadUrl: string
+  onPreviewClick?: () => void
+  isActive?: boolean
 }) {
   const [isBusy, setIsBusy] = useState(false)
 
+  const handleClick = async () => {
+    if (badge === 'PDF' && onPreviewClick) {
+      onPreviewClick()
+      return
+    }
+
+    setIsBusy(true)
+    await triggerDownload(downloadUrl, label)
+    setIsBusy(false)
+  }
+
   return (
-    <div className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground">
+    <button
+      type="button"
+      disabled={isBusy}
+      onClick={() => void handleClick()}
+      className={cn(
+        'group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors disabled:opacity-50',
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-foreground'
+          : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+      )}
+    >
       <Badge variant="secondary" className="rounded-sm px-1.5 py-0 font-mono text-[10px]">
         {badge}
       </Badge>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 text-left">
         <p className="truncate">{label}</p>
         {dateLabel ? <p className="text-[10px] text-muted-foreground/70">{dateLabel}</p> : null}
       </div>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="opacity-0 transition-opacity group-hover:opacity-100"
-        disabled={isBusy}
-        onClick={() => {
-          setIsBusy(true)
-          void onDownload().finally(() => setIsBusy(false))
-        }}
-        aria-label={`Baixar ${label}`}
-      >
-        <Download className="h-3.5 w-3.5" />
-      </Button>
-    </div>
+      {badge === 'DOCX' ? (
+        <Download className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+      ) : (
+        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+      )}
+    </button>
   )
 }
 
@@ -167,6 +186,12 @@ function TargetItem({
   target: SerializedResumeTarget
 }) {
   const [isBusy, setIsBusy] = useState(false)
+  const { file: previewFile, open } = usePreviewPanel()
+
+  const isActive =
+    previewFile?.sessionId === sessionId
+    && previewFile?.targetId === target.id
+    && previewFile?.type === 'pdf'
 
   const handleDownload = async () => {
     if (target.generatedOutput?.status !== 'ready') {
@@ -177,28 +202,63 @@ function TargetItem({
     await triggerDownload(urls.pdfUrl, `target-${target.id}.pdf`)
   }
 
+  const handlePreviewClick = () => {
+    if (target.generatedOutput?.status !== 'ready') {
+      return
+    }
+
+    open({
+      sessionId,
+      targetId: target.id,
+      type: 'pdf',
+      label: `Target: ${createTargetLabel(target.targetJobDescription)}`,
+    })
+  }
+
   return (
-    <div className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground">
-      <div className="min-w-0 flex-1">
+    <div
+      className={cn(
+        'group flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-foreground'
+          : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+      )}
+    >
+      <button
+        type="button"
+        onClick={handlePreviewClick}
+        disabled={target.generatedOutput?.status !== 'ready'}
+        className="min-w-0 flex-1 text-left disabled:cursor-default"
+      >
         <p className="truncate" title={target.targetJobDescription}>
           {createTargetLabel(target.targetJobDescription)}
         </p>
         <p className="text-[10px] text-muted-foreground/70">{formatRelativeDate(target.createdAt)}</p>
-      </div>
+      </button>
       {target.generatedOutput?.status === 'ready' ? (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="opacity-0 transition-opacity group-hover:opacity-100"
-          disabled={isBusy}
-          onClick={() => {
-            setIsBusy(true)
-            void handleDownload().finally(() => setIsBusy(false))
-          }}
-          aria-label="Baixar currículo target"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={handlePreviewClick}
+            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-accent"
+            aria-label="Preview PDF"
+            title="Preview"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={isBusy}
+            onClick={() => {
+              setIsBusy(true)
+              void handleDownload().finally(() => setIsBusy(false))
+            }}
+            aria-label="Baixar currículo target"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ) : null}
     </div>
   )
@@ -207,6 +267,7 @@ function TargetItem({
 export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolean }) {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session')
+  const { file: previewFile, open } = usePreviewPanel()
   const { versions, targets, files, isLoading, error } = useSessionDocuments(sessionId)
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     files: true,
@@ -217,6 +278,10 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
   const hasFiles = Boolean(files.docxUrl || files.pdfUrl)
   const hasVersions = versions.length > 0
   const hasTargets = targets.length > 0
+  const isBasePdfActive =
+    previewFile?.sessionId === sessionId
+    && previewFile?.targetId === null
+    && previewFile?.type === 'pdf'
 
   const documentGroups = useMemo(
     () => ({ hasFiles, hasVersions, hasTargets }),
@@ -265,14 +330,23 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
             <DownloadItem
               label="Resume.docx"
               badge="DOCX"
-              onDownload={() => triggerDownload(files.docxUrl!, 'resume.docx')}
+              downloadUrl={files.docxUrl}
             />
           ) : null}
           {files.pdfUrl ? (
             <DownloadItem
               label="Resume.pdf"
               badge="PDF"
-              onDownload={() => triggerDownload(files.pdfUrl!, 'resume.pdf')}
+              downloadUrl={files.pdfUrl}
+              isActive={isBasePdfActive}
+              onPreviewClick={() => {
+                open({
+                  sessionId,
+                  targetId: null,
+                  type: 'pdf',
+                  label: 'Resume',
+                })
+              }}
             />
           ) : null}
         </DocumentSection>
