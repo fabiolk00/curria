@@ -1,4 +1,5 @@
 import OpenAI, { APIError } from 'openai'
+import { Stream } from 'openai/streaming'
 
 export const OPENAI_RETRYABLE_STATUS_CODES = [429, 500, 502, 503] as const
 
@@ -96,6 +97,66 @@ export async function callOpenAIWithRetry(
   throw lastError
 }
 
+export async function callOpenAIWithRetryGeneric<T>(
+  fn: (signal?: AbortSignal) => Promise<T>,
+  maxRetries = 3,
+  timeoutMs?: number,
+  externalSignal?: AbortSignal,
+): Promise<T> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    if (externalSignal?.aborted) {
+      throw new DOMException('Request aborted', 'AbortError')
+    }
+
+    let controller: AbortController | undefined
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let onExternalAbort: (() => void) | undefined
+
+    try {
+      controller = new AbortController()
+
+      if (timeoutMs) {
+        timer = setTimeout(() => controller!.abort(), timeoutMs)
+      }
+
+      if (externalSignal) {
+        onExternalAbort = () => controller!.abort()
+        externalSignal.addEventListener('abort', onExternalAbort)
+      }
+
+      const result = await fn(controller.signal)
+      return result
+    } catch (error) {
+      lastError = error as Error
+
+      const isRetryable =
+        error instanceof APIError &&
+        OPENAI_RETRYABLE_STATUS_CODES.includes(error.status as (typeof OPENAI_RETRYABLE_STATUS_CODES)[number])
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error
+      }
+
+      const exponentialDelay = Math.pow(2, attempt - 1) * 1000
+      const retryAfterMs = parseRetryAfterMs(error)
+      const delay = Math.min(
+        retryAfterMs != null ? Math.max(retryAfterMs, exponentialDelay) : exponentialDelay,
+        30_000,
+      )
+      await sleep(delay)
+    } finally {
+      if (timer) clearTimeout(timer)
+      if (onExternalAbort && externalSignal) {
+        externalSignal.removeEventListener('abort', onExternalAbort)
+      }
+    }
+  }
+
+  throw lastError
+}
+
 /**
  * Calls OpenAI chat completion API with retry logic.
  * This is the primary method used by API routes.
@@ -112,8 +173,23 @@ export async function createChatCompletionWithRetry(
   timeoutMs?: number,
   externalSignal?: AbortSignal,
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
-  return callOpenAIWithRetry(
+  return callOpenAIWithRetryGeneric(
     (signal) => openaiClient.chat.completions.create(params, { signal }),
+    maxRetries,
+    timeoutMs,
+    externalSignal,
+  )
+}
+
+export async function createChatCompletionStreamWithRetry(
+  openaiClient: OpenAI,
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+  maxRetries = 3,
+  timeoutMs?: number,
+  externalSignal?: AbortSignal,
+): Promise<Stream<OpenAI.Chat.Completions.ChatCompletionChunk>> {
+  return callOpenAIWithRetryGeneric(
+    (signal) => openaiClient.chat.completions.create(params, { signal }) as Promise<Stream<OpenAI.Chat.Completions.ChatCompletionChunk>>,
     maxRetries,
     timeoutMs,
     externalSignal,

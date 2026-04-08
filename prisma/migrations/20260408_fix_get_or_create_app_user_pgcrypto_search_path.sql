@@ -1,3 +1,7 @@
+CREATE SCHEMA IF NOT EXISTS extensions;
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
+
 CREATE OR REPLACE FUNCTION get_or_create_app_user(
   p_provider TEXT,
   p_provider_subject TEXT
@@ -80,43 +84,63 @@ BEGIN
       p_provider_subject;
   END IF;
 
-  INSERT INTO credit_accounts (
-    id,
-    user_id,
-    credits_remaining,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    'cred_' || resolved_user_id,
-    resolved_user_id,
-    1,
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT ON CONSTRAINT credit_accounts_user_id_key DO NOTHING;
+  BEGIN
+    INSERT INTO credit_accounts (
+      id,
+      user_id,
+      credits_remaining,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      'cred_' || resolved_user_id,
+      resolved_user_id,
+      1,
+      NOW(),
+      NOW()
+    );
+  EXCEPTION
+    WHEN unique_violation THEN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM credit_accounts AS existing_account
+        WHERE existing_account.user_id = resolved_user_id
+      ) THEN
+        RAISE;
+      END IF;
+  END;
 
-  INSERT INTO user_quotas (
-    id,
-    user_id,
-    plan,
-    asaas_customer_id,
-    asaas_subscription_id,
-    renews_at,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    gen_random_uuid()::TEXT,
-    resolved_user_id,
-    'free',
-    NULL,
-    NULL,
-    NULL,
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT ON CONSTRAINT user_quotas_user_id_key DO NOTHING;
+  BEGIN
+    INSERT INTO user_quotas (
+      id,
+      user_id,
+      plan,
+      asaas_customer_id,
+      asaas_subscription_id,
+      renews_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      gen_random_uuid()::TEXT,
+      resolved_user_id,
+      'free',
+      NULL,
+      NULL,
+      NULL,
+      NOW(),
+      NOW()
+    );
+  EXCEPTION
+    WHEN unique_violation THEN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM user_quotas AS existing_quota
+        WHERE existing_quota.user_id = resolved_user_id
+      ) THEN
+        RAISE;
+      END IF;
+  END;
 
   RETURN QUERY
   SELECT

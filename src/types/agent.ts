@@ -278,16 +278,61 @@ export type AgentRequest = {
   fileMime?: ParseFileInput['mime_type']
 }
 
+export type AgentSessionCreatedChunk = {
+  type: 'sessionCreated'
+  sessionId: string
+}
+
+export type AgentTextChunk = {
+  type: 'text'
+  content: string
+}
+
+export type AgentToolStartChunk = {
+  type: 'toolStart'
+  toolName: string
+}
+
+export type AgentToolResultChunk = {
+  type: 'toolResult'
+  toolName: string
+  output: unknown
+}
+
+export type AgentPatchChunk = {
+  type: 'patch'
+  patch: ToolPatch
+  phase: Phase
+}
+
+export type AgentDoneChunk = {
+  type: 'done'
+  sessionId: string
+  phase: Phase
+  atsScore?: ATSScoreResult
+  messageCount?: number
+  maxMessages?: number
+  isNewSession?: boolean
+  requestId?: string
+  toolIterations?: number
+}
+
+export type AgentErrorChunk = {
+  type: 'error'
+  error: string
+  code?: ToolErrorCode
+  action?: string
+  messageCount?: number
+  maxMessages?: number
+  upgradeUrl?: string
+  requestId?: string
+}
+
 export type AgentStreamChunk =
-  | { sessionCreated: true; sessionId: string }
-  | { delta: string }
-  | {
-      done: true
-      sessionId: string
-      phase: Phase
-      atsScore?: ATSScoreResult
-      messageCount?: number
-      maxMessages?: number
-      isNewSession?: boolean
-    }
-  | { error: string; action?: string; messageCount?: number; maxMessages?: number; upgradeUrl?: string }
+  | AgentSessionCreatedChunk
+  | AgentTextChunk
+  | AgentToolStartChunk
+  | AgentToolResultChunk
+  | AgentPatchChunk
+  | AgentDoneChunk
+  | AgentErrorChunk

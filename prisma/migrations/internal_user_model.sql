@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+SET search_path = public, extensions;
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   status TEXT NOT NULL DEFAULT 'active',
@@ -61,7 +63,7 @@ JOIN user_auth_identities AS identity
 CREATE TEMP TABLE new_legacy_user_mappings AS
 SELECT
   source.source_user_id AS legacy_user_id,
-  'usr_' || encode(digest('clerk:' || source.source_user_id, 'sha256'), 'hex') AS app_user_id
+  'usr_' || encode(extensions.digest('clerk:' || source.source_user_id, 'sha256'), 'hex') AS app_user_id
 FROM source_user_ids AS source
 LEFT JOIN existing_legacy_user_mappings AS existing_mapping
   ON existing_mapping.legacy_user_id = source.source_user_id
@@ -227,7 +229,7 @@ DECLARE
   resolved_user_id TEXT;
 BEGIN
   candidate_user_id := 'usr_' || encode(
-    digest(p_provider || ':' || p_provider_subject, 'sha256'),
+    extensions.digest(p_provider || ':' || p_provider_subject, 'sha256'),
     'hex'
   );
 

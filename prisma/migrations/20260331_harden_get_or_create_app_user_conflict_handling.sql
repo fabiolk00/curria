@@ -22,7 +22,7 @@ DECLARE
   resolved_user_id TEXT;
 BEGIN
   candidate_user_id := 'usr_' || encode(
-    digest(p_provider || ':' || p_provider_subject, 'sha256'),
+    extensions.digest(p_provider || ':' || p_provider_subject, 'sha256'),
     'hex'
   );
 

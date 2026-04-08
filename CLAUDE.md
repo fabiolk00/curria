@@ -313,7 +313,7 @@ Rules:
 - `GET /api/profile` — returns the saved UserProfile for the current user
 
 ### Important route realities
-- `/api/agent` uses SSE, but OpenAI is currently called with non-streaming completions and the server re-streams word chunks.
+- `/api/agent` uses true OpenAI streaming. Text chunks are forwarded to client SSE in real time, tool call deltas are accumulated server-side until the stream ends, and persisted tool patches are emitted only after the DB write succeeds. Multi-turn tool flows remain iterative and generate follow-up streaming calls with tool results in the message history.
 - `/api/file/[sessionId]` is not implemented.
 - File delivery currently happens through signed URLs returned by `generate_file`.
 - `POST /api/profile/upload` is planned but not implemented yet, even though the broader profile setup flow already exists.
