@@ -11,7 +11,7 @@ import { generateFile } from './generate-file'
 import { applyGapAction } from './gap-to-action'
 import { parseFile } from './parse-file'
 import { ingestResumeText } from './resume-ingestion'
-import { dispatchTool, executeTool } from './index'
+import { dispatchTool, dispatchToolWithContext, executeTool } from './index'
 import { rewriteSection } from './rewrite-section'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
 
@@ -466,8 +466,9 @@ describe('agent tool dispatch', () => {
     expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
   })
 
-  it('persists session generatedOutput.status=failed when generate_file validation fails', async () => {
+  it('does not persist generatedOutput when generate_file validation fails', async () => {
     const session = buildSession()
+    const originalGeneratedOutput = structuredClone(session.generatedOutput)
 
     vi.mocked(generateFile).mockResolvedValue({
       output: {
@@ -503,25 +504,54 @@ describe('agent tool dispatch', () => {
       error: 'summary is required.',
     })
     expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
-    expect(applyGeneratedOutputPatch).toHaveBeenCalledWith(session, {
-      status: 'failed',
-      docxPath: undefined,
-      pdfPath: undefined,
-      generatedAt: undefined,
+    expect(applyGeneratedOutputPatch).not.toHaveBeenCalled()
+    expect(session.generatedOutput).toEqual(originalGeneratedOutput)
+  })
+
+  it('returns no persistedPatch when generate_file fails', async () => {
+    const session = buildSession()
+
+    vi.mocked(generateFile).mockResolvedValue({
+      output: {
+        success: false,
+        code: 'VALIDATION_ERROR',
+        error: 'summary is required.',
+      },
+      patch: {
+        generatedOutput: {
+          status: 'failed',
+          docxPath: undefined,
+          pdfPath: undefined,
+          generatedAt: undefined,
+          error: 'summary is required.',
+        },
+      },
+      generatedOutput: {
+        status: 'failed',
+        docxPath: undefined,
+        pdfPath: undefined,
+        generatedAt: undefined,
+        error: 'summary is required.',
+      },
+    })
+
+    const result = await dispatchToolWithContext('generate_file', {
+      cv_state: session.cvState,
+    }, session)
+
+    expect(result.outputFailure).toEqual({
+      success: false,
+      code: 'VALIDATION_ERROR',
       error: 'summary is required.',
     })
-    expect(session.generatedOutput).toEqual({
-      status: 'failed',
-      docxPath: undefined,
-      pdfPath: undefined,
-      generatedAt: undefined,
-      error: 'summary is required.',
-    })
+    expect(result.persistedPatch).toBeUndefined()
+    expect(applyGeneratedOutputPatch).not.toHaveBeenCalled()
   })
 
   it('does not mutate cvState or agentState when generate_file fails', async () => {
     const session = buildSession()
     const originalCvState = structuredClone(session.cvState)
+    const originalGeneratedOutput = structuredClone(session.generatedOutput)
     session.agentState = {
       parseStatus: 'parsed',
       rewriteHistory: {
@@ -565,7 +595,7 @@ describe('agent tool dispatch', () => {
 
     expect(session.cvState).toEqual(originalCvState)
     expect(session.agentState).toEqual(originalAgentState)
-    expect(session.generatedOutput.status).toBe('failed')
+    expect(session.generatedOutput).toEqual(originalGeneratedOutput)
   })
 
   it('rejects malformed gap-driven rewrite output without persisting changes', async () => {
@@ -619,7 +649,7 @@ describe('agent tool dispatch', () => {
     )
   })
 
-  it('logs that generatedOutput was persisted when generate_file fails', async () => {
+  it('does not log generatedOutput persistence when generate_file fails', async () => {
     const session = buildSession()
 
     vi.mocked(generateFile).mockResolvedValue({
@@ -650,13 +680,10 @@ describe('agent tool dispatch', () => {
       cv_state: session.cvState,
     }, session)
 
-    expect(logInfo).toHaveBeenCalledWith(
+    expect(logInfo).not.toHaveBeenCalledWith(
       'agent.tool.generated_output.persisted',
       expect.objectContaining({
         toolName: 'generate_file',
-        status: 'failed',
-        errorCode: 'VALIDATION_ERROR',
-        errorMessage: 'summary is required.',
       }),
     )
   })

@@ -7,7 +7,6 @@ import {
 } from '@/lib/db/resume-targets'
 import {
   applyToolPatchWithVersion,
-  applyGeneratedOutputPatch as applySessionGeneratedOutputPatch,
   mergeToolPatch,
 } from '@/lib/db/sessions'
 import { isToolFailure, TOOL_ERROR_CODES, toolFailure, toolFailureFromUnknown } from '@/lib/agent/tool-errors'
@@ -25,6 +24,7 @@ import type {
   Session,
   SetPhaseInput,
   ToolPatch,
+  ToolFailure,
 } from '@/types/agent'
 
 import { generateFile } from './generate-file'
@@ -172,6 +172,13 @@ export const TOOL_DEFINITIONS: OpenAITool[] = [
 export type ToolExecutionResult = {
   output: unknown
   patch?: ToolPatch
+}
+
+export type DispatchedToolResult = {
+  output: unknown
+  outputJson: string
+  persistedPatch?: ToolPatch
+  outputFailure?: ToolFailure
 }
 
 function isCvStateEmpty(cvState: Session['cvState']): boolean {
@@ -431,12 +438,12 @@ export async function executeTool(
   }
 }
 
-export async function dispatchTool(
+async function dispatchToolInternal(
   toolName: string,
   toolInput: Record<string, unknown>,
   session: Session,
   externalSignal?: AbortSignal,
-): Promise<string> {
+): Promise<DispatchedToolResult> {
   const startedAt = Date.now()
   const previousCvState = structuredClone(session.cvState)
 
@@ -452,17 +459,14 @@ export async function dispatchTool(
     const execution = await executeTool(toolName, toolInput, session, externalSignal)
     const outputFailure = isToolFailure(execution.output) ? execution.output : undefined
     let persistedGeneratedOutput = false
+    let persistedPatch: ToolPatch | undefined
 
     if (execution.patch && !outputFailure) {
       const nextSession = mergeToolPatch(session, execution.patch)
       const versionSource = resolveCvVersionSource(toolName, previousCvState, nextSession.cvState, execution)
       await applyToolPatchWithVersion(session, execution.patch, versionSource)
       persistedGeneratedOutput = execution.patch.generatedOutput !== undefined
-    }
-
-    if (outputFailure && execution.patch?.generatedOutput) {
-      await applySessionGeneratedOutputPatch(session, execution.patch.generatedOutput)
-      persistedGeneratedOutput = true
+      persistedPatch = execution.patch
     }
 
     if (persistedGeneratedOutput) {
@@ -502,7 +506,12 @@ export async function dispatchTool(
       logInfo('agent.tool.completed', logFields)
     }
 
-    return JSON.stringify(execution.output)
+    return {
+      output: execution.output,
+      outputJson: JSON.stringify(execution.output),
+      persistedPatch,
+      outputFailure,
+    }
   } catch (err) {
     const failure = toolFailureFromUnknown(err, 'Tool execution failed.')
 
@@ -518,6 +527,29 @@ export async function dispatchTool(
       errorCode: failure.code,
       errorMessage: failure.error,
     })
-    return JSON.stringify(failure)
+    return {
+      output: failure,
+      outputJson: JSON.stringify(failure),
+      outputFailure: failure,
+    }
   }
+}
+
+export async function dispatchToolWithContext(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  session: Session,
+  externalSignal?: AbortSignal,
+): Promise<DispatchedToolResult> {
+  return dispatchToolInternal(toolName, toolInput, session, externalSignal)
+}
+
+export async function dispatchTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  session: Session,
+  externalSignal?: AbortSignal,
+): Promise<string> {
+  const result = await dispatchToolInternal(toolName, toolInput, session, externalSignal)
+  return result.outputJson
 }

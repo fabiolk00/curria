@@ -1,37 +1,35 @@
 import type OpenAI from 'openai'
+import { APIError } from 'openai'
 
 import { buildSystemPrompt, trimMessages } from '@/lib/agent/context-builder'
-import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
-import { TOOL_DEFINITIONS, dispatchTool } from '@/lib/agent/tools'
-import { getMessages, appendMessage } from '@/lib/db/sessions'
 import { AGENT_CONFIG, MODEL_CONFIG } from '@/lib/agent/config'
+import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
+import { dispatchToolWithContext, TOOL_DEFINITIONS } from '@/lib/agent/tools'
 import { trackApiUsage } from '@/lib/agent/usage-tracker'
+import { appendMessage, getMessages } from '@/lib/db/sessions'
+import { createChatCompletionStreamWithRetry } from '@/lib/openai/chat'
 import { openai } from '@/lib/openai/client'
-import { getChatCompletionUsage, createChatCompletionWithRetry } from '@/lib/openai/chat'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
-import type { Session } from '@/types/agent'
+import type {
+  AgentDoneChunk,
+  AgentErrorChunk,
+  AgentPatchChunk,
+  AgentTextChunk,
+  AgentToolResultChunk,
+  AgentToolStartChunk,
+  Session,
+} from '@/types/agent'
 
 const EMPTY_ASSISTANT_RESPONSE_FALLBACK = 'Analisei sua mensagem, mas não consegui concluir a resposta desta vez. Tente enviar novamente e eu continuo a partir do contexto já salvo.'
 const EMPTY_ASSISTANT_RECOVERY_PROMPT = 'The previous completion returned no visible assistant text. Respond to the user now with a direct, helpful plain-text answer. Do not call tools. Do not leave the content empty.'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type AgentLoopEvent =
-  | { type: 'delta'; text: string }
-  | {
-      type: 'done'
-      sessionId: string
-      phase: string
-      atsScore: unknown
-      messageCount: number
-      maxMessages: number
-      isNewSession: boolean
-      requestId: string
-      toolIterations: number
-    }
-  | { type: 'error'; error: Error }
+type AgentLoopEvent =
+  | AgentTextChunk
+  | AgentToolStartChunk
+  | AgentToolResultChunk
+  | AgentPatchChunk
+  | AgentDoneChunk
+  | AgentErrorChunk
 
 export type AgentLoopParams = {
   session: Session
@@ -40,13 +38,24 @@ export type AgentLoopParams = {
   requestId: string
   isNewSession: boolean
   requestStartedAt: number
-  /** Signal from the incoming request — fires when the client disconnects. */
   signal?: AbortSignal
 }
 
-// ---------------------------------------------------------------------------
-// Helpers (moved from route.ts)
-// ---------------------------------------------------------------------------
+export type AccumulatedToolCall = {
+  id: string
+  name: string
+  argumentsRaw: string
+}
+
+type StreamTurnResult = {
+  assistantText: string
+  toolCalls: AccumulatedToolCall[]
+  finishReason: OpenAI.Chat.Completions.ChatCompletionChunk.Choice['finish_reason'] | null
+  usage?: {
+    inputTokens: number
+    outputTokens: number
+  }
+}
 
 function parseJsonObject(value: string): Record<string, unknown> | null {
   try {
@@ -76,101 +85,214 @@ function buildToolMessage(
   return { role: 'tool', tool_call_id: toolCallId, content }
 }
 
-function buildAssistantToolCallMessage(
-  message: OpenAI.Chat.Completions.ChatCompletionMessage,
-): OpenAI.Chat.Completions.ChatCompletionAssistantMessageParam {
+function buildAssistantToolCallMessage(params: {
+  assistantText: string
+  toolCalls: AccumulatedToolCall[]
+}): OpenAI.Chat.Completions.ChatCompletionAssistantMessageParam {
   return {
     role: 'assistant',
-    content: message.content ?? '',
-    tool_calls: message.tool_calls,
+    content: params.assistantText,
+    tool_calls: params.toolCalls.map((toolCall) => ({
+      id: toolCall.id,
+      type: 'function',
+      function: {
+        name: toolCall.name,
+        arguments: toolCall.argumentsRaw,
+      },
+    })),
   }
 }
 
-async function recoverEmptyAssistantResponse(params: {
-  cachedSystemPrompt: string
-  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+function mapAPIErrorMessage(error: APIError): string {
+  const status = error.status ?? 0
+  const statusMessages: Record<number, string> = {
+    400: 'Erro na requisição. Por favor, tente novamente.',
+    401: 'Erro de configuração da IA. Entre em contato com o suporte.',
+    403: 'Acesso negado ao serviço de IA. Entre em contato com o suporte.',
+    429: 'O serviço de IA está sobrecarregado. Tente novamente em alguns segundos.',
+    500: 'O serviço de IA está temporariamente indisponível. Tente novamente.',
+    502: 'O serviço de IA está temporariamente indisponível. Tente novamente.',
+    503: 'O serviço de IA está em manutenção. Tente novamente em alguns minutos.',
+  }
+
+  return statusMessages[status] ?? 'Algo deu errado. Por favor, tente novamente.'
+}
+
+function buildErrorChunk(params: {
+  error: unknown
   requestId: string
-  sessionId: string
+  fallbackMessage?: string
+}): AgentErrorChunk {
+  if (params.error instanceof APIError && params.error.status) {
+    return {
+      type: 'error',
+      error: mapAPIErrorMessage(params.error),
+      code: TOOL_ERROR_CODES.INTERNAL_ERROR,
+      requestId: params.requestId,
+    }
+  }
+
+  if ((params.error instanceof Error || params.error instanceof DOMException) && params.error.name === 'AbortError') {
+    return {
+      type: 'error',
+      error: 'A requisição demorou muito. Por favor, tente novamente.',
+      code: TOOL_ERROR_CODES.INTERNAL_ERROR,
+      requestId: params.requestId,
+    }
+  }
+
+  return {
+    type: 'error',
+    error: params.fallbackMessage ?? 'Algo deu errado. Por favor, tente novamente.',
+    code: TOOL_ERROR_CODES.INTERNAL_ERROR,
+    requestId: params.requestId,
+  }
+}
+
+function createErrorChunk(
+  error: string,
+  requestId: string,
+  code: AgentErrorChunk['code'] = TOOL_ERROR_CODES.INTERNAL_ERROR,
+): AgentErrorChunk {
+  return {
+    type: 'error',
+    error,
+    code,
+    requestId,
+  }
+}
+
+function toUsage(
+  usage: OpenAI.CompletionUsage | null | undefined,
+): StreamTurnResult['usage'] | undefined {
+  if (!usage) {
+    return undefined
+  }
+
+  return {
+    inputTokens: usage.prompt_tokens ?? 0,
+    outputTokens: usage.completion_tokens ?? 0,
+  }
+}
+
+async function* streamAssistantTurn(params: {
+  session: Session
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+  cachedSystemPrompt: string
+  requestId: string
   appUserId: string
-  phase: string
-  stateVersion: number
+  requestStartedAt: number
   signal?: AbortSignal
-}): Promise<string> {
-  const response = await callOpenAIWithRetry(
+  maxCompletionTokens: number
+  tools?: OpenAI.Chat.Completions.ChatCompletionTool[]
+  toolChoice?: OpenAI.Chat.Completions.ChatCompletionToolChoiceOption
+}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
+  const streamStartedAt = Date.now()
+  const stream = await createChatCompletionStreamWithRetry(
+    openai,
     {
       model: MODEL_CONFIG.agent,
-      max_completion_tokens: Math.min(AGENT_CONFIG.maxTokens, 900),
-      tool_choice: 'none',
+      max_completion_tokens: params.maxCompletionTokens,
       messages: [
         { role: 'system', content: params.cachedSystemPrompt },
         ...params.messages,
-        { role: 'system', content: EMPTY_ASSISTANT_RECOVERY_PROMPT },
       ],
+      tools: params.tools,
+      tool_choice: params.toolChoice,
+      stream: true,
+      stream_options: { include_usage: true },
     },
-    2,
-    {
-      requestId: params.requestId,
-      sessionId: params.sessionId,
-      appUserId: params.appUserId,
-      phase: params.phase,
-      stateVersion: params.stateVersion,
-    },
+    3,
+    AGENT_CONFIG.timeout,
     params.signal,
   )
 
-  const usage = getChatCompletionUsage(response)
-  trackApiUsage({
-    userId: params.appUserId,
-    sessionId: params.sessionId,
-    model: MODEL_CONFIG.agent,
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
-    endpoint: 'agent',
-  }).catch(() => {})
+  const toolCalls: AccumulatedToolCall[] = []
+  let assistantText = ''
+  let finishReason: StreamTurnResult['finishReason'] = null
+  let usage: StreamTurnResult['usage']
+  let loggedFirstToken = false
 
-  return response.choices[0]?.message?.content?.trim() ?? ''
-}
+  for await (const chunk of stream) {
+    if (params.signal?.aborted) {
+      throw new DOMException('Request aborted', 'AbortError')
+    }
 
-async function callOpenAIWithRetry(
-  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
-  maxRetries: number,
-  traceContext: {
-    requestId: string
-    sessionId: string
-    appUserId: string
-    phase: string
-    stateVersion: number
-  },
-  externalSignal?: AbortSignal,
-): Promise<OpenAI.Chat.Completions.ChatCompletion> {
-  try {
-    return await createChatCompletionWithRetry(openai, params, maxRetries, AGENT_CONFIG.timeout, externalSignal)
-  } catch (error) {
-    logWarn('agent.model.failed', {
-      requestId: traceContext.requestId,
-      sessionId: traceContext.sessionId,
-      appUserId: traceContext.appUserId,
-      phase: traceContext.phase,
-      stateVersion: traceContext.stateVersion,
-      ...serializeError(error),
-    })
-    throw error
+    if (chunk.usage) {
+      usage = toUsage(chunk.usage)
+    }
+
+    const choice = chunk.choices[0]
+    if (!choice) {
+      continue
+    }
+
+    const { delta } = choice
+    if (choice.finish_reason) {
+      finishReason = choice.finish_reason
+    }
+
+    if (delta.content) {
+      assistantText += delta.content
+
+      if (!loggedFirstToken) {
+        loggedFirstToken = true
+        logInfo('agent.stream.first_token', {
+          requestId: params.requestId,
+          sessionId: params.session.id,
+          appUserId: params.appUserId,
+          phase: params.session.phase,
+          stateVersion: params.session.stateVersion,
+          setupMs: streamStartedAt - params.requestStartedAt,
+          firstTokenMs: Date.now() - streamStartedAt,
+          totalLatencyMs: Date.now() - params.requestStartedAt,
+          success: true,
+        })
+      }
+
+      yield {
+        type: 'text',
+        content: delta.content,
+      }
+    }
+
+    if (!delta.tool_calls) {
+      continue
+    }
+
+    for (const toolCallDelta of delta.tool_calls) {
+      const index = toolCallDelta.index ?? 0
+
+      if (!toolCalls[index]) {
+        toolCalls[index] = {
+          id: toolCallDelta.id ?? '',
+          name: toolCallDelta.function?.name ?? '',
+          argumentsRaw: '',
+        }
+      }
+
+      if (toolCallDelta.id) {
+        toolCalls[index].id = toolCallDelta.id
+      }
+
+      if (toolCallDelta.function?.name) {
+        toolCalls[index].name = toolCallDelta.function.name
+      }
+
+      if (toolCallDelta.function?.arguments) {
+        toolCalls[index].argumentsRaw += toolCallDelta.function.arguments
+      }
+    }
+  }
+
+  return {
+    assistantText,
+    toolCalls: toolCalls.filter(Boolean),
+    finishReason,
+    usage,
   }
 }
 
-// ---------------------------------------------------------------------------
-// Core loop
-// ---------------------------------------------------------------------------
-
-/**
- * Runs the agent tool loop. Yields `AgentLoopEvent` objects that the route
- * can encode directly into SSE chunks.
- *
- * The caller is responsible for:
- * - Persisting the user message (appendMessage) before calling this
- * - Encoding yielded events into the SSE format
- * - Handling errors (the generator catches internally and yields an error event)
- */
 export async function* runAgentLoop(
   params: AgentLoopParams,
 ): AsyncGenerator<AgentLoopEvent> {
@@ -180,20 +302,16 @@ export async function* runAgentLoop(
 
   const history = await getMessages(session.id)
   const messages = toOpenAIHistory(
-    trimMessages(history.map((m) => ({ role: m.role, content: m.content }))),
+    trimMessages(history.map((message) => ({ role: message.role, content: message.content }))),
   )
 
+  let toolIterations = 0
+  let assistantResponded = false
+  let cachedSystemPrompt = buildSystemPrompt(session)
+  let systemPromptDirty = false
+
   try {
-    let continueLoop = true
-    let toolIterations = 0
-    let assistantResponded = false
-
-    // Cache the system prompt; only rebuild when session state changes (4.3)
-    let cachedSystemPrompt = buildSystemPrompt(session)
-    let systemPromptDirty = false
-
-    while (continueLoop) {
-      // Check if the client disconnected before starting a new iteration
+    while (true) {
       if (signal?.aborted) {
         logInfo('agent.request.cancelled', {
           requestId,
@@ -204,7 +322,7 @@ export async function* runAgentLoop(
           success: false,
           latencyMs: Date.now() - requestStartedAt,
         })
-        break
+        return
       }
 
       toolIterations++
@@ -220,107 +338,182 @@ export async function* runAgentLoop(
           maxToolIterations: AGENT_CONFIG.maxToolIterations,
           success: false,
         })
+
+        yield {
+          type: 'error',
+          error: 'A IA excedeu o número máximo de chamadas de ferramenta. Tente novamente.',
+          code: TOOL_ERROR_CODES.INTERNAL_ERROR,
+          requestId,
+        }
         break
       }
 
-      // Rebuild system prompt only if a tool patch changed session state
       if (systemPromptDirty) {
         cachedSystemPrompt = buildSystemPrompt(session)
         systemPromptDirty = false
       }
 
-      const response = await callOpenAIWithRetry(
-        {
-          model: MODEL_CONFIG.agent,
-          max_completion_tokens: AGENT_CONFIG.maxTokens,
-          messages: [
-            { role: 'system', content: cachedSystemPrompt },
-            ...messages,
-          ],
-          tools: TOOL_DEFINITIONS,
-        },
-        3,
-        {
-          requestId,
-          sessionId: session.id,
-          appUserId,
-          phase: session.phase,
-          stateVersion: session.stateVersion,
-        },
+      const turn = yield* streamAssistantTurn({
+        session,
+        messages,
+        cachedSystemPrompt,
+        requestId,
+        appUserId,
+        requestStartedAt,
         signal,
-      )
+        maxCompletionTokens: AGENT_CONFIG.maxTokens,
+        tools: TOOL_DEFINITIONS,
+      })
 
-      const usage = getChatCompletionUsage(response)
-      trackApiUsage({
-        userId: appUserId,
-        sessionId: session.id,
-        model: MODEL_CONFIG.agent,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        endpoint: 'agent',
-      }).catch(() => {})
-
-      const responseMessage = response.choices[0]?.message
-      const finishReason = response.choices[0]?.finish_reason
-      const assistantText = responseMessage?.content?.trim() ?? ''
-
-      if (assistantText) {
-        assistantResponded = true
-        for (const word of assistantText.split(' ')) {
-          yield { type: 'delta', text: word + ' ' }
-        }
-        await appendMessage(session.id, 'assistant', assistantText)
+      if (turn.usage) {
+        trackApiUsage({
+          userId: appUserId,
+          sessionId: session.id,
+          model: MODEL_CONFIG.agent,
+          inputTokens: turn.usage.inputTokens,
+          outputTokens: turn.usage.outputTokens,
+          endpoint: 'agent',
+        }).catch(() => {})
       }
 
-      const toolCalls = responseMessage?.tool_calls ?? []
-      continueLoop = finishReason === 'tool_calls' && toolCalls.length > 0
+      if (turn.assistantText.trim()) {
+        assistantResponded = true
+        await appendMessage(session.id, 'assistant', turn.assistantText.trim())
+      }
 
-      if (!continueLoop) break
-
-      messages.push(buildAssistantToolCallMessage(responseMessage!))
-
-      for (const toolCall of toolCalls) {
-        if (toolCall.type !== 'function') continue
-
-        const toolInput = parseJsonObject(toolCall.function.arguments)
-        if (!toolInput) {
-          messages.push(
-            buildToolMessage(
-              toolCall.id,
-              JSON.stringify(
-                toolFailure(TOOL_ERROR_CODES.VALIDATION_ERROR, 'Malformed tool arguments from model.'),
-              ),
-            ),
+      if (turn.finishReason === 'tool_calls') {
+        if (turn.toolCalls.length === 0) {
+          yield createErrorChunk(
+            'The AI response was incomplete.',
+            requestId,
           )
+          break
+        }
+      } else if (turn.finishReason === 'stop') {
+        break
+      } else if (turn.finishReason === 'length') {
+        yield createErrorChunk(
+          'The response was too long and was truncated.',
+          requestId,
+        )
+        break
+      } else if (!turn.finishReason) {
+        yield createErrorChunk(
+          'The AI response was incomplete.',
+          requestId,
+        )
+        break
+      } else {
+        yield createErrorChunk(
+          `Unexpected finish reason: ${turn.finishReason}`,
+          requestId,
+        )
+        break
+      }
+
+      messages.push(buildAssistantToolCallMessage({
+        assistantText: turn.assistantText,
+        toolCalls: turn.toolCalls,
+      }))
+
+      for (const toolCall of turn.toolCalls) {
+        yield {
+          type: 'toolStart',
+          toolName: toolCall.name,
+        }
+
+        const toolInput = parseJsonObject(toolCall.argumentsRaw)
+        if (!toolInput) {
+          const failure = toolFailure(
+            TOOL_ERROR_CODES.LLM_INVALID_OUTPUT,
+            `Failed to parse arguments for tool "${toolCall.name}".`,
+          )
+
+          messages.push(buildToolMessage(toolCall.id, JSON.stringify(failure)))
+
+          yield createErrorChunk(failure.error, requestId, failure.code)
+          break
+        }
+
+        const toolResult = await dispatchToolWithContext(toolCall.name, toolInput, session, signal)
+        messages.push(buildToolMessage(toolCall.id, toolResult.outputJson))
+
+        if (toolResult.outputFailure) {
+          yield {
+            type: 'error',
+            error: toolResult.outputFailure.error,
+            code: toolResult.outputFailure.code,
+            requestId,
+          }
+
+          if (toolResult.persistedPatch) {
+            yield {
+              type: 'patch',
+              patch: toolResult.persistedPatch,
+              phase: session.phase,
+            }
+            systemPromptDirty = true
+          }
           continue
         }
 
-        const toolResult = await dispatchTool(toolCall.function.name, toolInput, session, signal)
-        messages.push(buildToolMessage(toolCall.id, toolResult))
-        // Tool dispatch may have mutated session state via applyToolPatchWithVersion
-        systemPromptDirty = true
+        yield {
+          type: 'toolResult',
+          toolName: toolCall.name,
+          output: toolResult.output,
+        }
+
+        if (toolResult.persistedPatch) {
+          yield {
+            type: 'patch',
+            patch: toolResult.persistedPatch,
+            phase: session.phase,
+          }
+          systemPromptDirty = true
+        }
       }
     }
 
     if (!assistantResponded && !signal?.aborted) {
-      const recoveredText = await recoverEmptyAssistantResponse({
+      const recoveryTurn = yield* streamAssistantTurn({
+        session,
+        messages: [
+          ...messages,
+          { role: 'system', content: EMPTY_ASSISTANT_RECOVERY_PROMPT },
+        ],
         cachedSystemPrompt,
-        messages,
         requestId,
-        sessionId: session.id,
         appUserId,
-        phase: session.phase,
-        stateVersion: session.stateVersion,
+        requestStartedAt,
         signal,
+        maxCompletionTokens: Math.min(AGENT_CONFIG.maxTokens, 900),
+        toolChoice: 'none',
       })
 
-      const finalAssistantText = recoveredText || EMPTY_ASSISTANT_RESPONSE_FALLBACK
-
-      for (const word of finalAssistantText.split(' ')) {
-        yield { type: 'delta', text: word + ' ' }
+      if (recoveryTurn.usage) {
+        trackApiUsage({
+          userId: appUserId,
+          sessionId: session.id,
+          model: MODEL_CONFIG.agent,
+          inputTokens: recoveryTurn.usage.inputTokens,
+          outputTokens: recoveryTurn.usage.outputTokens,
+          endpoint: 'agent',
+        }).catch(() => {})
       }
+
+      const finalAssistantText = recoveryTurn.assistantText.trim() || EMPTY_ASSISTANT_RESPONSE_FALLBACK
+
+      if (!recoveryTurn.assistantText.trim()) {
+        yield {
+          type: 'text',
+          content: finalAssistantText,
+        }
+      }
+
+      assistantResponded = true
       await appendMessage(session.id, 'assistant', finalAssistantText)
-      logWarn(recoveredText ? 'agent.response.empty_recovered' : 'agent.response.empty_fallback', {
+
+      logWarn(recoveryTurn.assistantText.trim() ? 'agent.response.empty_recovered' : 'agent.response.empty_fallback', {
         requestId,
         sessionId: session.id,
         appUserId,
@@ -331,16 +524,15 @@ export async function* runAgentLoop(
       })
     }
 
-    logInfo('agent.request.completed', {
+    logInfo('agent.stream.completed', {
       requestId,
       sessionId: session.id,
       appUserId,
       phase: session.phase,
       stateVersion: session.stateVersion,
       isNewSession,
-      messageCount: session.messageCount + 1,
-      toolIterations,
-      parseConfidenceScore: session.agentState.parseConfidenceScore,
+      messageCountAfter: session.messageCount + 1,
+      toolLoopsUsed: toolIterations,
       success: true,
       latencyMs: Date.now() - requestStartedAt,
     })
@@ -356,7 +548,20 @@ export async function* runAgentLoop(
       isNewSession,
       toolIterations,
     }
-  } catch (err) {
+  } catch (error) {
+    if ((error instanceof Error || error instanceof DOMException) && error.name === 'AbortError' && signal?.aborted) {
+      logInfo('agent.request.cancelled', {
+        requestId,
+        sessionId: session.id,
+        appUserId,
+        phase: session.phase,
+        toolIterations,
+        success: false,
+        latencyMs: Date.now() - requestStartedAt,
+      })
+      return
+    }
+
     logError('agent.request.failed', {
       requestId,
       sessionId: session.id,
@@ -366,8 +571,15 @@ export async function* runAgentLoop(
       parseConfidenceScore: session.agentState.parseConfidenceScore,
       success: false,
       latencyMs: Date.now() - requestStartedAt,
-      ...serializeError(err),
+      ...serializeError(error),
     })
-    yield { type: 'error', error: err instanceof Error ? err : new Error(String(err)) }
+
+    yield buildErrorChunk({
+      error,
+      requestId,
+    })
   }
 }
+
+export type { AgentLoopEvent }
+
