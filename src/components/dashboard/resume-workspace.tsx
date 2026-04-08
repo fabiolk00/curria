@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useDefaultLayout } from "react-resizable-panels"
 
 import { usePreviewPanel } from "@/context/preview-panel-context"
 import { usePreviewPanelOverlay } from "@/hooks/use-preview-panel-overlay"
@@ -13,6 +14,11 @@ import {
 import type { PlanSlug } from "@/lib/plans"
 import type { ManualEditInput, ManualEditSection, ManualEditSectionData } from "@/types/agent"
 import type { SessionWorkspace } from "@/types/dashboard"
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
 
 import { ChatInterface } from "./chat-interface"
 import { ManualEditDialog } from "./manual-edit-dialog"
@@ -93,6 +99,11 @@ export function ResumeWorkspace({
   const [planUpdateOpen, setPlanUpdateOpen] = useState(false)
   const { isOpen: isPreviewOpen, file: previewFile, close: closePreview } = usePreviewPanel()
   const isPreviewOverlay = usePreviewPanelOverlay()
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: "resume-workspace-split-view",
+    panelIds: ["workspace-chat-panel", "workspace-preview-panel"],
+    storage: typeof window === "undefined" ? undefined : window.localStorage,
+  })
 
   useEffect(() => {
     setAvailableCredits(currentCredits)
@@ -201,36 +212,74 @@ export function ResumeWorkspace({
     }
   }
 
+  const chatPane = (
+    <div className="flex min-h-[72svh] flex-col overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur lg:h-full lg:min-h-0">
+      <ChatInterface
+        sessionId={sessionId}
+        userName={userName}
+        disabled={activeMutation !== null}
+        currentCredits={availableCredits}
+        onSessionChange={(nextSessionId) => setSessionId(nextSessionId)}
+        onStreamingChange={setIsStreaming}
+        onAgentTurnCompleted={(payload) => {
+          if (payload.isNewSession) {
+            setAvailableCredits((previous) => Math.max(previous - 1, 0))
+          }
+
+          setSessionId(payload.sessionId)
+          void refreshWorkspace(payload.sessionId)
+        }}
+        onCreditsExhausted={() => setPlanUpdateOpen(true)}
+      />
+    </div>
+  )
+
+  const viewerPane = (
+    <WorkspaceSidePanel
+      sessionId={sessionId}
+      showInlinePreview={!isPreviewOverlay}
+      previewFile={!isPreviewOverlay ? previewFile : null}
+      baseOutputReady={baseOutputReady}
+    />
+  )
+
   return (
     <>
-      <div className="grid min-h-screen gap-6 p-4 lg:grid-cols-[minmax(0,1.15fr)_420px] lg:p-8">
-        <div className="flex min-h-[72svh] flex-col overflow-hidden rounded-[2rem] border border-border/60 bg-background/90 shadow-[0_32px_110px_-75px_oklch(var(--foreground)/0.9)] backdrop-blur lg:h-[calc(100svh-4rem)]">
-          <ChatInterface
-            sessionId={sessionId}
-            userName={userName}
-            disabled={activeMutation !== null}
-            currentCredits={availableCredits}
-            onSessionChange={(nextSessionId) => setSessionId(nextSessionId)}
-            onStreamingChange={setIsStreaming}
-            onAgentTurnCompleted={(payload) => {
-              if (payload.isNewSession) {
-                setAvailableCredits((previous) => Math.max(previous - 1, 0))
-              }
-
-              setSessionId(payload.sessionId)
-              void refreshWorkspace(payload.sessionId)
-            }}
-            onCreditsExhausted={() => setPlanUpdateOpen(true)}
-          />
+      {isPreviewOverlay ? (
+        <div className="space-y-6 p-4">
+          {chatPane}
+          {viewerPane}
         </div>
+      ) : (
+        <div className="h-[calc(100svh-4rem)] p-8">
+          <ResizablePanelGroup
+            id="resume-workspace-split-view"
+            orientation="horizontal"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
+            className="items-stretch"
+          >
+            <ResizablePanel id="workspace-chat-panel" defaultSize={68} minSize={44}>
+              <div className="h-full pr-2">
+                {chatPane}
+              </div>
+            </ResizablePanel>
 
-        <WorkspaceSidePanel
-          sessionId={sessionId}
-          showInlinePreview={!isPreviewOverlay}
-          previewFile={!isPreviewOverlay ? previewFile : null}
-          baseOutputReady={baseOutputReady}
-        />
-      </div>
+            <ResizableHandle withHandle />
+
+            <ResizablePanel
+              id="workspace-preview-panel"
+              defaultSize={32}
+              minSize={24}
+              maxSize={56}
+            >
+              <div className="h-full pl-2">
+                {viewerPane}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      )}
 
       {isPreviewOpen && previewFile && isPreviewOverlay ? <PreviewPanel /> : null}
 

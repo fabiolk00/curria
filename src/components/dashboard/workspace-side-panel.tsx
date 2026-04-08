@@ -13,7 +13,7 @@ type WorkspaceSidePanelProps = {
 }
 
 const panelClassName =
-  'rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]'
+  'flex h-full flex-col rounded-[2rem] border border-border/60 bg-card/85 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]'
 
 export function WorkspaceSidePanel({
   sessionId,
@@ -34,15 +34,15 @@ export function WorkspaceSidePanel({
 
   return (
     <Card className={panelClassName}>
-      <CardHeader className="pt-8">
+      <CardHeader className="shrink-0 pt-8">
         <CardTitle>Template viewer</CardTitle>
         <CardDescription>
           Aqui aparece a pre-visualizacao do PDF gerado.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pb-8">
+      <CardContent className="flex min-h-0 flex-1 flex-col pb-8">
         {showInlinePreview && inlinePreviewFile ? (
-          <div className="h-[calc(100svh-13rem)] min-h-[32rem] overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/70">
+          <div className="min-h-[32rem] flex-1 overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/70">
             <PreviewPanel
               inline
               fileOverride={inlinePreviewFile}
@@ -50,7 +50,7 @@ export function WorkspaceSidePanel({
             />
           </div>
         ) : (
-          <div className="rounded-[1.5rem] border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
+          <div className="flex flex-1 items-center rounded-[1.5rem] border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
             Gere um arquivo.
           </div>
         )}
