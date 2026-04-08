@@ -277,12 +277,18 @@ function SidebarContent({
         isOpen || isMobile ? "gap-3 px-3 py-2.5" : "justify-center px-0 py-2",
       )}
     >
-      <Avatar className="h-9 w-9 border border-border/60">
-        <AvatarImage src={avatarSrc} alt={displayName} />
-        <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
+      {isOpen || isMobile ? (
+        <Avatar className="h-9 w-9 border border-border/60">
+          <AvatarImage src={avatarSrc} alt={displayName} />
+          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/80">
+          <User className="h-4 w-4 text-sidebar-foreground/75" />
+        </div>
+      )}
       <AnimatePresence initial={false}>
         {isOpen || isMobile ? (
           <motion.div
