@@ -218,12 +218,20 @@ export function ChatInterface({
   }
 
   useEffect(() => {
+    const welcomeMessage = createWelcomeMessage(user?.firstName?.trim() || userName.trim() || undefined)
+
     setSessionId(initialSessionId)
-    if (initialSessionId) {
-      setSessionExpired(false)
-      setSessionLimitReached(false)
+    setSessionExpired(false)
+    setSessionLimitReached(false)
+
+    if (!initialSessionId) {
+      setPhase("intake")
+      setAtsScore(undefined)
+      setMessageCount(0)
+      setUploadedFile(null)
+      setMessages([welcomeMessage])
     }
-  }, [initialSessionId])
+  }, [initialSessionId, user?.firstName, userName])
 
   useEffect(() => {
     onStreamingChange?.(isStreaming)

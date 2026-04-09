@@ -357,6 +357,44 @@ describe("ChatInterface", () => {
     })
   })
 
+  it("resets the composer and conversation when the session prop is cleared", async () => {
+    const { rerender } = render(<ChatInterface sessionId="sess_reset" userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i) as HTMLTextAreaElement
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          JSON.stringify({
+            error: "Esta sessÃ£o atingiu o limite de 30 mensagens.",
+            action: "new_session",
+            messageCount: 30,
+            maxMessages: 30,
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    await userEvent.type(textarea, "ForÃ§ar reset")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(textarea).toBeDisabled()
+    })
+
+    rerender(<ChatInterface userName="Fabio" />)
+
+    await waitFor(() => {
+      expect(textarea).not.toBeDisabled()
+    })
+
+    expect(screen.queryByText(/atingiu o limite de mensagens/i)).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /olá,\s+fabio!/i })).toBeInTheDocument()
+  })
+
   it("reads X-Session-Id header and fires onSessionChange before SSE parsing", async () => {
     const onSessionChange = vi.fn()
 

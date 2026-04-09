@@ -351,11 +351,7 @@ function SidebarContent({
           <div className="border-t border-border/30 mt-2 pt-2">
             <button
               onClick={() => {
-                // Explicitly clear session parameter for new conversation
-                const url = new URL(window.location.href)
-                url.searchParams.delete('session')
-                window.history.replaceState(window.history.state, "", url.toString())
-                router.refresh()
+                router.replace("/dashboard")
                 onCloseMobile?.()
               }}
               className={cn(
@@ -543,6 +539,3 @@ export function DashboardSidebar({
     </motion.aside>
   )
 }
-
-
-
