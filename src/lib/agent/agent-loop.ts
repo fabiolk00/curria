@@ -21,6 +21,7 @@ import type {
 } from '@/types/agent'
 
 const EMPTY_ASSISTANT_RECOVERY_PROMPT = 'The previous completion returned no visible assistant text. Respond to the user now with a direct, helpful plain-text answer. Do not call tools. Do not leave the content empty.'
+const LENGTH_RECOVERY_PROMPT = 'Your previous response was cut off by token limits. Continue exactly where it stopped. Do not repeat prior text. Do not call tools.'
 
 type AgentLoopEvent =
   | AgentTextChunk
@@ -174,6 +175,24 @@ function toUsage(
   }
 }
 
+function mergeUsage(
+  current: StreamTurnResult['usage'],
+  next: StreamTurnResult['usage'],
+): StreamTurnResult['usage'] {
+  if (!current) {
+    return next
+  }
+
+  if (!next) {
+    return current
+  }
+
+  return {
+    inputTokens: current.inputTokens + next.inputTokens,
+    outputTokens: current.outputTokens + next.outputTokens,
+  }
+}
+
 async function* streamAssistantTurn(params: {
   session: Session
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
@@ -301,6 +320,62 @@ async function* streamAssistantTurn(params: {
   }
 }
 
+async function* recoverTruncatedTurn(params: {
+  initialTurn: StreamTurnResult
+  session: Session
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
+  cachedSystemPrompt: string
+  requestId: string
+  appUserId: string
+  requestStartedAt: number
+  signal?: AbortSignal
+  maxCompletionTokens: number
+}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
+  let accumulatedAssistantText = params.initialTurn.assistantText
+  let finishReason = params.initialTurn.finishReason
+  let usage = params.initialTurn.usage
+  let recoveryAttempts = 0
+
+  while (finishReason === 'length' && recoveryAttempts < 2 && !params.signal?.aborted) {
+    recoveryAttempts++
+
+    const continuationTurn = yield* streamAssistantTurn({
+      session: params.session,
+      messages: [
+        ...params.messages,
+        { role: 'assistant', content: accumulatedAssistantText },
+        { role: 'user', content: LENGTH_RECOVERY_PROMPT },
+      ],
+      cachedSystemPrompt: params.cachedSystemPrompt,
+      requestId: params.requestId,
+      appUserId: params.appUserId,
+      requestStartedAt: params.requestStartedAt,
+      signal: params.signal,
+      maxCompletionTokens: Math.min(params.maxCompletionTokens, 1200),
+    })
+
+    accumulatedAssistantText += continuationTurn.assistantText
+    finishReason = continuationTurn.finishReason
+    usage = mergeUsage(usage, continuationTurn.usage)
+
+    if (continuationTurn.toolCalls.length > 0) {
+      return {
+        assistantText: accumulatedAssistantText,
+        toolCalls: continuationTurn.toolCalls,
+        finishReason,
+        usage,
+      }
+    }
+  }
+
+  return {
+    assistantText: accumulatedAssistantText,
+    toolCalls: [],
+    finishReason,
+    usage,
+  }
+}
+
 export async function* runAgentLoop(
   params: AgentLoopParams,
 ): AsyncGenerator<AgentLoopEvent> {
@@ -361,7 +436,7 @@ export async function* runAgentLoop(
         systemPromptDirty = false
       }
 
-      const turn = yield* streamAssistantTurn({
+      let turn = yield* streamAssistantTurn({
         session,
         messages,
         cachedSystemPrompt,
@@ -372,6 +447,20 @@ export async function* runAgentLoop(
         maxCompletionTokens: AGENT_CONFIG.maxTokens,
         tools: TOOL_DEFINITIONS,
       })
+
+      if (turn.finishReason === 'length' && turn.toolCalls.length === 0 && turn.assistantText.trim()) {
+        turn = yield* recoverTruncatedTurn({
+          initialTurn: turn,
+          session,
+          messages,
+          cachedSystemPrompt,
+          requestId,
+          appUserId,
+          requestStartedAt,
+          signal,
+          maxCompletionTokens: AGENT_CONFIG.maxTokens,
+        })
+      }
 
       if (turn.usage) {
         trackApiUsage({
@@ -400,10 +489,15 @@ export async function* runAgentLoop(
       } else if (turn.finishReason === 'stop') {
         break
       } else if (turn.finishReason === 'length') {
-        yield createErrorChunk(
-          'The response was too long and was truncated.',
+        logWarn('agent.response.truncated_after_recovery', {
           requestId,
-        )
+          sessionId: session.id,
+          appUserId,
+          phase: session.phase,
+          stateVersion: session.stateVersion,
+          toolIterations,
+          success: true,
+        })
         break
       } else if (!turn.finishReason) {
         yield createErrorChunk(
@@ -609,6 +703,5 @@ export async function* runAgentLoop(
     })
   }
 }
-
 
 

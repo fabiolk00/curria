@@ -396,10 +396,14 @@ describe('runAgentLoop streaming', () => {
     })
   })
 
-  it('emits an error when the streamed response is truncated', async () => {
-    mockCreateChatCompletionStreamWithRetry.mockResolvedValue(
-      mockLengthExceededStream() as never,
-    )
+  it('continues a truncated streamed response instead of surfacing a user-facing error', async () => {
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(
+        mockLengthExceededStream() as never,
+      )
+      .mockResolvedValueOnce(
+        mockTextStream('and now it finishes cleanly.') as never,
+      )
 
     const events = []
     for await (const event of runAgentLoop({
@@ -413,10 +417,17 @@ describe('runAgentLoop streaming', () => {
       events.push(event)
     }
 
-    expect(events).toContainEqual(expect.objectContaining({
-      type: 'error',
-      error: expect.stringContaining('too long and was truncated'),
-    }))
+    expect(events.some((event) => event.type === 'error' && event.error.includes('too long and was truncated'))).toBe(false)
+    expect(events.at(-1)).toMatchObject({
+      type: 'done',
+      sessionId: 'sess_123',
+    })
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'This is a very long response and now it finishes cleanly.',
+    )
   })
 
   it('emits an error when the stream ends without a finish reason', async () => {
