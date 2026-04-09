@@ -19,6 +19,7 @@ import {
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
+import { ChatHistoryNav } from "@/components/dashboard/chat-history-nav"
 import { SessionDocumentsPanel } from "@/components/dashboard/session-documents-panel"
 import { PlanUpdateDialog } from "@/components/dashboard/plan-update-dialog"
 import Logo from "@/components/logo"
@@ -345,6 +346,11 @@ function SidebarContent({
               />
             ))}
           </nav>
+
+          {/* Chat History Below Chat Nav */}
+          <div className="border-t border-border/30 mt-2 pt-2">
+            <ChatHistoryNav isOpen={isOpen || isMobile} />
+          </div>
 
           <SessionDocumentsPanel isSidebarOpen={isOpen || isMobile} />
         </ScrollArea>

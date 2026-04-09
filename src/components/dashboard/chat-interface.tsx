@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useUser } from "@clerk/nextjs"
-import { FileText, Send, Upload, X, Plus, MessageCircle, Loader2 } from "lucide-react"
+import { FileText, Send, Upload, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -633,93 +633,10 @@ export function ChatInterface({
     }
   }
 
-  const [sessions, setSessions] = useState<Array<{ id: string; createdAt: string }>>([])
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false)
-
-  useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        setIsLoadingSessions(true)
-        const response = await fetch(`${typeof window !== 'undefined' ? window.location.origin : ''}/api/session`)
-        const data = await response.json() as { sessions?: any[] }
-        if (data.sessions) {
-          const sessionList = data.sessions
-            .sort((a: any, b: any) => new Date(b.session.createdAt).getTime() - new Date(a.session.createdAt).getTime())
-            .slice(0, 5)
-            .map((ws: any) => ({ id: ws.session.id, createdAt: ws.session.createdAt }))
-          setSessions(sessionList)
-        }
-      } catch (error) {
-        console.error('Failed to load sessions:', error)
-      } finally {
-        setIsLoadingSessions(false)
-      }
-    }
-    loadSessions()
-  }, [])
-
-  const formatSessionTime = (dateString: string): string => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffHours < 1) return 'Just now'
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays === 1) return '1d ago'
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#faf9f5]">
       <div className="px-3 pb-1 pt-3 md:px-4">
         <ChatWindowChrome />
-      </div>
-
-      {/* Chat History Section */}
-      <div className="border-b border-border/30 px-3 py-2 md:px-4">
-        <button
-          onClick={() => {
-            setSessionId(undefined)
-            setMessages([createWelcomeMessage(user?.firstName?.trim() || userName.trim())])
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-muted/50 p-2 text-sm hover:bg-muted transition-colors"
-          title="Start new chat"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Chat</span>
-        </button>
-
-        {sessions.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {sessions.map((session) => (
-              <button
-                key={session.id}
-                onClick={() => {
-                  setSessionId(session.id)
-                  onSessionChange?.(session.id)
-                }}
-                className={cn(
-                  'w-full text-left px-2 py-1.5 rounded text-xs transition-colors flex items-center gap-2',
-                  sessionId === session.id
-                    ? 'bg-accent text-accent-foreground'
-                    : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
-                )}
-                title={`Chat from ${formatSessionTime(session.createdAt)}`}
-              >
-                <MessageCircle className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">#{session.id.slice(0, 6)}</span>
-                <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{formatSessionTime(session.createdAt)}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isLoadingSessions && (
-          <div className="flex items-center justify-center py-2">
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-          </div>
-        )}
       </div>
 
       {messageCount > 0 && (
