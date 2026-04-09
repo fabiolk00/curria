@@ -708,7 +708,7 @@ export function ChatInterface({
             </div>
           )}
 
-          <div className="rounded-[1.75rem] border border-border/35 bg-[#faf9f5] p-3 shadow-[0_18px_45px_-38px_oklch(var(--foreground)/0.7)] backdrop-blur">
+          <div className="rounded-[1.75rem] border border-border/35 bg-[#ffffff] p-3 shadow-[0_18px_45px_-38px_oklch(var(--foreground)/0.7)] backdrop-blur">
             <div className="flex items-end gap-2">
               {copy.allowFileUpload ? (
                 <>
