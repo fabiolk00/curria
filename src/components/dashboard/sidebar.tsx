@@ -7,7 +7,6 @@ import {
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
-  FileText,
   HelpCircle,
   LogOut,
   MessageSquare,
@@ -73,7 +72,7 @@ type ProfileResponse = {
 
 const navItems: NavItem[] = [
   {
-    label: "Meu Perfil",
+    label: "Perfil",
     href: "/dashboard/resumes/new",
     icon: User,
     isActive: (pathname) =>
@@ -83,7 +82,7 @@ const navItems: NavItem[] = [
       pathname.startsWith("/profile/"),
   },
   {
-    label: "Gerenciamento de Vagas",
+    label: "Gerenciamento",
     href: "/resumes",
     icon: BriefcaseBusiness,
     isActive: (pathname) => pathname === "/resumes" || pathname.startsWith("/resumes/"),
@@ -93,18 +92,6 @@ const navItems: NavItem[] = [
     href: "/dashboard",
     icon: MessageSquare,
     isActive: (pathname) => pathname === "/dashboard",
-  },
-  {
-    label: "Currículos",
-    href: "/dashboard/resumes",
-    icon: FileText,
-    isActive: (pathname) => pathname === "/dashboard/resumes" || pathname.startsWith("/dashboard/resumes/"),
-  },
-  {
-    label: "O que é ATS?",
-    href: "/what-is-ats",
-    icon: HelpCircle,
-    isActive: (pathname) => pathname === "/what-is-ats" || pathname.startsWith("/what-is-ats/"),
   },
 ]
 
@@ -530,3 +517,6 @@ export function DashboardSidebar({
     </motion.aside>
   )
 }
+
+
+

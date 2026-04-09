@@ -183,7 +183,7 @@ export default function UserDataPage() {
       setProfileSource(data.profile.source)
       setLastUpdatedAt(data.profile.updatedAt)
       toast.success("Perfil salvo com sucesso.")
-      router.push("/dashboard/resumes")
+      router.push("/dashboard")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
     } finally {
@@ -417,7 +417,7 @@ export default function UserDataPage() {
                 type="button"
                 variant="outline"
                 disabled={isSaving}
-                onClick={() => router.push("/dashboard/resumes")}
+                onClick={() => router.push("/dashboard")}
                 className={cn(secondaryButtonClassName, allSectionsClosed && "h-10 px-4")}
               >
                 Cancelar
@@ -450,3 +450,4 @@ export default function UserDataPage() {
     </div>
   )
 }
+
