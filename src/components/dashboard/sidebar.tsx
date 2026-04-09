@@ -351,9 +351,7 @@ function SidebarContent({
           <div className="border-t border-border/30 mt-2 pt-2">
             <button
               onClick={() => {
-                const url = new URL(window.location.href)
-                url.searchParams.delete('session')
-                window.history.replaceState(window.history.state, "", url.toString())
+                router.push('/dashboard')
                 onCloseMobile?.()
               }}
               className={cn(
