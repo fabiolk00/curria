@@ -1,5 +1,5 @@
 export const AGENT_CONFIG = {
-  maxTokens: 4000,
+  maxTokens: 2500,
   rewriterMaxTokens: 1200,
   ocrMaxTokens: 2000,
   timeout: 45_000,
