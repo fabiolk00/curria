@@ -251,7 +251,7 @@ export function ResumeWorkspace({
           {viewerPane}
         </div>
       ) : (
-        <div className="h-[calc(107svh-4rem)] px-0 py-0">
+        <div className="h-[calc(100svh-4rem)] px-0 py-0">
           <ResizablePanelGroup
             id="resume-workspace-split-view"
             orientation="horizontal"
