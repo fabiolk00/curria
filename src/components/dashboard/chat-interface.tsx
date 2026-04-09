@@ -684,7 +684,7 @@ export function ChatInterface({
 
       <div
         className={cn(
-          "bg-[#faf9f5] px-2 pb-0 pt-1 transition-colors md:px-3",
+          "bg-[#faf9f5] px-2 pb-4 pt-1 transition-colors md:px-3",
           isDragging && "bg-primary/5",
         )}
         onDragOver={handleDragOver}
@@ -764,7 +764,7 @@ export function ChatInterface({
               {copy.sessionLimitText}
             </p>
           ) : (
-            <p className="pb-0 text-center text-xs text-muted-foreground">
+            <p className="text-center text-xs text-muted-foreground">
               {copy.helperText}
             </p>
           )}
