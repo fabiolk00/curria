@@ -51,7 +51,7 @@ export default function DashboardShell({
         activeRecurringPlan={activeRecurringPlan ?? null}
       />
 
-      <main className="h-[calc(100svh-4rem)] min-w-0 flex-1 md:overflow-auto">{children}</main>
+      <main className="h-[calc(107.5svh-4rem)] min-w-0 flex-1 md:overflow-auto">{children}</main>
     </div>
   )
 }
