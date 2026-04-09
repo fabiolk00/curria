@@ -1,4 +1,5 @@
 import React from 'react'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { PreviewPanelProvider } from '@/context/preview-panel-context'
@@ -15,7 +16,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  const appUser = await getCurrentAppUser()
+  const [appUser, clerkUser] = await Promise.all([getCurrentAppUser(), currentUser()])
   if (!appUser) {
     redirect('/login')
   }
@@ -34,6 +35,15 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const activeRecurringPlan = billingInfo?.hasActiveRecurringSubscription
     ? billingInfo.plan
     : null
+  const displayName =
+    clerkUser?.fullName?.trim()
+    || clerkUser?.firstName?.trim()
+    || clerkUser?.username
+    || 'Conta CurrIA'
+  const primaryEmail =
+    clerkUser?.primaryEmailAddress?.emailAddress
+    || clerkUser?.emailAddresses[0]?.emailAddress
+    || ''
 
   return (
     <SidebarProvider>
@@ -44,6 +54,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           renewsIn={renewsIn}
           currentPlan={currentPlan}
           activeRecurringPlan={activeRecurringPlan}
+          userDisplayName={displayName}
+          userEmail={primaryEmail}
+          userImageUrl={clerkUser?.imageUrl ?? null}
         >
           {children}
         </DashboardShell>

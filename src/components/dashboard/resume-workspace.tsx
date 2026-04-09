@@ -93,6 +93,7 @@ export function ResumeWorkspace({
   activeRecurringPlan = null,
   currentCredits = 0,
 }: ResumeWorkspaceProps) {
+  const [hasMounted, setHasMounted] = useState(false)
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
   const [availableCredits, setAvailableCredits] = useState(currentCredits)
   const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null)
@@ -108,8 +109,12 @@ export function ResumeWorkspace({
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "resume-workspace-split-view",
     panelIds: ["workspace-chat-panel", "workspace-preview-panel"],
-    storage: typeof window === "undefined" ? NOOP_LAYOUT_STORAGE : window.localStorage,
+    storage: hasMounted ? window.localStorage : NOOP_LAYOUT_STORAGE,
   })
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   useEffect(() => {
     setAvailableCredits(currentCredits)

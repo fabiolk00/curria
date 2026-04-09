@@ -125,8 +125,8 @@ describe("ChatInterface", () => {
     expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("shows the visible greeting with the Clerk first name", () => {
-    render(<ChatInterface />)
+  it("shows the visible greeting from the explicit server-provided userName", () => {
+    render(<ChatInterface userName="Fabio" />)
 
     expect(screen.getByRole("heading", { name: "Olá, Fabio!" })).toBeInTheDocument()
   })

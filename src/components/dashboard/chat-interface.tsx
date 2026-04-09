@@ -88,10 +88,7 @@ function createWelcomeMessage(firstName?: string): Message {
 Já analisei o seu perfil, qualificações e habilidades com base no que você preencheu em "Meu Perfil".
 
 Envie o texto da vaga ou o link que vamos avaliar o match com ela!`,
-    timestamp: new Date().toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    timestamp: "",
   }
 }
 
@@ -144,13 +141,14 @@ export function ChatInterface({
   onCreditsExhausted,
 }: ChatInterfaceProps) {
   const { user } = useUser()
+  const preferredName = userName.trim() || user?.firstName?.trim() || undefined
   const copy = useMemo(
-    () => getChatCopy(user?.firstName?.trim() || userName.trim() || undefined),
-    [user?.firstName, userName],
+    () => getChatCopy(preferredName),
+    [preferredName],
   )
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
   const [messages, setMessages] = useState<Message[]>([
-    createWelcomeMessage(user?.firstName?.trim() || userName.trim() || undefined),
+    createWelcomeMessage(preferredName),
   ])
   const [input, setInput] = useState("")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -218,7 +216,7 @@ export function ChatInterface({
   }
 
   useEffect(() => {
-    const welcomeMessage = createWelcomeMessage(user?.firstName?.trim() || userName.trim() || undefined)
+    const welcomeMessage = createWelcomeMessage(preferredName)
 
     setSessionId(initialSessionId)
     setSessionExpired(false)
@@ -231,7 +229,7 @@ export function ChatInterface({
       setUploadedFile(null)
       setMessages([welcomeMessage])
     }
-  }, [initialSessionId, user?.firstName, userName])
+  }, [initialSessionId, preferredName])
 
   useEffect(() => {
     onStreamingChange?.(isStreaming)
@@ -271,7 +269,7 @@ export function ChatInterface({
   }, [])
 
   useEffect(() => {
-    const welcomeMessage = createWelcomeMessage(user?.firstName?.trim() || userName.trim() || undefined)
+    const welcomeMessage = createWelcomeMessage(preferredName)
 
     if (!sessionId) {
       setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
@@ -329,7 +327,7 @@ export function ChatInterface({
     return () => {
       cancelled = true
     }
-  }, [sessionId, user?.firstName, userName])
+  }, [preferredName, sessionId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })

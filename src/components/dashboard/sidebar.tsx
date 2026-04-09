@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
 import { AnimatePresence, motion } from "motion/react"
 import {
@@ -57,6 +57,9 @@ interface DashboardSidebarProps {
   renewsIn?: string
   currentPlan?: PlanSlug | null
   activeRecurringPlan?: PlanSlug | null
+  userDisplayName?: string
+  userEmail?: string
+  userImageUrl?: string | null
 }
 
 type NavItem = {
@@ -183,6 +186,9 @@ function SidebarContent({
   renewsIn,
   currentPlan,
   activeRecurringPlan,
+  userDisplayName,
+  userEmail,
+  userImageUrl,
 }: DashboardSidebarProps & {
   isOpen: boolean
   isMobile: boolean
@@ -198,13 +204,17 @@ function SidebarContent({
   const percentage =
     hasBillingData && maxCredits > 0 ? (creditsRemaining / maxCredits) * 100 : 0
   const displayName =
-    user?.fullName?.trim() || user?.firstName?.trim() || user?.username || "Conta CurrIA"
-  const email = user?.primaryEmailAddress?.emailAddress || ""
+    userDisplayName
+    || user?.fullName?.trim()
+    || user?.firstName?.trim()
+    || user?.username
+    || "Conta CurrIA"
+  const email = userEmail || user?.primaryEmailAddress?.emailAddress || ""
   const initials = getInitials(displayName, email)
   const currentCredits = creditsRemaining ?? 0
   const planLabel = currentPlan ? `Plano ${PLANS[currentPlan].name}` : "Plano indisponível"
-  const avatarSrc = profilePhotoUrl ?? user?.imageUrl ?? undefined
-  const shortcutLabel = useMemo(getShortcutLabel, [])
+  const avatarSrc = profilePhotoUrl ?? userImageUrl ?? user?.imageUrl ?? undefined
+  const [shortcutLabel, setShortcutLabel] = useState("Ctrl+B")
 
   useEffect(() => {
     let isMounted = true
@@ -237,6 +247,10 @@ function SidebarContent({
     return () => {
       isMounted = false
     }
+  }, [])
+
+  useEffect(() => {
+    setShortcutLabel(getShortcutLabel())
   }, [])
 
   const handleSignOut = async (): Promise<void> => {
@@ -485,6 +499,9 @@ export function DashboardSidebar({
   renewsIn,
   currentPlan,
   activeRecurringPlan,
+  userDisplayName,
+  userEmail,
+  userImageUrl,
 }: DashboardSidebarProps) {
   const isMobile = useIsMobile()
   const {
@@ -512,6 +529,9 @@ export function DashboardSidebar({
             renewsIn={renewsIn}
             currentPlan={currentPlan}
             activeRecurringPlan={activeRecurringPlan}
+            userDisplayName={userDisplayName}
+            userEmail={userEmail}
+            userImageUrl={userImageUrl}
           />
         </SheetContent>
       </Sheet>
@@ -537,6 +557,9 @@ export function DashboardSidebar({
         renewsIn={renewsIn}
         currentPlan={currentPlan}
         activeRecurringPlan={activeRecurringPlan}
+        userDisplayName={userDisplayName}
+        userEmail={userEmail}
+        userImageUrl={userImageUrl}
       />
     </motion.aside>
   )

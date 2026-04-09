@@ -1,4 +1,5 @@
 import React from "react"
+import { currentUser } from "@clerk/nextjs/server"
 
 import { ResumeWorkspace } from "@/components/dashboard/resume-workspace"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
@@ -19,7 +20,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? rawSessionParam[0]
     : rawSessionParam
 
-  const appUser = await getCurrentAppUser()
+  const [appUser, clerkUser] = await Promise.all([getCurrentAppUser(), currentUser()])
   let billingInfo = null
   if (appUser) {
     try {
@@ -31,11 +32,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const currentCredits = appUser?.creditAccount.creditsRemaining ?? 0
   const activeRecurringPlan = billingInfo?.hasActiveRecurringSubscription ? billingInfo.plan : null
+  const displayName =
+    clerkUser?.firstName?.trim()
+    || clerkUser?.fullName?.trim()
+    || clerkUser?.username
+    || "Você"
 
   return (
     <ResumeWorkspace
       initialSessionId={initialSessionId || undefined}
-      userName={'Voc\u00EA'}
+      userName={displayName}
       activeRecurringPlan={activeRecurringPlan}
       currentCredits={currentCredits}
     />

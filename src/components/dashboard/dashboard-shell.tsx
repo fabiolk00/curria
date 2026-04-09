@@ -16,6 +16,9 @@ interface DashboardShellProps {
   renewsIn?: string | null
   currentPlan?: PlanSlug | null
   activeRecurringPlan?: PlanSlug | null
+  userDisplayName?: string
+  userEmail?: string
+  userImageUrl?: string | null
 }
 
 export default function DashboardShell({
@@ -25,6 +28,9 @@ export default function DashboardShell({
   renewsIn,
   currentPlan,
   activeRecurringPlan,
+  userDisplayName,
+  userEmail,
+  userImageUrl,
 }: DashboardShellProps) {
   const { openMobile } = useSidebarContext()
   const isMobile = useIsMobile()
@@ -49,6 +55,9 @@ export default function DashboardShell({
         renewsIn={renewsIn ?? undefined}
         currentPlan={currentPlan ?? null}
         activeRecurringPlan={activeRecurringPlan ?? null}
+        userDisplayName={userDisplayName}
+        userEmail={userEmail}
+        userImageUrl={userImageUrl ?? null}
       />
 
       <main className="h-[calc(107.5svh-4rem)] min-w-0 flex-1 md:overflow-auto">{children}</main>
