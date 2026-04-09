@@ -32,7 +32,7 @@ const HTTP_STATUS_TO_TOOL_ERROR_CODE: Readonly<Partial<Record<number, ToolErrorC
   429: TOOL_ERROR_CODES.RATE_LIMITED,
 }
 
-export const TOOL_ERROR_HTTP_STATUS: Readonly<Record<ToolErrorCode, number>> = {
+const TOOL_ERROR_HTTP_STATUS: Readonly<Record<ToolErrorCode, number>> = {
   [TOOL_ERROR_CODES.VALIDATION_ERROR]: 400,
   [TOOL_ERROR_CODES.PARSE_ERROR]: 400,
   [TOOL_ERROR_CODES.LLM_INVALID_OUTPUT]: 500,

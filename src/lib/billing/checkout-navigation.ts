@@ -1,7 +1,7 @@
 import type { PlanSlug } from '@/lib/plans'
 
 export type PaidPlanSlug = Exclude<PlanSlug, 'free'>
-export const DEFAULT_CHECKOUT_ONBOARDING_PLAN: PaidPlanSlug = 'monthly'
+const DEFAULT_CHECKOUT_ONBOARDING_PLAN: PaidPlanSlug = 'monthly'
 
 export function isPaidPlanSlug(value: string | null | undefined): value is PaidPlanSlug {
   return value === 'unit' || value === 'monthly' || value === 'pro'

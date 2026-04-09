@@ -1,7 +1,7 @@
 import OpenAI, { APIError } from 'openai'
 import { Stream } from 'openai/streaming'
 
-export const OPENAI_RETRYABLE_STATUS_CODES = [429, 500, 502, 503] as const
+const OPENAI_RETRYABLE_STATUS_CODES = [429, 500, 502, 503] as const
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -97,7 +97,7 @@ export async function callOpenAIWithRetry(
   throw lastError
 }
 
-export async function callOpenAIWithRetryGeneric<T>(
+async function callOpenAIWithRetryGeneric<T>(
   fn: (signal?: AbortSignal) => Promise<T>,
   maxRetries = 3,
   timeoutMs?: number,
@@ -166,7 +166,7 @@ export async function callOpenAIWithRetryGeneric<T>(
  * @param timeoutMs - Per-attempt timeout in milliseconds (optional)
  * @returns Promise resolving to ChatCompletion
  */
-export async function createChatCompletionWithRetry(
+async function createChatCompletionWithRetry(
   openaiClient: OpenAI,
   params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
   maxRetries = 3,

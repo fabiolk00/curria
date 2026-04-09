@@ -13,7 +13,7 @@ export const AGENT_CONFIG = {
 
 export const DEFAULT_OPENAI_MODEL = 'gpt-5-nano' as const
 
-export const SUPPORTED_OPENAI_MODELS = [
+const SUPPORTED_OPENAI_MODELS = [
   DEFAULT_OPENAI_MODEL,
   'gpt-5.4-nano',
   'gpt-5-mini',
@@ -22,7 +22,7 @@ export const SUPPORTED_OPENAI_MODELS = [
   'gpt-5.4-mini',
 ] as const
 
-export type OpenAIModelName = typeof SUPPORTED_OPENAI_MODELS[number]
+type OpenAIModelName = typeof SUPPORTED_OPENAI_MODELS[number]
 
 function createUniformModelConfig(model: OpenAIModelName) {
   return {
@@ -75,5 +75,5 @@ export const ACTIVE_OPENAI_MODEL = resolveOpenAIModel(
 )
 export const MODEL_CONFIG = createUniformModelConfig(ACTIVE_OPENAI_MODEL)
 
-export type AgentConfig = typeof AGENT_CONFIG
-export type ModelConfig = typeof MODEL_CONFIG
+type AgentConfig = typeof AGENT_CONFIG
+type ModelConfig = typeof MODEL_CONFIG

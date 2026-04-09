@@ -1,4 +1,9 @@
-import type { GeneratedOutput, ManualEditInput } from '@/types/agent'
+import type {
+  GeneratedOutput,
+  ManualEditInput,
+  ResumeEditorSaveInput,
+  ResumeEditorSaveOutput,
+} from '@/types/agent'
 import type { SessionWorkspace } from '@/types/dashboard'
 
 export class DashboardApiError extends Error {
@@ -45,6 +50,26 @@ export async function manualEditBaseSection(
     },
     body: JSON.stringify(input),
   })
+
+  return {
+    changed: response.changed,
+  }
+}
+
+export async function saveEditedResume(
+  sessionId: string,
+  input: ResumeEditorSaveInput,
+): Promise<{ changed: boolean }> {
+  const response = await requestJson<Extract<ResumeEditorSaveOutput, { success: true }>>(
+    `/api/session/${sessionId}/manual-edit`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    },
+  )
 
   return {
     changed: response.changed,

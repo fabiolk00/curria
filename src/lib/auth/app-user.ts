@@ -126,7 +126,7 @@ export async function getCurrentAppUser(req?: Parameters<typeof getAuth>[0]): Pr
   return appUser.status === 'active' ? appUser : null
 }
 
-export async function findAppUserIdByClerkUserId(clerkUserId: string): Promise<string | null> {
+async function findAppUserIdByClerkUserId(clerkUserId: string): Promise<string | null> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase
     .from('user_auth_identities')
@@ -142,7 +142,7 @@ export async function findAppUserIdByClerkUserId(clerkUserId: string): Promise<s
   return data?.user_id ?? null
 }
 
-export async function resolveAppUserIdFromReference(referenceUserId: string): Promise<string | null> {
+async function resolveAppUserIdFromReference(referenceUserId: string): Promise<string | null> {
   const supabase = getSupabaseAdminClient()
 
   const { data: directUser, error: directUserError } = await supabase

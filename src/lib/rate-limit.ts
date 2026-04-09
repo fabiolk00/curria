@@ -14,7 +14,7 @@ export const agentLimiter = new Ratelimit({
 })
 
 // Public routes (free analysis): 5 requests per minute per IP
-export const publicLimiter = new Ratelimit({
+const publicLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(5, '1 m'),
   prefix:  'curria:public',

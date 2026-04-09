@@ -1,16 +1,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export type TimestampConvention = 'none' | 'append_only' | 'mutable'
-export type IdConvention = 'generic' | 'domain'
+type TimestampConvention = 'none' | 'append_only' | 'mutable'
+type IdConvention = 'generic' | 'domain'
 
-export type TableConvention = {
+type TableConvention = {
   id: IdConvention
   timestamps: TimestampConvention
   requiredFunctionInsertColumns?: string[]
 }
 
-export type AuditFinding = {
+type AuditFinding = {
   code:
     | 'UNCLASSIFIED_TABLE'
     | 'MISSING_ID_DEFAULT'
@@ -45,7 +45,7 @@ type FunctionDefinition = {
   inserts: FunctionInsert[]
 }
 
-export const TABLE_CONVENTIONS: Record<string, TableConvention> = {
+const TABLE_CONVENTIONS: Record<string, TableConvention> = {
   users: {
     id: 'domain',
     timestamps: 'mutable',

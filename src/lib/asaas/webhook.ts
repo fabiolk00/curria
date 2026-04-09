@@ -71,7 +71,7 @@ export const AsaasWebhookEventSchema = z.object({
 })
 
 export type AsaasPayment = z.infer<typeof AsaasPaymentSchema>
-export type AsaasSubscription = z.infer<typeof AsaasSubscriptionSchema>
+type AsaasSubscription = z.infer<typeof AsaasSubscriptionSchema>
 export type AsaasWebhookEvent = z.infer<typeof AsaasWebhookEventSchema>
 
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/

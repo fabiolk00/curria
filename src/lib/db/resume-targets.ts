@@ -68,6 +68,27 @@ export async function createResumeTarget(input: {
   return mapResumeTargetRow(data as ResumeTargetRow)
 }
 
+export async function updateResumeTargetCvStateWithVersion(input: {
+  sessionId: string
+  userId: string
+  targetId: string
+  derivedCvState: CVState
+}): Promise<ResumeTarget> {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase.rpc('update_resume_target_with_version', {
+    p_session_id: input.sessionId,
+    p_user_id: input.userId,
+    p_target_id: input.targetId,
+    p_derived_cv_state: cloneCvState(input.derivedCvState),
+  })
+
+  if (error || !data) {
+    throw new Error(`Failed to update resume target: ${error?.message}`)
+  }
+
+  return mapResumeTargetRow(data as ResumeTargetRow)
+}
+
 export async function getResumeTargetsForSession(sessionId: string): Promise<ResumeTarget[]> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase

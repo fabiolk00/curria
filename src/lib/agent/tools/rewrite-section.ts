@@ -271,7 +271,4 @@ Rules:
   }
 }
 
-export {
-  buildRewritePatch,
-  validateRewritePayload,
-}
+

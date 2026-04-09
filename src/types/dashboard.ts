@@ -6,7 +6,7 @@ import type {
   GapAnalysisResult,
 } from '@/types/cv'
 
-export type SerializedTimelineEntry = {
+type SerializedTimelineEntry = {
   id: string
   sessionId: string
   targetResumeId?: string
@@ -133,12 +133,12 @@ export type SessionWorkspace = {
   targets: SerializedResumeTarget[]
 }
 
-export type CompareSnapshotRef =
+type CompareSnapshotRef =
   | { kind: 'base' }
   | { kind: 'version'; id: string }
   | { kind: 'target'; id: string }
 
-export type CompareSnapshotsResponse = {
+type CompareSnapshotsResponse = {
   sessionId: string
   left: {
     kind: 'base' | 'version' | 'target'

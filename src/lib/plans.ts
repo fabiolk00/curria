@@ -68,7 +68,7 @@ export const PLANS = {
 } as const
 
 export type PlanSlug = keyof typeof PLANS
-export type Plan = (typeof PLANS)[PlanSlug]
+type Plan = (typeof PLANS)[PlanSlug]
 
 /**
  * Helper to format price for display

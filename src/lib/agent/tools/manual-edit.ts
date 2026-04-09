@@ -46,7 +46,7 @@ export const ManualEditInputSchema = z.discriminatedUnion('section', [
   }),
 ])
 
-export type ValidatedManualEditInput = z.infer<typeof ManualEditInputSchema>
+type ValidatedManualEditInput = z.infer<typeof ManualEditInputSchema>
 
 function buildCvStatePatch(input: ValidatedManualEditInput): Partial<CVState> {
   switch (input.section) {

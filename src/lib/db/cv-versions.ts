@@ -33,7 +33,7 @@ function compareCvVersionRecency(
   return left.id.localeCompare(right.id)
 }
 
-export function serializeCvSnapshotForComparison(snapshot: CVState): string {
+function serializeCvSnapshotForComparison(snapshot: CVState): string {
   return JSON.stringify({
     fullName: snapshot.fullName,
     email: snapshot.email,
@@ -64,18 +64,18 @@ export function serializeCvSnapshotForComparison(snapshot: CVState): string {
   })
 }
 
-export function areCvSnapshotsIdentical(left: CVState, right: CVState): boolean {
+function areCvSnapshotsIdentical(left: CVState, right: CVState): boolean {
   return serializeCvSnapshotForComparison(left) === serializeCvSnapshotForComparison(right)
 }
 
-export function isCvVersionInComparisonScope(
+function isCvVersionInComparisonScope(
   version: Pick<CVVersion, 'targetResumeId'>,
   targetResumeId?: string,
 ): boolean {
   return normalizeTargetResumeId(version.targetResumeId) === normalizeTargetResumeId(targetResumeId)
 }
 
-export function getLatestRelevantCvVersion(
+function getLatestRelevantCvVersion(
   versions: readonly CVVersion[],
   targetResumeId?: string,
 ): CVVersion | undefined {
@@ -169,7 +169,7 @@ export async function createCvVersion(input: {
   return mapCvVersionRow(data as CVVersionRow)
 }
 
-export async function getCvVersionsForSession(sessionId: string): Promise<CVVersion[]> {
+async function getCvVersionsForSession(sessionId: string): Promise<CVVersion[]> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase
     .from('cv_versions')

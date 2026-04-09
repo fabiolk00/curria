@@ -10,11 +10,11 @@ import { getPlan, type PlanSlug } from '@/lib/plans'
 
 type BillingApplyResult = 'processed' | 'duplicate'
 export type BillingStatus = 'active' | 'canceled' | 'past_due'
-export type BillingCreditGrantEventType =
+type BillingCreditGrantEventType =
   | 'PAYMENT_SETTLED'
   | 'SUBSCRIPTION_STARTED'
   | 'SUBSCRIPTION_RENEWED'
-export type BillingSubscriptionMetadataEventType =
+type BillingSubscriptionMetadataEventType =
   | 'SUBSCRIPTION_UPDATED'
   | 'SUBSCRIPTION_CANCELED'
 
@@ -35,7 +35,7 @@ type BillingError = Error & {
   status: number
 }
 
-export type PersistedSubscriptionMetadata = {
+type PersistedSubscriptionMetadata = {
   appUserId: string
   plan: PlanSlug
   asaasSubscriptionId: string
@@ -43,7 +43,7 @@ export type PersistedSubscriptionMetadata = {
   status: string
 }
 
-export type CreditGrantRequest = {
+type CreditGrantRequest = {
   appUserId: string
   eventFingerprint: string
   eventPayload: AsaasWebhookEvent
@@ -61,7 +61,7 @@ export type CreditGrantRequest = {
     | 'subscription_renewed'
 }
 
-export type SubscriptionMetadataUpdateRequest = {
+type SubscriptionMetadataUpdateRequest = {
   appUserId: string
   eventFingerprint: string
   eventPayload: AsaasWebhookEvent

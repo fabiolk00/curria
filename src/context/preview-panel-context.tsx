@@ -21,6 +21,7 @@ type PreviewPanelContextValue = {
   close: () => void
   getCachedUrl: (key: string) => string | null
   setCachedUrl: (key: string, url: string) => void
+  invalidateCache: (key: string) => void
 }
 
 const PreviewPanelContext = createContext<PreviewPanelContextValue | null>(null)
@@ -60,9 +61,21 @@ export function PreviewPanelProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const invalidateCache = useCallback((key: string) => {
+    urlCache.current.delete(key)
+  }, [])
+
   return (
     <PreviewPanelContext.Provider
-      value={{ isOpen: file !== null, file, open, close, getCachedUrl, setCachedUrl }}
+      value={{
+        isOpen: file !== null,
+        file,
+        open,
+        close,
+        getCachedUrl,
+        setCachedUrl,
+        invalidateCache,
+      }}
     >
       {children}
     </PreviewPanelContext.Provider>

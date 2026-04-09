@@ -180,7 +180,7 @@ export function mergeToolPatch(session: Session, patch: ToolPatch): Session {
   }
 }
 
-export async function getUserSessions(appUserId: string, limit = 20): Promise<Session[]> {
+async function getUserSessions(appUserId: string, limit = 20): Promise<Session[]> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase
     .from('sessions')

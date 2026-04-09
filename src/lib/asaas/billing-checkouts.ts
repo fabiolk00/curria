@@ -90,7 +90,7 @@ async function updateCheckout(
   }
 }
 
-export function generateCheckoutReference(): string {
+function generateCheckoutReference(): string {
   return randomUUID()
 }
 

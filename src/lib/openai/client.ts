@@ -27,7 +27,7 @@ export function resolveOpenAIBaseUrl(envValue = process.env.OPENAI_BASE_URL): st
   }
 }
 
-export function getOpenAIClient(): OpenAI {
+function getOpenAIClient(): OpenAI {
   if (!openaiInstance) {
     const baseURL = resolveOpenAIBaseUrl()
 

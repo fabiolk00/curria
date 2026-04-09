@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { Download, ExternalLink, Loader2, X } from 'lucide-react'
+import { Download, ExternalLink, Loader2, Pencil, X } from 'lucide-react'
 
 import type { PreviewFile } from '@/context/preview-panel-context'
 import { usePreviewPanel } from '@/context/preview-panel-context'
 import { usePreviewPanelOverlay } from '@/hooks/use-preview-panel-overlay'
 import { getDownloadUrls } from '@/lib/dashboard/workspace-client'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+
+import { ResumeEditorModal } from './resume-editor-modal'
 
 type PreviewPanelProps = {
   inline?: boolean
@@ -73,10 +75,11 @@ function PreviewPanelContent({
   onClose: () => void
   showCloseButton: boolean
 }) {
-  const { getCachedUrl, setCachedUrl } = usePreviewPanel()
+  const { getCachedUrl, invalidateCache, setCachedUrl } = usePreviewPanel()
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
 
   const cacheKey = `${file.sessionId}:${file.targetId ?? 'base'}`
 
@@ -152,6 +155,15 @@ function PreviewPanelContent({
             <>
               <button
                 type="button"
+                onClick={() => setIsEditorOpen(true)}
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                title="Edit resume"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleDownload}
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Baixar PDF"
@@ -212,6 +224,17 @@ function PreviewPanelContent({
           />
         ) : null}
       </div>
+
+      <ResumeEditorModal
+        sessionId={file.sessionId}
+        targetId={file.targetId}
+        open={isEditorOpen}
+        onOpenChange={setIsEditorOpen}
+        onSaved={() => {
+          invalidateCache(cacheKey)
+          void fetchUrls()
+        }}
+      />
     </div>
   )
 }

@@ -4,7 +4,11 @@ import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 
-import { createResumeTarget, updateResumeTargetGeneratedOutput } from './resume-targets'
+import {
+  createResumeTarget,
+  updateResumeTargetCvStateWithVersion,
+  updateResumeTargetGeneratedOutput,
+} from './resume-targets'
 
 vi.mock('@/lib/db/supabase-admin', () => ({
   getSupabaseAdminClient: vi.fn(),
@@ -133,5 +137,80 @@ describe('resume targets', () => {
 
     expect(updateEqSession).toHaveBeenCalledWith('session_id', 'sess_123')
     expect(updateEqId).toHaveBeenCalledWith('id', 'target_123')
+  })
+
+  it('updates the target state and version snapshot through a single transactional RPC', async () => {
+    const persistedSnapshots: CVState[] = []
+
+    vi.mocked(getSupabaseAdminClient).mockReturnValue({
+      rpc: vi.fn((fn: string, args: {
+        p_session_id: string
+        p_target_id: string
+        p_user_id: string
+        p_derived_cv_state: CVState
+      }) => {
+        if (fn !== 'update_resume_target_with_version') {
+          throw new Error(`Unexpected RPC: ${fn}`)
+        }
+
+        persistedSnapshots.push(args.p_derived_cv_state)
+
+        return Promise.resolve({
+          data: {
+            id: args.p_target_id,
+            session_id: args.p_session_id,
+            target_job_description: 'AWS backend role',
+            derived_cv_state: args.p_derived_cv_state,
+            gap_analysis: null,
+            generated_output: {
+              status: 'ready',
+              docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
+              pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
+              generatedAt: '2026-03-27T12:30:00.000Z',
+            },
+            created_at: '2026-03-27T12:00:00.000Z',
+            updated_at: '2026-03-27T12:45:00.000Z',
+          },
+          error: null,
+        })
+      }),
+    } as unknown as ReturnType<typeof getSupabaseAdminClient>)
+
+    const updatedTarget = await updateResumeTargetCvStateWithVersion({
+      sessionId: 'sess_123',
+      targetId: 'target_123',
+      userId: 'usr_123',
+      derivedCvState: {
+        ...buildDerivedCvState(),
+        summary: 'Updated target summary.',
+      },
+    })
+
+    expect(updatedTarget.id).toBe('target_123')
+    expect(updatedTarget.derivedCvState.summary).toBe('Updated target summary.')
+    expect(persistedSnapshots).toEqual([
+      {
+        ...buildDerivedCvState(),
+        summary: 'Updated target summary.',
+      },
+    ])
+  })
+
+  it('surfaces transactional target update failures', async () => {
+    vi.mocked(getSupabaseAdminClient).mockReturnValue({
+      rpc: vi.fn(() => Promise.resolve({
+        data: null,
+        error: {
+          message: 'transaction failed after target update attempt',
+        },
+      })),
+    } as unknown as ReturnType<typeof getSupabaseAdminClient>)
+
+    await expect(updateResumeTargetCvStateWithVersion({
+      sessionId: 'sess_123',
+      targetId: 'target_123',
+      userId: 'usr_123',
+      derivedCvState: buildDerivedCvState(),
+    })).rejects.toThrow('Failed to update resume target')
   })
 })

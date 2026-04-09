@@ -50,7 +50,7 @@ const ResumeIngestionSchema = z.object({
 
 type ResumeIngestionPayload = z.infer<typeof ResumeIngestionSchema>
 
-export type ResumeIngestionResult = {
+type ResumeIngestionResult = {
   patch?: ToolPatch
   confidenceScore?: number
   strategy: 'populate_empty' | 'merge_preserving_existing' | 'unstructured_only'
@@ -373,7 +373,4 @@ Rules:
   }
 }
 
-export {
-  buildCvStatePatch,
-  parseResumeIngestionPayload,
-}
+

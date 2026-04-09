@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ResumeTarget, Session } from '@/types/agent'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import { dispatchTool } from '@/lib/agent/tools'
 import { manualEditSection } from '@/lib/agent/tools/manual-edit'
+import {
+  getResumeTargetForSession,
+  updateResumeTargetCvStateWithVersion,
+} from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession } from '@/lib/db/sessions'
 
 import { POST } from './route'
@@ -21,6 +26,15 @@ vi.mock('@/lib/agent/tools/manual-edit', async () => {
     manualEditSection: vi.fn(actual.manualEditSection),
   }
 })
+
+vi.mock('@/lib/agent/tools', () => ({
+  dispatchTool: vi.fn(),
+}))
+
+vi.mock('@/lib/db/resume-targets', () => ({
+  getResumeTargetForSession: vi.fn(),
+  updateResumeTargetCvStateWithVersion: vi.fn(),
+}))
 
 vi.mock('@/lib/db/sessions', () => ({
   getSession: vi.fn(),
@@ -115,6 +129,8 @@ function buildSession(targets?: ResumeTarget[]): Session & { resumeTargets?: Res
 describe('manual edit route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({ success: true }))
+    vi.mocked(getResumeTargetForSession).mockResolvedValue(null)
   })
 
   it('creates a manual version for a successful canonical edit', async () => {
@@ -243,5 +259,175 @@ describe('manual edit route', () => {
 
     expect(response.status).toBe(200)
     expect(target.derivedCvState.skills).toEqual(['TypeScript', 'AWS'])
+  })
+
+  it('saves the full base cvState and regenerates files in one request', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        body: JSON.stringify({
+          scope: 'base',
+          cvState: {
+            ...buildSession().cvState,
+            summary: 'Updated base summary.',
+          },
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'base',
+      changed: true,
+    })
+    expect(applyToolPatchWithVersion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sess_123' }),
+      {
+        cvState: expect.objectContaining({
+          summary: 'Updated base summary.',
+        }),
+      },
+      'manual',
+    )
+    expect(dispatchTool).toHaveBeenCalledWith(
+      'generate_file',
+      expect.objectContaining({
+        cv_state: expect.objectContaining({
+          summary: 'Updated base summary.',
+        }),
+        target_id: undefined,
+      }),
+      expect.objectContaining({ id: 'sess_123' }),
+    )
+  })
+
+  it('skips persistence and generation when the full base cvState is unchanged', async () => {
+    const session = buildSession()
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(session)
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        body: JSON.stringify({
+          scope: 'base',
+          cvState: session.cvState,
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'base',
+      changed: false,
+    })
+    expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
+    expect(dispatchTool).not.toHaveBeenCalled()
+  })
+
+  it('updates the current target resume and regenerates target artifacts', async () => {
+    const target = buildTarget()
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession([target]))
+    vi.mocked(getResumeTargetForSession).mockResolvedValue(target)
+    vi.mocked(updateResumeTargetCvStateWithVersion).mockResolvedValue({
+      ...target,
+      derivedCvState: {
+        ...target.derivedCvState,
+        summary: 'Updated target summary.',
+      },
+    })
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        body: JSON.stringify({
+          scope: 'target',
+          targetId: 'target_123',
+          cvState: {
+            ...target.derivedCvState,
+            summary: 'Updated target summary.',
+          },
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'target',
+      targetId: 'target_123',
+      changed: true,
+    })
+    expect(updateResumeTargetCvStateWithVersion).toHaveBeenCalledWith({
+      sessionId: 'sess_123',
+      targetId: 'target_123',
+      userId: 'usr_123',
+      derivedCvState: expect.objectContaining({
+        summary: 'Updated target summary.',
+      }),
+    })
+    expect(dispatchTool).toHaveBeenCalledWith(
+      'generate_file',
+      expect.objectContaining({
+        cv_state: expect.objectContaining({
+          summary: 'Updated target summary.',
+        }),
+        target_id: 'target_123',
+      }),
+      expect.objectContaining({ id: 'sess_123' }),
+    )
+  })
+
+  it('returns 404 when the requested target resume does not exist', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(getResumeTargetForSession).mockResolvedValue(null)
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        body: JSON.stringify({
+          scope: 'target',
+          targetId: 'target_missing',
+          cvState: buildSession().cvState,
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(404)
+    expect(updateResumeTargetCvStateWithVersion).not.toHaveBeenCalled()
+    expect(dispatchTool).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid full-state payloads', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        body: JSON.stringify({
+          scope: 'base',
+          cvState: {
+            summary: 'Incomplete payload',
+          },
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(400)
+    expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
+    expect(dispatchTool).not.toHaveBeenCalled()
   })
 })

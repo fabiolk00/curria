@@ -1,4 +1,4 @@
-﻿import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
   BorderStyle,
   Document,
@@ -753,5 +753,5 @@ export const generateFileDeps = {
   upload,
 }
 
-export type { GenerateFileExecutionResult, SupabaseStorageClient }
+
 

@@ -143,7 +143,7 @@ export type ScoreATSInput = {
   job_description?: string
 }
 
-export type ScoreATSOutput =
+type ScoreATSOutput =
   | { success: true; result: ATSScoreResult }
   | ToolFailure
 
@@ -198,7 +198,7 @@ export type SetPhaseInput = {
   reason?: string
 }
 
-export type SetPhaseOutput =
+type SetPhaseOutput =
   | { success: true; phase: Phase }
   | ToolFailure
 
@@ -247,6 +247,17 @@ export type ManualEditInput =
       value: CertificationEntry[]
     }
 
+export type ResumeEditorSaveInput =
+  | {
+      scope: 'base'
+      cvState: CVState
+    }
+  | {
+      scope: 'target'
+      targetId: string
+      cvState: CVState
+    }
+
 export type ManualEditOutput =
   | {
       success: true
@@ -255,11 +266,21 @@ export type ManualEditOutput =
     }
   | ToolFailure
 
+export type ResumeEditorSaveOutput =
+  | {
+      success: true
+      changed: boolean
+      scope: 'base' | 'target'
+      targetId?: string
+    }
+  | ToolFailure
+  | ToolFailure
+
 export type CreateTargetResumeInput = {
   target_job_description: string
 }
 
-export type CreateTargetResumeOutput =
+type CreateTargetResumeOutput =
   | {
       success: true
       targetId: string
@@ -271,7 +292,7 @@ export type CreateTargetResumeOutput =
 
 // ── Agent API request/response ────────────────────────────────────────
 
-export type AgentRequest = {
+type AgentRequest = {
   sessionId: string
   message: string
   file?: string   // base64

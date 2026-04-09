@@ -6,7 +6,7 @@ type SchemaContactPoint = {
   email: string
 }
 
-export interface SchemaOrganization {
+interface SchemaOrganization {
   "@context": string
   "@type": "Organization"
   name: string
@@ -15,7 +15,7 @@ export interface SchemaOrganization {
   contactPoint?: SchemaContactPoint
 }
 
-export interface SchemaSoftwareApplication {
+interface SchemaSoftwareApplication {
   "@context": string
   "@type": "SoftwareApplication"
   name: string
@@ -31,7 +31,7 @@ export interface SchemaSoftwareApplication {
   }>
 }
 
-export interface SchemaFAQPage {
+interface SchemaFAQPage {
   "@context": string
   "@type": "FAQPage"
   mainEntity: Array<{

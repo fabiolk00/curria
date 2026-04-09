@@ -31,7 +31,7 @@ type AgentLoopEvent =
   | AgentDoneChunk
   | AgentErrorChunk
 
-export type AgentLoopParams = {
+type AgentLoopParams = {
   session: Session
   userMessage: string
   appUserId: string
@@ -41,7 +41,7 @@ export type AgentLoopParams = {
   signal?: AbortSignal
 }
 
-export type AccumulatedToolCall = {
+type AccumulatedToolCall = {
   id: string
   name: string
   argumentsRaw: string
@@ -581,5 +581,5 @@ export async function* runAgentLoop(
   }
 }
 
-export type { AgentLoopEvent }
+
 

@@ -18,9 +18,9 @@ type UserQuotaBillingRow = {
   asaas_subscription_id: string | null
 }
 
-export type BillingStatus = 'active' | 'canceled' | 'past_due'
+type BillingStatus = 'active' | 'canceled' | 'past_due'
 
-export type UserBillingInfo = {
+type UserBillingInfo = {
   plan: PlanSlug
   creditsRemaining: number
   maxCredits: number
@@ -30,7 +30,7 @@ export type UserBillingInfo = {
   hasActiveRecurringSubscription: boolean
 }
 
-export type ActiveRecurringSubscription = {
+type ActiveRecurringSubscription = {
   plan: 'monthly' | 'pro'
   asaasSubscriptionId: string
   renewsAt: string | null
@@ -163,7 +163,7 @@ export async function revokeSubscription(asaasSubscriptionId: string): Promise<v
   }
 }
 
-export async function getUserIdByCustomer(asaasCustomerId: string): Promise<string | null> {
+async function getUserIdByCustomer(asaasCustomerId: string): Promise<string | null> {
   const supabase = getSupabaseAdminClient()
   const { data } = await supabase
     .from('user_quotas')

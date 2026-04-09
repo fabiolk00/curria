@@ -247,7 +247,7 @@ export async function getJobApplicationsForUser(userId: string): Promise<JobAppl
   return data.map(mapJobApplicationRow)
 }
 
-export async function getJobApplicationForUser(
+async function getJobApplicationForUser(
   userId: string,
   applicationId: string,
 ): Promise<JobApplication | null> {

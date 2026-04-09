@@ -102,6 +102,4 @@ Rules:
   }
 }
 
-export {
-  parseGapAnalysis,
-}
+

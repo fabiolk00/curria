@@ -2,7 +2,7 @@ type LogLevel = 'info' | 'warn' | 'error'
 
 type LogValue = string | number | boolean | null | undefined
 
-export type LogFields = Record<string, LogValue>
+type LogFields = Record<string, LogValue>
 
 type ErrorShape = {
   name?: string
@@ -64,7 +64,7 @@ export function serializeError(error: unknown): LogFields {
   }
 }
 
-export function logEvent(level: LogLevel, event: string, fields: LogFields = {}): void {
+function logEvent(level: LogLevel, event: string, fields: LogFields = {}): void {
   const payload = {
     timestamp: new Date().toISOString(),
     level,

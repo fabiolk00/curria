@@ -1,4 +1,4 @@
-export const CHECKOUT_ERROR_MESSAGE = 'Não foi possível iniciar o checkout. Tente novamente.'
+const CHECKOUT_ERROR_MESSAGE = 'Não foi possível iniciar o checkout. Tente novamente.'
 export const CHECKOUT_BILLING_SETUP_ERROR_MESSAGE =
   'O checkout não está configurado corretamente neste ambiente. Tente novamente mais tarde.'
 

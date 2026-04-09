@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const ParseFileInputSchema = z.object({
+const ParseFileInputSchema = z.object({
   file_base64: z.string(),
   mime_type: z.enum([
     'application/pdf',
@@ -10,37 +10,37 @@ export const ParseFileInputSchema = z.object({
   ]),
 })
 
-export const ScoreATSInputSchema = z.object({
+const ScoreATSInputSchema = z.object({
   resume_text: z.string(),
   job_description: z.string().optional(),
 })
 
-export const AnalyzeGapInputSchema = z.object({
+const AnalyzeGapInputSchema = z.object({
   target_job_description: z.string(),
 })
 
-export const ApplyGapActionInputSchema = z.object({
+const ApplyGapActionInputSchema = z.object({
   item_type: z.enum(['missing_skill', 'weak_area', 'suggestion']),
   item_value: z.string(),
 })
 
-export const RewriteSectionInputSchema = z.object({
+const RewriteSectionInputSchema = z.object({
   section: z.enum(['summary', 'experience', 'skills', 'education', 'certifications']),
   current_content: z.string(),
   instructions: z.string(),
   target_keywords: z.array(z.string()).optional(),
 })
 
-export const CreateTargetResumeInputSchema = z.object({
+const CreateTargetResumeInputSchema = z.object({
   target_job_description: z.string(),
 })
 
-export const SetPhaseInputSchema = z.object({
+const SetPhaseInputSchema = z.object({
   phase: z.enum(['intake', 'analysis', 'dialog', 'confirm', 'generation']),
   reason: z.string().optional(),
 })
 
-export const GenerateFileInputSchema = z.object({
+const GenerateFileInputSchema = z.object({
   cv_state: z.object({
     fullName: z.string(),
     email: z.string(),

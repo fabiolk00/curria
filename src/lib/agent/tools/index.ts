@@ -169,12 +169,12 @@ export const TOOL_DEFINITIONS: OpenAITool[] = [
   },
 ]
 
-export type ToolExecutionResult = {
+type ToolExecutionResult = {
   output: unknown
   patch?: ToolPatch
 }
 
-export type DispatchedToolResult = {
+type DispatchedToolResult = {
   output: unknown
   outputJson: string
   persistedPatch?: ToolPatch
