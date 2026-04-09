@@ -11,6 +11,7 @@ import {
   LogOut,
   MessageSquare,
   PanelLeft,
+  Plus,
   Settings,
   Sparkles,
   User,
@@ -19,7 +20,6 @@ import {
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
-import { ChatHistoryNav } from "@/components/dashboard/chat-history-nav"
 import { SessionDocumentsPanel } from "@/components/dashboard/session-documents-panel"
 import { PlanUpdateDialog } from "@/components/dashboard/plan-update-dialog"
 import Logo from "@/components/logo"
@@ -89,10 +89,10 @@ const navItems: NavItem[] = [
     isActive: (pathname) => pathname === "/resumes" || pathname.startsWith("/resumes/"),
   },
   {
-    label: "Chat",
-    href: "/dashboard",
+    label: "Sessões",
+    href: "/dashboard/sessions",
     icon: MessageSquare,
-    isActive: (pathname) => pathname === "/dashboard",
+    isActive: (pathname) => pathname === "/dashboard/sessions",
   },
 ]
 
@@ -347,9 +347,27 @@ function SidebarContent({
             ))}
           </nav>
 
-          {/* Chat History Below Chat Nav */}
+          {/* Nova Conversa Button */}
           <div className="border-t border-border/30 mt-2 pt-2">
-            <ChatHistoryNav isOpen={isOpen || isMobile} />
+            <button
+              onClick={() => {
+                const url = new URL(window.location.href)
+                url.searchParams.delete('session')
+                window.history.replaceState(window.history.state, "", url.toString())
+                onCloseMobile?.()
+              }}
+              className={cn(
+                'flex items-center rounded-lg text-sm font-medium transition-colors w-full',
+                isOpen || isMobile
+                  ? 'gap-3 px-3 py-2 hover:bg-sidebar-accent/50'
+                  : 'h-10 justify-center px-0 py-0 hover:bg-sidebar-accent/50',
+                'text-sidebar-foreground/70 hover:text-sidebar-foreground',
+              )}
+              title="Nova conversa"
+            >
+              <Plus className="h-4 w-4 shrink-0 text-sidebar-foreground/75" strokeWidth={1.75} />
+              {isOpen || isMobile ? <span>Nova Conversa</span> : null}
+            </button>
           </div>
 
           <SessionDocumentsPanel isSidebarOpen={isOpen || isMobile} />
