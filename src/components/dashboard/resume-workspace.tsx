@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/resizable"
 
 import { ChatInterface } from "./chat-interface"
+import { ChatHistorySidebar } from "./chat-history-sidebar"
 import { ManualEditDialog } from "./manual-edit-dialog"
 import { PlanUpdateDialog } from "./plan-update-dialog"
 import { PreviewPanel } from "./preview-panel"
@@ -251,33 +252,49 @@ export function ResumeWorkspace({
           {viewerPane}
         </div>
       ) : (
-        <div className="h-[calc(107svh-4rem)] px-0 py-0">
-          <ResizablePanelGroup
-            id="resume-workspace-split-view"
-            orientation="horizontal"
-            defaultLayout={defaultLayout}
-            onLayoutChanged={onLayoutChanged}
-            className="items-stretch bg-[#faf9f5]"
-          >
-            <ResizablePanel id="workspace-chat-panel" defaultSize="68%" minSize="44%">
-              <div className="h-full min-w-0">
-                {chatPane}
-              </div>
-            </ResizablePanel>
+        <div className="flex h-[calc(107svh-4rem)]">
+          {/* Chat history sidebar */}
+          <div className="w-64 border-r border-border bg-background">
+            <ChatHistorySidebar
+              currentSessionId={sessionId}
+              onSessionSelect={(nextSessionId) => setSessionId(nextSessionId)}
+              onNewChat={() => {
+                setSessionId(undefined)
+                setWorkspace(null)
+              }}
+              isLoading={isStreaming}
+            />
+          </div>
 
-            <ResizableHandle withHandle />
-
-            <ResizablePanel
-              id="workspace-preview-panel"
-              defaultSize="32%"
-              minSize="24%"
-              maxSize="56%"
+          {/* Main workspace */}
+          <div className="flex-1 px-0 py-0">
+            <ResizablePanelGroup
+              id="resume-workspace-split-view"
+              orientation="horizontal"
+              defaultLayout={defaultLayout}
+              onLayoutChanged={onLayoutChanged}
+              className="items-stretch bg-[#faf9f5]"
             >
-              <div className="h-full min-w-0">
-                {viewerPane}
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              <ResizablePanel id="workspace-chat-panel" defaultSize="68%" minSize="44%">
+                <div className="h-full min-w-0">
+                  {chatPane}
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              <ResizablePanel
+                id="workspace-preview-panel"
+                defaultSize="32%"
+                minSize="24%"
+                maxSize="56%"
+              >
+                <div className="h-full min-w-0">
+                  {viewerPane}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
         </div>
       )}
 
