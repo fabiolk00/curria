@@ -66,8 +66,8 @@ export function ChatMessage({
           className={cn(
             "rounded-2xl px-4 py-3",
             isAssistant
-              ? "bg-card border border-border text-[#8dcfe6] rounded-tl-md"
-              : "rounded-tr-md bg-[#f0eee6] text-[#8dcfe6] shadow-[0_8px_24px_-18px_rgba(15,23,42,0.35)] ring-1 ring-black/5",
+              ? "bg-card border border-border text-card-foreground rounded-tl-md"
+              : "rounded-tr-md bg-[#f0eee6] text-foreground shadow-[0_8px_24px_-18px_rgba(15,23,42,0.35)] ring-1 ring-black/5",
           )}
         >
           <div className="text-sm">
