@@ -34,11 +34,11 @@ export async function GET(
   if (!docxPath || !pdfPath) {
     return NextResponse.json(
       {
-        error: target
-          ? 'Generated resume artifacts are not available for this target.'
-          : 'Generated resume artifacts are not available for this session.',
+        docxUrl: null,
+        pdfUrl: null,
+        available: false,
       },
-      { status: 404 },
+      { status: 200 },
     )
   }
 

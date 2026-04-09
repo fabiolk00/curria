@@ -241,7 +241,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
   })
 
-  it('returns a clear error when artifacts do not exist', async () => {
+  it('returns empty urls when session artifacts do not exist yet', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
       status: 'active',
@@ -276,14 +276,16 @@ describe('GET /api/file/[sessionId]', () => {
       { params: { sessionId: 'sess_123' } },
     )
 
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      error: 'Generated resume artifacts are not available for this session.',
+      docxUrl: null,
+      pdfUrl: null,
+      available: false,
     })
     expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
   })
 
-  it('returns a clear error when target artifacts do not exist', async () => {
+  it('returns empty urls when target artifacts do not exist yet', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
       status: 'active',
@@ -324,9 +326,11 @@ describe('GET /api/file/[sessionId]', () => {
       { params: { sessionId: 'sess_123' } },
     )
 
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      error: 'Generated resume artifacts are not available for this target.',
+      docxUrl: null,
+      pdfUrl: null,
+      available: false,
     })
   })
 

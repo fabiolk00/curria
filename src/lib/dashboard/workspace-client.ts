@@ -95,9 +95,11 @@ export async function generateResume(
 export async function getDownloadUrls(
   sessionId: string,
   targetId?: string,
-): Promise<{ docxUrl: string; pdfUrl: string }> {
+): Promise<{ docxUrl: string | null; pdfUrl: string | null; available?: boolean }> {
   const suffix = targetId ? `?targetId=${encodeURIComponent(targetId)}` : ''
-  return requestJson<{ docxUrl: string; pdfUrl: string }>(`/api/file/${sessionId}${suffix}`)
+  return requestJson<{ docxUrl: string | null; pdfUrl: string | null; available?: boolean }>(
+    `/api/file/${sessionId}${suffix}`,
+  )
 }
 
 export function isGeneratedOutputReady(generatedOutput?: GeneratedOutput): boolean {
