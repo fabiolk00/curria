@@ -26,6 +26,8 @@ import { PlanUpdateDialog } from "./plan-update-dialog"
 import { PreviewPanel } from "./preview-panel"
 import { WorkspaceSidePanel } from "./workspace-side-panel"
 
+export const NEW_CONVERSATION_EVENT = "curria:new-conversation"
+
 type MutationKind =
   | "workspace-refresh"
   | "manual-edit"
@@ -116,6 +118,23 @@ export function ResumeWorkspace({
   useEffect(() => {
     setSessionId(initialSessionId)
   }, [initialSessionId])
+
+  useEffect(() => {
+    const handleNewConversation = (): void => {
+      setSessionId(undefined)
+      setWorkspace(null)
+      setActiveMutation(null)
+      setErrorMessage(null)
+      setStatusMessage(null)
+      closePreview()
+    }
+
+    window.addEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
+
+    return () => {
+      window.removeEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
+    }
+  }, [closePreview])
 
   useEffect(() => {
     if (!sessionId) {

@@ -1,12 +1,12 @@
 import React from "react"
 
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PreviewPanelProvider } from "@/context/preview-panel-context"
-import { ResumeWorkspace } from "./resume-workspace"
+import { NEW_CONVERSATION_EVENT, ResumeWorkspace } from "./resume-workspace"
 
 const {
   mockGetSessionWorkspace,
@@ -30,6 +30,7 @@ vi.mock("./chat-interface", () => ({
     onSessionChange,
     onAgentTurnCompleted,
     currentCredits,
+    sessionId,
   }: {
     onCreditsExhausted?: () => void
     onSessionChange?: (sessionId: string) => void
@@ -39,6 +40,7 @@ vi.mock("./chat-interface", () => ({
       phase: string
     }) => void
     currentCredits?: number
+    sessionId?: string
   }) => (
     <>
       <button type="button" onClick={() => onCreditsExhausted?.()}>
@@ -57,6 +59,7 @@ vi.mock("./chat-interface", () => ({
       >
         Simulate new session done
       </button>
+      <div data-testid="chat-session-id">{sessionId ?? "none"}</div>
       <div data-testid="chat-current-credits">{currentCredits ?? 0}</div>
     </>
   ),
@@ -221,5 +224,22 @@ describe("ResumeWorkspace", () => {
     })
 
     expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-credits", "0")
+  })
+
+  it("clears the active session immediately when a new conversation starts", async () => {
+    renderWorkspace(<ResumeWorkspace initialSessionId="sess_existing" userName="Fabio" />)
+
+    await waitFor(() => {
+      expect(mockGetSessionWorkspace).toHaveBeenCalledWith("sess_existing")
+      expect(screen.getByTestId("chat-session-id")).toHaveTextContent("sess_existing")
+    })
+
+    act(() => {
+      window.dispatchEvent(new Event(NEW_CONVERSATION_EVENT))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-session-id")).toHaveTextContent("none")
+    })
   })
 })

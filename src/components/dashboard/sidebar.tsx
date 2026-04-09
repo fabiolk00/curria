@@ -46,6 +46,7 @@ import { useSidebarContext } from "@/context/sidebar-context"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { PLANS, PlanSlug } from "@/lib/plans"
 import { cn } from "@/lib/utils"
+import { NEW_CONVERSATION_EVENT } from "./resume-workspace"
 
 const EXPANDED_WIDTH = 240
 const COLLAPSED_WIDTH = 56
@@ -351,6 +352,7 @@ function SidebarContent({
           <div className="border-t border-border/30 mt-2 pt-2">
             <button
               onClick={() => {
+                window.dispatchEvent(new Event(NEW_CONVERSATION_EVENT))
                 router.replace("/dashboard")
                 onCloseMobile?.()
               }}
