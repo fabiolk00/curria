@@ -27,6 +27,10 @@ import { PreviewPanel } from "./preview-panel"
 import { WorkspaceSidePanel } from "./workspace-side-panel"
 
 export const NEW_CONVERSATION_EVENT = "curria:new-conversation"
+const NOOP_LAYOUT_STORAGE = {
+  getItem: (_key: string) => null,
+  setItem: (_key: string, _value: string) => {},
+}
 
 type MutationKind =
   | "workspace-refresh"
@@ -104,7 +108,7 @@ export function ResumeWorkspace({
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "resume-workspace-split-view",
     panelIds: ["workspace-chat-panel", "workspace-preview-panel"],
-    storage: typeof window === "undefined" ? undefined : window.localStorage,
+    storage: typeof window === "undefined" ? NOOP_LAYOUT_STORAGE : window.localStorage,
   })
 
   useEffect(() => {
