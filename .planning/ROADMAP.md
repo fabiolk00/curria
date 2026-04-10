@@ -28,7 +28,7 @@ This roadmap starts milestone `v1.1 Agent Reliability and Response Continuity` a
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Add build and request provenance to the live `/api/agent` route and structured logs
+- [x] 05-01: Add build and request provenance to the live `/api/agent` route and structured logs
 - [ ] 05-02: Document and script the post-deploy parity check for operators
 - [ ] 05-03: Add regression coverage for provenance and log-schema guarantees
 
@@ -69,6 +69,6 @@ Phases execute in numeric order: 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Deployed Agent Parity and Evidence | 0/3 | Pending | - |
+| 5. Deployed Agent Parity and Evidence | 1/3 | In Progress|  |
 | 6. Dialog Continuity and Model Routing Hardening | 0/3 | Pending | - |
 | 7. Transcript Integrity and End-to-End Agent Verification | 0/3 | Pending | - |
