@@ -32,9 +32,13 @@ jobs:
         run: npm test
         env:
           ANTHROPIC_API_KEY: dummy
+          OPENAI_API_KEY: sk-test-dummy
           NEXT_PUBLIC_SUPABASE_URL: http://localhost
           SUPABASE_SERVICE_ROLE_KEY: dummy
-          ASAAS_API_KEY: dummy
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dummy
+          CLERK_SECRET_KEY: sk_test_dummy
+          CLERK_WEBHOOK_SECRET: whsec_dummy
+          ASAAS_ACCESS_TOKEN: dummy
           ASAAS_WEBHOOK_TOKEN: dummy
-          UPSTASH_REDIS_URL: dummy
-          UPSTASH_REDIS_TOKEN: dummy
+          UPSTASH_REDIS_REST_URL: https://dummy.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: dummy

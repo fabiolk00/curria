@@ -22,10 +22,20 @@ npm install
 
 ### 2. Configure the environment
 
-Copy `.env.example` to `.env` and fill in the required values for Clerk, Supabase, Postgres, OpenAI, Asaas, and Upstash.
+Copy `.env.example` to `.env`, then fill in the required values for:
+
+- `DATABASE_URL` and `DIRECT_URL`
+- `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `CLERK_WEBHOOK_SECRET`
+- `OPENAI_API_KEY`
+- `ASAAS_ACCESS_TOKEN` and `ASAAS_WEBHOOK_TOKEN`
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+
+Optional entries such as `OPENAI_BASE_URL`, `ASAAS_SANDBOX`, and `LINKDAPI_API_KEY` can stay empty unless you actively use them.
 
 ```bash
 copy .env.example .env
+# or: cp .env.example .env
 ```
 
 ### 3. Prepare the database

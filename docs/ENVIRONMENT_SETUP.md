@@ -1,291 +1,137 @@
 ---
 title: Environment Variables Setup
-audience: [developers]
-related: [GETTING_STARTED.md]
+audience: [developers, operators]
+related: [GETTING_STARTED.md, staging/SETUP_GUIDE.md]
 status: current
-updated: 2026-04-02
+updated: 2026-04-10
 ---
 
 # Environment Variables Setup
 
-This document explains how environment variables are managed in CurrIA to prevent accidental commits of secrets.
+CurrIA uses committed templates for the launch-critical contract and local untracked files for real secrets.
 
-## Security Model
+## Files and Ownership
 
-CurrIA uses a **strict separation** between:
+Committed files:
 
-1. **Template files** (committed to git with placeholder values)
-   - `.env.example` - Template for local development
-   - `.env.staging.example` - Template for staging/production values
+- `.env.example` - local development template for runtime variables
+- `.env.staging.example` - staging validation template for `scripts/verify-staging.sh`
 
-2. **Local files** (ignored by git, never committed)
-   - `.env` - Your local development secrets
-   - `.env.local` - Local overrides
-   - `.env.*.local` - Environment-specific overrides
+Ignored local files:
 
-## Setup Instructions
+- `.env` - your real local runtime credentials
+- `.env.local` - personal overrides
+- `.env.staging` - real staging validation credentials
+- `.env.*.local` - environment-specific local overrides
 
-### First Time Setup
+Only the template files should appear in git. Real secrets must stay in ignored local files or your deployment platform.
+
+## Canonical Runtime Contract
+
+CurrIA treats these names as canonical for local dev, CI, preview, staging, and production:
+
+| Area | Required variables |
+|------|--------------------|
+| Database | `DATABASE_URL`, `DIRECT_URL` |
+| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Clerk | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET` |
+| OpenAI | `OPENAI_API_KEY` |
+| Asaas | `ASAAS_ACCESS_TOKEN`, `ASAAS_WEBHOOK_TOKEN` |
+| Upstash | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+
+Optional variables:
+
+- `OPENAI_BASE_URL`
+- `ASAAS_SANDBOX`
+- `LINKDAPI_API_KEY`
+
+Do not use legacy provider aliases. CI and runtime are intentionally aligned on the canonical names above.
+
+## Local Setup
+
+1. Copy the template:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/curria.git
-cd curria
+copy .env.example .env
+# or: cp .env.example .env
+```
 
-# 2. Copy the template to create your local .env
-cp .env.example .env
+2. Replace every placeholder value in `.env` with a real secret or local connection string.
 
-# 3. Fill in your actual secrets
-# Edit .env and replace all "replace_me" values with real values:
-#   - CLERK_SECRET_KEY
-#   - OPENAI_API_KEY
-#   - Database credentials
-#   - Other API keys
-nano .env
+3. Keep optional values empty unless you actively use that integration or override.
 
-# 4. Verify your secrets are loaded
+4. Start the app:
+
+```bash
 npm run dev
-
-# 5. Install git hooks (prevents accidental commits)
-npx husky install
 ```
 
-### What Goes Where
+If a launch-critical variable is missing, the relevant runtime path now fails with an explicit error naming the missing variable.
 
-**`.env.example` (template, committed to git)**
-```bash
-CLERK_SECRET_KEY=sk_test_replace_me          # ← Placeholder
-OPENAI_API_KEY=sk-replace_me                 # ← Placeholder
-DATABASE_URL=postgresql://.../@localhost     # ← Example
-```
+## Staging Validation Setup
 
-**`.env` (your local file, NOT committed)**
-```bash
-CLERK_SECRET_KEY=sk_live_abc123xyz...        # ← Real secret
-OPENAI_API_KEY=sk-proj-real-key...           # ← Real secret
-DATABASE_URL=postgresql://.../@production    # ← Real URL
-```
+Use `.env.staging.example` only for the staging verification flow described in [staging/SETUP_GUIDE.md](./staging/SETUP_GUIDE.md).
 
-### Common Tasks
-
-**Add a new environment variable**
-
-1. Add to `.env.example` with placeholder:
-   ```bash
-   MY_NEW_API_KEY=replace_me
-   ```
-
-2. Add to your `.env` with real value:
-   ```bash
-   MY_NEW_API_KEY=real_secret_value
-   ```
-
-3. Commit the template change:
-   ```bash
-   git add .env.example
-   git commit -m "chore: add MY_NEW_API_KEY to environment template"
-   ```
-
-**Update an existing variable**
-
-If a secret changes (API key rotated, etc.):
-```bash
-# Update your local .env
-nano .env
-# Change: MY_API_KEY=old_value → MY_API_KEY=new_value
-
-# .env.example stays the same (it's a template)
-# No git commit needed
-```
-
-**Different environments**
-
-Create environment-specific overrides:
+1. Copy the staging template:
 
 ```bash
-# For staging-specific values:
-cp .env .env.staging.local
-nano .env.staging.local
-# Modify as needed for staging
-
-# For development-specific values:
-cp .env .env.development.local
-nano .env.development.local
-# Modify as needed for development
+copy .env.staging.example .env.staging
+# or: cp .env.staging.example .env.staging
 ```
 
-Then load them:
-```bash
-# Use staging values
-NODE_ENV=staging npm run dev
+2. Fill in:
 
-# Use development values
-NODE_ENV=development npm run dev
-```
+- `STAGING_DB_URL`
+- `STAGING_API_URL`
+- `STAGING_ASAAS_WEBHOOK_TOKEN`
+- `STAGING_ASAAS_ACCESS_TOKEN`
 
-## Protection Mechanisms
-
-### 1. Git Ignore (Filesystem Level)
-
-`.gitignore` prevents `.env` files from being added to git:
-```bash
-# From .gitignore
-.env
-.env.local
-.env.production.local
-.env.development.local
-```
-
-Verify it's working:
-```bash
-git check-ignore .env
-# Output: .env is ignored (correct)
-```
-
-### 2. Git Hooks (Pre-Commit Level)
-
-The `.husky/pre-commit` hook **blocks commits** if you accidentally try to add `.env` files:
+3. Run the staging preflight:
 
 ```bash
-# If you accidentally try to commit .env:
-git add .env
-git commit -m "oops"
-# ❌ Error: .env files should not be committed!
+bash scripts/verify-staging.sh
 ```
 
-**Install hooks** (one-time setup):
-```bash
-npx husky install
-```
+That script checks the staging env file, database reachability, required billing tables, RPC functions, API reachability, webhook token presence, and test-user data.
 
-**Verify hooks are installed:**
-```bash
-ls -la .husky/
-# Should show: pre-commit, pre-push, etc.
-```
+## Deployment Guidance
 
-### 3. CI/CD Level (Optional)
+Deploy environments must use the same canonical runtime names listed above. Before rolling out Phase 1:
 
-If using GitHub Actions, you can add a check:
-```yaml
-- name: Check for committed secrets
-  run: |
-    if git diff --cached --name-only | grep -E "\.env"; then
-      echo "❌ Error: .env file would be committed!"
-      exit 1
-    fi
-```
+- rename any legacy Asaas variable to `ASAAS_ACCESS_TOKEN`
+- rename any legacy Upstash variables to `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+- confirm `ASAAS_WEBHOOK_TOKEN` and `CLERK_WEBHOOK_SECRET` are stored separately from API access credentials
 
-## Troubleshooting
+## Safety Rules
 
-### Issue: Pre-commit hook not running
+- Never copy real values back into `.env.example` or `.env.staging.example`.
+- Never commit `.env`, `.env.local`, or `.env.staging`.
+- If a secret rotates, update only your local file or deployment platform entry unless the contract name itself changed.
+- If you add a new required variable, update the template and docs in the same change.
 
-**Solution:** Ensure husky is installed:
-```bash
-npx husky install
-npm install husky --save-dev  # If missing
-```
+## Quick Checks
 
-### Issue: ".env file should not be committed" error
+Verify the templates are the only tracked env files:
 
-**Why?** The pre-commit hook caught you trying to commit `.env`
-
-**Solution:**
-```bash
-# Unstage the .env file
-git rm --cached .env
-
-# Continue with your commit (without .env)
-git commit -m "your message"
-
-# Or start over
-git reset
-git add .  # Add only the files you want
-git commit -m "your message"
-```
-
-### Issue: Need to update `.env.example`
-
-**Process:**
-```bash
-# 1. Update your .env with new values
-nano .env
-
-# 2. Update the template (with placeholders)
-nano .env.example
-
-# 3. Add only .env.example
-git add .env.example
-
-# 4. Commit
-git commit -m "chore: update environment template"
-
-# .env stays local and untracked ✓
-```
-
-### Issue: Different values per developer
-
-**Solution:** Use `.env.local` for personal overrides:
-```bash
-# Copy your .env to .env.local
-cp .env .env.local
-
-# Now .env.local has your personal values
-# .env is team standard
-
-# Both are ignored by git, so no conflicts
-```
-
-Load priority:
-```
-1. .env                (team standard)
-2. .env.local          (personal override)
-3. .env.${NODE_ENV}    (environment-specific)
-4. .env.${NODE_ENV}.local (environment + personal)
-```
-
-## Best Practices
-
-✅ **DO:**
-- Keep `.env.example` in sync with actual variables
-- Use meaningful placeholder names: `sk_replace_me` not `xxx`
-- Document new variables in `.env.example`
-- Review `.env.example` before committing
-- Rotate secrets regularly
-
-❌ **DON'T:**
-- Commit actual `.env` files with real secrets
-- Share your `.env` file with others (each person has their own)
-- Use the same secret values across environments
-- Check in binary/compiled secrets (only text files)
-- Forget to run `npx husky install` on new machines
-
-## File Checklist
-
-After setup, you should have:
-
-```
-✓ .env                    (local, NOT in git, has real secrets)
-✓ .env.example            (in git, has placeholders)
-✓ .env.staging.example    (in git, optional for staging template)
-✓ .gitignore             (includes .env and .env.*.local)
-✓ .husky/pre-commit      (prevents accidental commits)
-```
-
-Check with:
 ```bash
 git ls-files | grep ".env"
-# Should show only: .env.example, .env.staging.example
-
-ls -la | grep ".env"
-# Should show: .env (not tracked), .env.example (tracked)
 ```
 
----
+Expected tracked files:
+
+- `.env.example`
+- `.env.staging.example`
+
+Verify your local runtime file is ignored:
+
+```bash
+git check-ignore .env
+```
 
 ## Related Documentation
 
-- [GETTING_STARTED.md](./GETTING_STARTED.md) - First-time setup
-- [.env.example](../.env.example) - Environment template
-- [.gitignore](../.gitignore) - Git ignore rules
-- [.husky/pre-commit](../.husky/pre-commit) - Pre-commit hook
+- [README.md](../README.md)
+- [staging/SETUP_GUIDE.md](./staging/SETUP_GUIDE.md)
+- [staging/VALIDATION_PLAN.md](./staging/VALIDATION_PLAN.md)
+- [.env.example](../.env.example)
+- [.env.staging.example](../.env.staging.example)
