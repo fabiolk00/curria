@@ -10,6 +10,7 @@ import { appendMessage, getMessages } from '@/lib/db/sessions'
 import { createChatCompletionStreamWithRetry } from '@/lib/openai/chat'
 import { openai } from '@/lib/openai/client'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
+import { getAgentReleaseMetadata, type AgentReleaseMetadata } from '@/lib/runtime/release-metadata'
 import type {
   AgentDoneChunk,
   AgentErrorChunk,
@@ -584,6 +585,7 @@ function mergeConciseRecoveryTurn(
 async function trackTurnUsage(params: {
   session: Session
   appUserId: string
+  releaseMetadata: AgentReleaseMetadata
   model: string
   usage: NonNullable<StreamTurnResult['usage']>
   finishReason: StreamTurnResult['finishReason']
@@ -612,6 +614,7 @@ async function trackTurnUsage(params: {
   }).catch(() => {})
 
   logInfo('agent.turn.completed', {
+    ...params.releaseMetadata,
     requestId: params.requestId,
     sessionId: params.session.id,
     appUserId: params.appUserId,
@@ -1026,6 +1029,7 @@ export async function* runAgentLoop(
   params: AgentLoopParams,
 ): AsyncGenerator<AgentLoopEvent> {
   const { session, userMessage, appUserId, requestId, isNewSession, requestStartedAt, signal } = params
+  const releaseMetadata = getAgentReleaseMetadata()
 
   await appendMessage(session.id, 'user', userMessage)
 
@@ -1056,6 +1060,7 @@ export async function* runAgentLoop(
       await appendMessage(session.id, 'assistant', generationAssistantText)
 
       logInfo('agent.stream.completed', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -1123,6 +1128,7 @@ export async function* runAgentLoop(
       await appendMessage(session.id, 'assistant', bootstrapAssistantText)
 
       logInfo('agent.stream.completed', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -1153,6 +1159,7 @@ export async function* runAgentLoop(
     while (true) {
       if (signal?.aborted) {
         logInfo('agent.request.cancelled', {
+          ...releaseMetadata,
           requestId,
           sessionId: session.id,
           appUserId,
@@ -1196,6 +1203,7 @@ export async function* runAgentLoop(
       const historyChars = calculateHistoryChars(messages)
 
       logInfo('agent.turn.started', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -1257,6 +1265,7 @@ export async function* runAgentLoop(
         await trackTurnUsage({
           session,
           appUserId,
+          releaseMetadata,
           model: turn.model,
           usage: turn.usage,
           finishReason: turn.finishReason,
@@ -1288,6 +1297,7 @@ export async function* runAgentLoop(
         break
       } else if (turn.finishReason === 'length') {
         logWarn('agent.response.truncated_after_recovery', {
+          ...releaseMetadata,
           requestId,
           sessionId: session.id,
           appUserId,
@@ -1421,6 +1431,7 @@ export async function* runAgentLoop(
           await trackTurnUsage({
             session,
             appUserId,
+            releaseMetadata,
             model: recoveryTurn.model,
             usage: recoveryTurn.usage,
             finishReason: recoveryTurn.finishReason,
@@ -1456,6 +1467,7 @@ export async function* runAgentLoop(
       await appendMessage(session.id, 'assistant', finalAssistantText)
 
       logWarn(recoverySucceeded ? 'agent.response.empty_recovered' : 'agent.response.empty_fallback', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -1470,6 +1482,7 @@ export async function* runAgentLoop(
     }
 
     logInfo('agent.stream.completed', {
+      ...releaseMetadata,
       requestId,
       sessionId: session.id,
       appUserId,
@@ -1496,6 +1509,7 @@ export async function* runAgentLoop(
   } catch (error) {
     if ((error instanceof Error || error instanceof DOMException) && error.name === 'AbortError' && signal?.aborted) {
       logInfo('agent.request.cancelled', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -1508,6 +1522,7 @@ export async function* runAgentLoop(
     }
 
     logError('agent.request.failed', {
+      ...releaseMetadata,
       requestId,
       sessionId: session.id,
       appUserId,

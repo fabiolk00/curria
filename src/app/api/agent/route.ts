@@ -18,6 +18,7 @@ import { AGENT_CONFIG } from '@/lib/agent/config'
 import { extractUrl } from '@/lib/agent/url-extractor'
 import { scrapeJobPosting } from '@/lib/agent/scraper'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
+import { getAgentReleaseMetadata, type AgentReleaseMetadata } from '@/lib/runtime/release-metadata'
 import type { AgentSessionCreatedChunk, Session } from '@/types/agent'
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,39 @@ const BodySchema = z.object({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function applyAgentReleaseHeaders(response: Response, metadata: AgentReleaseMetadata): Response {
+  response.headers.set('X-Agent-Release', metadata.releaseId)
+  response.headers.set('X-Agent-Release-Source', metadata.releaseSource)
+  response.headers.set('X-Agent-Resolved-Agent-Model', metadata.resolvedAgentModel)
+  response.headers.set('X-Agent-Resolved-Dialog-Model', metadata.resolvedDialogModel)
+
+  if (metadata.commitShortSha) {
+    response.headers.set('X-Agent-Commit-Short-Sha', metadata.commitShortSha)
+  }
+
+  return response
+}
+
+function createAgentJsonResponse(
+  body: unknown,
+  init: ResponseInit,
+  metadata: AgentReleaseMetadata,
+): Response {
+  const headers = new Headers(init.headers)
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  return applyAgentReleaseHeaders(
+    new Response(JSON.stringify(body), {
+      ...init,
+      headers,
+    }),
+    metadata,
+  )
+}
 
 function buildSessionLimitReachedError(maxMessages: number): string {
   return `Esta sessão atingiu o limite de ${maxMessages} mensagens. Inicie uma nova análise para continuar.`
@@ -520,11 +554,13 @@ async function handleFileAttachment(
 export async function POST(req: NextRequest) {
   const requestStartedAt = Date.now()
   const requestId = crypto.randomUUID()
+  const releaseMetadata = getAgentReleaseMetadata()
 
   // ── Auth ────────────────────────────────────────────────────────────
   const appUser = await getCurrentAppUser(req)
   if (!appUser) {
     logWarn('agent.request.unauthorized', {
+      ...releaseMetadata,
       requestId,
       requestHost: req.headers.get('host') ?? undefined,
       requestOrigin: req.headers.get('origin') ?? undefined,
@@ -532,7 +568,7 @@ export async function POST(req: NextRequest) {
       success: false,
       latencyMs: Date.now() - requestStartedAt,
     })
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    return createAgentJsonResponse({ error: 'Unauthorized' }, { status: 401 }, releaseMetadata)
   }
   const appUserId = appUser.id
 
@@ -540,12 +576,17 @@ export async function POST(req: NextRequest) {
   const { success } = await agentLimiter.limit(appUserId)
   if (!success) {
     logWarn('agent.request.rate_limited', {
+      ...releaseMetadata,
       requestId,
       appUserId,
       success: false,
       latencyMs: Date.now() - requestStartedAt,
     })
-    const response = new Response(JSON.stringify({ error: 'Too many requests. Please wait a moment.' }), { status: 429 })
+    const response = createAgentJsonResponse(
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429 },
+      releaseMetadata,
+    )
     response.headers.set('Retry-After', '60')
     return response
   }
@@ -556,23 +597,25 @@ export async function POST(req: NextRequest) {
     rawBody = await req.json()
   } catch {
     logWarn('agent.request.invalid_json', {
+      ...releaseMetadata,
       requestId,
       appUserId,
       success: false,
       latencyMs: Date.now() - requestStartedAt,
     })
-    return new Response(JSON.stringify({ error: 'Invalid JSON body.' }), { status: 400 })
+    return createAgentJsonResponse({ error: 'Invalid JSON body.' }, { status: 400 }, releaseMetadata)
   }
 
   const raw = BodySchema.safeParse(rawBody)
   if (!raw.success) {
     logWarn('agent.request.invalid_body', {
+      ...releaseMetadata,
       requestId,
       appUserId,
       success: false,
       latencyMs: Date.now() - requestStartedAt,
     })
-    return new Response(JSON.stringify({ error: raw.error.flatten() }), { status: 400 })
+    return createAgentJsonResponse({ error: raw.error.flatten() }, { status: 400 }, releaseMetadata)
   }
   const { sessionId, file, fileMime } = raw.data
 
@@ -580,6 +623,7 @@ export async function POST(req: NextRequest) {
   let message = await prepareUserMessage(raw.data.message, appUserId, requestId)
 
   logInfo('agent.request.received', {
+    ...releaseMetadata,
     requestId,
     appUserId,
     requestedSessionId: sessionId,
@@ -598,20 +642,26 @@ export async function POST(req: NextRequest) {
 
   if (sessionId && !session) {
     logWarn('agent.session.not_found', {
+      ...releaseMetadata,
       requestId,
       appUserId,
       requestedSessionId: sessionId,
       success: false,
       latencyMs: Date.now() - requestStartedAt,
     })
-    return new Response(JSON.stringify({
-      error: 'Sessão não encontrada. Inicie uma nova análise.',
-      action: 'new_session',
-    }), { status: 404 })
+    return createAgentJsonResponse(
+      {
+        error: 'Sessão não encontrada. Inicie uma nova análise.',
+        action: 'new_session',
+      },
+      { status: 404 },
+      releaseMetadata,
+    )
   }
 
   if (session) {
     logInfo('agent.session.loaded', {
+      ...releaseMetadata,
       requestId,
       sessionId: session.id,
       appUserId,
@@ -624,6 +674,7 @@ export async function POST(req: NextRequest) {
 
     if (session.messageCount >= AGENT_CONFIG.maxMessagesPerSession) {
       logWarn('agent.session.message_cap_reached', {
+        ...releaseMetadata,
         requestId,
         sessionId: session.id,
         appUserId,
@@ -633,12 +684,16 @@ export async function POST(req: NextRequest) {
         maxMessages: AGENT_CONFIG.maxMessagesPerSession,
         success: false,
       })
-      const response = new Response(JSON.stringify({
-        error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
-        action: 'new_session',
-        messageCount: session.messageCount,
-        maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-      }), { status: 429 })
+      const response = createAgentJsonResponse(
+        {
+          error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
+          action: 'new_session',
+          messageCount: session.messageCount,
+          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+        },
+        { status: 429 },
+        releaseMetadata,
+      )
       response.headers.set('Retry-After', '0')
       return response
     }
@@ -648,20 +703,26 @@ export async function POST(req: NextRequest) {
     const newSession = await createSessionWithCredit(appUserId)
     if (!newSession) {
       logWarn('agent.session.create_blocked_no_credit', {
+        ...releaseMetadata,
         requestId,
         appUserId,
         success: false,
         latencyMs: Date.now() - requestStartedAt,
       })
-      return new Response(JSON.stringify({
-        error: 'Seus créditos acabaram. Faça upgrade do seu plano para continuar.',
-        upgradeUrl: '/pricing',
-      }), { status: 402 })
+      return createAgentJsonResponse(
+        {
+          error: 'Seus créditos acabaram. Faça upgrade do seu plano para continuar.',
+          upgradeUrl: '/pricing',
+        },
+        { status: 402 },
+        releaseMetadata,
+      )
     }
 
     session = newSession
     isNewSession = true
     logInfo('agent.session.created', {
+      ...releaseMetadata,
       requestId,
       sessionId: session.id,
       appUserId,
@@ -695,6 +756,7 @@ export async function POST(req: NextRequest) {
       const messageCountIncremented = await incrementMessageCount(session!.id)
       if (!messageCountIncremented) {
         logWarn('agent.session.message_cap_reached', {
+          ...releaseMetadata,
           requestId,
           sessionId: session!.id,
           appUserId,
@@ -704,12 +766,16 @@ export async function POST(req: NextRequest) {
           maxMessages: AGENT_CONFIG.maxMessagesPerSession,
           success: false,
         })
-        const response = new Response(JSON.stringify({
-          error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
-          action: 'new_session',
-          messageCount: AGENT_CONFIG.maxMessagesPerSession,
-          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-        }), { status: 429 })
+        const response = createAgentJsonResponse(
+          {
+            error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
+            action: 'new_session',
+            messageCount: AGENT_CONFIG.maxMessagesPerSession,
+            maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+          },
+          { status: 429 },
+          releaseMetadata,
+        )
         response.headers.set('Retry-After', '0')
         return response
       }
@@ -719,7 +785,7 @@ export async function POST(req: NextRequest) {
       const errorMessage = isAbort
         ? 'A requisição demorou muito. Por favor, tente novamente.'
         : 'Algo deu errado. Por favor, tente novamente.'
-      return new Response(JSON.stringify({ error: errorMessage }), { status: 500 })
+      return createAgentJsonResponse({ error: errorMessage }, { status: 500 }, releaseMetadata)
     }
   }
 
@@ -824,5 +890,5 @@ export async function POST(req: NextRequest) {
     headers['X-Session-Id'] = session.id
   }
 
-  return new Response(stream, { headers })
+  return applyAgentReleaseHeaders(new Response(stream, { headers }), releaseMetadata)
 }
