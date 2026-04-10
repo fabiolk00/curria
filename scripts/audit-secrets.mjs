@@ -2,26 +2,54 @@
 
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ALLOWED_TRACKED_ENV_FILES = new Set([
+export const ALLOWED_TRACKED_ENV_FILES = new Set([
   '.env.example',
   '.env.staging.example',
 ])
 
-const SECRET_ASSIGNMENT_NAMES = new Set([
+export const SECRET_ASSIGNMENT_NAMES = new Set([
   'ANTHROPIC_API_KEY',
   'ASAAS_ACCESS_TOKEN',
   'ASAAS_WEBHOOK_TOKEN',
   'CLERK_SECRET_KEY',
   'CLERK_WEBHOOK_SECRET',
+  'CRON_SECRET',
+  'DATABASE_URL',
+  'DIRECT_URL',
   'E2E_AUTH_BYPASS_SECRET',
   'LINKDAPI_API_KEY',
   'OPENAI_API_KEY',
   'STAGING_ASAAS_ACCESS_TOKEN',
   'STAGING_ASAAS_WEBHOOK_TOKEN',
+  'STAGING_DB_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'UPSTASH_REDIS_REST_TOKEN',
 ])
+
+const EXACT_PLACEHOLDER_VALUES = new Set([
+  'curria-e2e-secret',
+  'dummy',
+  'pk_test_dummy',
+  'sk-test-dummy',
+  'sk_test_dummy',
+  'whsec_dummy',
+])
+
+const PLACEHOLDER_SUBSTRINGS = [
+  'replace_me',
+  'replace-me',
+  'example.com',
+  'example.org',
+  'example.net',
+  'localhost',
+  '127.0.0.1',
+  'your-project.supabase.co',
+  'project.supabase.co',
+  'dummy.upstash.io',
+]
 
 const GENERIC_SECRET_PATTERNS = [
   {
@@ -85,31 +113,51 @@ function normalizeAssignedValue(rawValue) {
   return rawValue.trim().replace(/^[`'"]|[`'"]$/g, '')
 }
 
-function looksPlaceholder(value) {
+export function looksPlaceholder(value) {
   if (!value) {
     return true
   }
 
   const normalized = value.trim().toLowerCase()
 
-  return [
-    'replace',
-    'example',
-    'dummy',
-    'placeholder',
-    'sample',
-    'changeme',
-    'change-me',
-    'your-',
-    'your_',
-    'test',
-    'localhost',
-    'sandbox',
-    'curria-e2e-secret',
-  ].some((token) => normalized.includes(token))
+  if (EXACT_PLACEHOLDER_VALUES.has(normalized)) {
+    return true
+  }
+
+  return PLACEHOLDER_SUBSTRINGS.some((token) => normalized.includes(token))
 }
 
-function findSecretAssignments(path, content) {
+export function isTrackedEnvFilePath(filePath) {
+  return /(^|\/)\.env(?:\.|$)/.test(filePath)
+}
+
+export function extractAssignedCandidates(rawValue) {
+  const expression = rawValue
+    .trim()
+    .replace(/\s+#.*$/, '')
+    .replace(/[;,]\s*$/, '')
+
+  if (!expression) {
+    return []
+  }
+
+  const quotedValues = [...expression.matchAll(/(["'`])((?:\\.|(?!\1).)*)\1/g)]
+    .map((match) => match[2].trim())
+    .filter(Boolean)
+
+  if (quotedValues.length > 0) {
+    return quotedValues
+  }
+
+  if (expression.includes('process.env')) {
+    return []
+  }
+
+  const normalized = normalizeAssignedValue(expression)
+  return normalized ? [normalized] : []
+}
+
+export function findSecretAssignments(path, content) {
   const findings = []
   const lines = content.split(/\r?\n/)
 
@@ -121,7 +169,7 @@ function findSecretAssignments(path, content) {
       continue
     }
 
-    const match = trimmed.match(/^[`'"]?([A-Z0-9_]+)[`'"]?\s*[:=]\s*([^#\s,]+|".*?"|'.*?')/)
+    const match = trimmed.match(/^[`'"]?([A-Z0-9_]+)[`'"]?\s*[:=]\s*(.+)$/)
     if (!match) {
       continue
     }
@@ -131,12 +179,10 @@ function findSecretAssignments(path, content) {
       continue
     }
 
-    if (rawValue.includes('process.env')) {
-      continue
-    }
+    const candidates = extractAssignedCandidates(rawValue)
+    const suspiciousValue = candidates.find((value) => !looksPlaceholder(value))
 
-    const value = normalizeAssignedValue(rawValue)
-    if (looksPlaceholder(value)) {
+    if (!suspiciousValue) {
       continue
     }
 
@@ -178,7 +224,7 @@ function main() {
   const findings = []
 
   for (const filePath of trackedFiles) {
-    if (/^\.env(?:\.|$)/.test(filePath) && !ALLOWED_TRACKED_ENV_FILES.has(filePath)) {
+    if (isTrackedEnvFilePath(filePath) && !ALLOWED_TRACKED_ENV_FILES.has(filePath)) {
       findings.push({
         path: filePath,
         line: 1,
@@ -226,4 +272,14 @@ function main() {
   console.log(`Secret audit passed for ${trackedFiles.length} tracked files.`)
 }
 
-main()
+export function isDirectExecution(metaUrl = import.meta.url, argv1 = process.argv[1]) {
+  if (!argv1) {
+    return false
+  }
+
+  return fileURLToPath(metaUrl) === path.resolve(argv1)
+}
+
+if (isDirectExecution()) {
+  main()
+}

@@ -24,7 +24,7 @@ Ignored local files:
 - `.env.staging` - real staging validation credentials
 - `.env.*.local` - environment-specific local overrides
 
-Only the template files should appear in git. Real secrets must stay in ignored local files or your deployment platform.
+Only the root template files should appear in git. Real secrets must stay in ignored local files or your deployment platform, and CI blocks tracked nested `.env*` files anywhere else in the repo.
 
 ## Canonical Runtime Contract
 
@@ -108,7 +108,7 @@ Deploy environments must use the same canonical runtime names listed above. Befo
 - Never commit `.env`, `.env.local`, or `.env.staging`.
 - If a secret rotates, update only your local file or deployment platform entry unless the contract name itself changed.
 - If you add a new required variable, update the template and docs in the same change.
-- CI runs `npm run audit:secrets` to block tracked env files, private keys, and obvious committed secret values.
+- CI runs `npm run audit:secrets` to block tracked `.env*` files outside the committed root templates, private keys, and obvious committed secret values for launch-critical env names.
 
 ## Quick Checks
 
