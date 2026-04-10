@@ -21,6 +21,9 @@ vi.mock('@/lib/linkedin/import-jobs', () => ({
 vi.mock('@/lib/observability/structured-log', () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
+  serializeError: (error: unknown) => ({
+    errorMessage: error instanceof Error ? error.message : String(error),
+  }),
 }))
 
 const JOB_ID = 'job_test_123'
@@ -112,6 +115,9 @@ describe('GET /api/profile/status/[jobId]', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.status).toBe('failed')
+    expect(json.errorMessage).toBe(
+      'Nao foi possivel importar esse perfil do LinkedIn agora. Confira se o link esta publico e tente novamente em instantes.',
+    )
   })
 
   it('returns 500 when claimAndProcessJob throws', async () => {
@@ -121,5 +127,7 @@ describe('GET /api/profile/status/[jobId]', () => {
 
     const res = await GET(makeRequest(), { params: { jobId: JOB_ID } })
     expect(res.status).toBe(500)
+    const json = await res.json()
+    expect(json.error).toBe('Nao foi possivel acompanhar a importacao do LinkedIn agora. Tente novamente em instantes.')
   })
 })

@@ -39,6 +39,12 @@ type ProfileResponse = {
   } | null
 }
 
+type ImportStatusResponse = {
+  status: JobStatus
+  error?: string
+  errorMessage?: string
+}
+
 function statusLabel(status: JobStatus): string {
   switch (status) {
     case "waiting":
@@ -75,10 +81,11 @@ export function ImportResumeModal({
           credentials: "include",
         })
         if (!response.ok) {
-          throw new Error("Nao foi possivel acompanhar a importacao.")
+          const failure = (await response.json().catch(() => null)) as { error?: string } | null
+          throw new Error(failure?.error ?? "Nao foi possivel acompanhar a importacao.")
         }
 
-        const data = (await response.json()) as { status: JobStatus }
+        const data = (await response.json()) as ImportStatusResponse
         setJobStatus(data.status)
 
         if (data.status === "completed") {
@@ -107,7 +114,7 @@ export function ImportResumeModal({
           window.clearInterval(interval)
           setJobId(null)
           setJobStatus("failed")
-          toast.error("Nao foi possivel importar seu perfil do LinkedIn.")
+          toast.error(data.errorMessage ?? "Nao foi possivel importar seu perfil do LinkedIn.")
         }
       } catch (error) {
         window.clearInterval(interval)

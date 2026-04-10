@@ -16,6 +16,18 @@ type SessionDocuments = {
   refresh: () => void
 }
 
+function getDocumentErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message === 'Generated resume artifacts could not be retrieved.') {
+      return 'Nao foi possivel carregar seus arquivos agora. Tente novamente em instantes.'
+    }
+
+    return error.message
+  }
+
+  return 'Nao foi possivel carregar os documentos da sessao.'
+}
+
 export function useSessionDocuments(sessionId: string | null): SessionDocuments {
   const [files, setFiles] = useState<SessionFiles>({ docxUrl: null, pdfUrl: null })
   const [isLoading, setIsLoading] = useState(false)
@@ -41,10 +53,7 @@ export function useSessionDocuments(sessionId: string | null): SessionDocuments 
       setError(null)
 
       try {
-        const nextFiles = await getDownloadUrls(sessionId).catch(() => ({
-          docxUrl: null,
-          pdfUrl: null,
-        }))
+        const nextFiles = await getDownloadUrls(sessionId)
 
         if (isCancelled) {
           return
@@ -56,11 +65,7 @@ export function useSessionDocuments(sessionId: string | null): SessionDocuments 
         })
       } catch (fetchError) {
         if (!isCancelled) {
-          setError(
-            fetchError instanceof Error
-              ? fetchError.message
-              : 'Nao foi possivel carregar os documentos da sessao.',
-          )
+          setError(getDocumentErrorMessage(fetchError))
         }
       } finally {
         if (!isCancelled) {

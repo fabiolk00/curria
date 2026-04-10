@@ -3,18 +3,23 @@ import { z } from 'zod'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { createImportJob } from '@/lib/linkedin/import-jobs'
-import { logError, logInfo } from '@/lib/observability/structured-log'
+import { logError, logInfo, serializeError } from '@/lib/observability/structured-log'
 
 const BodySchema = z.object({
-  linkedinUrl: z.string().url('Invalid URL format'),
+  linkedinUrl: z.string().url('Informe um link valido do LinkedIn.'),
 })
+
+const AUTH_REQUIRED_MESSAGE = 'Voce precisa estar autenticado para importar um perfil do LinkedIn.'
+const INVALID_REQUEST_MESSAGE = 'Nao foi possivel ler sua solicitacao. Revise o link do LinkedIn e tente novamente.'
+const INVALID_LINKEDIN_URL_MESSAGE = 'Informe um link publico de perfil do LinkedIn no formato https://www.linkedin.com/in/seu-perfil/.'
+const START_IMPORT_FAILURE_MESSAGE = 'Nao foi possivel iniciar a importacao do LinkedIn agora. Tente novamente em instantes.'
 
 export async function POST(req: NextRequest) {
   const appUser = await getCurrentAppUser(req)
   if (!appUser) {
     logError('[api/profile/extract] Unauthorized access attempt')
     return NextResponse.json(
-      { error: 'Você precisa estar autenticado para importar um perfil do LinkedIn.' },
+      { error: AUTH_REQUIRED_MESSAGE },
       { status: 401 },
     )
   }
@@ -24,13 +29,18 @@ export async function POST(req: NextRequest) {
     rawBody = await req.json()
   } catch {
     logError('[api/profile/extract] Invalid JSON in request', { appUserId: appUser.id })
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    return NextResponse.json({ error: INVALID_REQUEST_MESSAGE }, { status: 400 })
   }
 
   const body = BodySchema.safeParse(rawBody)
   if (!body.success) {
+    const firstIssue = body.error.issues[0]?.message
+    const errorMessage = firstIssue === 'Required'
+      ? INVALID_LINKEDIN_URL_MESSAGE
+      : (firstIssue ?? INVALID_LINKEDIN_URL_MESSAGE)
+
     return NextResponse.json(
-      { error: body.error.flatten() },
+      { error: errorMessage },
       { status: 400 },
     )
   }
@@ -39,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   if (!linkedinUrl.includes('linkedin.com/in/')) {
     return NextResponse.json(
-      { error: 'Invalid LinkedIn profile URL. Must be in format: https://www.linkedin.com/in/username/' },
+      { error: INVALID_LINKEDIN_URL_MESSAGE },
       { status: 400 },
     )
   }
@@ -60,11 +70,12 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     logError('[api/profile/extract] Failed to create job', {
       appUserId: appUser.id,
-      error: error instanceof Error ? error.message : String(error),
+      linkedinUrl,
+      ...serializeError(error),
     })
 
     return NextResponse.json(
-      { error: 'Failed to start profile extraction' },
+      { error: START_IMPORT_FAILURE_MESSAGE },
       { status: 500 },
     )
   }

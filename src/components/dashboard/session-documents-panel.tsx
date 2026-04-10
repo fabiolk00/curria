@@ -123,7 +123,7 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
   const searchParams = useSearchParams()
   const [sessionId, setSessionId] = useState<string | null>(() => searchParams.get('session'))
   const { file: previewFile, open } = usePreviewPanel()
-  const { files, isLoading, error } = useSessionDocuments(sessionId)
+  const { files, isLoading, error, refresh } = useSessionDocuments(sessionId)
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     files: true,
   })
@@ -164,7 +164,7 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
     return null
   }
 
-  if (!documentGroups.hasFiles && !isLoading) {
+  if (!documentGroups.hasFiles && !isLoading && !error) {
     return null
   }
 
@@ -194,7 +194,16 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
       ) : null}
 
       {error ? (
-        <p className="px-2 py-1 text-xs text-destructive">{error}</p>
+        <div className="space-y-2 px-2 py-1">
+          <p className="text-xs text-destructive">{error}</p>
+          <button
+            type="button"
+            onClick={refresh}
+            className="text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : null}
 
       {documentGroups.hasFiles ? (
