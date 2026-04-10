@@ -310,4 +310,65 @@ describe('/api/agent route model selection', () => {
       'quero revisar mais um ajuste antes de gerar',
     )
   })
+
+  it('inherits the resolved agent model for a real dialog-phase route request when OPENAI_DIALOG_MODEL is unset', async () => {
+    process.env.OPENAI_AGENT_MODEL = 'gpt-5.4-mini'
+    delete process.env.OPENAI_DIALOG_MODEL
+    mockCreateChatCompletionStreamWithRetry.mockImplementation(
+      async () => textStopStream('Resposta de dialogo sem override.') as never,
+    )
+
+    const { POST } = await loadRoute()
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'sess_dialog_model_override',
+        message: 'reescreva',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream')
+
+    const events = parseSseDataEvents(await response.text())
+    const requestParams = mockCreateChatCompletionStreamWithRetry.mock.calls[0]?.[1]
+
+    expect(requestParams?.model).toBe('gpt-5.4-mini')
+    expect(events).toContainEqual({
+      type: 'text',
+      content: 'Resposta de dialogo sem override.',
+    })
+  })
+
+  it('inherits the resolved agent model for a real confirm-phase route request when OPENAI_DIALOG_MODEL is unset', async () => {
+    process.env.OPENAI_AGENT_MODEL = 'gpt-5.4-mini'
+    delete process.env.OPENAI_DIALOG_MODEL
+    mockGetSession.mockResolvedValue(buildSession('confirm'))
+    mockCreateChatCompletionStreamWithRetry.mockImplementation(
+      async () => textStopStream('Resposta de confirmacao sem override.') as never,
+    )
+
+    const { POST } = await loadRoute()
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'sess_confirm_model_override',
+        message: 'quero revisar antes de gerar',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream')
+
+    const events = parseSseDataEvents(await response.text())
+    const requestParams = mockCreateChatCompletionStreamWithRetry.mock.calls[0]?.[1]
+
+    expect(requestParams?.model).toBe('gpt-5.4-mini')
+    expect(events).toContainEqual({
+      type: 'text',
+      content: 'Resposta de confirmacao sem override.',
+    })
+  })
 })

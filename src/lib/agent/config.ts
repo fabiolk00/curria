@@ -113,6 +113,8 @@ const ACTIVE_AGENT_MODEL = resolveOpenAIModel(
 
 export const MODEL_CONFIG = {
   agentModel: ACTIVE_AGENT_MODEL,
+  // Dialog and confirm inherit the resolved agent model unless an explicit
+  // OPENAI_DIALOG_MODEL override is present.
   dialogModel: resolveDialogModel(
     ACTIVE_AGENT_MODEL,
     process.env.OPENAI_DIALOG_MODEL,
@@ -129,6 +131,8 @@ export const MODEL_CONFIG = {
 
 export const ACTIVE_OPENAI_MODEL = MODEL_CONFIG.agentModel
 
+const DIALOG_MODEL_PHASES = new Set<Phase>(['dialog', 'confirm'])
+
 export function resolveDialogModel(
   agentModel: OpenAIModelName,
   value: string | undefined,
@@ -137,7 +141,7 @@ export function resolveDialogModel(
 }
 
 export function resolveAgentModelForPhase(phase: Phase): OpenAIModelName {
-  if (phase === 'dialog' || phase === 'confirm') {
+  if (DIALOG_MODEL_PHASES.has(phase)) {
     return MODEL_CONFIG.dialogModel
   }
 

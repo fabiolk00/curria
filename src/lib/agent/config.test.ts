@@ -128,6 +128,24 @@ describe('AGENT_CONFIG', () => {
     expect(loadedConfig.resolveAgentModelForPhase('analysis')).toBe('gpt-5-mini')
   })
 
+  it('inherits the resolved agent model for dialog and confirm when OPENAI_DIALOG_MODEL is unset', async () => {
+    const loadedConfig = await loadFreshConfigModule({
+      OPENAI_MODEL_COMBO: 'combo_a',
+      OPENAI_AGENT_MODEL: 'gpt-5.4-mini',
+      OPENAI_DIALOG_MODEL: undefined,
+    })
+
+    expect(loadedConfig.MODEL_CONFIG).toEqual({
+      agentModel: 'gpt-5.4-mini',
+      dialogModel: 'gpt-5.4-mini',
+      structuredModel: DEFAULT_OPENAI_MODEL,
+      visionModel: DEFAULT_OPENAI_MODEL,
+    })
+    expect(loadedConfig.resolveAgentModelForPhase('dialog')).toBe('gpt-5.4-mini')
+    expect(loadedConfig.resolveAgentModelForPhase('confirm')).toBe('gpt-5.4-mini')
+    expect(loadedConfig.resolveAgentModelForPhase('analysis')).toBe('gpt-5.4-mini')
+  })
+
   it('keeps the conversation output budget intentionally short', () => {
     expect(AGENT_CONFIG.conversationMaxOutputTokens).toBe(900)
     expect(AGENT_CONFIG.conciseFallbackMaxTokens).toBe(350)

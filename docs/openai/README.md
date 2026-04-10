@@ -14,7 +14,8 @@ Use this folder for the canonical OpenAI runtime, quality, and migration documen
 
 Current runtime note:
 - `OPENAI_MODEL_COMBO` selects the baseline agent combo
-- `OPENAI_AGENT_MODEL` or `OPENAI_MODEL` override the agent turn model directly
+- `OPENAI_AGENT_MODEL` overrides the agent turn model directly
+- `OPENAI_MODEL` remains a compatibility alias for `OPENAI_AGENT_MODEL`
 - dialog and confirm turns follow the resolved agent model unless `OPENAI_DIALOG_MODEL` is explicitly set
 - `OPENAI_DIALOG_MODEL` is an override, not a separate default baseline
 - `npm run agent:parity` verifies the deployed `/api/agent` headers against the expected resolved agent and dialog model values

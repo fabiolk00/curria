@@ -54,7 +54,8 @@ Do not use legacy provider aliases. CI and runtime are intentionally aligned on 
 OpenAI model selection works as follows:
 
 - `OPENAI_MODEL_COMBO` selects the baseline agent combo.
-- `OPENAI_MODEL` and `OPENAI_AGENT_MODEL` override the agent turn model directly.
+- Prefer `OPENAI_AGENT_MODEL` when you want to override the agent turn model directly.
+- `OPENAI_MODEL` is still accepted as a compatibility alias for `OPENAI_AGENT_MODEL`.
 - `OPENAI_DIALOG_MODEL` is an explicit override for dialog and confirm turns only.
 - When `OPENAI_DIALOG_MODEL` is unset, dialog and confirm turns follow the resolved agent model.
 
