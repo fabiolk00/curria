@@ -703,6 +703,98 @@ describe('runAgentLoop streaming', () => {
     expect(finalText).not.toContain('Tente novamente com um pedido curto')
   })
 
+  it('keeps automatic analysis bootstrap silent when analyze_gap fails but the turn can continue', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'analysis' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL, ETL e integracao de dados.',
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL, ETL e Python.',
+      },
+    }
+
+    mockDispatchToolWithContext
+      .mockResolvedValueOnce({
+        output: { success: true, total: 51 },
+        outputJson: JSON.stringify({ success: true, total: 51 }),
+        persistedPatch: {
+          atsScore: {
+            total: 51,
+            breakdown: {
+              format: 70,
+              structure: 60,
+              keywords: 45,
+              contact: 95,
+              impact: 35,
+            },
+            issues: [],
+            suggestions: [],
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        output: { success: false, code: 'LLM_INVALID_OUTPUT', error: 'Invalid gap analysis payload.' },
+        outputJson: JSON.stringify({ success: false, code: 'LLM_INVALID_OUTPUT', error: 'Invalid gap analysis payload.' }),
+        outputFailure: { success: false, code: 'LLM_INVALID_OUTPUT', error: 'Invalid gap analysis payload.' },
+        persistedPatch: undefined,
+      })
+
+    mockCreateChatCompletionStreamWithRetry.mockResolvedValue(
+      mockTextStream('Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.') as never,
+    )
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Responsabilidades e requisitos da vaga...',
+      appUserId: 'usr_123',
+      requestId: 'req_silent_bootstrap',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
+      1,
+      'score_ats',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
+    expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
+      2,
+      'analyze_gap',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
+    expect(events.some((event) => event.type === 'toolStart')).toBe(false)
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'error'
+          && event.error === 'Invalid gap analysis payload.',
+      ),
+    ).toBe(false)
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'patch',
+      patch: expect.objectContaining({
+        atsScore: expect.objectContaining({
+          total: 51,
+        }),
+      }),
+    }))
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.',
+    )
+  })
+
   it('emits an error when the stream ends without a finish reason', async () => {
     async function* incompleteStream() {
       yield {

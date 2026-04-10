@@ -725,10 +725,17 @@ async function* runDeterministicTool(params: {
   toolInput: Record<string, unknown>
   requestId: string
   signal?: AbortSignal
+  surfaceToolStartToUser?: boolean
+  surfaceFailureToUser?: boolean
 }): AsyncGenerator<AgentLoopEvent, DeterministicToolOutcome> {
-  yield {
-    type: 'toolStart',
-    toolName: params.toolName,
+  const surfaceToolStartToUser = params.surfaceToolStartToUser ?? true
+  const surfaceFailureToUser = params.surfaceFailureToUser ?? true
+
+  if (surfaceToolStartToUser) {
+    yield {
+      type: 'toolStart',
+      toolName: params.toolName,
+    }
   }
 
   const toolResult = await dispatchToolWithContext(
@@ -739,11 +746,13 @@ async function* runDeterministicTool(params: {
   )
 
   if (toolResult.outputFailure) {
-    yield {
-      type: 'error',
-      error: toolResult.outputFailure.error,
-      code: toolResult.outputFailure.code,
-      requestId: params.requestId,
+    if (surfaceFailureToUser) {
+      yield {
+        type: 'error',
+        error: toolResult.outputFailure.error,
+        code: toolResult.outputFailure.code,
+        requestId: params.requestId,
+      }
     }
 
     if (toolResult.persistedPatch) {
@@ -805,6 +814,8 @@ async function* primeAnalysisState(params: {
       },
       requestId: params.requestId,
       signal: params.signal,
+      surfaceToolStartToUser: false,
+      surfaceFailureToUser: false,
     })
     mutatedPromptState = mutatedPromptState || scoreResult.hadPatch
   }
@@ -818,6 +829,8 @@ async function* primeAnalysisState(params: {
       },
       requestId: params.requestId,
       signal: params.signal,
+      surfaceToolStartToUser: false,
+      surfaceFailureToUser: false,
     })
     mutatedPromptState = mutatedPromptState || gapResult.hadPatch
   }
