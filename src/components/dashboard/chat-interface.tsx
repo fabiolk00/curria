@@ -37,6 +37,12 @@ type ProfileResponse = {
   } | null
 }
 
+type SessionMessagePayload = {
+  role: string
+  content: string
+  createdAt: string
+}
+
 function hasConversationMessages(items: Message[]): boolean {
   return items.some((message) => message.id !== "welcome")
 }
@@ -99,6 +105,96 @@ function isCreditExhaustedError(message?: string): boolean {
 function isRecoverableStreamError(chunk: { code?: string; error?: string }): boolean {
   return chunk.code === "LLM_INVALID_OUTPUT"
     || Boolean(chunk.error && /invalid .*payload/i.test(chunk.error))
+}
+
+function normalizeFetchedMessages(
+  payload: SessionMessagePayload[],
+  welcomeMessage: Message,
+): Message[] {
+  return payload.map((message, index) => ({
+    id: String(index),
+    role: message.role as "user" | "assistant",
+    content:
+      message.role === "assistant" && index === 0 && isLegacyWelcomeMessage(message.content)
+        ? welcomeMessage.content
+        : message.content,
+    timestamp: new Date(message.createdAt).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  }))
+}
+
+function choosePreferredTranscriptMessage(
+  clientMessage: Message | undefined,
+  serverMessage: Message,
+  thinkingText: string,
+): Message {
+  if (!clientMessage || clientMessage.role !== serverMessage.role) {
+    return serverMessage
+  }
+
+  const clientContent = clientMessage.content.trim()
+  const serverContent = serverMessage.content.trim()
+  const normalizedClientContent = clientContent === thinkingText ? "" : clientContent
+  const normalizedServerContent = serverContent === thinkingText ? "" : serverContent
+
+  if (!normalizedServerContent && normalizedClientContent) {
+    return {
+      ...serverMessage,
+      content: clientMessage.content,
+      timestamp: clientMessage.timestamp || serverMessage.timestamp,
+    }
+  }
+
+  if (!normalizedClientContent && normalizedServerContent) {
+    return serverMessage
+  }
+
+  if (normalizedClientContent.length > normalizedServerContent.length) {
+    return {
+      ...serverMessage,
+      content: clientMessage.content,
+      timestamp: clientMessage.timestamp || serverMessage.timestamp,
+    }
+  }
+
+  return serverMessage
+}
+
+function mergeFetchedTranscriptMessages(
+  previous: Message[],
+  serverMessages: Message[],
+  thinkingText: string,
+): Message[] {
+  const previousConversation = previous.filter((message) => message.id !== "welcome")
+
+  if (previousConversation.length === 0) {
+    return serverMessages
+  }
+
+  if (serverMessages.length === 0) {
+    return previous
+  }
+
+  const comparableLength = Math.min(previousConversation.length, serverMessages.length)
+  const rolesStayAligned = Array.from({ length: comparableLength }).every((_, index) =>
+    previousConversation[index]?.role === serverMessages[index]?.role,
+  )
+
+  if (!rolesStayAligned) {
+    return serverMessages.length < previousConversation.length ? previousConversation : serverMessages
+  }
+
+  const merged = serverMessages.map((serverMessage, index) =>
+    choosePreferredTranscriptMessage(previousConversation[index], serverMessage, thinkingText),
+  )
+
+  if (previousConversation.length > serverMessages.length) {
+    return [...merged, ...previousConversation.slice(serverMessages.length)]
+  }
+
+  return merged
 }
 
 interface ChatInterfaceProps {
@@ -185,6 +281,19 @@ export function ChatInterface({
     setMessages((previous) =>
       previous.map((item) =>
         item.id === assistantMessageId ? { ...item, content } : item,
+      ),
+    )
+  }
+
+  const appendAssistantMessageContent = (assistantMessageId: string, content: string): void => {
+    setMessages((previous) =>
+      previous.map((message) =>
+        message.id === assistantMessageId
+          ? {
+              ...message,
+              content: message.content === copy.thinkingText ? content : message.content + content,
+            }
+          : message,
       ),
     )
   }
@@ -293,30 +402,13 @@ export function ChatInterface({
         }
 
         if (data.messages?.length) {
-          const nextMessages = data.messages.map(
-              (
-                message: { role: string; content: string; createdAt: string },
-                index: number,
-              ) => ({
-                id: String(index),
-                role: message.role as "user" | "assistant",
-                content:
-                  message.role === "assistant" && index === 0 && isLegacyWelcomeMessage(message.content)
-                    ? welcomeMessage.content
-                    : message.content,
-                timestamp: new Date(message.createdAt).toLocaleTimeString("pt-BR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              }),
-            )
+          const nextMessages = normalizeFetchedMessages(
+            data.messages as SessionMessagePayload[],
+            welcomeMessage,
+          )
 
           setMessages((previous) => {
-            if (hasConversationMessages(previous) && nextMessages.length < previous.length) {
-              return previous
-            }
-
-            return nextMessages
+            return mergeFetchedTranscriptMessages(previous, nextMessages, copy.thinkingText)
           })
           return
         }
@@ -346,8 +438,9 @@ export function ChatInterface({
     const messageToSend = input
     const fileToSend = uploadedFile
 
+    const baseMessageId = Date.now()
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: String(baseMessageId),
       role: "user",
       content: fileToSend ? `${messageToSend}\n\nAnexo: ${fileToSend.name}` : messageToSend,
       timestamp: new Date().toLocaleTimeString("pt-BR", {
@@ -356,17 +449,17 @@ export function ChatInterface({
       }),
     }
 
-    setMessages((previous) => [...previous, userMessage])
     setInput("")
     setUploadedFile(null)
     setIsStreaming(true)
     setIsToolExecuting(false)
     setCurrentToolName(null)
 
-    const assistantMessageId = `${Date.now() + 1}`
+    const assistantMessageId = String(baseMessageId + 1)
     setActiveAssistantMessageId(assistantMessageId)
     setMessages((previous) => [
       ...previous,
+      userMessage,
       {
         id: assistantMessageId,
         role: "assistant",
@@ -481,16 +574,7 @@ export function ChatInterface({
 
               switch (chunk.type) {
                 case "text":
-                  setMessages((previous) =>
-                    previous.map((message) =>
-                      message.id === assistantMessageId
-                        ? {
-                            ...message,
-                            content: message.content === copy.thinkingText ? chunk.content : message.content + chunk.content,
-                          }
-                        : message,
-                    ),
-                  )
+                  appendAssistantMessageContent(assistantMessageId, chunk.content)
                   break
 
                 case "sessionCreated":

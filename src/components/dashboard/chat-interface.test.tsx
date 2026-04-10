@@ -365,6 +365,152 @@ describe("ChatInterface", () => {
     })
   })
 
+  it("keeps one coherent assistant bubble for a recoverable rewrite stream", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { type: "sessionCreated", sessionId: "sess_rewrite_single" },
+            { type: "text", content: "Posso reescrever agora seu resumo profissional. " },
+            {
+              type: "error",
+              error: "Invalid gap analysis payload.",
+              code: "LLM_INVALID_OUTPUT",
+            },
+            { type: "text", content: "Ja tenho seu curriculo e a vaga como referencia." },
+            { type: "done", sessionId: "sess_rewrite_single", phase: "dialog", messageCount: 2 },
+          ]),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "X-Session-Id": "sess_rewrite_single",
+            },
+          },
+        )
+      }
+
+      if (typeof url === "string" && url === "/api/session/sess_rewrite_single") {
+        return new Response(
+          JSON.stringify({
+            session: {
+              phase: "dialog",
+              messageCount: 2,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
+    await userEvent.type(textarea, "reescreva")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      const assistantMessages = screen.getAllByTestId("message-assistant")
+      expect(assistantMessages).toHaveLength(2)
+
+      const finalAssistantMessage = assistantMessages[assistantMessages.length - 1]
+      expect(finalAssistantMessage).toHaveTextContent(
+        /Posso reescrever agora seu resumo profissional\. Ja tenho seu curriculo e a vaga como referencia\./i,
+      )
+      expect(finalAssistantMessage).not.toHaveTextContent(/Aviso:\s*Invalid gap analysis payload\./i)
+    })
+  })
+
+  it("preserves a richer streamed assistant transcript when late history hydration is shorter", async () => {
+    let resolveHistoryFetch: ((response: Response) => void) | null = null
+    const historyFetch = new Promise<Response>((resolve) => {
+      resolveHistoryFetch = resolve
+    })
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { type: "sessionCreated", sessionId: "sess_history_reconcile" },
+            { type: "text", content: "Posso reescrever agora seu resumo profissional. " },
+            { type: "text", content: "Ja tenho seu curriculo e a vaga como referencia." },
+            { type: "done", sessionId: "sess_history_reconcile", phase: "dialog", messageCount: 2 },
+          ]),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "X-Session-Id": "sess_history_reconcile",
+            },
+          },
+        )
+      }
+
+      if (typeof url === "string" && url === "/api/session/sess_history_reconcile/messages") {
+        return historyFetch
+      }
+
+      if (typeof url === "string" && url === "/api/session/sess_history_reconcile") {
+        return new Response(
+          JSON.stringify({
+            session: {
+              phase: "dialog",
+              messageCount: 2,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
+    await userEvent.type(textarea, "reescreva")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      const assistantMessages = screen.getAllByTestId("message-assistant")
+      expect(assistantMessages).toHaveLength(2)
+      expect(assistantMessages[assistantMessages.length - 1]).toHaveTextContent(
+        /Posso reescrever agora seu resumo profissional\. Ja tenho seu curriculo e a vaga como referencia\./i,
+      )
+    })
+
+    expect(resolveHistoryFetch).not.toBeNull()
+    resolveHistoryFetch!(
+      new Response(
+        JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: "reescreva",
+              createdAt: "2026-04-10T12:48:00.000Z",
+            },
+            {
+              role: "assistant",
+              content: "Posso reescrever agora seu resumo profissional.",
+              createdAt: "2026-04-10T12:48:01.000Z",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+
+    await waitFor(() => {
+      const assistantMessages = screen.getAllByTestId("message-assistant")
+      expect(assistantMessages).toHaveLength(2)
+      expect(assistantMessages[assistantMessages.length - 1]).toHaveTextContent(
+        /Posso reescrever agora seu resumo profissional\. Ja tenho seu curriculo e a vaga como referencia\./i,
+      )
+    })
+  })
+
   it("shows expired banner (not cap banner) and disables input on 404 stale session", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (typeof url === "string" && url.includes("/api/agent")) {
