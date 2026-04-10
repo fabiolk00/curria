@@ -1,35 +1,52 @@
 # Production Readiness Checklist
 
-Status: billing webhook contract updated for settlement-based processing.
+Status: settlement-based billing contract current as of Phase 1 hardening.
 
 ## Required before deploy
 
-- [ ] Latest billing code deployed
-- [ ] `billing_webhook_hardening.sql` applied
-- [ ] `20260406_align_asaas_webhook_contract.sql` applied
-- [ ] `20260406_fix_billing_checkout_timestamp_defaults.sql` applied
-- [ ] `20260407_persist_billing_display_totals.sql` applied
-- [ ] `20260407_harden_text_id_generation.sql` applied
-- [ ] `20260407_harden_standard_timestamps.sql` applied
-- [ ] Old overload of `apply_billing_credit_grant_event` removed
-- [ ] Focused billing tests passing
-- [ ] Typecheck passing
+- [ ] Latest billing code is deployed.
+- [ ] `prisma/migrations/billing_webhook_hardening.sql` is applied.
+- [ ] `prisma/migrations/20260406_align_asaas_webhook_contract.sql` is applied.
+- [ ] `prisma/migrations/20260406_fix_billing_checkout_timestamp_defaults.sql` is applied.
+- [ ] `prisma/migrations/20260407_persist_billing_display_totals.sql` is applied.
+- [ ] `prisma/migrations/20260407_harden_text_id_generation.sql` is applied.
+- [ ] `prisma/migrations/20260407_harden_standard_timestamps.sql` is applied.
+- [ ] The old overload of `apply_billing_credit_grant_event` is removed.
+- [ ] Deploy environments use the canonical runtime contract from `.env.example`.
+- [ ] Dedicated webhook secrets are set separately from broader API credentials.
 
 ## Runtime behavior to confirm
 
-- [ ] One-time purchases grant credits from settled payments only
-- [ ] One-time purchases still settle when Asaas sends `checkoutSession` and `externalReference = null`
-- [ ] Initial recurring activation comes from settled payment with `payment.subscription`
-- [ ] `SUBSCRIPTION_CREATED` invalid snapshots return `200 ignored`
-- [ ] Renewals replace balance, not add to it
-- [ ] Cancellations preserve credits
-- [ ] Duplicate `PAYMENT_CONFIRMED` and `PAYMENT_RECEIVED` do not double-grant
-- [ ] `processed_events` stores internal event types, not old raw names
-- [ ] Dashboard credit denominator is never lower than the runtime balance
+- [ ] Settled one-time payments store `processed_events.event_type = 'PAYMENT_SETTLED'`.
+- [ ] Initial recurring activation stores `processed_events.event_type = 'SUBSCRIPTION_STARTED'`.
+- [ ] Renewals store `processed_events.event_type = 'SUBSCRIPTION_RENEWED'`.
+- [ ] Metadata-only subscription updates store `processed_events.event_type = 'SUBSCRIPTION_UPDATED'`.
+- [ ] Cancellations store `processed_events.event_type = 'SUBSCRIPTION_CANCELED'`.
+- [ ] `SUBSCRIPTION_CREATED` inactive snapshots return `200 ignored` and do not grant credits.
+- [ ] Renewal replaces the balance once instead of adding to the previous cycle total.
+- [ ] Duplicate `PAYMENT_CONFIRMED` and `PAYMENT_RECEIVED` deliveries do not double-grant.
+- [ ] Dashboard display totals are never lower than the runtime credit balance.
 
-## DB verification
+## Database verification
 
-### ID defaults
+### Migration-derived objects
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts')
+ORDER BY table_name;
+```
+
+Expected:
+
+- `billing_checkouts`
+- `credit_accounts`
+- `processed_events`
+- `user_quotas`
+
+### Text ID defaults
 
 ```sql
 SELECT table_name, column_default
@@ -54,7 +71,7 @@ ORDER BY table_name;
 
 Expected:
 
-- every listed generic text-ID table returns a `gen_random_uuid()::text` default or equivalent expression
+- Every listed text-ID table uses `gen_random_uuid()::text` or an equivalent expression.
 
 ### Timestamp defaults
 
@@ -79,9 +96,9 @@ ORDER BY table_name, column_name;
 
 Expected:
 
-- every mutable table listed above returns `NOW()` or equivalent defaults for both timestamps
+- Mutable tables use `NOW()` defaults for both timestamp columns.
 
-### Function signatures
+### Billing RPC signatures
 
 ```sql
 SELECT
@@ -99,10 +116,10 @@ ORDER BY p.proname, args;
 
 Expected:
 
-- one `apply_billing_credit_grant_event` with `p_is_renewal boolean`
-- one `apply_billing_subscription_metadata_event`
+- One `apply_billing_credit_grant_event` signature with `p_is_renewal boolean`
+- One `apply_billing_subscription_metadata_event` signature
 
-### Processed event types
+### Internal processed event names
 
 ```sql
 SELECT event_type, COUNT(*) AS count
@@ -111,7 +128,7 @@ GROUP BY event_type
 ORDER BY event_type;
 ```
 
-Expected new values include:
+Expected values include:
 
 - `PAYMENT_SETTLED`
 - `SUBSCRIPTION_STARTED`
@@ -119,11 +136,20 @@ Expected new values include:
 - `SUBSCRIPTION_UPDATED`
 - `SUBSCRIPTION_CANCELED`
 
+## Verification commands
+
+Run these before calling the rollout ready:
+
+```bash
+npm run typecheck
+npm test
+```
+
 ## Linked docs
 
 - [billing/IMPLEMENTATION.md](./billing/IMPLEMENTATION.md)
 - [billing/MIGRATION_GUIDE.md](./billing/MIGRATION_GUIDE.md)
 - [billing/MONITORING.md](./billing/MONITORING.md)
 - [billing/OPS_RUNBOOK.md](./billing/OPS_RUNBOOK.md)
+- [staging/SETUP_GUIDE.md](./staging/SETUP_GUIDE.md)
 - [staging/VALIDATION_PLAN.md](./staging/VALIDATION_PLAN.md)
-- [staging/VALIDATION_AGENT_PROMPT.md](./staging/VALIDATION_AGENT_PROMPT.md)
