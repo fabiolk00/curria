@@ -19,9 +19,9 @@
 
 ### Transcript Integrity and Verification
 
-- [ ] **UX-01**: One chat request renders as one coherent assistant turn in the visible transcript, even when recovery or fallback paths are used.
-- [ ] **QA-04**: Automated verification covers live-route model selection, dialog recovery, and the final rendered assistant output for rewrite flows.
-- [ ] **QA-05**: Team can reproduce and inspect a representative `reescreva` incident with committed route or transcript evidence.
+- [x] **UX-01**: One chat request renders as one coherent assistant turn in the visible transcript, even when recovery or fallback paths are used.
+- [x] **QA-04**: Automated verification covers live-route model selection, dialog recovery, and the final rendered assistant output for rewrite flows.
+- [x] **QA-05**: Team can reproduce and inspect a representative `reescreva` incident with committed route or transcript evidence.
 
 ## v1.2 Requirements
 
@@ -53,9 +53,9 @@
 | AGNT-01 | Phase 6 | Complete |
 | AGNT-02 | Phase 6 | Complete |
 | AGNT-03 | Phase 6 | Complete |
-| UX-01 | Phase 7 | Pending |
-| QA-04 | Phase 7 | Pending |
-| QA-05 | Phase 7 | Pending |
+| UX-01 | Phase 7 | Complete |
+| QA-04 | Phase 7 | Complete |
+| QA-05 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 9 total
@@ -64,4 +64,4 @@
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after completing Phase 6*
+*Last updated: 2026-04-10 after completing Phase 7*

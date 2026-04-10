@@ -13,7 +13,7 @@ This roadmap starts milestone `v1.1 Agent Reliability and Response Continuity` a
 
 - [x] **Phase 5: Deployed Agent Parity and Evidence** - Prove which build, model, and recovery path the live `/api/agent` route is serving. (completed 2026-04-10)
 - [x] **Phase 6: Dialog Continuity and Model Routing Hardening** - Eliminate truncation-driven repetition and keep dialog or confirm turns on the intended model contract. (completed 2026-04-10)
-- [ ] **Phase 7: Transcript Integrity and End-to-End Agent Verification** - Prove the final rendered chat transcript matches the backend stream and recovery behavior.
+- [x] **Phase 7: Transcript Integrity and End-to-End Agent Verification** - Prove the final rendered chat transcript matches the backend stream and recovery behavior. (completed 2026-04-10)
 
 ## Phase Details
 
@@ -58,9 +58,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: Harden chat transcript assembly around recovered and fallback turns
-- [ ] 07-02: Add end-to-end SSE and transcript verification for the real `/api/agent` path
-- [ ] 07-03: Capture operator repro guidance and closeout evidence for the original incident
+- [x] 07-01: Harden chat transcript assembly around recovered and fallback turns
+- [x] 07-02: Add end-to-end SSE and transcript verification for the real `/api/agent` path
+- [x] 07-03: Capture operator repro guidance and closeout evidence for the original incident
 
 ## Progress
 
@@ -71,4 +71,4 @@ Phases execute in numeric order: 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 5. Deployed Agent Parity and Evidence | 3/3 | Complete   | 2026-04-10 |
 | 6. Dialog Continuity and Model Routing Hardening | 3/3 | Complete    | 2026-04-10 |
-| 7. Transcript Integrity and End-to-End Agent Verification | 0/3 | Pending | - |
+| 7. Transcript Integrity and End-to-End Agent Verification | 3/3 | Complete | 2026-04-10 |
