@@ -19,6 +19,9 @@ jobs:
 
       - run: npm install
 
+      - name: Secret Audit
+        run: npm run audit:secrets
+
       - name: TypeScript
         run: npm run typecheck
 

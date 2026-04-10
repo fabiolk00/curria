@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "audit:db-conventions": "tsx scripts/audit-database-conventions.ts",
+    "audit:secrets": "node scripts/audit-secrets.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",

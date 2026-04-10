@@ -108,6 +108,7 @@ Deploy environments must use the same canonical runtime names listed above. Befo
 - Never commit `.env`, `.env.local`, or `.env.staging`.
 - If a secret rotates, update only your local file or deployment platform entry unless the contract name itself changed.
 - If you add a new required variable, update the template and docs in the same change.
+- CI runs `npm run audit:secrets` to block tracked env files, private keys, and obvious committed secret values.
 
 ## Quick Checks
 
@@ -126,6 +127,13 @@ Verify your local runtime file is ignored:
 
 ```bash
 git check-ignore .env
+git check-ignore .env.staging
+```
+
+Run the repo secret audit locally before pushing if you touched env or CI files:
+
+```bash
+npm run audit:secrets
 ```
 
 ## Related Documentation
