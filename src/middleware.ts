@@ -45,6 +45,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
   const clerkFrameSrc = [
     "'self'",
+    'blob:',
     clerkFrontendApi,
     'https://*.clerk.accounts.dev',
     'https://challenges.cloudflare.com',
