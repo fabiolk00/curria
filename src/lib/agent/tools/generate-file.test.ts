@@ -28,6 +28,7 @@ function buildSupabase() {
   return {
     storage: {
       from: vi.fn(() => ({
+        upload: vi.fn(() => Promise.resolve({ error: null })),
         createSignedUrl: vi.fn((filePath: string) => Promise.resolve({
           data: {
             signedUrl: `https://cdn.example.com/${filePath}`,
@@ -47,14 +48,12 @@ describe('generateFile', () => {
   it('persists generated output paths but not signed URLs', async () => {
     const supabase = buildSupabase()
     const upload = vi.fn().mockResolvedValue(undefined)
-    const generateDOCX = vi.fn().mockResolvedValue(Buffer.from('docx'))
     const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
 
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
     vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockImplementation(generateDOCX)
     vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
 
     const result = await generateFile({
@@ -63,13 +62,13 @@ describe('generateFile', () => {
 
     expect(result.output).toEqual({
       success: true,
-      docxUrl: 'https://cdn.example.com/usr_123/sess_123/resume.docx',
       pdfUrl: 'https://cdn.example.com/usr_123/sess_123/resume.pdf',
+      docxUrl: null,
+      warnings: undefined,
     })
     expect(result.patch).toMatchObject({
       generatedOutput: {
         status: 'ready',
-        docxPath: 'usr_123/sess_123/resume.docx',
         pdfPath: 'usr_123/sess_123/resume.pdf',
       },
     })
@@ -81,8 +80,7 @@ describe('generateFile', () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockRejectedValue(new Error('template render failed'))
-    vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
+    vi.spyOn(generateFileDeps, 'generatePDF').mockRejectedValue(new Error('template render failed'))
 
     const result = await generateFile({
       cv_state: buildCvState(),
@@ -98,6 +96,7 @@ describe('generateFile', () => {
         status: 'failed',
         docxPath: undefined,
         pdfPath: undefined,
+        generatedAt: undefined,
         error: 'template render failed',
       },
     })
@@ -107,7 +106,6 @@ describe('generateFile', () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockResolvedValue(Buffer.from('docx'))
     vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
     vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
 
@@ -120,15 +118,14 @@ describe('generateFile', () => {
       throw new Error('Expected successful output.')
     }
 
-    expect(result.output.docxUrl).toContain('resume.docx')
     expect(result.output.pdfUrl).toContain('resume.pdf')
+    expect(result.output.docxUrl).toBeNull()
   })
 
   it('builds target-specific artifact metadata without touching session-level patching', async () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockResolvedValue(Buffer.from('docx'))
     vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
     vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
 
@@ -139,13 +136,13 @@ describe('generateFile', () => {
 
     expect(result.output).toEqual({
       success: true,
-      docxUrl: 'https://cdn.example.com/usr_123/sess_123/targets/target_123/resume.docx',
       pdfUrl: 'https://cdn.example.com/usr_123/sess_123/targets/target_123/resume.pdf',
+      docxUrl: null,
+      warnings: undefined,
     })
     expect(result.patch).toBeUndefined()
     expect(result.generatedOutput).toEqual({
       status: 'ready',
-      docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
       pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
       generatedAt: expect.any(String),
       error: undefined,
@@ -156,9 +153,7 @@ describe('generateFile', () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    const generateDOCX = vi.fn().mockResolvedValue(Buffer.from('docx'))
     const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockImplementation(generateDOCX)
     vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
     vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
 
@@ -171,9 +166,6 @@ describe('generateFile', () => {
       targetJobDescription: 'React engineer with PostgreSQL experience',
     })
 
-    expect(generateDOCX).toHaveBeenCalledWith(expect.objectContaining({
-      skills: 'React, PostgreSQL, TypeScript',
-    }))
     expect(generatePDF).toHaveBeenCalledWith(expect.objectContaining({
       skills: 'React, PostgreSQL, TypeScript',
     }))
@@ -223,7 +215,6 @@ describe('generateFile', () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockResolvedValue(Buffer.from('docx'))
     vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
     vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
 
@@ -237,14 +228,13 @@ describe('generateFile', () => {
 
     expect(result.output).toEqual({
       success: true,
-      docxUrl: 'https://cdn.example.com/usr_123/sess_123/targets/target_123/resume.docx',
       pdfUrl: 'https://cdn.example.com/usr_123/sess_123/targets/target_123/resume.pdf',
+      docxUrl: null,
       warnings: ['email'],
     })
     expect(result.patch).toBeUndefined()
     expect(result.generatedOutput).toEqual({
       status: 'ready',
-      docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
       pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
       generatedAt: expect.any(String),
       error: undefined,
@@ -297,14 +287,12 @@ describe('generateFile', () => {
   it('fills missing contact and summary fields with explicit placeholders and warnings', async () => {
     const supabase = buildSupabase()
     const upload = vi.fn().mockResolvedValue(undefined)
-    const generateDOCX = vi.fn().mockResolvedValue(Buffer.from('docx'))
     const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
 
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
     vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockImplementation(generateDOCX)
     vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
 
     const result = await generateFile({
@@ -318,15 +306,10 @@ describe('generateFile', () => {
 
     expect(result.output).toEqual({
       success: true,
-      docxUrl: 'https://cdn.example.com/usr_123/sess_123/resume.docx',
       pdfUrl: 'https://cdn.example.com/usr_123/sess_123/resume.pdf',
+      docxUrl: null,
       warnings: ['email', 'telefone', 'resumo profissional'],
     })
-    expect(generateDOCX).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'Email nao informado no perfil salvo.',
-      phone: 'Telefone nao informado no perfil salvo.',
-      summary: 'Resumo profissional pendente. O perfil salvo nao traz uma descricao valida para esta secao.',
-    }))
     expect(generatePDF).toHaveBeenCalledWith(expect.objectContaining({
       email: 'Email nao informado no perfil salvo.',
       phone: 'Telefone nao informado no perfil salvo.',
@@ -338,7 +321,6 @@ describe('generateFile', () => {
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockResolvedValue(Buffer.from('docx'))
     vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
     vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
 
@@ -351,8 +333,8 @@ describe('generateFile', () => {
 
     expect(result.output).toEqual({
       success: true,
-      docxUrl: 'https://cdn.example.com/usr_123/sess_123/resume.docx',
       pdfUrl: 'https://cdn.example.com/usr_123/sess_123/resume.pdf',
+      docxUrl: null,
       warnings: ['telefone'],
     })
   })
@@ -360,14 +342,12 @@ describe('generateFile', () => {
   it('autofills the missing end date for the most recent experience during generation', async () => {
     const supabase = buildSupabase()
     const upload = vi.fn().mockResolvedValue(undefined)
-    const generateDOCX = vi.fn().mockResolvedValue(Buffer.from('docx'))
     const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
 
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
     vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
-    vi.spyOn(generateFileDeps, 'generateDOCX').mockImplementation(generateDOCX)
     vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
 
     const result = await generateFile({
@@ -393,7 +373,7 @@ describe('generateFile', () => {
     }, 'usr_123', 'sess_123')
 
     expect(result.output.success).toBe(true)
-    expect(generateDOCX).toHaveBeenCalledWith(expect.objectContaining({
+    expect(generatePDF).toHaveBeenCalledWith(expect.objectContaining({
       experiences: expect.arrayContaining([
         expect.objectContaining({
           company: 'Pravaler',

@@ -15,7 +15,6 @@ test.describe('dashboard core funnel', () => {
         derivedCvState: workspace.session.cvState,
         generatedOutput: {
           status: 'ready',
-          docxPath: `${sessionId}/targets/target_001/resume.docx`,
           pdfPath: `${sessionId}/targets/target_001/resume.pdf`,
           generatedAt: '2026-04-10T12:06:00.000Z',
         },
@@ -64,9 +63,9 @@ test.describe('dashboard core funnel', () => {
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByTestId('document-item-docx').click(),
+      page.getByTestId('document-item-pdf').click(),
     ])
 
-    expect(download.suggestedFilename()).toBe('Resume.docx')
+    expect(download.suggestedFilename()).toBe('Resume.pdf')
   })
 })

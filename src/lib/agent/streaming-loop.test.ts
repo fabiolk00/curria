@@ -1360,6 +1360,27 @@ describe('runAgentLoop streaming', () => {
         }
       })
       .mockImplementationOnce(async (_toolName, _toolInput, currentSession) => {
+        currentSession.agentState.gapAnalysis = {
+          analyzedAt: '2026-04-10T18:00:00.000Z',
+          result: {
+            matchScore: 61,
+            missingSkills: ['Power BI', 'ingles fluente'],
+            weakAreas: ['resumo profissional'],
+            improvementSuggestions: ['Destaque resultados com BI e ETL no resumo.'],
+          },
+        }
+
+        return {
+          output: { success: true, result: currentSession.agentState.gapAnalysis.result },
+          outputJson: JSON.stringify({ success: true, result: currentSession.agentState.gapAnalysis.result }),
+          persistedPatch: {
+            agentState: {
+              gapAnalysis: currentSession.agentState.gapAnalysis,
+            },
+          },
+        }
+      })
+      .mockImplementationOnce(async (_toolName, _toolInput, currentSession) => {
         currentSession.phase = 'dialog'
 
         return {
@@ -1397,6 +1418,13 @@ describe('runAgentLoop streaming', () => {
     )
     expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
       2,
+      'analyze_gap',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
+    expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
+      3,
       'set_phase',
       expect.any(Object),
       expect.any(Object),
@@ -1430,7 +1458,7 @@ describe('runAgentLoop streaming', () => {
       2,
       'sess_123',
       'assistant',
-      'Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo. Pontuacao ATS atual: 51/100. Posso seguir reescrevendo seu resumo ou experiencia com base nesses pontos. Se quiser gerar agora a versao otimizada, responda com "Aceito".',
+      expect.stringContaining('Recebi a vaga e comparei com seu curriculo com foco em aderencia ATS.'),
     )
   })
 
@@ -1527,6 +1555,7 @@ describe('runAgentLoop streaming', () => {
       'toolStart',
       'toolResult',
       'patch',
+      'toolResult',
       'text',
       'done',
     ])
@@ -1534,7 +1563,7 @@ describe('runAgentLoop streaming', () => {
       2,
       'sess_123',
       'assistant',
-      'Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.',
+      expect.stringContaining('Seu curriculo ATS-otimizado em PDF esta pronto.'),
     )
   })
 
@@ -1601,30 +1630,102 @@ describe('runAgentLoop streaming', () => {
       },
     }
 
-    mockDispatchToolWithContext
-      .mockResolvedValueOnce({
-        output: { success: true, phase: 'generation' },
-        outputJson: JSON.stringify({ success: true, phase: 'generation' }),
-        persistedPatch: {
-          phase: 'generation',
-        },
-      })
+    mockDispatchToolWithContext.mockImplementation(async (toolName) => {
+      if (toolName === 'set_phase') {
+        return {
+          output: { success: true, phase: 'generation' },
+          outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+          persistedPatch: {
+            phase: 'generation',
+          },
+        }
+      }
+
+      if (toolName === 'generate_file') {
+        return {
+          output: {
+            success: true,
+            pdfUrl: 'https://example.com/resume.pdf',
+          },
+          outputJson: JSON.stringify({
+            success: true,
+            pdfUrl: 'https://example.com/resume.pdf',
+          }),
+          persistedPatch: {
+            generatedOutput: {
+              status: 'ready',
+              pdfPath: 'usr_123/sess_123/resume.pdf',
+            },
+          },
+        }
+      }
+
+      if (toolName === 'score_ats') {
+        return {
+          output: {
+            success: true,
+            result: {
+              total: 73,
+              breakdown: {
+                format: 70,
+                structure: 70,
+                keywords: 80,
+                contact: 95,
+                impact: 50,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+          outputJson: JSON.stringify({ success: true, result: { total: 73 } }),
+          persistedPatch: {
+            atsScore: {
+              total: 73,
+              breakdown: {
+                format: 70,
+                structure: 70,
+                keywords: 80,
+                contact: 95,
+                impact: 50,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+        }
+      }
+
+      throw new Error(`Unexpected tool call: ${toolName}`)
+    })
       .mockResolvedValueOnce({
         output: {
           success: true,
-          docxUrl: 'https://example.com/resume.docx',
-          pdfUrl: 'https://example.com/resume.pdf',
+          result: {
+            total: 69,
+            breakdown: {
+              format: 70,
+              structure: 68,
+              keywords: 72,
+              contact: 95,
+              impact: 40,
+            },
+            issues: [],
+            suggestions: [],
+          },
         },
-        outputJson: JSON.stringify({
-          success: true,
-          docxUrl: 'https://example.com/resume.docx',
-          pdfUrl: 'https://example.com/resume.pdf',
-        }),
+        outputJson: JSON.stringify({ success: true, result: { total: 69 } }),
         persistedPatch: {
-          generatedOutput: {
-            status: 'ready',
-            docxPath: 'usr_123/sess_123/resume.docx',
-            pdfPath: 'usr_123/sess_123/resume.pdf',
+          atsScore: {
+            total: 69,
+            breakdown: {
+              format: 70,
+              structure: 68,
+              keywords: 72,
+              contact: 95,
+              impact: 40,
+            },
+            issues: [],
+            suggestions: [],
           },
         },
       })
@@ -1649,6 +1750,8 @@ describe('runAgentLoop streaming', () => {
       'toolStart',
       'toolResult',
       'patch',
+      'toolResult',
+      'patch',
       'text',
       'done',
     ])
@@ -1656,7 +1759,7 @@ describe('runAgentLoop streaming', () => {
       2,
       'sess_123',
       'assistant',
-      'Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.',
+      expect.stringContaining('Seu curriculo ATS-otimizado em PDF esta pronto.'),
     )
   })
 
@@ -1672,35 +1775,75 @@ describe('runAgentLoop streaming', () => {
       },
     }
 
-    mockDispatchToolWithContext
-      .mockResolvedValueOnce({
-        output: { success: true, phase: 'generation' },
-        outputJson: JSON.stringify({ success: true, phase: 'generation' }),
-        persistedPatch: {
-          phase: 'generation',
-        },
-      })
-      .mockResolvedValueOnce({
-        output: {
-          success: true,
-          docxUrl: 'https://example.com/resume.docx',
-          pdfUrl: 'https://example.com/resume.pdf',
-          warnings: ['email', 'telefone', 'resumo profissional'],
-        },
-        outputJson: JSON.stringify({
-          success: true,
-          docxUrl: 'https://example.com/resume.docx',
-          pdfUrl: 'https://example.com/resume.pdf',
-          warnings: ['email', 'telefone', 'resumo profissional'],
-        }),
-        persistedPatch: {
-          generatedOutput: {
-            status: 'ready',
-            docxPath: 'usr_123/sess_123/resume.docx',
-            pdfPath: 'usr_123/sess_123/resume.pdf',
+    mockDispatchToolWithContext.mockImplementation(async (toolName) => {
+      if (toolName === 'set_phase') {
+        return {
+          output: { success: true, phase: 'generation' },
+          outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+          persistedPatch: {
+            phase: 'generation',
           },
-        },
-      })
+        }
+      }
+
+      if (toolName === 'generate_file') {
+        return {
+          output: {
+            success: true,
+            pdfUrl: 'https://example.com/resume.pdf',
+            warnings: ['email', 'telefone', 'resumo profissional'],
+          },
+          outputJson: JSON.stringify({
+            success: true,
+            pdfUrl: 'https://example.com/resume.pdf',
+            warnings: ['email', 'telefone', 'resumo profissional'],
+          }),
+          persistedPatch: {
+            generatedOutput: {
+              status: 'ready',
+              pdfPath: 'usr_123/sess_123/resume.pdf',
+            },
+          },
+        }
+      }
+
+      if (toolName === 'score_ats') {
+        return {
+          output: {
+            success: true,
+            result: {
+              total: 69,
+              breakdown: {
+                format: 70,
+                structure: 68,
+                keywords: 72,
+                contact: 95,
+                impact: 40,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+          outputJson: JSON.stringify({ success: true, result: { total: 69 } }),
+          persistedPatch: {
+            atsScore: {
+              total: 69,
+              breakdown: {
+                format: 70,
+                structure: 68,
+                keywords: 72,
+                contact: 95,
+                impact: 40,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+        }
+      }
+
+      throw new Error(`Unexpected tool call: ${toolName}`)
+    })
 
     const events = []
     for await (const event of runAgentLoop({
@@ -1735,37 +1878,45 @@ describe('runAgentLoop streaming', () => {
       },
     }
 
-    mockDispatchToolWithContext
-      .mockResolvedValueOnce({
-        output: { success: true, phase: 'generation' },
-        outputJson: JSON.stringify({ success: true, phase: 'generation' }),
-        persistedPatch: {
-          phase: 'generation',
-        },
-      })
-      .mockResolvedValueOnce({
-        output: {
-          success: false,
-          code: 'VALIDATION_ERROR',
-          error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
-        },
-        outputJson: JSON.stringify({
-          success: false,
-          code: 'VALIDATION_ERROR',
-          error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
-        }),
-        outputFailure: {
-          success: false,
-          code: 'VALIDATION_ERROR',
-          error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
-        },
-        persistedPatch: {
-          generatedOutput: {
-            status: 'failed',
+    mockDispatchToolWithContext.mockImplementation(async (toolName) => {
+      if (toolName === 'set_phase') {
+        return {
+          output: { success: true, phase: 'generation' },
+          outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+          persistedPatch: {
+            phase: 'generation',
+          },
+        }
+      }
+
+      if (toolName === 'generate_file') {
+        return {
+          output: {
+            success: false,
+            code: 'VALIDATION_ERROR',
             error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
           },
-        },
-      })
+          outputJson: JSON.stringify({
+            success: false,
+            code: 'VALIDATION_ERROR',
+            error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
+          }),
+          outputFailure: {
+            success: false,
+            code: 'VALIDATION_ERROR',
+            error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
+          },
+          persistedPatch: {
+            generatedOutput: {
+              status: 'failed',
+              error: 'Falta a descricao da sua segunda experiencia - Case New Holland. Adicione pelo menos um resultado, responsabilidade ou entrega dessa funcao.',
+            },
+          },
+        }
+      }
+
+      throw new Error(`Unexpected tool call: ${toolName}`)
+    })
 
     const events = []
     for await (const event of runAgentLoop({

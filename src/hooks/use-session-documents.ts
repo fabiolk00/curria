@@ -60,7 +60,7 @@ export function useSessionDocuments(sessionId: string | null): SessionDocuments 
         }
 
         setFiles({
-          docxUrl: nextFiles.docxUrl ?? null,
+          docxUrl: null,
           pdfUrl: nextFiles.pdfUrl ?? null,
         })
       } catch (fetchError) {

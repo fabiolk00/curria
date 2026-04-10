@@ -424,41 +424,37 @@ function buildRewriteTargetKeywords(session: Session): string[] | undefined {
   return targetKeywords.length > 0 ? targetKeywords : undefined
 }
 
-function buildResumeTextForScoring(session: Session): string {
-  if (session.agentState.sourceResumeText?.trim()) {
-    return session.agentState.sourceResumeText
-  }
-
+function buildResumeTextFromCvState(cvState: Session['cvState']): string {
   const lines: string[] = []
 
-  if (session.cvState.fullName.trim()) {
-    lines.push(session.cvState.fullName.trim())
+  if (cvState.fullName.trim()) {
+    lines.push(cvState.fullName.trim())
   }
 
   const contactLine = [
-    session.cvState.email?.trim(),
-    session.cvState.phone?.trim(),
-    session.cvState.linkedin?.trim(),
-    session.cvState.location?.trim(),
+    cvState.email?.trim(),
+    cvState.phone?.trim(),
+    cvState.linkedin?.trim(),
+    cvState.location?.trim(),
   ].filter(Boolean).join(' | ')
 
   if (contactLine) {
     lines.push(contactLine)
   }
 
-  if (session.cvState.summary.trim()) {
+  if (cvState.summary.trim()) {
     lines.push('Summary')
-    lines.push(session.cvState.summary.trim())
+    lines.push(cvState.summary.trim())
   }
 
-  if (session.cvState.skills.length > 0) {
+  if (cvState.skills.length > 0) {
     lines.push('Skills')
-    lines.push(session.cvState.skills.join(', '))
+    lines.push(cvState.skills.join(', '))
   }
 
-  if (session.cvState.experience.length > 0) {
+  if (cvState.experience.length > 0) {
     lines.push('Experience')
-    for (const experience of session.cvState.experience.slice(0, 6)) {
+    for (const experience of cvState.experience.slice(0, 6)) {
       lines.push(`${experience.title} - ${experience.company} (${experience.startDate} - ${experience.endDate})`)
       for (const bullet of experience.bullets.slice(0, 4)) {
         lines.push(`- ${bullet}`)
@@ -466,21 +462,29 @@ function buildResumeTextForScoring(session: Session): string {
     }
   }
 
-  if (session.cvState.education.length > 0) {
+  if (cvState.education.length > 0) {
     lines.push('Education')
-    for (const education of session.cvState.education.slice(0, 4)) {
+    for (const education of cvState.education.slice(0, 4)) {
       lines.push(`${education.degree} - ${education.institution} (${education.year})`)
     }
   }
 
-  if ((session.cvState.certifications?.length ?? 0) > 0) {
+  if ((cvState.certifications?.length ?? 0) > 0) {
     lines.push('Certifications')
-    for (const certification of session.cvState.certifications?.slice(0, 4) ?? []) {
+    for (const certification of cvState.certifications?.slice(0, 4) ?? []) {
       lines.push(`${certification.name} - ${certification.issuer}`)
     }
   }
 
   return lines.join('\n').trim()
+}
+
+function buildResumeTextForScoring(session: Session): string {
+  if (session.agentState.sourceResumeText?.trim()) {
+    return session.agentState.sourceResumeText
+  }
+
+  return buildResumeTextFromCvState(session.cvState)
 }
 
 function hasResumeContextForDeterministicAnalysis(session: Session): boolean {
@@ -659,6 +663,61 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
   }
 
   return 'Recebi sua mensagem, mas esta resposta falhou. Tente repetir o pedido em uma frase curta e objetiva que eu continuo daqui.'
+}
+
+function buildDeterministicVacancyBootstrap(session: Session, userMessage: string): string {
+  const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || looksLikeJobDescription(userMessage))
+
+  if (!hasTargetJobContext) {
+    return buildDeterministicAssistantFallback(session, userMessage)
+  }
+
+  const parts = ['Recebi a vaga e comparei com seu curriculo com foco em aderencia ATS.']
+
+  if (session.atsScore) {
+    parts.push(`Pontuacao ATS atual: ${session.atsScore.total}/100.`)
+  }
+
+  if (session.agentState.targetFitAssessment) {
+    parts.push(
+      `Aderencia inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${session.agentState.targetFitAssessment.summary}`,
+    )
+  } else if (session.agentState.gapAnalysis) {
+    parts.push(`Aderencia estimada a vaga: ${session.agentState.gapAnalysis.result.matchScore}/100.`)
+  }
+
+  if (session.agentState.gapAnalysis) {
+    const missingSkills = session.agentState.gapAnalysis.result.missingSkills.slice(0, 3)
+    const weakAreas = session.agentState.gapAnalysis.result.weakAreas.slice(0, 2)
+    const topSuggestion = session.agentState.gapAnalysis.result.improvementSuggestions[0]
+
+    if (missingSkills.length > 0) {
+      parts.push(`Palavras-chave e sinais que ainda estao fracos: ${missingSkills.join(', ')}.`)
+    }
+
+    if (weakAreas.length > 0) {
+      parts.push(`Trechos do curriculo com maior oportunidade de ganho: ${weakAreas.join(', ')}.`)
+    }
+
+    if (topSuggestion) {
+      parts.push(`Melhor proximo ajuste ATS: ${topSuggestion}.`)
+    }
+  } else if (session.atsScore) {
+    const topIssue = session.atsScore.issues[0]?.message
+    const topSuggestion = session.atsScore.suggestions[0]
+
+    if (topIssue) {
+      parts.push(`Principal ponto a melhorar: ${topIssue}.`)
+    }
+
+    if (topSuggestion) {
+      parts.push(`Melhor proximo ajuste ATS: ${topSuggestion}.`)
+    }
+  }
+
+  parts.push('Posso reescrever agora seu resumo, experiencia ou competencias com base nessa vaga. Se a versao atual ja estiver boa para gerar, responda com "Aceito".')
+
+  return parts.join(' ')
 }
 
 function buildDialogFallback(session: Session, userMessage: string): DeterministicFallback {
@@ -1231,6 +1290,9 @@ async function* primeAnalysisState(params: {
 
   let mutatedPromptState = false
   const latestMessageLooksLikeVacancy = looksLikeJobDescription(params.userMessage)
+  const latestTargetJobDescription = latestMessageLooksLikeVacancy
+    ? params.userMessage.trim()
+    : session.agentState.targetJobDescription?.trim()
 
   if (!session.atsScore) {
     const scoreResult = yield* runDeterministicTool({
@@ -1238,7 +1300,7 @@ async function* primeAnalysisState(params: {
       toolName: 'score_ats',
       toolInput: {
         resume_text: buildResumeTextForScoring(session),
-        job_description: session.agentState.targetJobDescription,
+        job_description: latestTargetJobDescription,
       },
       requestId: params.requestId,
       signal: params.signal,
@@ -1248,16 +1310,12 @@ async function* primeAnalysisState(params: {
     mutatedPromptState = mutatedPromptState || scoreResult.hadPatch
   }
 
-  if (
-    !latestMessageLooksLikeVacancy
-    && session.agentState.targetJobDescription?.trim()
-    && !session.agentState.gapAnalysis
-  ) {
+  if (latestTargetJobDescription && !session.agentState.gapAnalysis) {
     const gapResult = yield* runDeterministicTool({
       session,
       toolName: 'analyze_gap',
       toolInput: {
-        target_job_description: session.agentState.targetJobDescription,
+        target_job_description: latestTargetJobDescription,
       },
       requestId: params.requestId,
       signal: params.signal,
@@ -1277,6 +1335,7 @@ async function* handleConfirmedGeneration(params: {
   requestId: string
   signal?: AbortSignal
 }): AsyncGenerator<AgentLoopEvent, string> {
+  const previousAtsTotal = params.session.atsScore?.total
   const setPhaseResult = yield* runDeterministicTool({
     session: params.session,
     toolName: 'set_phase',
@@ -1299,6 +1358,39 @@ async function* handleConfirmedGeneration(params: {
   })
 
   if (generationResult.success) {
+    let refreshedAtsTotal: number | null = null
+
+    if (params.session.agentState.targetJobDescription?.trim()) {
+      const refreshedScoreResult = yield* runDeterministicTool({
+        session: params.session,
+        toolName: 'score_ats',
+        toolInput: {
+          resume_text: buildResumeTextFromCvState(params.session.cvState),
+          job_description: params.session.agentState.targetJobDescription,
+        },
+        requestId: params.requestId,
+        signal: params.signal,
+        surfaceToolStartToUser: false,
+        surfaceFailureToUser: false,
+      })
+
+      const refreshedScoreOutput = refreshedScoreResult.output
+      if (
+        refreshedScoreResult.success
+        && refreshedScoreOutput
+        && typeof refreshedScoreOutput === 'object'
+        && 'success' in refreshedScoreOutput
+        && refreshedScoreOutput.success === true
+        && 'result' in refreshedScoreOutput
+        && refreshedScoreOutput.result
+        && typeof refreshedScoreOutput.result === 'object'
+        && 'total' in refreshedScoreOutput.result
+        && typeof refreshedScoreOutput.result.total === 'number'
+      ) {
+        refreshedAtsTotal = refreshedScoreOutput.result.total
+      }
+    }
+
     const generationWarnings = (
       generationResult.output
       && typeof generationResult.output === 'object'
@@ -1310,11 +1402,26 @@ async function* handleConfirmedGeneration(params: {
       ? generationResult.output.warnings.filter((warning): warning is string => typeof warning === 'string' && warning.trim().length > 0)
       : []
 
+    const atsSummary = refreshedAtsTotal !== null
+      ? (previousAtsTotal !== undefined
+        ? `ATS Score antes: ${previousAtsTotal}/100. ATS agora: ${refreshedAtsTotal}/100.`
+        : `ATS atual estimado: ${refreshedAtsTotal}/100.`)
+      : null
+
     if (generationWarnings.length > 0) {
-      return `Seus arquivos ATS-otimizados estao prontos. Mantive avisos claros nos campos pendentes do perfil: ${generationWarnings.join(', ')}. Confira os downloads de DOCX e PDF acima.`
+      return [
+        'Seu curriculo ATS-otimizado em PDF esta pronto.',
+        atsSummary,
+        `Mantive avisos claros nos campos pendentes do perfil: ${generationWarnings.join(', ')}.`,
+        'Confira o download e a pre-visualizacao acima.',
+      ].filter(Boolean).join(' ')
     }
 
-    return 'Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.'
+    return [
+      'Seu curriculo ATS-otimizado em PDF esta pronto.',
+      atsSummary,
+      'Confira o download e a pre-visualizacao acima.',
+    ].filter(Boolean).join(' ')
   }
 
   if (!setPhaseResult.success && setPhaseResult.failureMessage) {
@@ -1614,7 +1721,7 @@ export async function* runAgentLoop(
         surfaceFailureToUser: false,
       })
 
-      const bootstrapAssistantText = buildDeterministicAssistantFallback(session, userMessage)
+      const bootstrapAssistantText = buildDeterministicVacancyBootstrap(session, userMessage)
       const bootstrapFallbackKind = session.atsScore
         || session.agentState.targetFitAssessment
         || session.agentState.gapAnalysis

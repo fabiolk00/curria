@@ -124,10 +124,10 @@ test.describe('long vacancy generation stress', () => {
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByTestId('document-item-docx').click(),
+      page.getByTestId('document-item-pdf').click(),
     ])
 
-    expect(download.suggestedFilename()).toBe('Resume.docx')
+    expect(download.suggestedFilename()).toBe('Resume.pdf')
     expect(longVacancyText.length).toBeGreaterThan(7000)
   })
 })

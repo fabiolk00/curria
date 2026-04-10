@@ -13,8 +13,8 @@ type SessionMessage = {
 
 type FileResponse = {
   available?: boolean
-  docxUrl: string | null
   pdfUrl: string | null
+  docxUrl?: string | null
 }
 
 type ProfileResponse = {
@@ -49,15 +49,15 @@ function buildDefaultArtifactResponse(isReady: boolean): FileResponse {
   if (!isReady) {
     return {
       available: false,
-      docxUrl: null,
       pdfUrl: null,
+      docxUrl: null,
     }
   }
 
   return {
     available: true,
-    docxUrl: `${DEFAULT_ASSET_BASE_URL}/resume.docx`,
     pdfUrl: `${DEFAULT_ASSET_BASE_URL}/resume.pdf`,
+    docxUrl: null,
   }
 }
 
@@ -103,7 +103,6 @@ export function buildMockWorkspace(sessionId = 'sess_e2e_browser'): SessionWorks
       },
       generatedOutput: {
         status: 'ready',
-        docxPath: `${sessionId}/resume.docx`,
         pdfPath: `${sessionId}/resume.pdf`,
         generatedAt: '2026-04-10T12:05:00.000Z',
       },
@@ -143,7 +142,7 @@ function resolveFileResponse(
 
   const isReady =
     generatedOutput?.status === 'ready'
-    && Boolean(generatedOutput.docxPath && generatedOutput.pdfPath)
+    && Boolean(generatedOutput.pdfPath)
 
   return buildDefaultArtifactResponse(isReady)
 }
@@ -151,7 +150,6 @@ function resolveFileResponse(
 function markGeneratedOutputReady(workspace: SessionWorkspace, sessionId: string): void {
   workspace.session.generatedOutput = {
     status: 'ready',
-    docxPath: `${sessionId}/resume.docx`,
     pdfPath: `${sessionId}/resume.pdf`,
     generatedAt: '2026-04-10T12:31:00.000Z',
   }
@@ -307,18 +305,6 @@ export async function installCoreFunnelApiMocks(
     const targetId = requestUrl.searchParams.get('targetId')
     await jsonResponse(route, resolveFileResponse(workspace, targetId, options.file))
   })
-
-  await page.route('**/__e2e-assets/*.docx', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      headers: {
-        'content-disposition': 'attachment; filename="Resume.docx"',
-      },
-      body: Buffer.from('PK\u0003\u0004 CurrIA E2E DOCX'),
-    })
-  })
-
   await page.route('**/__e2e-assets/*.pdf', async (route) => {
     await route.fulfill({
       status: 200,

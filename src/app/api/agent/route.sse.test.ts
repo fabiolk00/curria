@@ -453,6 +453,38 @@ describe('/api/agent SSE fallback coverage', () => {
           },
         },
       })
+      .mockResolvedValueOnce({
+        output: {
+          success: true,
+          result: {
+            total: 73,
+            breakdown: {
+              format: 70,
+              structure: 70,
+              keywords: 80,
+              contact: 95,
+              impact: 50,
+            },
+            issues: [],
+            suggestions: [],
+          },
+        },
+        outputJson: JSON.stringify({ success: true, result: { total: 73 } }),
+        persistedPatch: {
+          atsScore: {
+            total: 73,
+            breakdown: {
+              format: 70,
+              structure: 70,
+              keywords: 80,
+              contact: 95,
+              impact: 50,
+            },
+            issues: [],
+            suggestions: [],
+          },
+        },
+      })
 
     const response = await POST(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
@@ -471,7 +503,7 @@ describe('/api/agent SSE fallback coverage', () => {
       .map((event) => String(event.content ?? ''))
       .join('')
 
-    expect(finalText).toBe('Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.')
+    expect(finalText).toContain('Seu curriculo ATS-otimizado em PDF esta pronto.')
     expect(events).toContainEqual(expect.objectContaining({
       type: 'patch',
       phase: 'dialog',

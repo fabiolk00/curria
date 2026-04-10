@@ -103,5 +103,5 @@ export async function getDownloadUrls(
 }
 
 export function isGeneratedOutputReady(generatedOutput?: GeneratedOutput): boolean {
-  return generatedOutput?.status === 'ready' && Boolean(generatedOutput.docxPath && generatedOutput.pdfPath)
+  return generatedOutput?.status === 'ready' && Boolean(generatedOutput.pdfPath)
 }

@@ -57,9 +57,9 @@ export async function GET(
   }
 
   const artifactMetadata = target?.generatedOutput ?? session.generatedOutput
-  const { docxPath, pdfPath } = artifactMetadata
+  const { pdfPath } = artifactMetadata
 
-  if (!docxPath || !pdfPath) {
+  if (!pdfPath) {
     return NextResponse.json(
       {
         docxUrl: null,
@@ -71,10 +71,10 @@ export async function GET(
   }
 
   try {
-    const signedUrls = await createSignedResumeArtifactUrls(docxPath, pdfPath)
+    const signedUrls = await createSignedResumeArtifactUrls(undefined, pdfPath)
 
     return NextResponse.json({
-      docxUrl: signedUrls.docxUrl,
+      docxUrl: null,
       pdfUrl: signedUrls.pdfUrl,
     })
   } catch (error) {

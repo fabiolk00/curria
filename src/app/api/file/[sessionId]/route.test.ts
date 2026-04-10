@@ -111,12 +111,12 @@ describe('GET /api/file/[sessionId]', () => {
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      docxUrl: 'https://cdn.example.com/signed/docx',
+      docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf',
     })
     expect(getSession).toHaveBeenCalledWith('sess_123', 'usr_123')
     expect(createSignedResumeArtifactUrls).toHaveBeenCalledWith(
-      'usr_123/sess_123/resume.docx',
+      undefined,
       'usr_123/sess_123/resume.pdf',
     )
     expect(updateSession).not.toHaveBeenCalled()
@@ -152,7 +152,6 @@ describe('GET /api/file/[sessionId]', () => {
       derivedCvState: buildSession().cvState,
       generatedOutput: {
         status: 'ready',
-        docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
         pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
         generatedAt: '2026-03-27T12:30:00.000Z',
       },
@@ -171,12 +170,12 @@ describe('GET /api/file/[sessionId]', () => {
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      docxUrl: 'https://cdn.example.com/signed/target-docx',
+      docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/target-pdf',
     })
     expect(getResumeTargetForSession).toHaveBeenCalledWith('sess_123', 'target_123')
     expect(createSignedResumeArtifactUrls).toHaveBeenCalledWith(
-      'usr_123/sess_123/targets/target_123/resume.docx',
+      undefined,
       'usr_123/sess_123/targets/target_123/resume.pdf',
     )
   })

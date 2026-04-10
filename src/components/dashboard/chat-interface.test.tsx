@@ -219,7 +219,7 @@ describe("ChatInterface", () => {
 
         return new Response(
           createSSEStream([
-            { type: "text", content: "Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima." },
+            { type: "text", content: "Seu curriculo ATS-otimizado em PDF esta pronto. ATS Score antes: 47/100. ATS agora: 63/100. Confira o download e a pre-visualizacao acima." },
             { type: "done", sessionId: "sess_confirm", phase: "generation", messageCount: 4 },
           ]),
           { status: 200, headers: { "Content-Type": "text/event-stream", "X-Session-Id": "sess_confirm" } },

@@ -138,18 +138,26 @@ function PreviewPanelContent({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!previewUrl) {
       return
     }
 
+    const response = await fetch(previewUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to download preview PDF (${response.status})`)
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
-    anchor.href = previewUrl
+    anchor.href = objectUrl
     anchor.download = `${file.label}.pdf`
     anchor.rel = 'noopener noreferrer'
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
+    URL.revokeObjectURL(objectUrl)
   }
 
   const previewState = isLoading ? 'loading' : error ? 'error' : previewUrl ? 'ready' : 'idle'
@@ -183,7 +191,7 @@ function PreviewPanelContent({
               </button>
               <button
                 type="button"
-                onClick={handleDownload}
+                onClick={() => void handleDownload()}
                 data-testid="preview-download-pdf"
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Baixar PDF"

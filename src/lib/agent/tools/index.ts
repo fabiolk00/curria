@@ -158,7 +158,7 @@ const TOOL_DEFINITIONS: OpenAITool[] = [
     type: 'function',
     function: {
       name: 'generate_file',
-      description: 'Generate the final ATS-optimized DOCX and PDF files for download.',
+      description: 'Generate the final ATS-optimized PDF file for download and preview.',
       parameters: {
         type: 'object',
         properties: {

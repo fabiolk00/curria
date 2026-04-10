@@ -24,8 +24,8 @@ type GenerateFileExecutionResult = {
 
 type SupabaseStorageClient = ReturnType<SupabaseClient['storage']['from']>
 type SignedResumeArtifactUrls = {
-  docxUrl: string
   pdfUrl: string
+  docxUrl?: string | null
 }
 
 type ResumeTemplateSource = CVState | TemplateData
@@ -366,9 +366,9 @@ function getSupabase(): SupabaseClient {
   return createClient(url, serviceRoleKey)
 }
 
-function createSuccessPatch(docxPath: string, pdfPath: string): ToolPatch {
+function createSuccessPatch(pdfPath: string): ToolPatch {
   return {
-    generatedOutput: createGeneratedOutput('ready', undefined, docxPath, pdfPath),
+    generatedOutput: createGeneratedOutput('ready', undefined, undefined, pdfPath),
   }
 }
 
@@ -392,36 +392,33 @@ function buildArtifactPaths(
   userId: string,
   sessionId: string,
   scope: ArtifactScope,
-): { docxPath: string; pdfPath: string } {
+): { pdfPath: string } {
   if (scope.type === 'target') {
     return {
-      docxPath: `${userId}/${sessionId}/targets/${scope.targetId}/resume.docx`,
       pdfPath: `${userId}/${sessionId}/targets/${scope.targetId}/resume.pdf`,
     }
   }
 
   return {
-    docxPath: `${userId}/${sessionId}/resume.docx`,
     pdfPath: `${userId}/${sessionId}/resume.pdf`,
   }
 }
 
 export async function createSignedResumeArtifactUrls(
-  docxPath: string,
+  docxPath: string | undefined,
   pdfPath: string,
   supabase: SupabaseClient = generateFileDeps.getSupabase(),
 ): Promise<SignedResumeArtifactUrls> {
-  const [{ data: docxSigned, error: docxError }, { data: pdfSigned, error: pdfError }] = await Promise.all([
-    supabase.storage.from('resumes').createSignedUrl(docxPath, 3600),
-    supabase.storage.from('resumes').createSignedUrl(pdfPath, 3600),
-  ])
+  const { data: pdfSigned, error: pdfError } = await supabase.storage
+    .from('resumes')
+    .createSignedUrl(pdfPath, 3600)
 
-  if (docxError || !docxSigned?.signedUrl || pdfError || !pdfSigned?.signedUrl) {
+  if (pdfError || !pdfSigned?.signedUrl) {
     throw new Error('Failed to create signed download URLs.')
   }
 
   return {
-    docxUrl: docxSigned.signedUrl,
+    docxUrl: docxPath ? null : null,
     pdfUrl: pdfSigned.signedUrl,
   }
 }
@@ -451,41 +448,29 @@ export async function generateFile(
     const supabase = generateFileDeps.getSupabase()
     const templateData = cvStateToTemplateData(validation.cvState, templateTargetSource)
 
-    const [docxBuffer, pdfBuffer] = await Promise.all([
-      generateFileDeps.generateDOCX(templateData),
-      generateFileDeps.generatePDF(templateData),
-    ])
+    const pdfBuffer = await generateFileDeps.generatePDF(templateData)
 
     const artifactPaths = buildArtifactPaths(userId, sessionId, scope)
-    docxPath = artifactPaths.docxPath
     pdfPath = artifactPaths.pdfPath
 
-    await Promise.all([
-      generateFileDeps.upload(
-        supabase,
-        docxPath,
-        docxBuffer,
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ),
-      generateFileDeps.upload(
-        supabase,
-        pdfPath,
-        pdfBuffer,
-        'application/pdf',
-      ),
-    ])
+    await generateFileDeps.upload(
+      supabase,
+      pdfPath,
+      pdfBuffer,
+      'application/pdf',
+    )
 
     const signedUrls = await createSignedResumeArtifactUrls(docxPath, pdfPath, supabase)
 
     return {
       output: {
         success: true,
-        docxUrl: signedUrls.docxUrl,
         pdfUrl: signedUrls.pdfUrl,
+        docxUrl: null,
         warnings: validation.warnings.length > 0 ? validation.warnings : undefined,
       },
-      patch: scope.type === 'session' ? createSuccessPatch(docxPath, pdfPath) : undefined,
-      generatedOutput: createGeneratedOutput('ready', undefined, docxPath, pdfPath),
+      patch: scope.type === 'session' ? createSuccessPatch(pdfPath) : undefined,
+      generatedOutput: createGeneratedOutput('ready', undefined, undefined, pdfPath),
     }
   } catch (err) {
     console.error('[generateFile]', err)

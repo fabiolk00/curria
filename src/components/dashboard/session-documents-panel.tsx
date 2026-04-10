@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown, ChevronRight, Download, ExternalLink, FileText } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, FileText } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { usePreviewPanel } from '@/context/preview-panel-context'
@@ -75,13 +75,11 @@ function DocumentSection({
 
 function DownloadItem({
   label,
-  badge,
   downloadUrl,
   onPreviewClick,
   isActive = false,
 }: {
   label: string
-  badge: 'PDF' | 'DOCX'
   downloadUrl: string
   onPreviewClick?: () => void
   isActive?: boolean
@@ -89,7 +87,7 @@ function DownloadItem({
   const [isBusy, setIsBusy] = useState(false)
 
   const handleClick = async () => {
-    if (badge === 'PDF' && onPreviewClick) {
+    if (onPreviewClick) {
       onPreviewClick()
       return
     }
@@ -104,7 +102,7 @@ function DownloadItem({
       type="button"
       disabled={isBusy}
       onClick={() => void handleClick()}
-      data-testid={badge === 'DOCX' ? 'document-item-docx' : 'document-item-pdf'}
+      data-testid="document-item-pdf"
       className={cn(
         'group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors disabled:opacity-50',
         isActive
@@ -113,16 +111,12 @@ function DownloadItem({
       )}
     >
       <Badge variant="secondary" className="rounded-sm px-1.5 py-0 font-mono text-[10px]">
-        {badge}
+        PDF
       </Badge>
       <div className="min-w-0 flex-1 text-left">
         <p className="truncate">{label}</p>
       </div>
-      {badge === 'DOCX' ? (
-        <Download className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-      ) : (
-        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-      )}
+      <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
     </button>
   )
 }
@@ -159,7 +153,7 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
     }
   }, [])
 
-  const hasFiles = Boolean(files.docxUrl || files.pdfUrl)
+  const hasFiles = Boolean(files.pdfUrl)
   const isBasePdfActive =
     previewFile?.sessionId === sessionId
     && previewFile?.targetId === null
@@ -186,7 +180,6 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
   return (
     <div
       data-testid="session-documents-panel"
-      data-docx-available={String(Boolean(files.docxUrl))}
       data-pdf-available={String(Boolean(files.pdfUrl))}
       data-state={panelState}
       className="mt-3 border-t border-border/60 pt-3"
@@ -221,17 +214,9 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
           isOpen={openSections.files}
           onToggle={() => toggleSection('files')}
         >
-          {files.docxUrl ? (
-            <DownloadItem
-              label="Resume.docx"
-              badge="DOCX"
-              downloadUrl={files.docxUrl}
-            />
-          ) : null}
           {files.pdfUrl ? (
             <DownloadItem
               label="Resume.pdf"
-              badge="PDF"
               downloadUrl={files.pdfUrl}
               isActive={isBasePdfActive}
               onPreviewClick={() => {

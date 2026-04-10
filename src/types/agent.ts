@@ -208,7 +208,7 @@ export type GenerateFileInput = {
 }
 
 export type GenerateFileOutput =
-  | { success: true; docxUrl: string; pdfUrl: string; warnings?: string[] }
+  | { success: true; pdfUrl: string; docxUrl?: string | null; warnings?: string[] }
   | ToolFailure
 
 export type ManualEditSection = 'contact' | RewriteSectionInput['section']
