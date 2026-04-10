@@ -1,74 +1,67 @@
 # Requirements: CurrIA
 
-**Defined:** 2026-04-09
+**Defined:** 2026-04-10
 **Core Value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
 
-## v1 Requirements
+## v1.1 Requirements
 
-### Runtime Contracts
+### Runtime Provenance
 
-- [x] **OPS-01**: Deployment and CI use the same env variable contract for OpenAI, Asaas, Upstash, and other core launch dependencies.
-- [x] **OPS-02**: Missing required production credentials fail fast with actionable errors before silent runtime degradation.
-- [x] **OPS-03**: Release and staging docs describe the current billing contract, migrations, and validation prerequisites without stale steps.
+- [ ] **OPS-04**: Operator can identify which build or commit served a real `/api/agent` request.
+- [ ] **OPS-05**: Completed `/api/agent` turns log the selected model, assistant text length, recovery usage, and fallback branch.
+- [ ] **OPS-06**: Team can run a documented post-deploy check that confirms live `/api/agent` config and runtime parity after rollout.
 
-### Core Journey Verification
+### Dialog Continuity
 
-- [x] **QA-01**: Team can run automated browser tests covering auth, profile setup or edit, and session creation.
-- [x] **QA-02**: Team can run automated browser tests covering agent interaction, target resume creation, and artifact download.
-- [x] **QA-03**: CI runs reliable critical-path verification without depending on fragile live-provider behavior.
+- [ ] **AGNT-01**: User can send a follow-up rewrite request in `dialog` and receive a concrete rewrite or a non-repetitive continuation response.
+- [ ] **AGNT-02**: Dialog and confirm turns use the resolved model contract, including explicit `OPENAI_DIALOG_MODEL` overrides when present and agent-model fallback when absent.
+- [ ] **AGNT-03**: Truncation and empty-response recovery preserve the latest rewrite intent and target-job context instead of reverting to stale bootstrap behavior.
 
-### Billing Validation
+### Transcript Integrity and Verification
 
-- [x] **BILL-01**: Settlement-based one-time and subscription billing scenarios are validated end-to-end in staging.
-- [x] **BILL-02**: Duplicate or replayed billing events are verified to remain idempotent and not double-grant credits.
-- [x] **BILL-03**: Dashboard credit totals are verified to stay consistent with runtime balance during validated billing scenarios.
+- [ ] **UX-01**: One chat request renders as one coherent assistant turn in the visible transcript, even when recovery or fallback paths are used.
+- [ ] **QA-04**: Automated verification covers live-route model selection, dialog recovery, and the final rendered assistant output for rewrite flows.
+- [ ] **QA-05**: Team can reproduce and inspect a representative `reescreva` incident with committed route or transcript evidence.
 
-### Observability and Failure Handling
+## v1.2 Requirements
 
-- [x] **OBS-01**: Critical server routes emit structured logs with request or entity context for production debugging.
-- [x] **OBS-02**: Core funnel failures surface user-safe, actionable errors instead of opaque or silent failure states.
+### Guided Rewriting Experience
 
-## v2 Requirements
+- **AGNT-04**: User can request multi-section rewriting with explicit section-choice guidance in the chat flow.
+- **UX-02**: Chat transcript can expose user-friendly recovery annotations when a response was degraded but still usable.
 
-### Onboarding Expansion
+### Deployment Guardrails
 
-- **ONBR-01**: User can upload a PDF or DOCX profile and extract structured resume data before the first chat session.
-- **ONBR-02**: User can choose LinkedIn, file upload, or blank-profile onboarding through one consistent review flow.
-
-### Growth Instrumentation
-
-- **GROW-01**: Team can inspect funnel analytics for profile activation, resume generation, and download behavior.
-- **GROW-02**: Job application tracking can attach generated resume artifacts instead of storing only labels.
+- **OPS-07**: CI or deploy checks block promotion when `/api/agent` provenance or required log fields drift from the documented contract.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Broad product redesign | Keep the existing brownfield funnel stable while hardening it for launch |
-| New premium feature pillars | Reliability and launch confidence take priority over additional surface area |
-| Native mobile app | Web launch is the current validation path |
+| PDF and DOCX profile upload onboarding | Still deferred from the previous milestone; it does not address the current agent continuity incident |
+| Billing or pricing changes | v1.0 already validated billing behavior; this milestone is about agent reliability and transcript trust |
+| Broad UI redesign of the dashboard chat | Visual polish is secondary to proving and fixing runtime behavior |
+| Full prompt-system rewrite | Too broad for the current bug; keep the milestone focused on proven failure seams |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPS-01 | Phase 1 | Complete |
-| OPS-02 | Phase 1 | Complete |
-| OPS-03 | Phase 1 | Complete |
-| QA-01 | Phase 2 | Complete |
-| QA-02 | Phase 2 | Complete |
-| QA-03 | Phase 2 | Complete |
-| BILL-01 | Phase 3 | Complete |
-| BILL-02 | Phase 3 | Complete |
-| BILL-03 | Phase 3 | Complete |
-| OBS-01 | Phase 4 | Complete |
-| OBS-02 | Phase 4 | Complete |
+| OPS-04 | TBD | Pending |
+| OPS-05 | TBD | Pending |
+| OPS-06 | TBD | Pending |
+| AGNT-01 | TBD | Pending |
+| AGNT-02 | TBD | Pending |
+| AGNT-03 | TBD | Pending |
+| UX-01 | TBD | Pending |
+| QA-04 | TBD | Pending |
+| QA-05 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 11 total
-- Mapped to phases: 11
-- Unmapped: 0
+- v1.1 requirements: 9 total
+- Mapped to phases: 0
+- Unmapped: 9
 
 ---
-*Requirements defined: 2026-04-09*
-*Last updated: 2026-04-10 after Phase 4 completion*
+*Requirements defined: 2026-04-10*
+*Last updated: 2026-04-10 after initial milestone definition*
