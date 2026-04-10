@@ -99,3 +99,9 @@ None yet.
 Last session: 2026-04-10T14:33:36.2345711-03:00
 Stopped at: Phase 7 complete; milestone ready to close
 Resume file: None
+
+## Quick Tasks Completed
+
+| Date | ID | Task | Status |
+|------|----|------|--------|
+| 2026-04-10 | 260410-pis | Replace custom login/signup forms with embedded Clerk auth components | Complete |

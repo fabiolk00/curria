@@ -1,42 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
-import { act, render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { render, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import React from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import LoginForm from "./login-form"
 
-const { mockSignIn, mockSetActive, mockNavigateToUrl, mockIsSignedIn, mockSearchParamsGet, mockIsLoaded } = vi.hoisted(() => ({
-  mockSignIn: vi.fn(),
-  mockSetActive: vi.fn(),
-  mockNavigateToUrl: vi.fn(),
-  mockIsSignedIn: vi.fn(),
+const { mockSearchParamsGet, mockSignInProps } = vi.hoisted(() => ({
   mockSearchParamsGet: vi.fn(),
-  mockIsLoaded: vi.fn(),
+  mockSignInProps: vi.fn(),
 }))
 
 vi.mock("@clerk/nextjs", () => ({
-  useAuth: () => ({
-    isSignedIn: mockIsSignedIn(),
-  }),
-  useSignIn: () => ({
-    isLoaded: mockIsLoaded(),
-    signIn: {
-      create: mockSignIn,
-      authenticateWithRedirect: vi.fn(),
-    },
-    setActive: mockSetActive,
-  }),
+  SignIn: (props: unknown) => {
+    mockSignInProps(props)
+    return <div data-testid="clerk-sign-in">Clerk SignIn</div>
+  },
 }))
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
-}))
-
-vi.mock("@/lib/navigation/external", () => ({
-  navigateToUrl: mockNavigateToUrl,
 }))
 
 vi.mock("@/components/logo", () => ({
@@ -46,206 +30,29 @@ vi.mock("@/components/logo", () => ({
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsSignedIn.mockReturnValue(false)
     mockSearchParamsGet.mockReturnValue(null)
-    mockIsLoaded.mockReturnValue(true)
-    mockSetActive.mockResolvedValue(undefined)
   })
 
-  it("renders the login form", () => {
+  it("renders the embedded Clerk sign in component inside the branded shell", () => {
     render(<LoginForm />)
 
-    expect(screen.getByText("Entrar na sua conta")).toBeInTheDocument()
-    expect(screen.getByLabelText("E-mail")).toBeInTheDocument()
-    expect(screen.getByLabelText("Senha")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^entrar$/i })).toBeInTheDocument()
+    expect(screen.getByText("Logo")).toBeInTheDocument()
+    expect(screen.getByTestId("clerk-sign-in")).toBeInTheDocument()
   })
 
-  it("has noValidate attribute on form", () => {
-    const { container } = render(<LoginForm />)
-    const form = container.querySelector("form")
-
-    expect(form).toHaveAttribute("noValidate")
-  })
-
-  it("submits form when valid data is entered", async () => {
-    mockSignIn.mockResolvedValue({ status: "complete", createdSessionId: "sess_123" })
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    const emailInput = screen.getByLabelText("E-mail")
-    const passwordInput = screen.getByLabelText("Senha")
-    const submitButton = screen.getByRole("button", { name: /^entrar$/i })
-
-    await user.type(emailInput, "test@example.com")
-    await user.type(passwordInput, "password123")
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith({
-        identifier: "test@example.com",
-        password: "password123",
-      })
-    })
-
-    await waitFor(() => {
-      expect(mockSetActive).toHaveBeenCalledWith({ session: expect.any(String) })
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("/dashboard")
-    })
-  })
-
-  it("redirects to the requested safe path after sign in", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "redirect_to" ? "/pricing?checkoutPlan=monthly" : null,
-    )
-    mockSignIn.mockResolvedValue({ status: "complete", createdSessionId: "sess_123" })
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    await user.type(screen.getByLabelText("E-mail"), "test@example.com")
-    await user.type(screen.getByLabelText("Senha"), "password123")
-    await user.click(screen.getByRole("button", { name: /^entrar$/i }))
-
-    await waitFor(() => {
-      expect(mockSetActive).toHaveBeenCalledWith({ session: expect.any(String) })
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("/pricing?checkoutPlan=monthly")
-    })
-  })
-
-  it("falls back to the Clerk login page when the sign in attempt needs another factor", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "redirect_to" ? "/pricing?checkoutPlan=monthly" : null,
-    )
-    mockSignIn.mockResolvedValue({ status: "needs_second_factor" })
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    await user.type(screen.getByLabelText("E-mail"), "test@example.com")
-    await user.type(screen.getByLabelText("Senha"), "password123")
-    await user.click(screen.getByRole("button", { name: /^entrar$/i }))
-
-    await waitFor(() => {
-      expect(mockNavigateToUrl).toHaveBeenCalledWith(
-        "/login/clerk?redirect_to=%2Fpricing%3FcheckoutPlan%3Dmonthly&status=needs_second_factor",
-      )
-    })
-  })
-
-  it("shows error when email is invalid", async () => {
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    const emailInput = screen.getByLabelText("E-mail")
-    const passwordInput = screen.getByLabelText("Senha")
-    const submitButton = screen.getByRole("button", { name: /^entrar$/i })
-
-    await user.type(emailInput, "invalid")
-    await user.type(passwordInput, "password123")
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(screen.getByText("E-mail inválido")).toBeInTheDocument()
-    })
-  })
-
-  it("shows error when password is too short", async () => {
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    const emailInput = screen.getByLabelText("E-mail")
-    const passwordInput = screen.getByLabelText("Senha")
-    const submitButton = screen.getByRole("button", { name: /^entrar$/i })
-
-    await user.type(emailInput, "test@example.com")
-    await user.type(passwordInput, "short")
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(screen.getByText("Senha deve ter pelo menos 8 caracteres")).toBeInTheDocument()
-    })
-  })
-
-  it("disables submit button while submitting", async () => {
-    mockSignIn.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ status: "complete" }), 100)),
-    )
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    const emailInput = screen.getByLabelText("E-mail")
-    const passwordInput = screen.getByLabelText("Senha")
-    const submitButton = screen.getByRole("button", { name: /^entrar$/i })
-
-    await user.type(emailInput, "test@example.com")
-    await user.type(passwordInput, "password123")
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(submitButton).toBeDisabled()
-    })
-  })
-
-  it("disables email sign in and shows loading feedback while Clerk is not ready", () => {
-    mockIsLoaded.mockReturnValue(false)
-
-    render(<LoginForm />)
-
-    expect(screen.getByRole("button", { name: /carregando/i })).toBeDisabled()
-    expect(screen.getByText(/Carregando autenticação/i)).toBeInTheDocument()
-  })
-
-  it("shows a bounded recovery action when Clerk stays unavailable", async () => {
-    vi.useFakeTimers()
-    mockIsLoaded.mockReturnValue(false)
-
-    render(<LoginForm />)
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(10000)
-    })
-
-    expect(screen.getByText(/A autenticação não carregou/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /recarregar autenticação/i })).toBeInTheDocument()
-
-    vi.useRealTimers()
-  })
-
-  it("redirects authenticated visitors away from login", async () => {
-    mockIsSignedIn.mockReturnValue(true)
+  it("passes the safe redirect path into the embedded Clerk sign in flow", () => {
     mockSearchParamsGet.mockImplementation((key: string) =>
       key === "redirect_to" ? "/pricing?checkoutPlan=monthly" : null,
     )
 
     render(<LoginForm />)
 
-    await waitFor(() => {
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("/pricing?checkoutPlan=monthly")
-    })
-  })
-
-  it("resumes the requested path when Clerk reports an existing session during sign in", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "redirect_to" ? "/pricing?checkoutPlan=monthly" : null,
+    expect(mockSignInProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routing: "hash",
+        forceRedirectUrl: "/pricing?checkoutPlan=monthly",
+        signUpUrl: "/signup",
+      }),
     )
-    mockSignIn.mockRejectedValue({
-      errors: [{ code: "session_exists", message: "Session already exists" }],
-    })
-    const user = userEvent.setup()
-
-    render(<LoginForm />)
-
-    await user.type(screen.getByLabelText("E-mail"), "test@example.com")
-    await user.type(screen.getByLabelText("Senha"), "password123")
-    await user.click(screen.getByRole("button", { name: /^entrar$/i }))
-
-    await waitFor(() => {
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("/pricing?checkoutPlan=monthly")
-    })
   })
 })
