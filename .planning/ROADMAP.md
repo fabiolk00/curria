@@ -60,7 +60,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Reconcile staging migrations, fixtures, and billing test setup
+- [x] 03-01: Reconcile staging migrations, fixtures, and billing test setup
 - [ ] 03-02: Execute settlement validation scenarios and capture evidence
 - [ ] 03-03: Fix any billing inconsistencies surfaced during validation
 
@@ -88,5 +88,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Contract Alignment and Fail-Fast Guards | 3/3 | Complete    | 2026-04-10 |
 | 2. Core Funnel Browser Verification | 3/3 | Complete    | 2026-04-10 |
-| 3. Billing Settlement Validation | 0/3 | Not started | - |
+| 3. Billing Settlement Validation | 1/3 | In Progress|  |
 | 4. Observability and Launch Readiness | 0/3 | Not started | - |

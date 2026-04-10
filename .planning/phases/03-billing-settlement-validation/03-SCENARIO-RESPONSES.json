@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-04-10T05:57:00Z",
+  "status": "blocked",
+  "environment": {
+    "envFilePresent": false,
+    "bashAvailable": false,
+    "psqlAvailable": false
+  },
+  "baseline": {
+    "attemptedUser": "usr_staging_001",
+    "result": "blocked",
+    "error": "ENOENT: no such file or directory, open 'C:\\CurrIA\\.env.staging'"
+  },
+  "scenarios": {}
+}
