@@ -9,7 +9,7 @@
 
 - [x] **OPS-04**: Operator can identify which build or commit served a real `/api/agent` request.
 - [x] **OPS-05**: Completed `/api/agent` turns log the selected model, assistant text length, recovery usage, and fallback branch.
-- [ ] **OPS-06**: Team can run a documented post-deploy check that confirms live `/api/agent` config and runtime parity after rollout.
+- [x] **OPS-06**: Team can run a documented post-deploy check that confirms live `/api/agent` config and runtime parity after rollout.
 
 ### Dialog Continuity
 
@@ -49,7 +49,7 @@
 |-------------|-------|--------|
 | OPS-04 | Phase 5 | Complete |
 | OPS-05 | Phase 5 | Complete |
-| OPS-06 | Phase 5 | Pending |
+| OPS-06 | Phase 5 | Complete |
 | AGNT-01 | Phase 6 | Pending |
 | AGNT-02 | Phase 6 | Pending |
 | AGNT-03 | Phase 6 | Pending |
