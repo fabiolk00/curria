@@ -43,9 +43,16 @@ describe('PreviewPanel', () => {
   const getCachedUrl = vi.fn()
   const setCachedUrl = vi.fn()
   const invalidateCache = vi.fn()
+  const createObjectUrl = vi.fn(() => 'blob:preview-resume')
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Blob(['pdf'], { type: 'application/pdf' }), { status: 200 })))
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: createObjectUrl,
+      revokeObjectURL: vi.fn(),
+    })
     vi.mocked(usePreviewPanel).mockReturnValue({
       isOpen: false,
       file: null,
@@ -82,10 +89,12 @@ describe('PreviewPanel', () => {
 
     expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-session-id', 'sess_123')
     expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-state', 'ready')
-    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-preview-url', 'https://example.com/resume.pdf')
-    expect(screen.getByTestId('preview-panel-frame')).toHaveAttribute('src', 'https://example.com/resume.pdf')
+    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-preview-url', 'blob:preview-resume')
+    expect(screen.getByTestId('preview-panel-frame')).toHaveAttribute('src', 'blob:preview-resume')
     expect(screen.getByTestId('preview-download-pdf')).toBeInTheDocument()
     expect(screen.getByTestId('preview-open-external')).toHaveAttribute('href', 'https://example.com/resume.pdf')
+    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+    expect(setCachedUrl).toHaveBeenCalledWith('sess_123:target_123', 'blob:preview-resume')
 
     await userEvent.click(screen.getByTitle('Edit resume'))
 

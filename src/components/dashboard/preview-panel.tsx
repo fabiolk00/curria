@@ -77,6 +77,7 @@ function PreviewPanelContent({
 }) {
   const { getCachedUrl, invalidateCache, setCachedUrl } = usePreviewPanel()
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [externalUrl, setExternalUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -87,6 +88,7 @@ function PreviewPanelContent({
     setIsLoading(true)
     setError(null)
     setPreviewUrl(null)
+    setExternalUrl(null)
 
     const cachedUrl = getCachedUrl(cacheKey)
     if (cachedUrl) {
@@ -103,8 +105,16 @@ function PreviewPanelContent({
         return
       }
 
-      setPreviewUrl(urls.pdfUrl)
-      setCachedUrl(cacheKey, urls.pdfUrl)
+      const pdfResponse = await fetch(urls.pdfUrl)
+      if (!pdfResponse.ok) {
+        throw new Error(`Failed to fetch preview PDF (${pdfResponse.status})`)
+      }
+
+      const pdfBlob = await pdfResponse.blob()
+      const objectUrl = URL.createObjectURL(pdfBlob)
+      setPreviewUrl(objectUrl)
+      setExternalUrl(urls.pdfUrl)
+      setCachedUrl(cacheKey, objectUrl)
     } catch (fetchError) {
       console.error('[preview-panel] failed to load signed urls', fetchError)
       setError('Falha ao carregar o arquivo. Tente novamente.')
@@ -182,7 +192,7 @@ function PreviewPanelContent({
                 <span className="hidden sm:inline">Download</span>
               </button>
               <a
-                href={previewUrl}
+                href={externalUrl ?? previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="preview-open-external"

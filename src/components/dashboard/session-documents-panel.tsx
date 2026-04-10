@@ -15,13 +15,21 @@ import { NEW_CONVERSATION_EVENT, SESSION_SYNC_EVENT, type SessionSyncDetail } fr
 type SectionKey = 'files'
 
 async function triggerDownload(url: string, filename: string) {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to download file (${response.status})`)
+  }
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  anchor.href = url
+  anchor.href = objectUrl
   anchor.download = filename
   anchor.rel = 'noopener noreferrer'
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 function DocumentSection({

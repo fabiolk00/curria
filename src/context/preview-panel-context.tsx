@@ -28,6 +28,12 @@ const PreviewPanelContext = createContext<PreviewPanelContextValue | null>(null)
 
 const CACHE_TTL_MS = 50 * 60 * 1000
 
+function revokeObjectUrl(url: string): void {
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url)
+  }
+}
+
 export function PreviewPanelProvider({ children }: { children: ReactNode }) {
   const [file, setFile] = useState<PreviewFile | null>(null)
   const urlCache = useRef<Map<string, CacheEntry>>(new Map())
@@ -47,6 +53,7 @@ export function PreviewPanelProvider({ children }: { children: ReactNode }) {
     }
 
     if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) {
+      revokeObjectUrl(entry.pdfUrl)
       urlCache.current.delete(key)
       return null
     }
@@ -55,6 +62,11 @@ export function PreviewPanelProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setCachedUrl = useCallback((key: string, url: string) => {
+    const previousEntry = urlCache.current.get(key)
+    if (previousEntry && previousEntry.pdfUrl !== url) {
+      revokeObjectUrl(previousEntry.pdfUrl)
+    }
+
     urlCache.current.set(key, {
       pdfUrl: url,
       fetchedAt: Date.now(),
@@ -62,6 +74,10 @@ export function PreviewPanelProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const invalidateCache = useCallback((key: string) => {
+    const entry = urlCache.current.get(key)
+    if (entry) {
+      revokeObjectUrl(entry.pdfUrl)
+    }
     urlCache.current.delete(key)
   }, [])
 

@@ -48,4 +48,39 @@ describe('SessionDocumentsPanel', () => {
 
     expect(refresh).toHaveBeenCalledTimes(1)
   })
+
+  it('downloads DOCX via fetch/blob without opening the preview', async () => {
+    const refresh = vi.fn()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Blob(['docx'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), { status: 200 }),
+    )
+    const createObjectUrl = vi.fn(() => 'blob:resume-docx')
+    const revokeObjectUrl = vi.fn()
+    const appendChildSpy = vi.spyOn(document.body, 'appendChild')
+    const removeChildSpy = vi.spyOn(document.body, 'removeChild')
+
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: createObjectUrl,
+      revokeObjectURL: revokeObjectUrl,
+    })
+
+    mockUseSessionDocuments.mockReturnValue({
+      files: { docxUrl: 'https://example.com/resume.docx', pdfUrl: 'https://example.com/resume.pdf' },
+      isLoading: false,
+      error: null,
+      refresh,
+    })
+
+    render(<SessionDocumentsPanel isSidebarOpen />)
+
+    await userEvent.click(screen.getByTestId('document-item-docx'))
+
+    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/resume.docx')
+    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+    expect(mockOpenPreview).not.toHaveBeenCalled()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:resume-docx')
+    appendChildSpy.mockRestore()
+    removeChildSpy.mockRestore()
+  })
 })
