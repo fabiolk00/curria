@@ -229,6 +229,54 @@ describe('/api/agent SSE fallback coverage', () => {
     ])
   })
 
+  it('streams a rewrite-specific dialog fallback for terse requests like "reescreva"', async () => {
+    const session = buildDialogSession({
+      id: 'sess_dialog_rewrite_real',
+      agentState: {
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL e ETL.',
+      },
+    })
+
+    vi.mocked(getSession).mockResolvedValue(session)
+    vi.mocked(createChatCompletionStreamWithRetry).mockImplementation(
+      async () => emptyStopStream() as never,
+    )
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.id,
+        message: 'reescreva',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream')
+
+    const events = parseSseDataEvents(await response.text())
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => String(event.content ?? ''))
+      .join('')
+
+    expect(finalText).toContain('Posso reescrever agora seu resumo profissional.')
+    expect(finalText).toContain('Ja tenho seu curriculo e a vaga como referencia.')
+    expect(finalText).not.toContain('Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.')
+    expect(events.at(-1)).toMatchObject({
+      type: 'done',
+      sessionId: session.id,
+      phase: 'dialog',
+      isNewSession: false,
+    })
+    expect(createChatCompletionStreamWithRetry).toHaveBeenCalledTimes(5)
+    expect(vi.mocked(appendMessage).mock.calls.at(-1)).toEqual([
+      session.id,
+      'assistant',
+      expect.stringContaining('Posso reescrever agora seu resumo profissional.'),
+    ])
+  })
+
   it('streams the latest pasted vacancy acknowledgement through the real agent loop when dialog recovery fails', async () => {
     const session = buildDialogSession({
       id: 'sess_dialog_latest_vacancy_real',

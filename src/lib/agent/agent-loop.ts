@@ -266,6 +266,76 @@ function isDialogContinuationApproval(message: string): boolean {
   return /^(sim|ok|okay|pode|pode fazer|pode seguir|segue|continue|continua|vai|manda ver|bora)$/.test(normalized)
 }
 
+type RewriteFocus = 'summary' | 'experience' | 'skills'
+
+function resolveRewriteFocus(message: string): RewriteFocus | null {
+  const normalized = normalizeText(message)
+
+  if (!normalized) {
+    return null
+  }
+
+  if (/\b(resumo|summary|perfil profissional)\b/.test(normalized)) {
+    return 'summary'
+  }
+
+  if (/\b(experiencia|experience|historico)\b/.test(normalized)) {
+    return 'experience'
+  }
+
+  if (/\b(competencia|competencias|skills|habilidades)\b/.test(normalized)) {
+    return 'skills'
+  }
+
+  return null
+}
+
+function isDialogRewriteRequest(message: string): boolean {
+  const normalized = normalizeText(message)
+
+  if (!normalized || looksLikeJobDescription(message)) {
+    return false
+  }
+
+  if (resolveRewriteFocus(message)) {
+    return true
+  }
+
+  return /\b(reescreva|reescrever|reescreve|rewrite|adapte|adaptar|ajuste|ajustar|melhore|melhorar|refaca|refazer)\b/.test(normalized)
+}
+
+function formatRewriteFocusLabel(focus: RewriteFocus): string {
+  switch (focus) {
+    case 'summary':
+      return 'resumo profissional'
+    case 'experience':
+      return 'experiencia'
+    case 'skills':
+      return 'competencias'
+  }
+}
+
+function buildDialogRewriteContinuation(params: {
+  hasTargetJobContext: boolean
+  focus: RewriteFocus
+  explicit: boolean
+}): DeterministicFallback {
+  const focusLabel = formatRewriteFocusLabel(params.focus)
+
+  return {
+    kind: params.hasTargetJobContext
+      ? `dialog_rewrite_saved_target_${params.focus}`
+      : `dialog_rewrite_resume_only_${params.focus}`,
+    text: params.hasTargetJobContext
+      ? (params.explicit
+        ? `Posso reescrever agora seu ${focusLabel}. Ja tenho seu curriculo e a vaga como referencia. Vou devolver uma versao mais alinhada a essa oportunidade.`
+        : `Posso seguir, sim. Ja tenho seu curriculo e a vaga como referencia. Vou continuar pelo trecho com maior impacto para essa vaga: seu ${focusLabel}.`)
+      : (params.explicit
+        ? `Posso reescrever agora seu ${focusLabel}. Ja tenho seu curriculo em contexto e vou te devolver uma versao mais forte e objetiva.`
+        : `Posso seguir, sim. Ja tenho seu curriculo em contexto. Vou continuar pelo trecho com maior impacto: seu ${focusLabel}.`),
+  }
+}
+
 function buildResumeTextForScoring(session: Session): string {
   if (session.agentState.sourceResumeText?.trim()) {
     return session.agentState.sourceResumeText
@@ -394,6 +464,8 @@ function buildRecoveryUserPrompt(params: {
   const hasResumeContext = hasResumeContextForDeterministicAnalysis(params.session)
   const targetJobDescription = params.session.agentState.targetJobDescription?.trim()
   const latestMessageLooksLikeVacancy = looksLikeJobDescription(params.userMessage)
+  const latestRewriteFocus = resolveRewriteFocus(params.userMessage)
+  const latestMessageIsRewriteRequest = isDialogRewriteRequest(params.userMessage)
   const targetLooksLikeVacancy = Boolean(targetJobDescription || latestMessageLooksLikeVacancy)
   const resumeExcerpt = hasResumeContext
     ? truncateForRecovery(buildResumeTextForScoring(params.session), latestMessageLooksLikeVacancy ? 1_000 : 650)
@@ -406,6 +478,8 @@ function buildRecoveryUserPrompt(params: {
     `Current phase: ${params.session.phase}.`,
     `Resume context available: ${hasResumeContext ? 'yes' : 'no'}.`,
     `Target job context available: ${targetLooksLikeVacancy ? 'yes' : 'no'}.`,
+    `Latest message asks for rewrite: ${latestMessageIsRewriteRequest ? 'yes' : 'no'}.`,
+    latestRewriteFocus ? `Preferred rewrite focus: ${latestRewriteFocus}.` : '',
     resumeExcerpt ? `Saved resume context:\n${resumeExcerpt}` : '',
     targetJobDescription && !latestMessageLooksLikeVacancy
       ? `Saved target job context:\n${truncateForRecovery(targetJobDescription, 1_200)}`
@@ -480,21 +554,35 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
 function buildDialogFallback(session: Session, userMessage: string): DeterministicFallback {
   const latestMessageLooksLikeVacancy = looksLikeJobDescription(userMessage)
   const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || latestMessageLooksLikeVacancy)
-
-  if (isDialogContinuationApproval(userMessage)) {
-    return {
-      kind: hasTargetJobContext ? 'dialog_continue_saved_target' : 'dialog_continue_resume_only',
-      text: hasTargetJobContext
-        ? 'Posso seguir, sim. Ja tenho seu curriculo e a vaga como referencia. Vou continuar pelo trecho com maior impacto para essa vaga: seu resumo profissional. Se preferir, diga "resumo", "experiencia" ou "competencias".'
-        : 'Posso seguir, sim. Ja tenho seu curriculo em contexto. Vou continuar pelo trecho com maior impacto: seu resumo profissional. Se preferir, diga "experiencia" ou "competencias".',
-    }
-  }
+  const rewriteFocus = resolveRewriteFocus(userMessage)
+  const latestMessageIsRewriteRequest = isDialogRewriteRequest(userMessage)
 
   if (latestMessageLooksLikeVacancy) {
     return {
       kind: 'dialog_latest_target_job_context',
       text: 'Recebi essa nova vaga e ja tenho seu curriculo em contexto. Posso adaptar agora seu resumo, experiencia ou competencias para essa oportunidade. Se quiser, responda com "reescreva meu resumo".',
     }
+  }
+
+  if (isDialogContinuationApproval(userMessage)) {
+    const continuation = buildDialogRewriteContinuation({
+      hasTargetJobContext,
+      focus: rewriteFocus ?? 'summary',
+      explicit: false,
+    })
+
+    return {
+      ...continuation,
+      kind: hasTargetJobContext ? 'dialog_continue_saved_target' : 'dialog_continue_resume_only',
+    }
+  }
+
+  if (latestMessageIsRewriteRequest) {
+    return buildDialogRewriteContinuation({
+      hasTargetJobContext,
+      focus: rewriteFocus ?? 'summary',
+      explicit: true,
+    })
   }
 
   if (hasTargetJobContext) {
@@ -558,16 +646,29 @@ function shouldUseDeterministicVacancyBootstrap(session: Session, userMessage: s
     && looksLikeJobDescription(userMessage)
 }
 
+function isBootstrapLikeAssistantText(text: string): boolean {
+  return /recebi a vaga e ela ja ficou salva como referencia|posso seguir reescrevendo seu resumo ou experiencia/.test(normalizeText(text))
+}
+
+function isConcreteRewriteContinuationText(text: string): boolean {
+  return /(?:posso|vou) (?:seguir|reescrever|adaptar|continuar).*(?:resumo|experiencia|competenc)/.test(normalizeText(text))
+}
+
 function mergeConciseRecoveryTurn(
   priorTurn: StreamTurnResult,
   conciseTurn: StreamTurnResult,
 ): StreamTurnResult {
   const priorText = priorTurn.assistantText.trim()
   const conciseText = conciseTurn.assistantText.trim()
+  const priorTextLooksLikeBootstrap = isBootstrapLikeAssistantText(priorText)
+  const conciseTextLooksLikeBootstrap = isBootstrapLikeAssistantText(conciseText)
+  const conciseTextLooksLikeConcreteContinuation = isConcreteRewriteContinuationText(conciseText)
   const shouldPreferConciseText = conciseText.length > 0
     && (
       !priorText
       || conciseTurn.finishReason === 'stop'
+      || (priorTextLooksLikeBootstrap && !conciseTextLooksLikeBootstrap)
+      || (conciseTextLooksLikeConcreteContinuation && conciseText.length >= Math.max(80, priorText.length))
     )
 
   return {
@@ -799,7 +900,13 @@ async function* recoverTruncatedTurn(params: {
       maxCompletionTokens: Math.min(params.maxCompletionTokens, 450),
     })
 
-    accumulatedAssistantText += continuationTurn.assistantText
+    const shouldReplacePriorText = isBootstrapLikeAssistantText(accumulatedAssistantText)
+      && !isBootstrapLikeAssistantText(continuationTurn.assistantText)
+      && isConcreteRewriteContinuationText(continuationTurn.assistantText)
+
+    accumulatedAssistantText = shouldReplacePriorText
+      ? continuationTurn.assistantText
+      : `${accumulatedAssistantText}${continuationTurn.assistantText}`
     finishReason = continuationTurn.finishReason
     usage = mergeUsage(usage, continuationTurn.usage)
 

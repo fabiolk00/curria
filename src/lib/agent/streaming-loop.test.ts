@@ -610,6 +610,97 @@ describe('runAgentLoop streaming', () => {
     })
   })
 
+  it('prefers a more useful concise continuation over stale bootstrap-like partial text', async () => {
+    async function* partialBootstrapLengthStream() {
+      yield {
+        choices: [{
+          delta: {
+            content: 'Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.',
+          },
+          finish_reason: null,
+        }],
+        usage: null,
+      }
+
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'length',
+        }],
+        usage: null,
+      }
+    }
+
+    async function* emptyLengthStream() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'length',
+        }],
+        usage: null,
+      }
+    }
+
+    async function* conciseContinuationLengthStream() {
+      yield {
+        choices: [{
+          delta: {
+            content: 'Posso reescrever agora seu resumo profissional. Ja tenho seu curriculo e a vaga como referencia.',
+          },
+          finish_reason: null,
+        }],
+        usage: null,
+      }
+
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'length',
+        }],
+        usage: null,
+      }
+    }
+
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(partialBootstrapLengthStream() as never)
+      .mockResolvedValueOnce(emptyLengthStream() as never)
+      .mockResolvedValueOnce(conciseContinuationLengthStream() as never)
+
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL e ETL.',
+      },
+    }
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'reescreva',
+      appUserId: 'usr_123',
+      requestId: 'req_prefer_useful_concise_text',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'Posso reescrever agora seu resumo profissional. Ja tenho seu curriculo e a vaga como referencia.',
+    )
+    expect(events.at(-1)).toMatchObject({
+      type: 'done',
+      sessionId: 'sess_123',
+    })
+  })
+
   it('logs release provenance when a response stays truncated after recovery', async () => {
     async function* emptyLengthStream() {
       yield {
@@ -919,6 +1010,62 @@ describe('runAgentLoop streaming', () => {
       'sess_123',
       'assistant',
       expect.stringContaining('Posso seguir, sim.'),
+    )
+  })
+
+  it('returns a rewrite-specific dialog fallback for terse rewrite requests', async () => {
+    async function* emptyStopStream() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'stop',
+        }],
+        usage: null,
+      }
+    }
+
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {} as Record<string, never>,
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL e ETL.',
+      },
+    }
+
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'reescreva',
+      appUserId: 'usr_123',
+      requestId: 'req_dialog_rewrite_fallback',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Posso reescrever agora seu resumo profissional.')
+    expect(finalText).toContain('Ja tenho seu curriculo e a vaga como referencia.')
+    expect(finalText).not.toContain('Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.')
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      expect.stringContaining('Posso reescrever agora seu resumo profissional.'),
     )
   })
 
