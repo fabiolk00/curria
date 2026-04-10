@@ -66,7 +66,7 @@ vi.mock('@/lib/agent/tools', () => ({
 }))
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
-  trackApiUsage: vi.fn(),
+  trackApiUsage: vi.fn(() => Promise.resolve()),
   calculateUsageCostCents: vi.fn(() => 1),
 }))
 
@@ -102,6 +102,47 @@ async function* emptyStopStream() {
   }
 }
 
+async function* emptyLengthStream() {
+  yield {
+    choices: [{
+      delta: {},
+      finish_reason: 'length',
+    }],
+    usage: null,
+  }
+
+  yield {
+    choices: [],
+    usage: {
+      prompt_tokens: 1540,
+      completion_tokens: 1250,
+      total_tokens: 2790,
+    },
+  }
+}
+
+async function* textStopStream(text: string) {
+  yield {
+    choices: [{
+      delta: { content: text },
+      finish_reason: null,
+    }],
+    usage: null,
+  }
+
+  yield {
+    choices: [{
+      delta: {},
+      finish_reason: 'stop',
+    }],
+    usage: {
+      prompt_tokens: 45,
+      completion_tokens: 20,
+      total_tokens: 65,
+    },
+  }
+}
+
 function buildDialogSession(overrides?: {
   id?: string
   agentState?: Record<string, unknown>
@@ -129,6 +170,39 @@ function buildDialogSession(overrides?: {
     generatedOutput: { status: 'idle' as const },
     creditsUsed: 1,
     messageCount: 2,
+    creditConsumed: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
+function buildIntakeSession(overrides?: {
+  id?: string
+  agentState?: Record<string, unknown>
+}) {
+  return {
+    id: overrides?.id ?? 'sess_intake',
+    userId: 'usr_123',
+    stateVersion: 1,
+    phase: 'intake' as const,
+    cvState: {
+      fullName: 'Fabio Silva',
+      email: 'fabio@example.com',
+      phone: '11999999999',
+      summary: 'Analista de dados com foco em BI e automacao.',
+      experience: [],
+      skills: ['SQL', 'Power BI'],
+      education: [],
+    },
+    agentState: {
+      parseStatus: 'parsed' as const,
+      rewriteHistory: {},
+      sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+      ...overrides?.agentState,
+    },
+    generatedOutput: { status: 'idle' as const },
+    creditsUsed: 1,
+    messageCount: 0,
     creditConsumed: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -335,6 +409,49 @@ describe('/api/agent SSE fallback coverage', () => {
       session.id,
       'assistant',
       expect.stringContaining('Recebi essa nova vaga'),
+    ])
+  })
+
+  it('recovers an intake turn that ends with length and zero visible text before falling back to the generic retry loop', async () => {
+    const session = buildIntakeSession({
+      id: 'sess_intake_zero_text_real',
+    })
+
+    vi.mocked(getSession).mockResolvedValue(session)
+    vi.mocked(createChatCompletionStreamWithRetry)
+      .mockImplementationOnce(async () => emptyLengthStream() as never)
+      .mockImplementation(async () => textStopStream('Bom dia! Otimo iniciar. Pode me dizer qual vaga voce esta mirando?') as never)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.id,
+        message: 'bom dia',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream')
+
+    const events = parseSseDataEvents(await response.text())
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => String(event.content ?? ''))
+      .join('')
+
+    expect(finalText).toContain('Pode me dizer qual vaga')
+    expect(events.at(-1)).toMatchObject({
+      type: 'done',
+      sessionId: session.id,
+      phase: 'intake',
+      isNewSession: false,
+    })
+    expect(vi.mocked(createChatCompletionStreamWithRetry)).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(appendMessage).mock.calls.at(-1)).toEqual([
+      session.id,
+      'assistant',
+      'Bom dia! Otimo iniciar. Pode me dizer qual vaga voce esta mirando?',
     ])
   })
 })

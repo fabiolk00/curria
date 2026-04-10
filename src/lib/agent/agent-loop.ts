@@ -65,6 +65,7 @@ type StreamTurnResult = {
     outputTokens: number
   }
   usedLengthRecovery?: boolean
+  usedZeroTextRecovery?: boolean
   usedConciseRecovery?: boolean
 }
 
@@ -697,6 +698,7 @@ async function trackTurnUsage(params: {
   historyChars: number
   allowedToolCount: number
   usedLengthRecovery: boolean
+  usedZeroTextRecovery: boolean
   usedConciseRecovery: boolean
 }): Promise<void> {
   const costCents = calculateUsageCostCents(
@@ -731,6 +733,7 @@ async function trackTurnUsage(params: {
     toolCalls: params.toolCalls,
     allowedToolCount: params.allowedToolCount,
     usedLengthRecovery: params.usedLengthRecovery,
+    usedZeroTextRecovery: params.usedZeroTextRecovery,
     usedConciseRecovery: params.usedConciseRecovery,
     costCents,
     success: true,
@@ -929,6 +932,66 @@ async function* recoverTruncatedTurn(params: {
     model: params.initialTurn.model,
     usage,
     usedLengthRecovery: recoveryAttempts > 0,
+  }
+}
+
+async function* recoverZeroTextTurn(params: {
+  initialTurn: StreamTurnResult
+  session: Session
+  userMessage: string
+  requestId: string
+  appUserId: string
+  requestStartedAt: number
+  signal?: AbortSignal
+  maxCompletionTokens: number
+}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
+  let lastTurn = params.initialTurn
+  let usage = params.initialTurn.usage
+  let recoveryAttempts = 0
+
+  while (recoveryAttempts < 2 && !params.signal?.aborted) {
+    recoveryAttempts++
+
+    const recoveryTurn = yield* streamAssistantTurn({
+      session: params.session,
+      messages: [
+        {
+          role: 'user',
+          content: buildRecoveryUserPrompt({
+            session: params.session,
+            userMessage: params.userMessage,
+            mode: 'empty',
+            attempt: recoveryAttempts,
+          }),
+        },
+      ],
+      cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
+      requestId: params.requestId,
+      appUserId: params.appUserId,
+      requestStartedAt: params.requestStartedAt,
+      signal: params.signal,
+      maxCompletionTokens: Math.min(params.maxCompletionTokens, 550),
+    })
+
+    usage = mergeUsage(usage, recoveryTurn.usage)
+    lastTurn = {
+      ...recoveryTurn,
+      usage,
+    }
+
+    if (recoveryTurn.toolCalls.length > 0 || recoveryTurn.assistantText.trim() || recoveryTurn.finishReason !== 'length') {
+      return {
+        ...lastTurn,
+        usedZeroTextRecovery: true,
+      }
+    }
+  }
+
+  return {
+    ...lastTurn,
+    model: lastTurn.model || params.initialTurn.model,
+    usage,
+    usedZeroTextRecovery: recoveryAttempts > 0,
   }
 }
 
@@ -1338,23 +1401,37 @@ export async function* runAgentLoop(
         tools: toolsForPhase,
       })
 
-      if (turn.finishReason === 'length' && turn.toolCalls.length === 0 && turn.assistantText.trim()) {
-        turn = yield* recoverTruncatedTurn({
-          initialTurn: turn,
-          session,
-          messages,
-          cachedSystemPrompt,
-          requestId,
-          appUserId,
-          requestStartedAt,
-          signal,
-          maxCompletionTokens: AGENT_CONFIG.conversationMaxOutputTokens,
-        })
+      if (turn.finishReason === 'length' && turn.toolCalls.length === 0) {
+        if (turn.assistantText.trim()) {
+          turn = yield* recoverTruncatedTurn({
+            initialTurn: turn,
+            session,
+            messages,
+            cachedSystemPrompt,
+            requestId,
+            appUserId,
+            requestStartedAt,
+            signal,
+            maxCompletionTokens: AGENT_CONFIG.conversationMaxOutputTokens,
+          })
+        } else {
+          turn = yield* recoverZeroTextTurn({
+            initialTurn: turn,
+            session,
+            userMessage,
+            requestId,
+            appUserId,
+            requestStartedAt,
+            signal,
+            maxCompletionTokens: AGENT_CONFIG.conversationMaxOutputTokens,
+          })
+        }
       }
 
       if (
         turn.toolCalls.length === 0
         && (turn.finishReason === 'length' || !turn.assistantText.trim())
+        && !turn.usedZeroTextRecovery
       ) {
         const conciseTurn = yield* recoverConciseTurn({
           session,
@@ -1383,6 +1460,7 @@ export async function* runAgentLoop(
           historyChars,
           allowedToolCount: toolsForPhase.length,
           usedLengthRecovery: Boolean(turn.usedLengthRecovery),
+          usedZeroTextRecovery: Boolean(turn.usedZeroTextRecovery),
           usedConciseRecovery: Boolean(turn.usedConciseRecovery),
         })
       }
@@ -1549,6 +1627,7 @@ export async function* runAgentLoop(
             historyChars: calculateHistoryChars(messages),
             allowedToolCount: 0,
             usedLengthRecovery: false,
+            usedZeroTextRecovery: false,
             usedConciseRecovery: true,
           })
         }

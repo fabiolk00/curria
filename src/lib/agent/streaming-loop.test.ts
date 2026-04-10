@@ -568,6 +568,79 @@ describe('runAgentLoop streaming', () => {
     )
   })
 
+  it('uses zero-text recovery before concise fallback when an intake turn burns tokens without visible text', async () => {
+    async function* emptyLengthStreamWithUsage() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'length',
+        }],
+        usage: null,
+      }
+
+      yield {
+        choices: [],
+        usage: {
+          prompt_tokens: 1540,
+          completion_tokens: 1250,
+        },
+      }
+    }
+
+    const session = {
+      ...buildSession(),
+      phase: 'intake' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+      },
+    }
+
+    const events = []
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(emptyLengthStreamWithUsage() as never)
+      .mockResolvedValueOnce(mockTextStream('Bom dia! Otimo iniciar. Pode me dizer qual vaga voce esta mirando?') as never)
+
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'bom dia',
+      appUserId: 'usr_123',
+      requestId: 'req_intake_zero_text_recovery',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Pode me dizer qual vaga')
+    expect(mockCreateChatCompletionStreamWithRetry).toHaveBeenCalledTimes(2)
+    expect(mockCreateChatCompletionStreamWithRetry.mock.calls[1]?.[1]?.messages?.[1]?.content).toContain(
+      'The previous response attempt returned no visible text.',
+    )
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'Bom dia! Otimo iniciar. Pode me dizer qual vaga voce esta mirando?',
+    )
+
+    const completedLog = mockLogInfo.mock.calls.find(([event]) => event === 'agent.turn.completed')?.[1]
+
+    expect(completedLog).toMatchObject({
+      phase: 'intake',
+      model: 'test-model',
+      usedLengthRecovery: false,
+      usedZeroTextRecovery: true,
+      usedConciseRecovery: false,
+    })
+  })
+
   it('keeps the best visible text when concise recovery returns empty after a truncated answer', async () => {
     async function* emptyLengthStream() {
       yield {
