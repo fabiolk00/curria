@@ -424,7 +424,7 @@ export function ChatInterface({
     return () => {
       cancelled = true
     }
-  }, [preferredName, sessionId])
+  }, [copy.thinkingText, preferredName, sessionId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -806,7 +806,7 @@ export function ChatInterface({
           {phase === "confirm" ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/45 bg-[#fffaf0] px-4 py-3">
               <p className="text-sm text-foreground">
-                Confirme a gera\u00E7\u00E3o do seu curr\u00EDculo otimizado ATS digitando <span className="font-semibold">"Aceito"</span> ou usando o bot\u00E3o.
+                Confirme a gera\u00E7\u00E3o do seu curr\u00EDculo otimizado ATS digitando <span className="font-semibold">&quot;Aceito&quot;</span> ou usando o bot\u00E3o.
               </p>
               <Button
                 data-testid="chat-accept-generate"
