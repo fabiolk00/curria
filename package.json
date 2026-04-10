@@ -16,6 +16,7 @@
     "phase1:model-selection": "tsx scripts/run-openai-model-selection-phase1.ts",
     "agent:baseline": "tsx scripts/report-agent-baseline.ts",
     "agent:parity": "tsx scripts/check-agent-runtime-parity.ts",
+    "agent:replay-dialog": "tsx scripts/replay-agent-dialog.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
