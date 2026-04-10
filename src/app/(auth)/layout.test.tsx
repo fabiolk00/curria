@@ -6,7 +6,7 @@ import '@testing-library/jest-dom'
 import AuthLayout, { dynamic } from './layout'
 
 const mockGetCurrentAppUser = vi.fn()
-const mockGetUserBillingInfo = vi.fn()
+const mockLoadOptionalBillingInfo = vi.fn()
 const mockCurrentUser = vi.fn()
 const mockRedirect = vi.fn((path: string) => {
   throw new Error(`redirect:${path}`)
@@ -20,8 +20,8 @@ vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: () => mockGetCurrentAppUser(),
 }))
 
-vi.mock('@/lib/asaas/quota', () => ({
-  getUserBillingInfo: () => mockGetUserBillingInfo(),
+vi.mock('@/lib/asaas/optional-billing-info', () => ({
+  loadOptionalBillingInfo: () => mockLoadOptionalBillingInfo(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -31,12 +31,18 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/components/dashboard/dashboard-shell', () => ({
   default: ({
     children,
+    billingNotice,
     currentPlan,
   }: {
     children: React.ReactNode
+    billingNotice?: string | null
     currentPlan?: string | null
   }) => (
-    <div data-testid="dashboard-shell" data-plan={currentPlan ?? ''}>
+    <div
+      data-testid="dashboard-shell"
+      data-billing-notice={billingNotice ?? ''}
+      data-plan={currentPlan ?? ''}
+    >
       {children}
     </div>
   ),
@@ -84,11 +90,14 @@ describe('AuthLayout', () => {
         updatedAt: new Date(),
       },
     })
-    mockGetUserBillingInfo.mockResolvedValue({
+    mockLoadOptionalBillingInfo.mockResolvedValue({
+      billingNotice: null,
+      billingInfo: {
       plan: 'monthly',
       creditsRemaining: 20,
       maxCredits: 20,
       renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
     })
 
     const jsx = await AuthLayout({
@@ -113,7 +122,10 @@ describe('AuthLayout', () => {
         updatedAt: new Date(),
       },
     })
-    mockGetUserBillingInfo.mockRejectedValue(new Error('billing unavailable'))
+    mockLoadOptionalBillingInfo.mockResolvedValue({
+      billingNotice: 'Billing temporarily unavailable.',
+      billingInfo: null,
+    })
 
     const jsx = await AuthLayout({
       children: <div>Child</div>,
@@ -122,6 +134,7 @@ describe('AuthLayout', () => {
     render(jsx)
 
     expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-billing-notice', 'Billing temporarily unavailable.')
     expect(screen.getByText('Child')).toBeInTheDocument()
   })
 })

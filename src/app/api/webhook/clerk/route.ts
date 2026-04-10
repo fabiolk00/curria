@@ -8,6 +8,7 @@ import {
   getOrCreateAppUserByClerkUserId,
   syncClerkUserProfile,
 } from '@/lib/auth/app-user'
+import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 
 export const runtime = 'nodejs'
 
@@ -39,6 +40,11 @@ function getRedisClient(): Redis {
   return redisClient
 }
 
+function readEventUserId(event: WebhookEvent): string | undefined {
+  const data = event.data as { id?: unknown }
+  return typeof data.id === 'string' ? data.id : undefined
+}
+
 export async function POST(req: Request): Promise<Response> {
   const headerPayload = headers()
   const svixId = headerPayload.get('svix-id')
@@ -46,6 +52,12 @@ export async function POST(req: Request): Promise<Response> {
   const svixSignature = headerPayload.get('svix-signature')
 
   if (!svixId || !svixTimestamp || !svixSignature) {
+    logWarn('clerk.webhook.headers_missing', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      success: false,
+    })
+
     return Response.json({ error: 'Missing svix headers' }, { status: 400 })
   }
 
@@ -56,7 +68,14 @@ export async function POST(req: Request): Promise<Response> {
     redis = getRedisClient()
     webhook = new Webhook(getRequiredClerkWebhookEnv('CLERK_WEBHOOK_SECRET'))
   } catch (error) {
-    console.error('[webhook/clerk] Missing configuration:', error)
+    logError('clerk.webhook.config_missing', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      svixId,
+      success: false,
+      ...serializeError(error),
+    })
+
     return Response.json(
       { error: error instanceof Error ? error.message : 'Missing Clerk webhook configuration.' },
       { status: 500 },
@@ -66,9 +85,14 @@ export async function POST(req: Request): Promise<Response> {
   const eventTime = parseInt(svixTimestamp, 10)
   const now = Math.floor(Date.now() / 1000)
   if (Math.abs(now - eventTime) > TOLERANCE_SECONDS) {
-    console.warn(
-      `[webhook/clerk] Rejected stale event ${svixId} (age: ${now - eventTime}s)`,
-    )
+    logWarn('clerk.webhook.timestamp_out_of_tolerance', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      svixId,
+      eventAgeSeconds: now - eventTime,
+      success: false,
+    })
+
     return Response.json(
       { error: 'Webhook timestamp out of tolerance' },
       { status: 400 },
@@ -82,6 +106,14 @@ export async function POST(req: Request): Promise<Response> {
   })
 
   if (setResult !== 'OK') {
+    logInfo('clerk.webhook.duplicate', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      svixId,
+      success: true,
+      duplicate: true,
+    })
+
     return Response.json({ ok: true, duplicate: true }, { status: 200 })
   }
 
@@ -95,7 +127,14 @@ export async function POST(req: Request): Promise<Response> {
       'svix-signature': svixSignature,
     }) as WebhookEvent
   } catch (error) {
-    console.error('[webhook/clerk] Signature verification failed:', error)
+    logWarn('clerk.webhook.signature_invalid', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      svixId,
+      success: false,
+      ...serializeError(error),
+    })
+
     await redis.del(idempotencyKey)
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
@@ -139,10 +178,28 @@ export async function POST(req: Request): Promise<Response> {
         break
     }
   } catch (error) {
-    console.error(`[webhook/clerk] Handler error for ${evt.type}:`, error)
+    logError('clerk.webhook.handler_failed', {
+      requestMethod: req.method,
+      requestPath: new URL(req.url).pathname,
+      svixId,
+      eventType: evt.type,
+      clerkUserId: readEventUserId(evt),
+      success: false,
+      ...serializeError(error),
+    })
+
     await redis.del(idempotencyKey)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
+
+  logInfo('clerk.webhook.processed', {
+    requestMethod: req.method,
+    requestPath: new URL(req.url).pathname,
+    svixId,
+    eventType: evt.type,
+    clerkUserId: readEventUserId(evt),
+    success: true,
+  })
 
   return Response.json({ ok: true }, { status: 200 })
 }

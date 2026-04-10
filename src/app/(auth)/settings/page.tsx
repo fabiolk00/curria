@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlanUpdateSection } from "@/components/dashboard/plan-update-section"
-import { getUserBillingInfo } from "@/lib/asaas/quota"
+import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
 import { db } from "@/lib/db/sessions"
 import { PLANS } from "@/lib/plans"
@@ -37,11 +37,8 @@ export default async function SettingsPage() {
   }
 
   let billingInfo = null
-  try {
-    billingInfo = await getUserBillingInfo(appUser.id)
-  } catch (error) {
-    console.error("[settings-page] failed to load billing info", error)
-  }
+  const billingResult = await loadOptionalBillingInfo(appUser.id, "settings_page")
+  billingInfo = billingResult.billingInfo
 
   const sessions = await db.getUserSessions(appUser.id, 4)
   const firstName = clerkUser?.firstName?.trim() || clerkUser?.username || "Você"

@@ -11,6 +11,7 @@ import { DashboardSidebar } from "./sidebar"
 
 interface DashboardShellProps {
   children: React.ReactNode
+  billingNotice?: string | null
   creditsRemaining?: number
   maxCredits?: number
   renewsIn?: string | null
@@ -23,6 +24,7 @@ interface DashboardShellProps {
 
 export default function DashboardShell({
   children,
+  billingNotice,
   creditsRemaining,
   maxCredits,
   renewsIn,
@@ -60,7 +62,18 @@ export default function DashboardShell({
         userImageUrl={userImageUrl ?? null}
       />
 
-      <main className="h-[calc(107.5svh-4rem)] min-w-0 flex-1 md:overflow-auto">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {billingNotice ? (
+          <div
+            data-testid="billing-notice"
+            className="border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm text-amber-900"
+          >
+            {billingNotice}
+          </div>
+        ) : null}
+
+        <main className="h-[calc(107.5svh-4rem)] min-w-0 flex-1 md:overflow-auto">{children}</main>
+      </div>
     </div>
   )
 }

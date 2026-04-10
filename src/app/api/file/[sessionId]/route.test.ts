@@ -7,6 +7,7 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { createSignedResumeArtifactUrls } from '@/lib/agent/tools/generate-file'
 import { getResumeTargetForSession } from '@/lib/db/resume-targets'
 import { getSession, updateSession } from '@/lib/db/sessions'
+import { logError } from '@/lib/observability/structured-log'
 
 import { GET } from './route'
 
@@ -25,6 +26,14 @@ vi.mock('@/lib/db/resume-targets', () => ({
 
 vi.mock('@/lib/agent/tools/generate-file', () => ({
   createSignedResumeArtifactUrls: vi.fn(),
+}))
+
+vi.mock('@/lib/observability/structured-log', () => ({
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  serializeError: (error: unknown) => ({
+    errorMessage: error instanceof Error ? error.message : String(error),
+  }),
 }))
 
 function buildSession(): Session {
@@ -369,5 +378,46 @@ describe('GET /api/file/[sessionId]', () => {
 
     expect(response.status).toBe(200)
     expect(updateSession).not.toHaveBeenCalled()
+  })
+
+  it('logs structured context when signed url generation fails', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({
+      id: 'usr_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      authIdentity: {
+        id: 'identity_123',
+        userId: 'usr_123',
+        provider: 'clerk',
+        providerSubject: 'user_123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      creditAccount: {
+        id: 'cred_usr_123',
+        userId: 'usr_123',
+        creditsRemaining: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(createSignedResumeArtifactUrls).mockRejectedValue(new Error('signing failed'))
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/file/sess_123'),
+      { params: { sessionId: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(404)
+    expect(logError).toHaveBeenCalledWith('api.file.download_urls_failed', expect.objectContaining({
+      requestMethod: 'GET',
+      requestPath: '/api/file/sess_123',
+      sessionId: 'sess_123',
+      appUserId: 'usr_123',
+      success: false,
+      errorMessage: 'signing failed',
+    }))
   })
 })

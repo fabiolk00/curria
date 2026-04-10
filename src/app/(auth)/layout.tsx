@@ -7,7 +7,7 @@ import { PreviewPanelProvider } from '@/context/preview-panel-context'
 import { SidebarProvider } from '@/context/sidebar-context'
 import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { formatRenewalCountdown } from '@/lib/asaas/billing-display'
-import { getUserBillingInfo } from '@/lib/asaas/quota'
+import { loadOptionalBillingInfo } from '@/lib/asaas/optional-billing-info'
 
 export const metadata = {
   title: 'Dashboard - CurrIA',
@@ -25,12 +25,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/login')
   }
 
-  let billingInfo = null
-  try {
-    billingInfo = await getUserBillingInfo(appUser.id)
-  } catch (error) {
-    console.error('[auth-layout] failed to load billing info', error)
-  }
+  const { billingInfo, billingNotice } = await loadOptionalBillingInfo(appUser.id, 'auth_layout')
 
   const renewsIn = billingInfo?.hasActiveRecurringSubscription
     ? formatRenewalCountdown(billingInfo.renewsAt)
@@ -53,6 +48,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     <SidebarProvider>
       <PreviewPanelProvider>
         <DashboardShell
+          billingNotice={billingNotice}
           creditsRemaining={billingInfo?.creditsRemaining}
           maxCredits={billingInfo?.maxCredits}
           renewsIn={renewsIn}
