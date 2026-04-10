@@ -35,10 +35,6 @@ vi.mock("@/lib/navigation/external", () => ({
   navigateToUrl: mockNavigateToUrl,
 }))
 
-vi.mock("@/components/logo", () => ({
-  default: () => <div>Logo</div>,
-}))
-
 describe("SignupForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -47,10 +43,9 @@ describe("SignupForm", () => {
     mockIsSignedIn.mockReturnValue(false)
   })
 
-  it("renders the embedded Clerk sign up component inside the branded shell", () => {
+  it("renders the embedded Clerk sign up component", () => {
     render(<SignupForm />)
 
-    expect(screen.getByText("Logo")).toBeInTheDocument()
     expect(screen.getByTestId("clerk-sign-up")).toBeInTheDocument()
   })
 

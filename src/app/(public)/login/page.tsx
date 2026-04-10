@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 
+import AuthShell from "@/components/auth/auth-shell"
 import LoginForm from "@/components/auth/login-form"
 
 export const metadata: Metadata = {
@@ -9,12 +10,13 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 p-4 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,oklch(var(--primary)/0.15),transparent_45%)]" />
-      <div className="pointer-events-none absolute bottom-[-10rem] left-1/2 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,oklch(var(--chart-2)/0.12),transparent_60%)] blur-3xl" />
-      <div className="relative w-full max-w-[400px]">
+    <AuthShell
+      mode="login"
+      eyebrow="Conta CurrIA"
+      title="Entre e volte para o seu curriculo alvo"
+      description="Acesse suas sessoes, analises ATS e arquivos gerados com o fluxo nativo do Clerk embutido na interface da CurrIA."
+    >
         <LoginForm />
-      </div>
-    </div>
+    </AuthShell>
   )
 }

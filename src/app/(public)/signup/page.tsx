@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 
+import AuthShell from "@/components/auth/auth-shell"
 import SignupForm from "@/components/auth/signup-form"
 
 export const metadata: Metadata = {
@@ -9,12 +10,13 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 p-4 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,oklch(var(--primary)/0.15),transparent_45%)]" />
-      <div className="pointer-events-none absolute bottom-[-10rem] left-1/2 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,oklch(var(--chart-2)/0.12),transparent_60%)] blur-3xl" />
-      <div className="relative w-full max-w-[400px]">
+    <AuthShell
+      mode="signup"
+      eyebrow="Nova conta"
+      title="Crie sua conta e salve cada versao do seu curriculo"
+      description="Cadastre-se para manter vagas-alvo, historico de otimizacoes e o PDF final sempre ligados ao seu perfil."
+    >
         <SignupForm />
-      </div>
-    </div>
+    </AuthShell>
   )
 }

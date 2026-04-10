@@ -23,20 +23,15 @@ vi.mock("next/navigation", () => ({
   }),
 }))
 
-vi.mock("@/components/logo", () => ({
-  default: () => <div>Logo</div>,
-}))
-
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSearchParamsGet.mockReturnValue(null)
   })
 
-  it("renders the embedded Clerk sign in component inside the branded shell", () => {
+  it("renders the embedded Clerk sign in component", () => {
     render(<LoginForm />)
 
-    expect(screen.getByText("Logo")).toBeInTheDocument()
     expect(screen.getByTestId("clerk-sign-in")).toBeInTheDocument()
   })
 

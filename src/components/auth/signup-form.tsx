@@ -4,7 +4,6 @@ import { SignUp, useAuth } from "@clerk/nextjs"
 import { useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 
-import Logo from "@/components/logo"
 import { embeddedClerkAppearance } from "@/components/auth/clerk-appearance"
 import { buildDefaultCheckoutOnboardingPath } from "@/lib/billing/checkout-navigation"
 import { getSafeRedirectPath } from "@/lib/auth/redirects"
@@ -30,12 +29,6 @@ export default function SignupForm() {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-4 text-center">
-        <div className="flex justify-center">
-          <Logo linkTo="/" />
-        </div>
-      </div>
-
       <SignUp
         routing="hash"
         forceRedirectUrl={redirectTo}
