@@ -201,7 +201,7 @@ export async function rewriteSection(
   try {
     const response = await callOpenAIWithRetry(
       (signal) => openai.chat.completions.create({
-        model: MODEL_CONFIG.structured,
+        model: MODEL_CONFIG.structuredModel,
         max_completion_tokens: AGENT_CONFIG.rewriterMaxTokens,
         response_format: { type: 'json_object' },
         messages: [
@@ -236,7 +236,7 @@ Rules:
     trackApiUsage({
       userId,
       sessionId,
-      model: MODEL_CONFIG.structured,
+      model: MODEL_CONFIG.structuredModel,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       endpoint: 'rewriter',
@@ -270,5 +270,4 @@ Rules:
     }
   }
 }
-
 

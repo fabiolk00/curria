@@ -70,7 +70,7 @@ async function parseImageOCR(
     (signal) =>
       openai.chat.completions.create(
         {
-          model: MODEL_CONFIG.vision,
+          model: MODEL_CONFIG.visionModel,
           max_completion_tokens: AGENT_CONFIG.ocrMaxTokens,
           messages: [
             {
@@ -102,7 +102,7 @@ async function parseImageOCR(
     trackApiUsage({
       userId,
       sessionId,
-      model: MODEL_CONFIG.vision,
+      model: MODEL_CONFIG.visionModel,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       endpoint: 'ocr',

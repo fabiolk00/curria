@@ -11,7 +11,7 @@ import { generateFile } from './generate-file'
 import { applyGapAction } from './gap-to-action'
 import { parseFile } from './parse-file'
 import { ingestResumeText } from './resume-ingestion'
-import { dispatchTool, dispatchToolWithContext, executeTool } from './index'
+import { dispatchTool, dispatchToolWithContext, executeTool, getToolDefinitionsForPhase } from './index'
 import { rewriteSection } from './rewrite-section'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
 
@@ -204,6 +204,19 @@ describe('agent tool dispatch', () => {
     })
     expect(session.agentState.sourceResumeText).toBe('existing parsed text')
     expect(session.agentState.parseStatus).toBe('attached')
+  })
+
+  it('limits tool exposure by phase', () => {
+    const analysisTools = getToolDefinitionsForPhase('analysis').map((tool) => (
+      tool.type === 'function' ? tool.function.name : 'unknown'
+    ))
+    const confirmTools = getToolDefinitionsForPhase('confirm').map((tool) => (
+      tool.type === 'function' ? tool.function.name : 'unknown'
+    ))
+
+    expect(analysisTools).toEqual(['score_ats', 'analyze_gap', 'set_phase'])
+    expect(confirmTools).toEqual(['create_target_resume', 'set_phase', 'generate_file'])
+    expect(confirmTools).not.toContain('rewrite_section')
   })
 
   it('persists the produced patch exactly once through the dispatcher', async () => {

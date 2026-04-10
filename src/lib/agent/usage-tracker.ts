@@ -17,6 +17,15 @@ export function getModelPricing(model: string): { input: number; output: number 
     ?? MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL]
 }
 
+export function calculateUsageCostCents(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = getModelPricing(model)
+
+  return Math.ceil(
+    (inputTokens / 1_000_000) * pricing.input
+    + (outputTokens / 1_000_000) * pricing.output,
+  )
+}
+
 export async function trackApiUsage(params: {
   userId: string
   sessionId?: string
@@ -27,11 +36,7 @@ export async function trackApiUsage(params: {
 }): Promise<void> {
   const supabase = getSupabaseAdminClient()
   const totalTokens = params.inputTokens + params.outputTokens
-  const pricing = getModelPricing(params.model)
-  const costCents = Math.ceil(
-    (params.inputTokens / 1_000_000) * pricing.input +
-    (params.outputTokens / 1_000_000) * pricing.output,
-  )
+  const costCents = calculateUsageCostCents(params.model, params.inputTokens, params.outputTokens)
 
   try {
     await supabase.from('api_usage').insert({

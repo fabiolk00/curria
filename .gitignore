@@ -47,3 +47,7 @@ yarn-error.log*
 
 # Local design imports
 Modernize Design Files.zip
+
+# Generated OpenAI evaluation artifacts
+docs/openai-baselines/20*/
+docs/openai-model-selection-runs/20*/

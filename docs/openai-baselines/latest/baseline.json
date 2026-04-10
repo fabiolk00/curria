@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-10T00:26:54.274Z",
+  "windowStart": "2026-04-03T00:26:52.875Z",
+  "windowDays": 7,
+  "usageSummary": {
+    "agent": {
+      "calls": 40,
+      "distinctModels": [
+        "gpt-5-nano"
+      ],
+      "medianInputTokens": 3294,
+      "medianOutputTokens": 1840,
+      "medianTotalTokens": 4776,
+      "medianCostCents": 1,
+      "totalCostUsd": 0.4
+    },
+    "gap_analysis": {
+      "calls": 25,
+      "distinctModels": [
+        "gpt-5-nano"
+      ],
+      "medianInputTokens": 1575,
+      "medianOutputTokens": 1200,
+      "medianTotalTokens": 2775,
+      "medianCostCents": 1,
+      "totalCostUsd": 0.25
+    },
+    "target_resume": {
+      "calls": 0,
+      "distinctModels": [],
+      "medianInputTokens": 0,
+      "medianOutputTokens": 0,
+      "medianTotalTokens": 0,
+      "medianCostCents": 0,
+      "totalCostUsd": 0
+    }
+  },
+  "generationSummary": {
+    "sessions": {
+      "ready": 0,
+      "failed": 2,
+      "generating": 0,
+      "idle": 19,
+      "missing": 0
+    },
+    "targetResumes": {
+      "ready": 0,
+      "failed": 0,
+      "generating": 0,
+      "idle": 0,
+      "missing": 0
+    }
+  },
+  "notes": [
+    "Token, model, and cost baselines come from api_usage.",
+    "Turn-level truncation and empty-fallback rates now depend on structured logs emitted by agent.turn.completed and agent.response.* events.",
+    "Use this report as the cost baseline before testing any agentModel promotion beyond combo_a."
+  ]
+}

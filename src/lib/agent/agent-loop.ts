@@ -4,8 +4,8 @@ import { APIError } from 'openai'
 import { buildSystemPrompt, trimMessages } from '@/lib/agent/context-builder'
 import { AGENT_CONFIG, MODEL_CONFIG } from '@/lib/agent/config'
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
-import { dispatchToolWithContext, TOOL_DEFINITIONS } from '@/lib/agent/tools'
-import { trackApiUsage } from '@/lib/agent/usage-tracker'
+import { dispatchToolWithContext, getToolDefinitionsForPhase } from '@/lib/agent/tools'
+import { calculateUsageCostCents, trackApiUsage } from '@/lib/agent/usage-tracker'
 import { appendMessage, getMessages } from '@/lib/db/sessions'
 import { createChatCompletionStreamWithRetry } from '@/lib/openai/chat'
 import { openai } from '@/lib/openai/client'
@@ -56,6 +56,15 @@ type StreamTurnResult = {
     inputTokens: number
     outputTokens: number
   }
+  usedLengthRecovery?: boolean
+  usedConciseRecovery?: boolean
+}
+
+type DeterministicToolOutcome = {
+  success: boolean
+  hadPatch: boolean
+  failureMessage?: string
+  failureCode?: AgentErrorChunk['code']
 }
 
 function parseJsonObject(value: string): Record<string, unknown> | null {
@@ -194,6 +203,153 @@ function mergeUsage(
   }
 }
 
+function calculateHistoryChars(messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]): number {
+  return messages.reduce((total, message) => {
+    if (typeof message.content === 'string') {
+      return total + message.content.length
+    }
+
+    if (Array.isArray(message.content)) {
+      return total + JSON.stringify(message.content).length
+    }
+
+    if ('tool_calls' in message && Array.isArray(message.tool_calls)) {
+      return total + JSON.stringify(message.tool_calls).length
+    }
+
+    return total
+  }, 0)
+}
+
+function normalizeText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function isGenerationApproval(message: string): boolean {
+  const normalized = normalizeText(message)
+
+  if (!normalized || /\b(nao|not|cancel|depois)\b/.test(normalized)) {
+    return false
+  }
+
+  return /\b(sim|yes|ok|okay|pode gerar|pode seguir|gera|gerar agora|generate now)\b/.test(normalized)
+}
+
+function buildResumeTextForScoring(session: Session): string {
+  if (session.agentState.sourceResumeText?.trim()) {
+    return session.agentState.sourceResumeText
+  }
+
+  const lines: string[] = []
+
+  if (session.cvState.fullName.trim()) {
+    lines.push(session.cvState.fullName.trim())
+  }
+
+  const contactLine = [
+    session.cvState.email?.trim(),
+    session.cvState.phone?.trim(),
+    session.cvState.linkedin?.trim(),
+    session.cvState.location?.trim(),
+  ].filter(Boolean).join(' | ')
+
+  if (contactLine) {
+    lines.push(contactLine)
+  }
+
+  if (session.cvState.summary.trim()) {
+    lines.push('Summary')
+    lines.push(session.cvState.summary.trim())
+  }
+
+  if (session.cvState.skills.length > 0) {
+    lines.push('Skills')
+    lines.push(session.cvState.skills.join(', '))
+  }
+
+  if (session.cvState.experience.length > 0) {
+    lines.push('Experience')
+    for (const experience of session.cvState.experience.slice(0, 6)) {
+      lines.push(`${experience.title} - ${experience.company} (${experience.startDate} - ${experience.endDate})`)
+      for (const bullet of experience.bullets.slice(0, 4)) {
+        lines.push(`- ${bullet}`)
+      }
+    }
+  }
+
+  if (session.cvState.education.length > 0) {
+    lines.push('Education')
+    for (const education of session.cvState.education.slice(0, 4)) {
+      lines.push(`${education.degree} - ${education.institution} (${education.year})`)
+    }
+  }
+
+  if ((session.cvState.certifications?.length ?? 0) > 0) {
+    lines.push('Certifications')
+    for (const certification of session.cvState.certifications?.slice(0, 4) ?? []) {
+      lines.push(`${certification.name} - ${certification.issuer}`)
+    }
+  }
+
+  return lines.join('\n').trim()
+}
+
+function hasResumeContextForDeterministicAnalysis(session: Session): boolean {
+  return buildResumeTextForScoring(session).trim().length > 0
+}
+
+async function trackTurnUsage(params: {
+  session: Session
+  appUserId: string
+  usage: NonNullable<StreamTurnResult['usage']>
+  finishReason: StreamTurnResult['finishReason']
+  toolCalls: number
+  requestId: string
+  systemPromptChars: number
+  historyChars: number
+  allowedToolCount: number
+  usedLengthRecovery: boolean
+  usedConciseRecovery: boolean
+}): Promise<void> {
+  const costCents = calculateUsageCostCents(
+    MODEL_CONFIG.agentModel,
+    params.usage.inputTokens,
+    params.usage.outputTokens,
+  )
+
+  trackApiUsage({
+    userId: params.appUserId,
+    sessionId: params.session.id,
+    model: MODEL_CONFIG.agentModel,
+    inputTokens: params.usage.inputTokens,
+    outputTokens: params.usage.outputTokens,
+    endpoint: 'agent',
+  }).catch(() => {})
+
+  logInfo('agent.turn.completed', {
+    requestId: params.requestId,
+    sessionId: params.session.id,
+    appUserId: params.appUserId,
+    phase: params.session.phase,
+    stateVersion: params.session.stateVersion,
+    systemPromptChars: params.systemPromptChars,
+    historyChars: params.historyChars,
+    inputTokens: params.usage.inputTokens,
+    outputTokens: params.usage.outputTokens,
+    finishReason: params.finishReason ?? 'none',
+    toolCalls: params.toolCalls,
+    allowedToolCount: params.allowedToolCount,
+    usedLengthRecovery: params.usedLengthRecovery,
+    usedConciseRecovery: params.usedConciseRecovery,
+    costCents,
+    success: true,
+  })
+}
+
 async function* streamAssistantTurn(params: {
   session: Session
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
@@ -210,7 +366,7 @@ async function* streamAssistantTurn(params: {
 
   // Only include tool_choice if tools are provided. OpenAI API requires tools when tool_choice is set.
   const requestParams: Parameters<typeof createChatCompletionStreamWithRetry>[1] = {
-    model: MODEL_CONFIG.agent,
+    model: MODEL_CONFIG.agentModel,
     max_completion_tokens: params.maxCompletionTokens,
     messages: [
       { role: 'system', content: params.cachedSystemPrompt },
@@ -352,7 +508,7 @@ async function* recoverTruncatedTurn(params: {
       appUserId: params.appUserId,
       requestStartedAt: params.requestStartedAt,
       signal: params.signal,
-      maxCompletionTokens: Math.min(params.maxCompletionTokens, 1200),
+      maxCompletionTokens: Math.min(params.maxCompletionTokens, 450),
     })
 
     accumulatedAssistantText += continuationTurn.assistantText
@@ -365,6 +521,7 @@ async function* recoverTruncatedTurn(params: {
         toolCalls: continuationTurn.toolCalls,
         finishReason,
         usage,
+        usedLengthRecovery: true,
       }
     }
   }
@@ -374,6 +531,7 @@ async function* recoverTruncatedTurn(params: {
     toolCalls: [],
     finishReason,
     usage,
+    usedLengthRecovery: recoveryAttempts > 0,
   }
 }
 
@@ -386,7 +544,7 @@ async function* recoverConciseTurn(params: {
   requestStartedAt: number
   signal?: AbortSignal
 }): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
-  return yield* streamAssistantTurn({
+  const turn = yield* streamAssistantTurn({
     session: params.session,
     messages: [
       {
@@ -399,8 +557,156 @@ async function* recoverConciseTurn(params: {
     appUserId: params.appUserId,
     requestStartedAt: params.requestStartedAt,
     signal: params.signal,
-    maxCompletionTokens: 500,
+    maxCompletionTokens: AGENT_CONFIG.conciseFallbackMaxTokens,
   })
+
+  return {
+    ...turn,
+    usedConciseRecovery: true,
+  }
+}
+
+async function* runDeterministicTool(params: {
+  session: Session
+  toolName: string
+  toolInput: Record<string, unknown>
+  requestId: string
+  signal?: AbortSignal
+}): AsyncGenerator<AgentLoopEvent, DeterministicToolOutcome> {
+  yield {
+    type: 'toolStart',
+    toolName: params.toolName,
+  }
+
+  const toolResult = await dispatchToolWithContext(
+    params.toolName,
+    params.toolInput,
+    params.session,
+    params.signal,
+  )
+
+  if (toolResult.outputFailure) {
+    yield {
+      type: 'error',
+      error: toolResult.outputFailure.error,
+      code: toolResult.outputFailure.code,
+      requestId: params.requestId,
+    }
+
+    if (toolResult.persistedPatch) {
+      yield {
+        type: 'patch',
+        patch: toolResult.persistedPatch,
+        phase: params.session.phase,
+      }
+    }
+
+    return {
+      success: false,
+      hadPatch: toolResult.persistedPatch !== undefined,
+      failureMessage: toolResult.outputFailure.error,
+      failureCode: toolResult.outputFailure.code,
+    }
+  }
+
+  yield {
+    type: 'toolResult',
+    toolName: params.toolName,
+    output: toolResult.output,
+  }
+
+  if (toolResult.persistedPatch) {
+    yield {
+      type: 'patch',
+      patch: toolResult.persistedPatch,
+      phase: params.session.phase,
+    }
+  }
+
+  return {
+    success: true,
+    hadPatch: toolResult.persistedPatch !== undefined,
+  }
+}
+
+async function* primeAnalysisState(params: {
+  session: Session
+  requestId: string
+  signal?: AbortSignal
+}): AsyncGenerator<AgentLoopEvent, boolean> {
+  const { session } = params
+
+  if (session.phase !== 'analysis' || !hasResumeContextForDeterministicAnalysis(session)) {
+    return false
+  }
+
+  let mutatedPromptState = false
+
+  if (!session.atsScore) {
+    const scoreResult = yield* runDeterministicTool({
+      session,
+      toolName: 'score_ats',
+      toolInput: {
+        resume_text: buildResumeTextForScoring(session),
+        job_description: session.agentState.targetJobDescription,
+      },
+      requestId: params.requestId,
+      signal: params.signal,
+    })
+    mutatedPromptState = mutatedPromptState || scoreResult.hadPatch
+  }
+
+  if (session.agentState.targetJobDescription?.trim() && !session.agentState.gapAnalysis) {
+    const gapResult = yield* runDeterministicTool({
+      session,
+      toolName: 'analyze_gap',
+      toolInput: {
+        target_job_description: session.agentState.targetJobDescription,
+      },
+      requestId: params.requestId,
+      signal: params.signal,
+    })
+    mutatedPromptState = mutatedPromptState || gapResult.hadPatch
+  }
+
+  return mutatedPromptState
+}
+
+async function* handleConfirmedGeneration(params: {
+  session: Session
+  requestId: string
+  signal?: AbortSignal
+}): AsyncGenerator<AgentLoopEvent, string> {
+  const setPhaseResult = yield* runDeterministicTool({
+    session: params.session,
+    toolName: 'set_phase',
+    toolInput: {
+      phase: 'generation',
+      reason: 'User explicitly approved file generation.',
+    },
+    requestId: params.requestId,
+    signal: params.signal,
+  })
+
+  const generationResult = yield* runDeterministicTool({
+    session: params.session,
+    toolName: 'generate_file',
+    toolInput: {
+      cv_state: params.session.cvState,
+    },
+    requestId: params.requestId,
+    signal: params.signal,
+  })
+
+  if (generationResult.success) {
+    return 'Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.'
+  }
+
+  if (!setPhaseResult.success && setPhaseResult.failureMessage) {
+    return `Nao consegui iniciar a geracao agora. ${setPhaseResult.failureMessage}`
+  }
+
+  return `Nao consegui gerar os arquivos agora. ${generationResult.failureMessage ?? 'Tente novamente em alguns instantes.'}`
 }
 
 export async function* runAgentLoop(
@@ -421,6 +727,58 @@ export async function* runAgentLoop(
   let systemPromptDirty = false
 
   try {
+    if (session.phase === 'confirm' && isGenerationApproval(userMessage)) {
+      const generationAssistantText = yield* handleConfirmedGeneration({
+        session,
+        requestId,
+        signal,
+      })
+
+      yield {
+        type: 'text',
+        content: generationAssistantText,
+      }
+
+      assistantResponded = true
+      await appendMessage(session.id, 'assistant', generationAssistantText)
+
+      logInfo('agent.stream.completed', {
+        requestId,
+        sessionId: session.id,
+        appUserId,
+        phase: session.phase,
+        stateVersion: session.stateVersion,
+        isNewSession,
+        messageCountAfter: session.messageCount + 1,
+        toolLoopsUsed: toolIterations,
+        success: true,
+        latencyMs: Date.now() - requestStartedAt,
+      })
+
+      yield {
+        type: 'done',
+        requestId,
+        sessionId: session.id,
+        phase: session.phase,
+        atsScore: session.atsScore,
+        messageCount: session.messageCount + 1,
+        maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+        isNewSession,
+        toolIterations,
+      }
+      return
+    }
+
+    const analysisPrimed = yield* primeAnalysisState({
+      session,
+      requestId,
+      signal,
+    })
+
+    if (analysisPrimed) {
+      systemPromptDirty = true
+    }
+
     while (true) {
       if (signal?.aborted) {
         logInfo('agent.request.cancelled', {
@@ -463,6 +821,24 @@ export async function* runAgentLoop(
         systemPromptDirty = false
       }
 
+      const toolsForPhase = getToolDefinitionsForPhase(session.phase)
+      const historyChars = calculateHistoryChars(messages)
+
+      logInfo('agent.turn.started', {
+        requestId,
+        sessionId: session.id,
+        appUserId,
+        phase: session.phase,
+        stateVersion: session.stateVersion,
+        toolIteration: toolIterations,
+        systemPromptChars: cachedSystemPrompt.length,
+        historyChars,
+        historyMessages: messages.length,
+        allowedToolCount: toolsForPhase.length,
+        maxOutputTokens: AGENT_CONFIG.conversationMaxOutputTokens,
+        success: true,
+      })
+
       let turn = yield* streamAssistantTurn({
         session,
         messages,
@@ -471,8 +847,8 @@ export async function* runAgentLoop(
         appUserId,
         requestStartedAt,
         signal,
-        maxCompletionTokens: AGENT_CONFIG.maxTokens,
-        tools: TOOL_DEFINITIONS,
+        maxCompletionTokens: AGENT_CONFIG.conversationMaxOutputTokens,
+        tools: toolsForPhase,
       })
 
       if (turn.finishReason === 'length' && turn.toolCalls.length === 0 && turn.assistantText.trim()) {
@@ -485,7 +861,7 @@ export async function* runAgentLoop(
           appUserId,
           requestStartedAt,
           signal,
-          maxCompletionTokens: AGENT_CONFIG.maxTokens,
+          maxCompletionTokens: AGENT_CONFIG.conversationMaxOutputTokens,
         })
       }
 
@@ -506,18 +882,24 @@ export async function* runAgentLoop(
         turn = {
           ...conciseTurn,
           usage: mergeUsage(turn.usage, conciseTurn.usage),
+          usedLengthRecovery: turn.usedLengthRecovery || conciseTurn.usedLengthRecovery,
         }
       }
 
       if (turn.usage) {
-        trackApiUsage({
-          userId: appUserId,
-          sessionId: session.id,
-          model: MODEL_CONFIG.agent,
-          inputTokens: turn.usage.inputTokens,
-          outputTokens: turn.usage.outputTokens,
-          endpoint: 'agent',
-        }).catch(() => {})
+        await trackTurnUsage({
+          session,
+          appUserId,
+          usage: turn.usage,
+          finishReason: turn.finishReason,
+          toolCalls: turn.toolCalls.length,
+          requestId,
+          systemPromptChars: cachedSystemPrompt.length,
+          historyChars,
+          allowedToolCount: toolsForPhase.length,
+          usedLengthRecovery: Boolean(turn.usedLengthRecovery),
+          usedConciseRecovery: Boolean(turn.usedConciseRecovery),
+        })
       }
 
       if (turn.assistantText.trim()) {
@@ -653,19 +1035,24 @@ export async function* runAgentLoop(
           appUserId,
           requestStartedAt,
           signal,
-          maxCompletionTokens: Math.min(AGENT_CONFIG.maxTokens, 900),
+          maxCompletionTokens: AGENT_CONFIG.conciseFallbackMaxTokens,
           // No tools in recovery mode, so no tool_choice needed
         })
 
         if (recoveryTurn.usage) {
-          trackApiUsage({
-            userId: appUserId,
-            sessionId: session.id,
-            model: MODEL_CONFIG.agent,
-            inputTokens: recoveryTurn.usage.inputTokens,
-            outputTokens: recoveryTurn.usage.outputTokens,
-            endpoint: 'agent',
-          }).catch(() => {})
+          await trackTurnUsage({
+            session,
+            appUserId,
+            usage: recoveryTurn.usage,
+            finishReason: recoveryTurn.finishReason,
+            toolCalls: recoveryTurn.toolCalls.length,
+            requestId,
+            systemPromptChars: cachedSystemPrompt.length,
+            historyChars: calculateHistoryChars(messages),
+            allowedToolCount: 0,
+            usedLengthRecovery: false,
+            usedConciseRecovery: true,
+          })
         }
 
         // Check if recovery was successful (got assistant text)
@@ -677,7 +1064,11 @@ export async function* runAgentLoop(
 
       if (!recoverySucceeded) {
         // Final fallback after all recovery attempts failed
-        finalAssistantText = 'I encountered an issue processing your request. Please try again or rephrase your question.'
+        finalAssistantText = 'Não consegui concluir a resposta completa desta vez, mas posso continuar de forma mais objetiva. Tente reenviar sua mensagem ou pedir um resumo mais curto.'
+        yield {
+          type: 'text',
+          content: finalAssistantText,
+        }
       }
 
       assistantResponded = true
@@ -750,4 +1141,3 @@ export async function* runAgentLoop(
     })
   }
 }
-

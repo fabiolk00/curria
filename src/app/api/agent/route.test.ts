@@ -364,7 +364,7 @@ Python, APIs e Microsoft Fabric.`
     expect(updateSession).not.toHaveBeenCalled()
   })
 
-  it('auto-generates gapAnalysis when a high-confidence job description arrives and resume context already exists', async () => {
+  it('stores the detected target job without kicking off background gap analysis', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_gap_ready',
       userId: 'usr_123',
@@ -392,24 +392,6 @@ Python, APIs e Microsoft Fabric.`
       updatedAt: new Date(),
     })
     vi.mocked(incrementMessageCount).mockResolvedValue(true)
-    vi.mocked(analyzeGap).mockResolvedValue({
-      output: {
-        success: true,
-        result: {
-          matchScore: 82,
-          missingSkills: ['Microsoft Fabric'],
-          weakAreas: ['summary'],
-          improvementSuggestions: ['Destacar entregas com dashboards executivos'],
-        },
-      },
-      result: {
-        matchScore: 82,
-        missingSkills: ['Microsoft Fabric'],
-        weakAreas: ['summary'],
-        improvementSuggestions: ['Destacar entregas com dashboards executivos'],
-      },
-    })
-
     const jobDescription = `Analista de BI Senior
 
 Responsabilidades:
@@ -434,34 +416,15 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     }))
 
     expect(response.status).toBe(200)
-    expect(analyzeGap).toHaveBeenCalledWith(
-      expect.objectContaining({
-        summary: expect.stringContaining('BI'),
-        skills: expect.arrayContaining(['SQL', 'Power BI']),
-      }),
-      expect.stringContaining('Microsoft Fabric'),
-      'usr_123',
-      'sess_gap_ready',
-    )
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(updateSession).toHaveBeenCalledWith('sess_gap_ready', {
       agentState: expect.objectContaining({
         targetJobDescription: expect.stringContaining('Power BI'),
-        targetFitAssessment: expect.objectContaining({
-          level: 'strong',
-          reasons: expect.arrayContaining(['Missing or underrepresented skill: Microsoft Fabric']),
-        }),
-        gapAnalysis: expect.objectContaining({
-          result: expect.objectContaining({
-            matchScore: 82,
-            missingSkills: expect.arrayContaining(['Microsoft Fabric']),
-          }),
-        }),
       }),
     })
+    expect(analyzeGap).not.toHaveBeenCalled()
   })
 
-  it('does not block the current response while auto gap analysis is still running', async () => {
+  it('does not start background gap analysis for existing sessions anymore', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_gap_background',
       userId: 'usr_123',
@@ -515,7 +478,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     }))
 
     expect(response.status).toBe(200)
-    expect(analyzeGap).toHaveBeenCalledTimes(1)
+    expect(analyzeGap).not.toHaveBeenCalled()
   })
 
   it('streams SSE done event for a valid new session', async () => {

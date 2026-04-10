@@ -54,7 +54,7 @@ export async function createTargetResumeVariant(input: {
 
     const response = await callOpenAIWithRetry(
       (signal) => openai.chat.completions.create({
-        model: MODEL_CONFIG.structured,
+        model: MODEL_CONFIG.structuredModel,
         max_completion_tokens: AGENT_CONFIG.rewriterMaxTokens,
         response_format: { type: 'json_object' },
         messages: [
@@ -116,7 +116,7 @@ Rules:
     trackApiUsage({
       userId: input.userId,
       sessionId: input.sessionId,
-      model: MODEL_CONFIG.structured,
+      model: MODEL_CONFIG.structuredModel,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       endpoint: 'target_resume',
@@ -146,5 +146,4 @@ Rules:
     return toolFailureFromUnknown(error, 'Failed to create target resume.')
   }
 }
-
 

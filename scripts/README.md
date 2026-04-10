@@ -12,6 +12,14 @@ Runs the OpenAI model-selection bakeoff defined in [run-openai-model-selection-p
 - Requires: `.env` with `OPENAI_API_KEY`
 - Output: timestamped files under `docs/openai-model-selection-runs/` plus a `latest/` copy
 
+### `npm run agent:baseline`
+
+Generates a 7-day OpenAI cost and generation baseline using production data sources.
+
+- Purpose: capture median token/cost usage before trying any agent-model promotion
+- Requires: `.env` with Supabase admin credentials
+- Output: timestamped files under `docs/openai-baselines/` plus a `latest/` copy
+
 ### `scripts/verify-staging.sh`
 
 Checks whether the staging environment is ready for billing and webhook validation.

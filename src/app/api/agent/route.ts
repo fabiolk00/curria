@@ -676,12 +676,6 @@ export async function POST(req: NextRequest) {
         return response
       }
 
-      scheduleAutoGenerateGapAnalysisForDetectedTarget(
-        session!,
-        detectedTargetJob,
-        appUserId,
-        requestId,
-      )
     } catch (err) {
       const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
       const errorMessage = isAbort
@@ -746,14 +740,6 @@ export async function POST(req: NextRequest) {
             return
           }
 
-          // After sessionId is safe, complete any expensive target-job work in
-          // the background so it does not delay the current assistant reply.
-          scheduleAutoGenerateGapAnalysisForDetectedTarget(
-            session!,
-            detectedTargetJob,
-            appUserId,
-            requestId,
-          )
         } catch (err) {
           const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
           const errorMessage = isAbort

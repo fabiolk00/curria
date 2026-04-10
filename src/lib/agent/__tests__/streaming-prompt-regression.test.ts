@@ -34,12 +34,29 @@ vi.mock('@/lib/db/sessions', () => ({
 vi.mock('@/lib/agent/config', () => ({
   AGENT_CONFIG: {
     timeout: 30_000,
-    maxTokens: 2_000,
+    conversationMaxOutputTokens: 900,
+    conciseFallbackMaxTokens: 350,
     maxToolIterations: 3,
-    maxMessagesPerSession: 15,
+    maxMessagesPerSession: 30,
+    maxSystemPromptCharsByPhase: {
+      intake: 6_000,
+      analysis: 8_000,
+      dialog: 8_000,
+      confirm: 6_500,
+      generation: 6_000,
+    },
+    phaseToolAllowlist: {
+      intake: ['parse_file', 'set_phase'],
+      analysis: ['score_ats', 'analyze_gap', 'set_phase'],
+      dialog: ['rewrite_section', 'apply_gap_action', 'set_phase'],
+      confirm: ['generate_file', 'create_target_resume', 'set_phase'],
+      generation: ['generate_file', 'create_target_resume', 'set_phase'],
+    },
   },
   MODEL_CONFIG: {
-    agent: 'test-model',
+    agentModel: 'test-model',
+    structuredModel: 'test-model',
+    visionModel: 'test-model',
   },
 }))
 
@@ -53,10 +70,11 @@ vi.mock('@/lib/openai/chat', () => ({
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
   trackApiUsage: mockTrackApiUsage,
+  calculateUsageCostCents: vi.fn(() => 1),
 }))
 
 vi.mock('@/lib/agent/tools', () => ({
-  TOOL_DEFINITIONS: [],
+  getToolDefinitionsForPhase: vi.fn(() => []),
   dispatchToolWithContext: mockDispatchToolWithContext,
 }))
 
@@ -106,7 +124,7 @@ describe('streaming prompt semantics regression', () => {
     mockAppendMessage.mockResolvedValue(undefined)
   })
 
-  it('rebuilds prompt with fresh upload priority across tool-loop turns', async () => {
+  it('rebuilds prompt after parsing and drops duplicate raw resume text once canonical state is available', async () => {
     const promptsBuilt: string[] = []
     const actualContextBuilder = await vi.importActual<typeof import('../context-builder')>('../context-builder')
 
@@ -157,6 +175,7 @@ describe('streaming prompt semantics regression', () => {
     expect(promptsBuilt).toHaveLength(2)
     expect(promptsBuilt[0]).toContain('Do not ask the user to upload a resume. Do not call parse_file.')
     expect(promptsBuilt[1]).not.toContain('Do not ask the user to upload a resume. Do not call parse_file.')
-    expect(promptsBuilt[1]).toContain('Freshly parsed resume text')
+    expect(promptsBuilt[1]).not.toContain('Freshly parsed resume text')
+    expect(promptsBuilt[1]).toContain('"fullName": "John Smith"')
   })
 })

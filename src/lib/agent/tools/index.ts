@@ -1,5 +1,6 @@
 import type OpenAI from 'openai'
 
+import { AGENT_CONFIG } from '@/lib/agent/config'
 import { scoreATS } from '@/lib/ats/score'
 import {
   getResumeTargetForSession,
@@ -26,6 +27,7 @@ import type {
   ToolPatch,
   ToolFailure,
 } from '@/types/agent'
+import type { Phase } from '@/types/cv'
 
 import { generateFile } from './generate-file'
 import { applyGapAction } from './gap-to-action'
@@ -168,6 +170,20 @@ export const TOOL_DEFINITIONS: OpenAITool[] = [
     },
   },
 ]
+
+export function getToolDefinitionsForPhase(phase: Phase): OpenAITool[] {
+  const allowedTools = new Set(AGENT_CONFIG.phaseToolAllowlist[phase])
+
+  return TOOL_DEFINITIONS.filter((tool) => {
+    const toolName = tool.type === 'function'
+      ? tool.function.name
+      : undefined
+
+    return toolName
+      ? allowedTools.has(toolName as (typeof AGENT_CONFIG.phaseToolAllowlist)[keyof typeof AGENT_CONFIG.phaseToolAllowlist][number])
+      : false
+  })
+}
 
 type ToolExecutionResult = {
   output: unknown

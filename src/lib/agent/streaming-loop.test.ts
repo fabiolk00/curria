@@ -34,13 +34,30 @@ vi.mock('@/lib/db/sessions', () => ({
 vi.mock('@/lib/agent/config', () => ({
   AGENT_CONFIG: {
     timeout: 30_000,
-    maxTokens: 2_000,
+    conversationMaxOutputTokens: 900,
+    conciseFallbackMaxTokens: 350,
     maxToolIterations: 3,
     maxHistoryMessages: 24,
-    maxMessagesPerSession: 15,
+    maxMessagesPerSession: 30,
+    maxSystemPromptCharsByPhase: {
+      intake: 6_000,
+      analysis: 8_000,
+      dialog: 8_000,
+      confirm: 6_500,
+      generation: 6_000,
+    },
+    phaseToolAllowlist: {
+      intake: ['parse_file', 'set_phase'],
+      analysis: ['score_ats', 'analyze_gap', 'set_phase'],
+      dialog: ['rewrite_section', 'apply_gap_action', 'set_phase'],
+      confirm: ['generate_file', 'create_target_resume', 'set_phase'],
+      generation: ['generate_file', 'create_target_resume', 'set_phase'],
+    },
   },
   MODEL_CONFIG: {
-    agent: 'test-model',
+    agentModel: 'test-model',
+    structuredModel: 'test-model',
+    visionModel: 'test-model',
   },
 }))
 
@@ -54,10 +71,11 @@ vi.mock('@/lib/openai/chat', () => ({
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
   trackApiUsage: mockTrackApiUsage,
+  calculateUsageCostCents: vi.fn(() => 1),
 }))
 
 vi.mock('@/lib/agent/tools', () => ({
-  TOOL_DEFINITIONS: [],
+  getToolDefinitionsForPhase: vi.fn(() => []),
   dispatchToolWithContext: mockDispatchToolWithContext,
 }))
 
@@ -511,6 +529,71 @@ describe('runAgentLoop streaming', () => {
       type: 'error',
       error: 'The AI response was incomplete.',
     }))
+  })
+
+  it('generates files directly from confirm after explicit approval without another model turn', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'confirm' as const,
+    }
+
+    mockDispatchToolWithContext
+      .mockResolvedValueOnce({
+        output: { success: true, phase: 'generation' },
+        outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+        persistedPatch: {
+          phase: 'generation',
+        },
+      })
+      .mockResolvedValueOnce({
+        output: {
+          success: true,
+          docxUrl: 'https://example.com/resume.docx',
+          pdfUrl: 'https://example.com/resume.pdf',
+        },
+        outputJson: JSON.stringify({
+          success: true,
+          docxUrl: 'https://example.com/resume.docx',
+          pdfUrl: 'https://example.com/resume.pdf',
+        }),
+        persistedPatch: {
+          generatedOutput: {
+            status: 'ready',
+            docxPath: 'usr_123/sess_123/resume.docx',
+            pdfPath: 'usr_123/sess_123/resume.pdf',
+          },
+        },
+      })
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'sim, pode gerar',
+      appUserId: 'usr_123',
+      requestId: 'req_confirm',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    expect(mockCreateChatCompletionStreamWithRetry).not.toHaveBeenCalled()
+    expect(events.map((event) => event.type)).toEqual([
+      'toolStart',
+      'toolResult',
+      'patch',
+      'toolStart',
+      'toolResult',
+      'patch',
+      'text',
+      'done',
+    ])
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'Seus arquivos ATS-otimizados estao prontos. Confira os downloads de DOCX e PDF acima.',
+    )
   })
 
   it('stops cleanly when the abort signal fires after the first chunk', async () => {
