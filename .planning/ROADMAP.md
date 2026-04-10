@@ -2,91 +2,73 @@
 
 ## Overview
 
-This roadmap turns an already feature-rich brownfield product into a launch-ready release. It first aligns environment contracts and fail-fast behavior, then adds browser verification for the highest-value journey, validates settlement-based billing in staging, and finishes with observability plus a release-readiness sweep. The phases intentionally harden the existing core funnel instead of expanding product breadth.
+This roadmap starts milestone `v1.1 Agent Reliability and Response Continuity` after the `v1.0` launch-hardening baseline shipped. The new work focuses on a live agent reliability incident: short dialog follow-ups like `reescreva` can still truncate, degrade, and surface repeated vacancy bootstrap copy. The phases therefore prove live `/api/agent` parity first, then harden dialog recovery and model routing, and finally verify the exact transcript the user sees.
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- Integer phases continue across milestones unless explicitly reset.
+- This milestone continues from the previous roadmap, so the first phase here is **Phase 5**.
+- Decimal phases (for urgent insertions) appear between surrounding integers in numeric order.
 
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Contract Alignment and Fail-Fast Guards** - Remove silent configuration drift and make release prerequisites explicit. (completed 2026-04-10)
-- [x] **Phase 2: Core Funnel Browser Verification** - Add browser-level coverage for the launch-critical user journey. (completed 2026-04-10)
-- [x] **Phase 3: Billing Settlement Validation** - Prove that staged billing behavior matches the current contract and stays idempotent. (completed 2026-04-10)
-- [x] **Phase 4: Observability and Launch Readiness** - Standardize diagnostics, error handling, and final launch checks. (completed 2026-04-10)
+- [ ] **Phase 5: Deployed Agent Parity and Evidence** - Prove which build, model, and recovery path the live `/api/agent` route is serving.
+- [ ] **Phase 6: Dialog Continuity and Model Routing Hardening** - Eliminate truncation-driven repetition and keep dialog or confirm turns on the intended model contract.
+- [ ] **Phase 7: Transcript Integrity and End-to-End Agent Verification** - Prove the final rendered chat transcript matches the backend stream and recovery behavior.
 
 ## Phase Details
 
-### Phase 1: Contract Alignment and Fail-Fast Guards
-**Goal**: Eliminate silent misconfiguration across runtime, CI, and staging for the providers that power the launch funnel.
-**Depends on**: Nothing (first phase)
-**Requirements**: [OPS-01, OPS-02, OPS-03]
+### Phase 5: Deployed Agent Parity and Evidence
+**Goal**: Make live `/api/agent` requests self-identifying and observable enough to confirm the deployed route, selected model, and recovery path.
+**Depends on**: Nothing (first phase of milestone v1.1)
+**Requirements**: [OPS-04, OPS-05, OPS-06]
 **Success Criteria** (what must be TRUE):
-  1. CI and runtime read the same provider env names for the core funnel.
-  2. Missing critical provider configuration fails early with actionable diagnostics.
-  3. Release and staging docs match the live billing contract and required migrations.
+  1. A real `/api/agent` request exposes build or commit provenance that operators can correlate with the current repo state.
+  2. Completed turns log selected model, assistant text length, recovery usage, and fallback branch in a stable structured format.
+  3. A documented post-deploy check proves whether a live environment is serving the expected config and route behavior.
 **Plans**: 3 plans
 
 Plans:
-- [x] 01-01: Align env contracts in runtime code, CI, and related docs
-- [x] 01-02: Add or tighten fail-fast guards for critical provider configuration
-- [x] 01-03: Refresh production-readiness and staging validation instructions
+- [ ] 05-01: Add build and request provenance to the live `/api/agent` route and structured logs
+- [ ] 05-02: Document and script the post-deploy parity check for operators
+- [ ] 05-03: Add regression coverage for provenance and log-schema guarantees
 
-### Phase 2: Core Funnel Browser Verification
-**Goal**: Create automated browser confidence for the highest-value user journey from auth to resume artifact delivery.
-**Depends on**: Phase 1
-**Requirements**: [QA-01, QA-02, QA-03]
+### Phase 6: Dialog Continuity and Model Routing Hardening
+**Goal**: Ensure rewrite follow-ups continue the conversation usefully and that dialog or confirm paths honor the intended model contract.
+**Depends on**: Phase 5
+**Requirements**: [AGNT-01, AGNT-02, AGNT-03]
 **Success Criteria** (what must be TRUE):
-  1. Team can run browser tests for auth, profile setup or edit, and session creation.
-  2. Team can run browser tests for agent interaction, target resume creation, and artifact download.
-  3. CI fails clearly when the core funnel regresses.
+  1. A `dialog` follow-up like `reescreva` returns a concrete rewrite or a short non-repetitive continuation response.
+  2. Recovery paths preserve the latest rewrite intent and latest target-job context instead of reverting to stale bootstrap copy.
+  3. Dialog and confirm requests use the documented resolved model behavior, including explicit override handling when configured.
 **Plans**: 3 plans
 
 Plans:
-- [x] 02-01: Set up browser-test infrastructure and reusable fixtures
-- [x] 02-02: Implement launch-critical journeys with staging-safe provider handling
-- [x] 02-03: Integrate browser verification into CI and contributor docs
+- [ ] 06-01: Tighten dialog fallback selection and latest-intent preservation in the agent loop
+- [ ] 06-02: Align per-phase model routing with the documented env contract
+- [ ] 06-03: Add targeted regressions for truncation, empty-response recovery, and repeat-request flows
 
-### Phase 3: Billing Settlement Validation
-**Goal**: Verify that the settlement-based billing contract behaves correctly in staging and remains credit-safe under replay scenarios.
-**Depends on**: Phase 1
-**Requirements**: [BILL-01, BILL-02, BILL-03]
+### Phase 7: Transcript Integrity and End-to-End Agent Verification
+**Goal**: Verify that the assistant message the user sees matches the backend stream outcome and stays stable under degraded paths.
+**Depends on**: Phase 5, Phase 6
+**Requirements**: [UX-01, QA-04, QA-05]
 **Success Criteria** (what must be TRUE):
-  1. One-time, activation, renewal, cancellation, and replay scenarios are validated against the current contract.
-  2. Credit grants remain idempotent during duplicate or replayed webhook events.
-  3. Dashboard display totals never contradict runtime credit balance in validated scenarios.
+  1. One user request produces one coherent assistant turn in the visible transcript, even when recovery or fallback logic runs.
+  2. Route-level or browser-level tests catch repeated bootstrap text, stale fallbacks, and transcript-assembly regressions.
+  3. The original `reescreva` incident can be reproduced, inspected, and closed with committed evidence.
 **Plans**: 3 plans
 
 Plans:
-- [x] 03-01: Reconcile staging migrations, fixtures, and billing test setup
-- [x] 03-02: Execute settlement validation scenarios and capture evidence
-- [x] 03-03: Fix any billing inconsistencies surfaced during validation
-
-### Phase 4: Observability and Launch Readiness
-**Goal**: Make production failures diagnosable, improve user-safe error handling, and close the milestone with a launch decision.
-**Depends on**: Phase 2, Phase 3
-**Requirements**: [OBS-01, OBS-02]
-**Success Criteria** (what must be TRUE):
-  1. Agent, billing, and profile import failures emit structured logs with useful request or entity context.
-  2. Core funnel failure states show actionable user-safe errors instead of opaque dead ends.
-  3. Launch blockers and remaining caveats are captured in a final readiness sweep.
-**Plans**: 3 plans
-
-Plans:
-- [x] 04-01: Standardize structured logging on fragile server routes
-- [x] 04-02: Tighten user-facing error translation on the core funnel
-- [x] 04-03: Produce the final launch-readiness sweep and handoff notes
+- [ ] 07-01: Harden chat transcript assembly around recovered and fallback turns
+- [ ] 07-02: Add end-to-end SSE and transcript verification for the real `/api/agent` path
+- [ ] 07-03: Capture operator repro guidance and closeout evidence for the original incident
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Contract Alignment and Fail-Fast Guards | 3/3 | Complete    | 2026-04-10 |
-| 2. Core Funnel Browser Verification | 3/3 | Complete    | 2026-04-10 |
-| 3. Billing Settlement Validation | 3/3 | Complete    | 2026-04-10 |
-| 4. Observability and Launch Readiness | 3/3 | Complete    | 2026-04-10 |
+| 5. Deployed Agent Parity and Evidence | 0/3 | Pending | - |
+| 6. Dialog Continuity and Model Routing Hardening | 0/3 | Pending | - |
+| 7. Transcript Integrity and End-to-End Agent Verification | 0/3 | Pending | - |
