@@ -498,6 +498,60 @@ describe('runAgentLoop streaming', () => {
     )
   })
 
+  it('includes saved resume context and avoids duplicating the vacancy text in concise recovery prompts', async () => {
+    async function* emptyLengthStream() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'length',
+        }],
+        usage: null,
+      }
+    }
+
+    const jobDescription = [
+      'Responsabilidades',
+      'Projetar, desenvolver e manter dashboards e solucoes analiticas.',
+      'Requisitos',
+      'SQL avancado, Power BI, ETL/ELT e ingles fluente.',
+      'Diferenciais',
+      'Python, Snowflake e Airflow.',
+    ].join('\n')
+
+    const session = {
+      ...buildSession(),
+      phase: 'analysis' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL, ETL e integracao de dados.',
+        targetJobDescription: jobDescription,
+      },
+    }
+
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(emptyLengthStream() as never)
+      .mockResolvedValueOnce(mockTextStream('Resposta curta final.') as never)
+
+    for await (const _event of runAgentLoop({
+      session,
+      userMessage: jobDescription,
+      appUserId: 'usr_123',
+      requestId: 'req_recovery_prompt',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      // consume stream
+    }
+
+    const recoveryRequest = mockCreateChatCompletionStreamWithRetry.mock.calls[1]?.[1]
+    const recoveryPrompt = recoveryRequest?.messages?.[1]?.content
+
+    expect(typeof recoveryPrompt).toBe('string')
+    expect(recoveryPrompt).toContain('Saved resume context:')
+    expect(recoveryPrompt).not.toContain('Saved target job context:')
+  })
+
   it('returns a vacancy-specific fallback instead of the generic empty fallback when every recovery returns empty', async () => {
     async function* emptyStopStream() {
       yield {
@@ -569,6 +623,84 @@ describe('runAgentLoop streaming', () => {
       'assistant',
       expect.stringContaining('Recebi a vaga'),
     )
+  })
+
+  it('returns a structured vacancy fallback instead of asking the user to retry when analysis data already exists', async () => {
+    async function* emptyStopStream() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'stop',
+        }],
+        usage: null,
+      }
+    }
+
+    const session = {
+      ...buildSession(),
+      phase: 'analysis' as const,
+      atsScore: {
+        total: 78,
+        breakdown: {
+          format: 80,
+          structure: 76,
+          keywords: 74,
+          contact: 95,
+          impact: 65,
+        },
+        issues: [],
+        suggestions: [],
+      },
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL e ETL.',
+        targetFitAssessment: {
+          level: 'partial' as const,
+          summary: 'Seu perfil atende bem BI e SQL, mas ainda falta evidenciar melhor ETL e impacto.',
+          reasons: ['Boa aderencia em BI', 'Gaps em ETL'],
+          assessedAt: new Date().toISOString(),
+        },
+        gapAnalysis: {
+          analyzedAt: new Date().toISOString(),
+          result: {
+            matchScore: 72,
+            missingSkills: ['ETL', 'DAX'],
+            weakAreas: ['impacto mensuravel'],
+            improvementSuggestions: ['Destacar projetos com ETL'],
+          },
+        },
+      },
+    }
+
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Reescreva meu curriculo para essa vaga',
+      appUserId: 'usr_123',
+      requestId: 'req_structured_vacancy_fallback',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Pontuacao ATS atual: 78/100.')
+    expect(finalText).toContain('Aderencia inicial: parcial.')
+    expect(finalText).toContain('Principais gaps: ETL, DAX, impacto mensuravel.')
+    expect(finalText).not.toContain('Tente novamente com um pedido curto')
   })
 
   it('emits an error when the stream ends without a finish reason', async () => {

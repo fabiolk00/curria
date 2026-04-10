@@ -324,6 +324,67 @@ Python, APIs e Microsoft Fabric.`
     })
   })
 
+  it('promotes a new session to analysis when a saved resume already exists and the user pastes a vacancy', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSessionWithCredit).mockResolvedValue({
+      id: 'sess_seeded_resume',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: 'Fabio Silva',
+        email: 'fabio@example.com',
+        phone: '11999999999',
+        summary: 'Analista de dados com foco em BI, SQL e automacao.',
+        experience: [],
+        skills: ['SQL', 'Power BI'],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const jobDescription = `Analista de BI Senior
+
+Responsabilidades:
+Levantar requisitos com as areas de negocio.
+Construir e manter dashboards em Power BI.
+Automatizar processos de coleta e transformacao de dados.
+
+Requisitos:
+Experiencia com Power BI, DAX e SQL.
+Vivencia com ETL e integracao de dados.
+
+Diferenciais:
+Python, APIs e Microsoft Fabric.`
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: jobDescription }),
+    }))
+
+    expect(response.status).toBe(200)
+    await response.text()
+    expect(updateSession).toHaveBeenCalledWith('sess_seeded_resume', {
+      agentState: expect.objectContaining({
+        targetJobDescription: expect.stringContaining('Power BI'),
+      }),
+      phase: 'analysis',
+    })
+    expect(vi.mocked(runAgentLoop).mock.calls.at(-1)?.[0].session.phase).toBe('analysis')
+  })
+
   it('does not persist targetJobDescription for a short non-job message', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)

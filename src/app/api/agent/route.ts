@@ -180,6 +180,17 @@ function hasResumeContextForAutoGap(session: Pick<Session, 'cvState' | 'agentSta
   )
 }
 
+function shouldAdvanceDetectedTargetToAnalysis(
+  session: Pick<Session, 'phase' | 'cvState' | 'agentState'>,
+  detection: TargetJobDetection | undefined,
+): boolean {
+  return Boolean(
+    detection
+    && session.phase === 'intake'
+    && hasResumeContextForAutoGap(session)
+  )
+}
+
 function buildDetectedTargetJobAgentState(
   session: Pick<Session, 'agentState'>,
   detection: TargetJobDetection,
@@ -229,12 +240,39 @@ async function persistDetectedTargetJobDescriptionBase(
     return undefined
   }
 
-  if (session.agentState.targetJobDescription?.trim() === detection.targetJobDescription) {
+  const shouldAdvanceToAnalysis = shouldAdvanceDetectedTargetToAnalysis(session, detection)
+  const sameTargetJob = session.agentState.targetJobDescription?.trim() === detection.targetJobDescription
+
+  if (sameTargetJob && !shouldAdvanceToAnalysis) {
     return detection
   }
 
-  const nextAgentState = buildDetectedTargetJobAgentState(session, detection)
-  await persistTargetJobAgentState(session, nextAgentState, appUserId, requestId)
+  const nextAgentState = sameTargetJob
+    ? session.agentState
+    : buildDetectedTargetJobAgentState(session, detection)
+
+  if (shouldAdvanceToAnalysis) {
+    session.phase = 'analysis'
+  }
+  session.agentState = nextAgentState
+  session.updatedAt = new Date()
+
+  try {
+    await updateSession(session.id, {
+      agentState: nextAgentState,
+      phase: shouldAdvanceToAnalysis ? 'analysis' : undefined,
+    })
+  } catch (error) {
+    logWarn('agent.target_job_detection.persist_failed', {
+      requestId,
+      sessionId: session.id,
+      appUserId,
+      phase: session.phase,
+      stateVersion: session.stateVersion,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
+  }
 
   return detection
 }

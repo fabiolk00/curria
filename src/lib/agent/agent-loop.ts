@@ -353,6 +353,17 @@ function truncateForRecovery(text: string, maxChars: number): string {
   return `${text.slice(0, maxChars - 15)}\n[truncated]`
 }
 
+function formatFitLevel(level: 'strong' | 'partial' | 'weak'): string {
+  switch (level) {
+    case 'strong':
+      return 'forte'
+    case 'partial':
+      return 'parcial'
+    case 'weak':
+      return 'fraca'
+  }
+}
+
 function buildRecoveryUserPrompt(params: {
   session: Session
   userMessage: string
@@ -361,7 +372,11 @@ function buildRecoveryUserPrompt(params: {
 }): string {
   const hasResumeContext = hasResumeContextForDeterministicAnalysis(params.session)
   const targetJobDescription = params.session.agentState.targetJobDescription?.trim()
-  const targetLooksLikeVacancy = Boolean(targetJobDescription || looksLikeJobDescription(params.userMessage))
+  const latestMessageLooksLikeVacancy = looksLikeJobDescription(params.userMessage)
+  const targetLooksLikeVacancy = Boolean(targetJobDescription || latestMessageLooksLikeVacancy)
+  const resumeExcerpt = hasResumeContext
+    ? truncateForRecovery(buildResumeTextForScoring(params.session), latestMessageLooksLikeVacancy ? 1_000 : 650)
+    : ''
 
   return [
     params.mode === 'concise'
@@ -370,7 +385,8 @@ function buildRecoveryUserPrompt(params: {
     `Current phase: ${params.session.phase}.`,
     `Resume context available: ${hasResumeContext ? 'yes' : 'no'}.`,
     `Target job context available: ${targetLooksLikeVacancy ? 'yes' : 'no'}.`,
-    targetJobDescription
+    resumeExcerpt ? `Saved resume context:\n${resumeExcerpt}` : '',
+    targetJobDescription && !latestMessageLooksLikeVacancy
       ? `Saved target job context:\n${truncateForRecovery(targetJobDescription, 1_200)}`
       : '',
     `Latest user message:\n${truncateForRecovery(params.userMessage, 3_000)}`,
@@ -381,6 +397,11 @@ function buildRecoveryUserPrompt(params: {
 function buildDeterministicAssistantFallback(session: Session, userMessage: string): string {
   const hasResumeContext = hasResumeContextForDeterministicAnalysis(session)
   const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || looksLikeJobDescription(userMessage))
+  const hasStructuredTargetAnalysis = Boolean(
+    session.atsScore
+    || session.agentState.targetFitAssessment
+    || session.agentState.gapAnalysis
+  )
 
   if (!hasResumeContext && hasTargetJobContext) {
     return 'Recebi a vaga. Para comparar aderência e adaptar seu currículo a essa oportunidade, envie seu currículo em PDF/DOCX ou cole o texto do currículo aqui.'
@@ -392,6 +413,36 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
 
   if (session.phase === 'confirm') {
     return 'Estou na etapa final. Se quiser gerar os arquivos agora, responda com "sim, pode gerar". Se preferir, peça mais ajustes no currículo.'
+  }
+
+  if (hasTargetJobContext && hasStructuredTargetAnalysis) {
+    const parts = ['Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.']
+
+    if (session.atsScore) {
+      parts.push(`Pontuacao ATS atual: ${session.atsScore.total}/100.`)
+    }
+
+    if (session.agentState.targetFitAssessment) {
+      parts.push(
+        `Aderencia inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${session.agentState.targetFitAssessment.summary}`,
+      )
+    } else if (session.agentState.gapAnalysis) {
+      parts.push(`Aderencia estimada a vaga: ${session.agentState.gapAnalysis.result.matchScore}/100.`)
+    }
+
+    if (session.agentState.gapAnalysis) {
+      const topGaps = [
+        ...session.agentState.gapAnalysis.result.missingSkills.slice(0, 2),
+        ...session.agentState.gapAnalysis.result.weakAreas.slice(0, 2),
+      ].filter(Boolean)
+
+      if (topGaps.length > 0) {
+        parts.push(`Principais gaps: ${topGaps.join(', ')}.`)
+      }
+    }
+
+    parts.push('Posso seguir reescrevendo seu resumo ou experiencia com base nesses pontos.')
+    return parts.join(' ')
   }
 
   if (hasTargetJobContext) {
