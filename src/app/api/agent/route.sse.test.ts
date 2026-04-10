@@ -20,10 +20,12 @@ const {
   mockDispatchTool,
   mockDispatchToolWithContext,
   mockGetToolDefinitionsForPhase,
+  mockDeriveTargetResumeCvState,
 } = vi.hoisted(() => ({
   mockDispatchTool: vi.fn(),
   mockDispatchToolWithContext: vi.fn(),
   mockGetToolDefinitionsForPhase: vi.fn(() => []),
+  mockDeriveTargetResumeCvState: vi.fn(),
 }))
 
 vi.mock('@/lib/openai/client', () => ({
@@ -65,6 +67,10 @@ vi.mock('@/lib/agent/tools', () => ({
   dispatchTool: mockDispatchTool,
   dispatchToolWithContext: mockDispatchToolWithContext,
   getToolDefinitionsForPhase: mockGetToolDefinitionsForPhase,
+}))
+
+vi.mock('@/lib/resume-targets/create-target-resume', () => ({
+  deriveTargetResumeCvState: mockDeriveTargetResumeCvState,
 }))
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
@@ -272,6 +278,11 @@ describe('/api/agent SSE fallback coverage', () => {
     mockDispatchTool.mockReset()
     mockDispatchToolWithContext.mockReset()
     mockGetToolDefinitionsForPhase.mockReturnValue([])
+    mockDeriveTargetResumeCvState.mockResolvedValue({
+      success: false,
+      code: 'LLM_INVALID_OUTPUT',
+      error: 'Invalid target resume payload.',
+    })
   })
 
   it('streams a dialog continue fallback through the real agent loop without repeating the bootstrap copy', async () => {
@@ -425,7 +436,7 @@ describe('/api/agent SSE fallback coverage', () => {
       .map((event) => String(event.content ?? ''))
       .join('')
 
-    expect(finalText).toBe('Confirme a geracao do seu curriculo otimizado ATS digitando: "Aceito". Se preferir, peca mais ajustes antes de gerar.')
+    expect(finalText).toBe('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
     expect(events).toContainEqual(expect.objectContaining({
       type: 'patch',
       phase: 'confirm',

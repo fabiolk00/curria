@@ -22,7 +22,7 @@ import type {
 } from '@/types/agent'
 
 const LENGTH_RECOVERY_PROMPT = 'Your previous response was cut off by token limits. Continue exactly where it stopped. Do not repeat prior text. Do not call tools.'
-const GENERATION_CONFIRMATION_TEXT = 'Confirme a geracao do seu curriculo otimizado ATS digitando: "Aceito". Se preferir, peca mais ajustes antes de gerar.'
+const GENERATION_CONFIRMATION_TEXT = 'Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.'
 const MISSING_PROFILE_WITH_TARGET_TEXT = 'Recebi a vaga. Para adaptar seu curriculo, complete primeiro seu perfil em "Meu Perfil" antes de continuar.'
 const MISSING_PROFILE_TEXT = 'Preciso do seu curriculo salvo em "Meu Perfil" para continuar.'
 const RECOVERY_SYSTEM_PROMPT = [
@@ -431,15 +431,15 @@ function buildResumeTextFromCvState(cvState: Session['cvState']): string {
     lines.push(cvState.fullName.trim())
   }
 
-  const contactLine = [
+  const contactFields = [
     cvState.email?.trim(),
     cvState.phone?.trim(),
     cvState.linkedin?.trim(),
     cvState.location?.trim(),
-  ].filter(Boolean).join(' | ')
+  ].filter((field): field is string => Boolean(field))
 
-  if (contactLine) {
-    lines.push(contactLine)
+  if (contactFields.length > 0) {
+    lines.push(...contactFields)
   }
 
   if (cvState.summary.trim()) {
@@ -491,6 +491,38 @@ function buildResumeTextForScoring(session: Session): string {
   }
 
   return canonicalResumeText
+}
+
+type TargetPreparationResult = {
+  applied: boolean
+  previousAtsTotal?: number
+  optimizedAtsTotal?: number
+}
+
+function dedupeOrderedSentences(items: Array<string | undefined | null>): string[] {
+  const seen = new Set<string>()
+  const unique: string[] = []
+
+  for (const item of items) {
+    const trimmed = item?.trim()
+    if (!trimmed) {
+      continue
+    }
+
+    const key = trimmed.toLowerCase()
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    unique.push(trimmed)
+  }
+
+  return unique
+}
+
+function normalizeTrailingSentence(text: string): string {
+  return text.trim().replace(/[.!?\s]+$/g, '')
 }
 
 function hasResumeContextForDeterministicAnalysis(session: Session): boolean {
@@ -671,7 +703,11 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
   return 'Recebi sua mensagem, mas esta resposta falhou. Tente repetir o pedido em uma frase curta e objetiva que eu continuo daqui.'
 }
 
-function buildDeterministicVacancyBootstrap(session: Session, userMessage: string): string {
+function buildDeterministicVacancyBootstrap(
+  session: Session,
+  userMessage: string,
+  targetPreparation: TargetPreparationResult,
+): string {
   const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || looksLikeJobDescription(userMessage))
 
   if (!hasTargetJobContext) {
@@ -680,7 +716,15 @@ function buildDeterministicVacancyBootstrap(session: Session, userMessage: strin
 
   const parts = ['Recebi a vaga e comparei com seu curriculo com foco em aderencia ATS.']
 
-  if (session.atsScore) {
+  if (
+    targetPreparation.applied
+    && targetPreparation.previousAtsTotal !== undefined
+    && targetPreparation.optimizedAtsTotal !== undefined
+  ) {
+    parts.push(
+      `Atualizei a versao de trabalho do seu curriculo para essa vaga. ATS antes: ${targetPreparation.previousAtsTotal}/100. ATS da versao otimizada: ${targetPreparation.optimizedAtsTotal}/100.`,
+    )
+  } else if (session.atsScore) {
     parts.push(`Pontuacao ATS atual: ${session.atsScore.total}/100.`)
   }
 
@@ -706,22 +750,29 @@ function buildDeterministicVacancyBootstrap(session: Session, userMessage: strin
     }
 
     if (topSuggestion) {
-      parts.push(`Melhor proximo ajuste ATS: ${topSuggestion}.`)
+      parts.push(`Melhor proximo ajuste ATS: ${normalizeTrailingSentence(topSuggestion)}.`)
     }
   } else if (session.atsScore) {
     const topIssue = session.atsScore.issues[0]?.message
     const topSuggestion = session.atsScore.suggestions[0]
+    const uniqueMessages = dedupeOrderedSentences([topIssue, topSuggestion])
 
-    if (topIssue) {
-      parts.push(`Principal ponto a melhorar: ${topIssue}.`)
+    if (uniqueMessages[0]) {
+      parts.push(`Principal ponto a melhorar: ${normalizeTrailingSentence(uniqueMessages[0])}.`)
     }
 
-    if (topSuggestion) {
-      parts.push(`Melhor proximo ajuste ATS: ${topSuggestion}.`)
+    if (uniqueMessages[1]) {
+      parts.push(`Melhor proximo ajuste ATS: ${normalizeTrailingSentence(uniqueMessages[1])}.`)
     }
   }
 
-  parts.push('Posso reescrever agora seu resumo, experiencia ou competencias com base nessa vaga. Se a versao atual ja estiver boa para gerar, responda com "Aceito".')
+  if (targetPreparation.applied) {
+    parts.push('Ja deixei uma versao base otimizada para essa vaga. Se quiser, ainda posso refinar resumo, experiencia ou competencias antes da geracao.')
+  } else {
+    parts.push('Posso otimizar agora seu resumo, experiencia ou competencias com base nessa vaga.')
+  }
+
+  parts.push('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
 
   return parts.join(' ')
 }
@@ -1300,7 +1351,7 @@ async function* primeAnalysisState(params: {
     ? params.userMessage.trim()
     : session.agentState.targetJobDescription?.trim()
 
-  if (!session.atsScore) {
+  if (!session.atsScore || latestMessageLooksLikeVacancy) {
     const scoreResult = yield* runDeterministicTool({
       session,
       toolName: 'score_ats',
@@ -1316,7 +1367,7 @@ async function* primeAnalysisState(params: {
     mutatedPromptState = mutatedPromptState || scoreResult.hadPatch
   }
 
-  if (latestTargetJobDescription && !session.agentState.gapAnalysis) {
+  if (latestTargetJobDescription && (!session.agentState.gapAnalysis || latestMessageLooksLikeVacancy)) {
     const gapResult = yield* runDeterministicTool({
       session,
       toolName: 'analyze_gap',
@@ -1333,6 +1384,107 @@ async function* primeAnalysisState(params: {
 
   return {
     mutatedPromptState,
+  }
+}
+
+async function* maybePrepareTargetResumeForDeterministicFlow(params: {
+  session: Session
+  requestId: string
+  signal?: AbortSignal
+}): AsyncGenerator<AgentLoopEvent, TargetPreparationResult> {
+  const targetJobDescription = params.session.agentState.targetJobDescription?.trim()
+  const previousAtsTotal = params.session.atsScore?.total
+
+  if (!targetJobDescription || !hasResumeContextForDeterministicAnalysis(params.session)) {
+    return {
+      applied: false,
+      previousAtsTotal,
+    }
+  }
+
+  const derivationResult = await deriveTargetResumeCvState({
+    sessionId: params.session.id,
+    userId: params.session.userId,
+    baseCvState: params.session.cvState,
+    targetJobDescription,
+    externalSignal: params.signal,
+  })
+
+  if (!derivationResult.success) {
+    return {
+      applied: false,
+      previousAtsTotal,
+    }
+  }
+
+  const derivedCvState = derivationResult.derivedCvState
+
+  if (JSON.stringify(derivedCvState) === JSON.stringify(params.session.cvState)) {
+    return {
+      applied: false,
+      previousAtsTotal,
+      optimizedAtsTotal: params.session.atsScore?.total,
+    }
+  }
+
+  const derivedPatch = {
+    cvState: derivedCvState,
+    agentState: {
+      sourceResumeText: buildResumeTextFromCvState(derivedCvState),
+    },
+    generatedOutput: {
+      status: 'idle' as const,
+      pdfPath: undefined,
+      generatedAt: undefined,
+      error: undefined,
+    },
+  } satisfies Parameters<typeof applyToolPatchWithVersion>[1]
+
+  await applyToolPatchWithVersion(
+    params.session,
+    derivedPatch,
+    'target-derived',
+  )
+
+  yield {
+    type: 'patch',
+    patch: derivedPatch,
+    phase: params.session.phase,
+  }
+
+  const refreshedScoreResult = yield* runDeterministicTool({
+    session: params.session,
+    toolName: 'score_ats',
+    toolInput: {
+      resume_text: buildResumeTextFromCvState(params.session.cvState),
+      job_description: targetJobDescription,
+    },
+    requestId: params.requestId,
+    signal: params.signal,
+    surfaceToolStartToUser: false,
+    surfaceFailureToUser: false,
+  })
+
+  const refreshedScoreOutput = refreshedScoreResult.output
+  const optimizedAtsTotal = (
+    refreshedScoreResult.success
+    && refreshedScoreOutput
+    && typeof refreshedScoreOutput === 'object'
+    && 'success' in refreshedScoreOutput
+    && refreshedScoreOutput.success === true
+    && 'result' in refreshedScoreOutput
+    && refreshedScoreOutput.result
+    && typeof refreshedScoreOutput.result === 'object'
+    && 'total' in refreshedScoreOutput.result
+    && typeof refreshedScoreOutput.result.total === 'number'
+  )
+    ? refreshedScoreOutput.result.total
+    : params.session.atsScore?.total
+
+  return {
+    applied: true,
+    previousAtsTotal,
+    optimizedAtsTotal,
   }
 }
 
@@ -1776,7 +1928,17 @@ export async function* runAgentLoop(
         surfaceFailureToUser: false,
       })
 
-      const bootstrapAssistantText = buildDeterministicVacancyBootstrap(session, userMessage)
+      const targetPreparation = yield* maybePrepareTargetResumeForDeterministicFlow({
+        session,
+        requestId,
+        signal,
+      })
+
+      if (targetPreparation.applied) {
+        systemPromptDirty = true
+      }
+
+      const bootstrapAssistantText = buildDeterministicVacancyBootstrap(session, userMessage, targetPreparation)
       const bootstrapFallbackKind = session.atsScore
         || session.agentState.targetFitAssessment
         || session.agentState.gapAnalysis

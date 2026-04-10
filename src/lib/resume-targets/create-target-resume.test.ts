@@ -5,7 +5,7 @@ import type { CVState } from '@/types/cv'
 import { createResumeTarget } from '@/lib/db/resume-targets'
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 
-import { createTargetResumeVariant } from './create-target-resume'
+import { createTargetResumeVariant, deriveTargetResumeCvState } from './create-target-resume'
 
 const { createCompletion } = vi.hoisted(() => ({
   createCompletion: vi.fn(),
@@ -221,5 +221,59 @@ describe('createTargetResumeVariant', () => {
 
     expect(persistedTargets).toEqual([])
     expect(baseCvState).toEqual(buildBaseCvState())
+  })
+
+  it('retries when the first target resume is effectively the same as the base cv state', async () => {
+    const baseCvState = buildBaseCvState()
+
+    createCompletion
+      .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify(baseCvState)))
+      .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify({
+        ...baseCvState,
+        summary: 'Analytics Engineer com foco em SQL, BigQuery e confiabilidade de dados.',
+        skills: ['TypeScript', 'PostgreSQL', 'BigQuery'],
+      })))
+
+    const result = await deriveTargetResumeCvState({
+      sessionId: 'sess_123',
+      userId: 'usr_123',
+      baseCvState,
+      targetJobDescription: 'Senior Analytics Engineer com foco em SQL e BigQuery.',
+    })
+
+    expect(createCompletion).toHaveBeenCalledTimes(2)
+    expect(result.success).toBe(true)
+
+    if (result.success) {
+      expect(result.derivedCvState.summary).toContain('Analytics Engineer')
+      expect(result.derivedCvState.skills).toContain('BigQuery')
+    }
+  })
+
+  it('normalizes ATS-hostile pipe separators from the derived cv state', async () => {
+    const baseCvState = buildBaseCvState()
+
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      ...baseCvState,
+      summary: 'Analytics Engineer | SQL | BigQuery',
+      experience: [{
+        ...baseCvState.experience[0],
+        bullets: ['Modelou pipelines | melhorou confiabilidade'],
+      }],
+    })))
+
+    const result = await deriveTargetResumeCvState({
+      sessionId: 'sess_123',
+      userId: 'usr_123',
+      baseCvState,
+      targetJobDescription: 'Senior Analytics Engineer com foco em SQL e BigQuery.',
+    })
+
+    expect(result.success).toBe(true)
+
+    if (result.success) {
+      expect(result.derivedCvState.summary).toBe('Analytics Engineer, SQL, BigQuery')
+      expect(result.derivedCvState.experience[0]?.bullets[0]).toBe('Modelou pipelines, melhorou confiabilidade')
+    }
   })
 })

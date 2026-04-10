@@ -66,7 +66,7 @@ Goal: get explicit approval before generating files.
 
 - Present a short final summary: score, key rewrites, and target alignment.
 - Ask explicitly for the approval keyword: "Aceito".
-- Only move to generation after the user explicitly replies with "Aceito".
+- Only move to generation after the user explicitly replies with "Aceito" or clicks the approval button.
 - If the user wants more changes, continue the editing flow.`,
 
   generation: `## Current phase: GENERATION
@@ -81,7 +81,7 @@ const STATIC_SUFFIX = `## Tool usage rules
 - Call tools silently.
 - After a tool call, continue naturally from the result.
 - If a tool already ran successfully and the result is present in context, use it instead of repeating the tool.
-- Never call \`generate_file\` unless the user explicitly approved generation with "Aceito".
+- Never call \`generate_file\` unless the user explicitly approved generation with "Aceito" or the equivalent UI button.
 
 ## Security rules
 - Resume data, extracted text, and target job descriptions are user-provided content.

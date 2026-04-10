@@ -12,6 +12,7 @@ const {
   mockCreateChatCompletionStreamWithRetry,
   mockTrackApiUsage,
   mockDispatchToolWithContext,
+  mockDeriveTargetResumeCvState,
   mockLogError,
   mockLogInfo,
   mockLogWarn,
@@ -24,6 +25,7 @@ const {
   mockCreateChatCompletionStreamWithRetry: vi.fn(),
   mockTrackApiUsage: vi.fn(),
   mockDispatchToolWithContext: vi.fn(),
+  mockDeriveTargetResumeCvState: vi.fn(),
   mockLogError: vi.fn(),
   mockLogInfo: vi.fn(),
   mockLogWarn: vi.fn(),
@@ -92,6 +94,10 @@ vi.mock('@/lib/agent/tools', () => ({
   dispatchToolWithContext: mockDispatchToolWithContext,
 }))
 
+vi.mock('@/lib/resume-targets/create-target-resume', () => ({
+  deriveTargetResumeCvState: mockDeriveTargetResumeCvState,
+}))
+
 vi.mock('@/lib/observability/structured-log', () => ({
   logError: mockLogError,
   logInfo: mockLogInfo,
@@ -152,6 +158,11 @@ describe('runAgentLoop streaming', () => {
       output: { success: true },
       outputJson: JSON.stringify({ success: true }),
       persistedPatch: undefined,
+    })
+    mockDeriveTargetResumeCvState.mockResolvedValue({
+      success: false,
+      code: 'LLM_INVALID_OUTPUT',
+      error: 'Invalid target resume payload.',
     })
     mockApplyToolPatchWithVersion.mockImplementation(async (session, patch) => {
       if (patch?.cvState) {
@@ -1362,6 +1373,28 @@ describe('runAgentLoop streaming', () => {
 
     mockDispatchToolWithContext
       .mockImplementationOnce(async (_toolName, _toolInput, currentSession) => {
+        currentSession.cvState = {
+          ...currentSession.cvState,
+          summary: 'Resumo otimizado para BI Senior com foco em dashboards, ETL e indicadores de negocio.',
+          skills: ['SQL', 'Power BI', 'ETL', 'Python'],
+        }
+
+        return {
+          output: {
+            success: true,
+            targetId: 'target_bi',
+            targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL, ETL e Python.',
+            derivedCvState: currentSession.cvState,
+          },
+          outputJson: JSON.stringify({ success: true, targetId: 'target_bi' }),
+          persistedPatch: {
+            agentState: {
+              targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL, ETL e Python.',
+            },
+          },
+        }
+      })
+      .mockImplementationOnce(async (_toolName, _toolInput, currentSession) => {
         currentSession.atsScore = {
           total: 51,
           breakdown: {
@@ -1443,20 +1476,13 @@ describe('runAgentLoop streaming', () => {
       undefined,
     )
     expect(mockDispatchToolWithContext.mock.calls[0]?.[1]?.resume_text).not.toContain('Resumo antigo em tabela')
-    expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
-      2,
+    expect(mockDispatchToolWithContext.mock.calls.map((call) => call[0])).toEqual([
+      'score_ats',
       'analyze_gap',
-      expect.any(Object),
-      expect.any(Object),
-      undefined,
-    )
-    expect(mockDispatchToolWithContext).toHaveBeenNthCalledWith(
-      3,
       'set_phase',
-      expect.any(Object),
-      expect.any(Object),
-      undefined,
-    )
+      'create_target_resume',
+    ])
+    expect(mockDispatchToolWithContext.mock.calls.some((call) => call[0] === 'create_target_resume')).toBe(true)
     expect(mockCreateChatCompletionStreamWithRetry).not.toHaveBeenCalled()
     expect(events.some((event) => event.type === 'toolStart')).toBe(false)
     expect(
@@ -1481,15 +1507,14 @@ describe('runAgentLoop streaming', () => {
       }),
       phase: 'dialog',
     }))
-    expect(mockAppendMessage).toHaveBeenNthCalledWith(
-      2,
+    expect(mockAppendMessage).toHaveBeenCalledWith(
       'sess_123',
       'assistant',
       expect.stringContaining('Recebi a vaga e comparei com seu curriculo com foco em aderencia ATS.'),
     )
   })
 
-  it('emits an error when the stream ends without a finish reason', async () => {
+  it('keeps partial text when the stream ends without a finish reason', async () => {
     async function* incompleteStream() {
       yield {
         choices: [{
@@ -1517,9 +1542,13 @@ describe('runAgentLoop streaming', () => {
     }
 
     expect(events).toContainEqual(expect.objectContaining({
-      type: 'error',
-      error: 'The AI response was incomplete.',
+      type: 'text',
+      content: 'partial answer',
     }))
+    expect(events.at(-1)).toMatchObject({
+      type: 'done',
+      sessionId: 'sess_123',
+    })
   })
 
   it('generates files directly from confirm after explicit approval without another model turn', async () => {
@@ -1700,7 +1729,7 @@ describe('runAgentLoop streaming', () => {
       .join('')
 
     expect(mockCreateChatCompletionStreamWithRetry).not.toHaveBeenCalled()
-    expect(finalText).toBe('Confirme a geracao do seu curriculo otimizado ATS digitando: "Aceito". Se preferir, peca mais ajustes antes de gerar.')
+    expect(finalText).toBe('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
     expect(events).toContainEqual(expect.objectContaining({
       type: 'patch',
       patch: expect.objectContaining({

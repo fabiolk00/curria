@@ -74,7 +74,7 @@ function getChatCopy(firstName?: string): ChatCopy {
     heading: greeting,
     description: "Cole a descricao da vaga para eu adaptar seu curriculo ATS com base no perfil salvo.",
     placeholder: "Cole a descricao da vaga aqui...",
-    helperText: "Quando a versao otimizada estiver pronta, confirme a geracao digitando \"Aceito\" ou usando o botao.",
+    helperText: "Quando fizer sentido, clique em Aceito para gerar seu curriculo.",
     thinkingText: "Pensando...",
     sessionCounterLabel: "nesta an\u00E1lise",
     sessionExpiredText: "Sess\u00E3o n\u00E3o encontrada. Inicie uma nova an\u00E1lise para continuar.",
@@ -810,12 +810,12 @@ export function ChatInterface({
                 {phase === "confirm"
                   ? (
                     <>
-                      Confirme a geracao do seu curriculo otimizado ATS digitando <span className="font-semibold">&quot;Aceito&quot;</span> ou usando o botao.
+                      Quando fizer sentido, clique em <span className="font-semibold">Aceito</span> para gerar seu curriculo.
                     </>
                   )
                   : (
                     <>
-                      Se a versao atual ja estiver boa para voce, confirme a geracao digitando <span className="font-semibold">&quot;Aceito&quot;</span> ou usando o botao.
+                      Se a versao atual ja estiver boa para voce, clique em <span className="font-semibold">Aceito</span> para gerar seu curriculo.
                     </>
                   )}
               </p>
@@ -906,7 +906,7 @@ export function ChatInterface({
           ) : (
             <p className="text-center text-xs text-muted-foreground">
               {showGenerationApproval
-                ? 'Para gerar os arquivos finais, responda com "Aceito" ou use o botao acima.'
+                ? 'Para gerar o PDF final, responda com "Aceito" ou use o botao acima.'
                 : copy.helperText}
             </p>
           )}

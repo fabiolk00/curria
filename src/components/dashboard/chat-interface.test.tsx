@@ -137,7 +137,7 @@ describe("ChatInterface", () => {
 
     expect(container.querySelector('input[type="file"]')).toBeNull()
     expect(
-      screen.getByText(/Quando a versao otimizada estiver pronta, confirme a geracao digitando "Aceito" ou usando o botao\./i),
+      screen.getByText(/Quando fizer sentido, clique em Aceito para gerar seu curriculo\./i),
     ).toBeInTheDocument()
   })
 
@@ -210,7 +210,7 @@ describe("ChatInterface", () => {
           return new Response(
             createSSEStream([
               { type: "patch", patch: { phase: "confirm" }, phase: "confirm" },
-              { type: "text", content: 'Confirme a geracao do seu curriculo otimizado ATS digitando: "Aceito". Se preferir, peca mais ajustes antes de gerar.' },
+              { type: "text", content: 'Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.' },
               { type: "done", sessionId: "sess_confirm", phase: "confirm", messageCount: 3 },
             ]),
             { status: 200, headers: { "Content-Type": "text/event-stream", "X-Session-Id": "sess_confirm" } },
