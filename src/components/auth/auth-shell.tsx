@@ -6,7 +6,7 @@ import Logo from "@/components/logo"
 
 const loginBenefits = [
   "Continue de onde voce parou no seu curriculo otimizado.",
-  "Email e senha funcionam melhor em navegadores embutidos.",
+  "Converse com IA e gere seu curriculo otimizado.",
   "Suas analises ATS e PDFs ficam salvos na sua conta.",
 ]
 
