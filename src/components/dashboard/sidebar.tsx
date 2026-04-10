@@ -46,7 +46,7 @@ import { useSidebarContext } from "@/context/sidebar-context"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { PLANS, PlanSlug } from "@/lib/plans"
 import { cn } from "@/lib/utils"
-import { NEW_CONVERSATION_EVENT } from "./resume-workspace"
+import { NEW_CONVERSATION_EVENT } from "./events"
 
 const EXPANDED_WIDTH = 240
 const COLLAPSED_WIDTH = 56

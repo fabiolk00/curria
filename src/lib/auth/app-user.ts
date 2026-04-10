@@ -1,5 +1,7 @@
 import { auth, getAuth } from '@clerk/nextjs/server'
+import { cookies } from 'next/headers'
 
+import { E2E_AUTH_COOKIE_NAME, resolveE2EAppUser } from '@/lib/auth/e2e-auth'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import type { AppUser, AuthProvider, UserStatus } from '@/types/user'
 
@@ -25,6 +27,34 @@ type UserIdentityLookupRow = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function getCookieFromHeader(headerValue: string | null, cookieName: string): string | undefined {
+  if (!headerValue) {
+    return undefined
+  }
+
+  return headerValue
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${cookieName}=`))
+    ?.slice(cookieName.length + 1)
+}
+
+function readE2EAuthCookieValue(req?: Parameters<typeof getAuth>[0]): string | undefined {
+  if (req && 'cookies' in req && typeof req.cookies?.get === 'function') {
+    return req.cookies.get(E2E_AUTH_COOKIE_NAME)?.value
+  }
+
+  if (req && 'headers' in req && typeof req.headers?.get === 'function') {
+    return getCookieFromHeader(req.headers.get('cookie'), E2E_AUTH_COOKIE_NAME)
+  }
+
+  try {
+    return cookies().get(E2E_AUTH_COOKIE_NAME)?.value
+  } catch {
+    return undefined
+  }
 }
 
 function isBootstrapAppUserRow(value: unknown): value is BootstrapAppUserRow {
@@ -117,6 +147,11 @@ export async function getOrCreateAppUserByClerkUserId(clerkUserId: string): Prom
 }
 
 export async function getCurrentAppUser(req?: Parameters<typeof getAuth>[0]): Promise<AppUser | null> {
+  const syntheticE2EUser = await resolveE2EAppUser(readE2EAuthCookieValue(req))
+  if (syntheticE2EUser) {
+    return syntheticE2EUser
+  }
+
   const { userId: clerkUserId } = req ? getAuth(req) : await auth()
   if (!clerkUserId) {
     return null

@@ -80,6 +80,13 @@ describe('PreviewPanel', () => {
       expect(getDownloadUrls).toHaveBeenCalledTimes(1)
     })
 
+    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-session-id', 'sess_123')
+    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-state', 'ready')
+    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-preview-url', 'https://example.com/resume.pdf')
+    expect(screen.getByTestId('preview-panel-frame')).toHaveAttribute('src', 'https://example.com/resume.pdf')
+    expect(screen.getByTestId('preview-download-pdf')).toBeInTheDocument()
+    expect(screen.getByTestId('preview-open-external')).toHaveAttribute('href', 'https://example.com/resume.pdf')
+
     await userEvent.click(screen.getByTitle('Edit resume'))
 
     await waitFor(() => {

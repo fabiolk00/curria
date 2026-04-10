@@ -1,8 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import type { NextFetchEvent, NextRequest } from 'next/server'
 
 import { decodeClerkFrontendApi } from '@/lib/auth/clerk-frontend-api'
+import {
+  E2E_AUTH_COOKIE_NAME,
+  assertE2EAuthConfigured,
+  hasValidE2EAuthCookie,
+  isE2EAuthEnabled,
+} from '@/lib/auth/e2e-auth'
 import { getAppUrl, isCanonicalAppHost } from '@/lib/config/app-url'
 
 const isPublicRoute = createRouteMatcher([
@@ -97,24 +103,59 @@ function shouldRedirectToCanonicalHost(req: NextRequest): boolean {
   return !isCanonicalAppHost(hostname)
 }
 
-export default clerkMiddleware((auth, req) => {
+async function handleCanonicalHostRedirect(req: NextRequest): Promise<NextResponse | null> {
   if (shouldRedirectToCanonicalHost(req)) {
     const canonical = getAppUrl()
     const redirectUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical)
-    return NextResponse.redirect(redirectUrl, 308)
+    return addSecurityHeaders(NextResponse.redirect(redirectUrl, 308))
+  }
+
+  return null
+}
+
+async function handleE2EMiddleware(req: NextRequest): Promise<NextResponse> {
+  assertE2EAuthConfigured()
+
+  const canonicalRedirect = await handleCanonicalHostRedirect(req)
+  if (canonicalRedirect) {
+    return canonicalRedirect
+  }
+
+  const isApiRoute = req.nextUrl.pathname.startsWith('/api/')
+  const hasValidE2EAuth = !isApiRoute
+    && await hasValidE2EAuthCookie(req.cookies.get(E2E_AUTH_COOKIE_NAME)?.value)
+
+  if (!isPublicRoute(req) && !isApiRoute && !hasValidE2EAuth) {
+    const loginUrl = new URL('/login', req.url)
+    return addSecurityHeaders(NextResponse.redirect(loginUrl, 307))
+  }
+
+  return addSecurityHeaders(NextResponse.next())
+}
+
+const clerkAuthMiddleware = clerkMiddleware(async (auth, req) => {
+  const canonicalRedirect = await handleCanonicalHostRedirect(req)
+  if (canonicalRedirect) {
+    return canonicalRedirect
   }
 
   // API routes handle their own auth and should not redirect
   const isApiRoute = req.nextUrl.pathname.startsWith('/api/')
 
   if (!isPublicRoute(req) && !isApiRoute) {
-    auth().protect()
+    await auth().protect()
   }
 
-  // Create a response to wrap with security headers
-  const response = NextResponse.next()
-  return addSecurityHeaders(response)
+  return addSecurityHeaders(NextResponse.next())
 })
+
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
+  if (isE2EAuthEnabled()) {
+    return handleE2EMiddleware(req)
+  }
+
+  return clerkAuthMiddleware(req, event)
+}
 
 export const config = {
   matcher: [

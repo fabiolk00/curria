@@ -53,6 +53,17 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+### 5. Run browser verification
+
+Install Chromium once, then run the committed Playwright lane:
+
+```bash
+npx playwright install chromium
+npm run test:e2e -- --project=chromium
+```
+
+This suite uses mocked API providers plus the test-only `E2E_AUTH_ENABLED` and `E2E_AUTH_BYPASS_SECRET` seam wired by the committed Playwright harness. It does not require live Clerk, Supabase, OpenAI, Asaas, or storage credentials.
+
 ## Documentation Start Here
 
 - [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Audience-based entry point for developers, operations, and product.
@@ -113,6 +124,7 @@ Current OpenAI routing is controlled in `src/lib/agent/config.ts`. The default r
 - OpenAI
 - Asaas billing
 - Vitest and Testing Library
+- Playwright (Chromium browser verification)
 
 ## Project Structure
 
@@ -170,6 +182,7 @@ npm run start
 npm run typecheck
 npm run lint
 npm test
+npm run test:e2e -- --project=chromium
 npm run db:generate
 npm run db:migrate
 npm run db:push

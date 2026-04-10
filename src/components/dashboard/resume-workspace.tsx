@@ -24,9 +24,8 @@ import { ChatInterface } from "./chat-interface"
 import { ManualEditDialog } from "./manual-edit-dialog"
 import { PlanUpdateDialog } from "./plan-update-dialog"
 import { PreviewPanel } from "./preview-panel"
+import { NEW_CONVERSATION_EVENT, SESSION_SYNC_EVENT } from "./events"
 import { WorkspaceSidePanel } from "./workspace-side-panel"
-
-export const NEW_CONVERSATION_EVENT = "curria:new-conversation"
 const NOOP_LAYOUT_STORAGE = {
   getItem: (_key: string) => null,
   setItem: (_key: string, _value: string) => {},
@@ -146,6 +145,12 @@ export function ResumeWorkspace({
   }, [closePreview])
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent(SESSION_SYNC_EVENT, {
+      detail: { sessionId: sessionId ?? null },
+    }))
+  }, [sessionId])
+
+  useEffect(() => {
     if (!sessionId) {
       return
     }
@@ -162,6 +167,7 @@ export function ResumeWorkspace({
   const isBusy = activeMutation !== null || isStreaming
   const baseOutputReady = isGeneratedOutputReady(workspace?.session.generatedOutput)
   const manualEditValue = getManualEditSectionValue(workspace, manualEditSection)
+  const targetCount = workspace?.targets.length ?? 0
 
   const refreshWorkspace = useCallback(async (targetSessionId: string): Promise<void> => {
     setActiveMutation("workspace-refresh")
@@ -282,12 +288,26 @@ export function ResumeWorkspace({
   return (
     <>
       {isPreviewOverlay ? (
-        <div className="space-y-0 p-0">
+        <div
+          data-testid="resume-workspace"
+          data-base-output-ready={String(baseOutputReady)}
+          data-busy={String(isBusy)}
+          data-session-id={sessionId ?? ""}
+          data-target-count={String(targetCount)}
+          className="space-y-0 p-0"
+        >
           {chatPane}
           {viewerPane}
         </div>
       ) : (
-        <div className="h-[calc(107svh-4rem)] px-0 py-0">
+        <div
+          data-testid="resume-workspace"
+          data-base-output-ready={String(baseOutputReady)}
+          data-busy={String(isBusy)}
+          data-session-id={sessionId ?? ""}
+          data-target-count={String(targetCount)}
+          className="h-[calc(107svh-4rem)] px-0 py-0"
+        >
           <ResizablePanelGroup
             id="resume-workspace-split-view"
             orientation="horizontal"

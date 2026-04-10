@@ -6,7 +6,8 @@ import "@testing-library/jest-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PreviewPanelProvider } from "@/context/preview-panel-context"
-import { NEW_CONVERSATION_EVENT, ResumeWorkspace } from "./resume-workspace"
+import { NEW_CONVERSATION_EVENT } from "./events"
+import { ResumeWorkspace } from "./resume-workspace"
 
 const {
   mockGetSessionWorkspace,
@@ -196,6 +197,10 @@ describe("ResumeWorkspace", () => {
       expect(mockGetSessionWorkspace).toHaveBeenCalledWith("sess_123")
     })
 
+    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-session-id", "sess_123")
+    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-target-count", "0")
+    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-base-output-ready", "true")
+
     expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-open", "false")
 
     await userEvent.click(screen.getByRole("button", { name: /trigger credits exhausted/i }))
@@ -234,6 +239,8 @@ describe("ResumeWorkspace", () => {
       expect(screen.getByTestId("chat-session-id")).toHaveTextContent("sess_existing")
     })
 
+    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-session-id", "sess_existing")
+
     act(() => {
       window.dispatchEvent(new Event(NEW_CONVERSATION_EVENT))
     })
@@ -241,5 +248,7 @@ describe("ResumeWorkspace", () => {
     await waitFor(() => {
       expect(screen.getByTestId("chat-session-id")).toHaveTextContent("none")
     })
+
+    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-session-id", "")
   })
 })

@@ -242,6 +242,8 @@ export default function UserDataPage() {
 
   return (
     <div
+      data-testid="user-data-page"
+      data-loading={String(isLoadingProfile)}
       className={cn(
         "relative overflow-hidden bg-slate-50/70 font-sans dark:bg-background",
         allSectionsClosed ? "min-h-screen md:h-screen md:overflow-y-hidden" : "min-h-screen",
@@ -426,6 +428,7 @@ export default function UserDataPage() {
                 type="button"
                 disabled={isSaving}
                 onClick={() => void handleSave()}
+                data-testid="profile-save-button"
                 className={cn(primaryButtonClassName, allSectionsClosed && "h-10 px-4")}
               >
                 {isSaving ? (

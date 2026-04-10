@@ -142,8 +142,16 @@ function PreviewPanelContent({
     anchor.remove()
   }
 
+  const previewState = isLoading ? 'loading' : error ? 'error' : previewUrl ? 'ready' : 'idle'
+
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div
+      data-testid="preview-panel"
+      data-preview-url={previewUrl ?? ''}
+      data-session-id={file.sessionId}
+      data-state={previewState}
+      className="flex h-full flex-col bg-background"
+    >
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{file.label}</p>
@@ -156,6 +164,7 @@ function PreviewPanelContent({
               <button
                 type="button"
                 onClick={() => setIsEditorOpen(true)}
+                data-testid="preview-edit-button"
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Edit resume"
               >
@@ -165,6 +174,7 @@ function PreviewPanelContent({
               <button
                 type="button"
                 onClick={handleDownload}
+                data-testid="preview-download-pdf"
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Baixar PDF"
               >
@@ -175,6 +185,7 @@ function PreviewPanelContent({
                 href={previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-testid="preview-open-external"
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Abrir em nova aba"
               >
@@ -218,6 +229,7 @@ function PreviewPanelContent({
 
         {previewUrl && !isLoading ? (
           <iframe
+            data-testid="preview-panel-frame"
             src={previewUrl}
             className="h-full w-full border-0"
             title={`Pre-visualizacao: ${file.label}`}

@@ -806,4 +806,55 @@ describe("ChatInterface", () => {
 
     consoleErrorSpy.mockRestore()
   })
+
+  it("exposes stable root state hooks for the initial composer state", () => {
+    render(<ChatInterface userName="Fabio" />)
+
+    expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-session-id", "")
+    expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-phase", "intake")
+    expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-message-count", "0")
+  })
+
+  it("updates the stable root state hooks after a completed streamed turn", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (typeof url === "string" && url.includes("/api/agent")) {
+        return new Response(
+          createSSEStream([
+            { type: "done", sessionId: "sess_state_hooks", phase: "dialog", messageCount: 1 },
+          ]),
+          {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          },
+        )
+      }
+
+      if (typeof url === "string" && url === "/api/session/sess_state_hooks") {
+        return new Response(
+          JSON.stringify({
+            session: {
+              phase: "dialog",
+              atsScore: { total: 88 },
+              messageCount: 3,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(JSON.stringify({ messages: [] }), { status: 200 })
+    })
+
+    render(<ChatInterface userName="Fabio" />)
+
+    const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
+    await userEvent.type(textarea, "Atualize o estado")
+    await userEvent.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-session-id", "sess_state_hooks")
+      expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-phase", "dialog")
+      expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-message-count", "3")
+    })
+  })
 })

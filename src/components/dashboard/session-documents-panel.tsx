@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, ChevronRight, Download, ExternalLink, FileText } from 'lucide-react'
@@ -10,6 +10,7 @@ import { usePreviewPanel } from '@/context/preview-panel-context'
 import { cn } from '@/lib/utils'
 
 import { useSessionDocuments } from '@/hooks/use-session-documents'
+import { NEW_CONVERSATION_EVENT, SESSION_SYNC_EVENT, type SessionSyncDetail } from './events'
 
 type SectionKey = 'files'
 
@@ -95,6 +96,7 @@ function DownloadItem({
       type="button"
       disabled={isBusy}
       onClick={() => void handleClick()}
+      data-testid={badge === 'DOCX' ? 'document-item-docx' : 'document-item-pdf'}
       className={cn(
         'group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors disabled:opacity-50',
         isActive
@@ -119,12 +121,35 @@ function DownloadItem({
 
 export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolean }) {
   const searchParams = useSearchParams()
-  const sessionId = searchParams.get('session')
+  const [sessionId, setSessionId] = useState<string | null>(() => searchParams.get('session'))
   const { file: previewFile, open } = usePreviewPanel()
   const { files, isLoading, error } = useSessionDocuments(sessionId)
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     files: true,
   })
+
+  useEffect(() => {
+    setSessionId(searchParams.get('session'))
+  }, [searchParams])
+
+  useEffect(() => {
+    const handleSessionSync = (event: Event) => {
+      const detail = (event as CustomEvent<SessionSyncDetail>).detail
+      setSessionId(detail?.sessionId ?? null)
+    }
+
+    const handleNewConversation = () => {
+      setSessionId(null)
+    }
+
+    window.addEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener)
+    window.addEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
+
+    return () => {
+      window.removeEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener)
+      window.removeEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
+    }
+  }, [])
 
   const hasFiles = Boolean(files.docxUrl || files.pdfUrl)
   const isBasePdfActive =
@@ -133,6 +158,7 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
     && previewFile?.type === 'pdf'
 
   const documentGroups = useMemo(() => ({ hasFiles }), [hasFiles])
+  const panelState = isLoading ? 'loading' : error ? 'error' : documentGroups.hasFiles ? 'ready' : 'empty'
 
   if (!isSidebarOpen || !sessionId) {
     return null
@@ -150,7 +176,13 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
   }
 
   return (
-    <div className="mt-3 border-t border-border/60 pt-3">
+    <div
+      data-testid="session-documents-panel"
+      data-docx-available={String(Boolean(files.docxUrl))}
+      data-pdf-available={String(Boolean(files.pdfUrl))}
+      data-state={panelState}
+      className="mt-3 border-t border-border/60 pt-3"
+    >
       <div className="px-2 pb-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           Documents

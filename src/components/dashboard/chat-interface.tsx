@@ -649,7 +649,13 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#faf9f5]">
+    <div
+      data-testid="chat-interface"
+      data-message-count={String(messageCount)}
+      data-phase={phase}
+      data-session-id={sessionId ?? ""}
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-[#faf9f5]"
+    >
       <div className="px-3 pb-1 pt-3 md:px-4">
         <ChatWindowChrome />
       </div>
@@ -746,6 +752,7 @@ export function ChatInterface({
                 </>
               ) : null}
               <Textarea
+                data-testid="chat-input"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder={copy.placeholder}
@@ -760,6 +767,7 @@ export function ChatInterface({
                 }}
               />
               <Button
+                data-testid="chat-send-button"
                 size="icon"
                 className="h-10 w-10 shrink-0 rounded-2xl"
                 disabled={(!input.trim() && !uploadedFile) || isInputDisabled}

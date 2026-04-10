@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server"
 
 import { ResumeWorkspace } from "@/components/dashboard/resume-workspace"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
+import { isE2EAuthEnabled } from "@/lib/auth/e2e-auth"
 import { getUserBillingInfo } from "@/lib/asaas/quota"
 
 export const dynamic = "force-dynamic"
@@ -20,7 +21,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? rawSessionParam[0]
     : rawSessionParam
 
-  const [appUser, clerkUser] = await Promise.all([getCurrentAppUser(), currentUser()])
+  const [appUser, clerkUser] = await Promise.all([
+    getCurrentAppUser(),
+    isE2EAuthEnabled() ? Promise.resolve(null) : currentUser(),
+  ])
   let billingInfo = null
   if (appUser) {
     try {
