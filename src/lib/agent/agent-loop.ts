@@ -20,9 +20,15 @@ import type {
   Session,
 } from '@/types/agent'
 
-const EMPTY_ASSISTANT_RECOVERY_PROMPT = 'The previous completion returned no visible assistant text. Respond to the user now with a direct, helpful plain-text answer. Do not call tools. Do not leave the content empty.'
 const LENGTH_RECOVERY_PROMPT = 'Your previous response was cut off by token limits. Continue exactly where it stopped. Do not repeat prior text. Do not call tools.'
-const CONCISE_LENGTH_RECOVERY_PROMPT = 'The previous response kept getting cut off by token limits. Answer the user again from scratch with a concise, high-signal plain-text reply under 180 words. Do not call tools.'
+const RECOVERY_SYSTEM_PROMPT = [
+  'You are CurrIA, a resume optimization assistant for Brazilian users.',
+  'Respond in the same language as the user, in plain text, with a short and useful answer.',
+  'Do not call tools.',
+  'Do not leave the content empty.',
+  'If the user pasted a job description but has not provided a resume yet, acknowledge the vacancy and ask for the resume file or pasted resume text.',
+  'If the user already has resume context loaded, acknowledge the latest request and give the clearest next step you can.',
+].join(' ')
 
 type AgentLoopEvent =
   | AgentTextChunk
@@ -302,6 +308,99 @@ function hasResumeContextForDeterministicAnalysis(session: Session): boolean {
   return buildResumeTextForScoring(session).trim().length > 0
 }
 
+function normalizeForJobDetection(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function looksLikeJobDescription(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length < 140) {
+    return false
+  }
+
+  const normalized = normalizeForJobDetection(trimmed)
+  const sectionSignals = [
+    'responsabilidades',
+    'responsibility',
+    'responsibilities',
+    'requisitos',
+    'requirements',
+    'qualificacoes',
+    'qualifications',
+    'diferenciais',
+    'nice to have',
+    'o que oferecemos',
+    'o que procuramos',
+    'we are looking for',
+    'job description',
+  ]
+
+  const sectionHits = sectionSignals.filter((signal) => normalized.includes(signal)).length
+  const roleHit = /\b(analista|engenheiro|developer|desenvolvedor|cientista|gerente|coordenador|consultor|product|designer|arquiteto|devops|sre|qa|bi|dados|data)\b/.test(normalized)
+  const hiringIntentHit = /\b(vaga|cargo|posicao|position|role|opportunity|buscamos|contratando)\b/.test(normalized)
+
+  return sectionHits >= 2 || (roleHit && hiringIntentHit && trimmed.length >= 220)
+}
+
+function truncateForRecovery(text: string, maxChars: number): string {
+  if (text.length <= maxChars) {
+    return text
+  }
+
+  return `${text.slice(0, maxChars - 15)}\n[truncated]`
+}
+
+function buildRecoveryUserPrompt(params: {
+  session: Session
+  userMessage: string
+  mode: 'concise' | 'empty'
+  attempt?: number
+}): string {
+  const hasResumeContext = hasResumeContextForDeterministicAnalysis(params.session)
+  const targetJobDescription = params.session.agentState.targetJobDescription?.trim()
+  const targetLooksLikeVacancy = Boolean(targetJobDescription || looksLikeJobDescription(params.userMessage))
+
+  return [
+    params.mode === 'concise'
+      ? 'The previous response was cut off. Answer again from scratch with a concise reply under 180 words.'
+      : `The previous response attempt returned no visible text. Reply now with at least one complete sentence.${params.attempt ? ` This is retry ${params.attempt}.` : ''}`,
+    `Current phase: ${params.session.phase}.`,
+    `Resume context available: ${hasResumeContext ? 'yes' : 'no'}.`,
+    `Target job context available: ${targetLooksLikeVacancy ? 'yes' : 'no'}.`,
+    targetJobDescription
+      ? `Saved target job context:\n${truncateForRecovery(targetJobDescription, 1_200)}`
+      : '',
+    `Latest user message:\n${truncateForRecovery(params.userMessage, 3_000)}`,
+    'Respond directly. No markdown fences. No tools.',
+  ].filter(Boolean).join('\n\n')
+}
+
+function buildDeterministicAssistantFallback(session: Session, userMessage: string): string {
+  const hasResumeContext = hasResumeContextForDeterministicAnalysis(session)
+  const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || looksLikeJobDescription(userMessage))
+
+  if (!hasResumeContext && hasTargetJobContext) {
+    return 'Recebi a vaga. Para comparar aderência e adaptar seu currículo a essa oportunidade, envie seu currículo em PDF/DOCX ou cole o texto do currículo aqui.'
+  }
+
+  if (!hasResumeContext) {
+    return 'Preciso do seu currículo para continuar. Envie um PDF/DOCX ou cole o texto do currículo aqui no chat.'
+  }
+
+  if (session.phase === 'confirm') {
+    return 'Estou na etapa final. Se quiser gerar os arquivos agora, responda com "sim, pode gerar". Se preferir, peça mais ajustes no currículo.'
+  }
+
+  if (hasTargetJobContext) {
+    return 'Recebi a vaga e vou usá-la como referência. Tente novamente com um pedido curto, como "compare meu currículo com esta vaga" ou "reescreva meu resumo para esta vaga".'
+  }
+
+  return 'Recebi sua mensagem, mas esta resposta falhou. Tente repetir o pedido em uma frase curta e objetiva que eu continuo daqui.'
+}
+
 async function trackTurnUsage(params: {
   session: Session
   appUserId: string
@@ -538,7 +637,6 @@ async function* recoverTruncatedTurn(params: {
 async function* recoverConciseTurn(params: {
   session: Session
   userMessage: string
-  cachedSystemPrompt: string
   requestId: string
   appUserId: string
   requestStartedAt: number
@@ -549,10 +647,14 @@ async function* recoverConciseTurn(params: {
     messages: [
       {
         role: 'user',
-        content: `${CONCISE_LENGTH_RECOVERY_PROMPT}\n\nOriginal user request:\n${params.userMessage}`,
+        content: buildRecoveryUserPrompt({
+          session: params.session,
+          userMessage: params.userMessage,
+          mode: 'concise',
+        }),
       },
     ],
-    cachedSystemPrompt: params.cachedSystemPrompt,
+    cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
     requestId: params.requestId,
     appUserId: params.appUserId,
     requestStartedAt: params.requestStartedAt,
@@ -872,7 +974,6 @@ export async function* runAgentLoop(
         const conciseTurn = yield* recoverConciseTurn({
           session,
           userMessage,
-          cachedSystemPrompt,
           requestId,
           appUserId,
           requestStartedAt,
@@ -1027,10 +1128,17 @@ export async function* runAgentLoop(
         const recoveryTurn = yield* streamAssistantTurn({
           session,
           messages: [
-            ...messages,
-            { role: 'system', content: EMPTY_ASSISTANT_RECOVERY_PROMPT },
+            {
+              role: 'user',
+              content: buildRecoveryUserPrompt({
+                session,
+                userMessage,
+                mode: 'empty',
+                attempt: recoveryAttempt,
+              }),
+            },
           ],
-          cachedSystemPrompt,
+          cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
           requestId,
           appUserId,
           requestStartedAt,
@@ -1064,7 +1172,7 @@ export async function* runAgentLoop(
 
       if (!recoverySucceeded) {
         // Final fallback after all recovery attempts failed
-        finalAssistantText = 'Não consegui concluir a resposta completa desta vez, mas posso continuar de forma mais objetiva. Tente reenviar sua mensagem ou pedir um resumo mais curto.'
+        finalAssistantText = buildDeterministicAssistantFallback(session, userMessage)
         yield {
           type: 'text',
           content: finalAssistantText,

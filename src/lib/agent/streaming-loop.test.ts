@@ -498,6 +498,79 @@ describe('runAgentLoop streaming', () => {
     )
   })
 
+  it('returns a vacancy-specific fallback instead of the generic empty fallback when every recovery returns empty', async () => {
+    async function* emptyStopStream() {
+      yield {
+        choices: [{
+          delta: {},
+          finish_reason: 'stop',
+        }],
+        usage: null,
+      }
+    }
+
+    const session = {
+      ...buildSession(),
+      phase: 'intake' as const,
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty' as const,
+        rewriteHistory: {},
+      },
+    }
+
+    mockCreateChatCompletionStreamWithRetry
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+      .mockResolvedValueOnce(emptyStopStream() as never)
+
+    const userMessage = [
+      'Responsabilidades',
+      'Projetar, desenvolver e manter dashboards e solucoes analiticas.',
+      'Requisitos',
+      'SQL avancado, Power BI, ETL/ELT e ingles fluente.',
+      'Diferenciais',
+      'Python, Snowflake e Airflow.',
+    ].join('\n')
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage,
+      appUserId: 'usr_123',
+      requestId: 'req_empty_vacancy',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Recebi a vaga')
+    expect(finalText).toContain('currículo')
+    expect(finalText).not.toContain('Não consegui concluir a resposta completa desta vez')
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      expect.stringContaining('Recebi a vaga'),
+    )
+  })
+
   it('emits an error when the stream ends without a finish reason', async () => {
     async function* incompleteStream() {
       yield {
