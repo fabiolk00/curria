@@ -87,11 +87,19 @@ describe('gap analysis', () => {
     })
   })
 
-  it('rejects invalid gap analysis output', async () => {
-    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
-      matchScore: 120,
-      missingSkills: 'AWS',
-    })))
+  it('coerces almost valid gap analysis output without a repair round', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse([
+      'Here is the analysis you asked for:',
+      '```json',
+      JSON.stringify({
+        matchScore: '72',
+        missingSkills: 'AWS, Docker',
+        weakAreas: 'summary; experience',
+        improvementSuggestions: 'Add AWS examples\nShow Docker usage',
+      }, null, 2),
+      '```',
+      'That should help.',
+    ].join('\n')))
 
     const result = await analyzeGap(
       buildCvState(),
@@ -102,18 +110,39 @@ describe('gap analysis', () => {
 
     expect(result).toEqual({
       output: {
-        success: false,
-        code: 'LLM_INVALID_OUTPUT',
-        error: 'Invalid gap analysis payload.',
+        success: true,
+        result: {
+          matchScore: 72,
+          missingSkills: ['AWS', 'Docker'],
+          weakAreas: ['summary', 'experience'],
+          improvementSuggestions: ['Add AWS examples', 'Show Docker usage'],
+        },
+      },
+      result: {
+        matchScore: 72,
+        missingSkills: ['AWS', 'Docker'],
+        weakAreas: ['summary', 'experience'],
+        improvementSuggestions: ['Add AWS examples', 'Show Docker usage'],
       },
     })
+
+    expect(createCompletion).toHaveBeenCalledTimes(1)
+    expect(createCompletion.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      max_completion_tokens: 600,
+      messages: expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('"resume"'),
+        }),
+      ]),
+    }))
   })
 
   it('retries with a repair prompt when the first payload is invalid', async () => {
     createCompletion
       .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify({
-        matchScore: 120,
-        missingSkills: 'AWS',
+        matchScore: 'high',
+        missingSkills: 123,
       })))
       .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify({
         matchScore: 68,
@@ -148,7 +177,11 @@ describe('gap analysis', () => {
     })
 
     expect(createCompletion).toHaveBeenCalledTimes(2)
+    expect(createCompletion.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      max_completion_tokens: 600,
+    }))
     expect(createCompletion.mock.calls[1]?.[0]).toEqual(expect.objectContaining({
+      max_completion_tokens: 400,
       messages: expect.arrayContaining([
         expect.objectContaining({
           role: 'system',
@@ -156,6 +189,7 @@ describe('gap analysis', () => {
         }),
         expect.objectContaining({
           role: 'user',
+          content: expect.stringContaining('"resume"'),
         }),
       ]),
     }))
@@ -164,8 +198,8 @@ describe('gap analysis', () => {
   it('returns the original validation failure when the repair payload is still invalid', async () => {
     createCompletion
       .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify({
-        matchScore: 120,
-        missingSkills: 'AWS',
+        matchScore: 'high',
+        missingSkills: 123,
       })))
       .mockResolvedValueOnce(buildOpenAIResponse(JSON.stringify({
         matchScore: 200,
