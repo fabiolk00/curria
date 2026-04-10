@@ -41,6 +41,8 @@ type ApiMockOptions = {
 }
 
 const DEFAULT_ASSET_BASE_URL = 'http://127.0.0.1:3000/__e2e-assets'
+const EMPTY_ASSISTANT_RESPONSE_FALLBACK =
+  'Analisei sua mensagem, mas nao consegui concluir a resposta desta vez. Tente enviar novamente.'
 
 function jsonResponse(route: Route, payload: unknown, status = 200): Promise<void> {
   return route.fulfill({
@@ -115,13 +117,13 @@ export async function installCoreFunnelApiMocks(
 ): Promise<void> {
   const sessionId = options.sessionId ?? options.workspace?.session.id ?? 'sess_e2e_browser'
   const workspace = options.workspace ?? buildMockWorkspace(sessionId)
-  const messages = options.messages ?? [
+  let messages = [...(options.messages ?? [
     {
       role: 'assistant',
       content: 'Ola! Vamos revisar a vaga.',
       createdAt: '2026-04-10T12:00:00.000Z',
     },
-  ]
+  ])]
   let profile = options.profile ?? {
     profile: {
       id: 'profile_e2e_browser',
@@ -182,10 +184,55 @@ export async function installCoreFunnelApiMocks(
   })
 
   await page.route('**/api/session/*', async (route) => {
+    workspace.session.messageCount = messages.length
     await jsonResponse(route, workspace)
   })
 
   await page.route('**/api/agent', async (route) => {
+    const body = route.request().postDataJSON() as { message?: string } | null
+    const userMessage = body?.message?.trim()
+
+    if (userMessage) {
+      messages = [
+        ...messages,
+        {
+          role: 'user',
+          content: userMessage,
+          createdAt: '2026-04-10T12:30:00.000Z',
+        },
+      ]
+    }
+
+    const assistantContent = streamChunks
+      .filter((chunk): chunk is Extract<AgentStreamChunk, { type: 'text' }> => chunk.type === 'text')
+      .map((chunk) => chunk.content)
+      .join('')
+      .trim()
+
+    const doneChunk = streamChunks.find(
+      (chunk): chunk is Extract<AgentStreamChunk, { type: 'done' }> => chunk.type === 'done',
+    )
+
+    if (assistantContent || doneChunk) {
+      messages = [
+        ...messages,
+        {
+          role: 'assistant',
+          content: assistantContent || EMPTY_ASSISTANT_RESPONSE_FALLBACK,
+          createdAt: '2026-04-10T12:30:01.000Z',
+        },
+      ]
+    }
+
+    if (doneChunk) {
+      workspace.session.phase = doneChunk.phase
+      workspace.session.messageCount = doneChunk.messageCount ?? messages.length
+
+      if (doneChunk.atsScore) {
+        workspace.session.atsScore = doneChunk.atsScore
+      }
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'text/event-stream',
