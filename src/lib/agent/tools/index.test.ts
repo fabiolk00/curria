@@ -7,13 +7,13 @@ import { getResumeTargetForSession, updateResumeTargetGeneratedOutput } from '@/
 import { applyGeneratedOutputPatch, applyToolPatchWithVersion, mergeToolPatch } from '@/lib/db/sessions'
 
 import { analyzeGap } from './gap-analysis'
-import { generateFile } from './generate-file'
 import { applyGapAction } from './gap-to-action'
 import { parseFile } from './parse-file'
 import { ingestResumeText } from './resume-ingestion'
 import { dispatchTool, dispatchToolWithContext, executeTool, getToolDefinitionsForPhase } from './index'
 import { rewriteSection } from './rewrite-section'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
+import { generateBillableResume } from '@/lib/resume-generation/generate-billable-resume'
 
 const { logError, logInfo, logWarn, serializeError } = vi.hoisted(() => ({
   logError: vi.fn(),
@@ -24,10 +24,6 @@ const { logError, logInfo, logWarn, serializeError } = vi.hoisted(() => ({
 
 vi.mock('./parse-file', () => ({
   parseFile: vi.fn(),
-}))
-
-vi.mock('./generate-file', () => ({
-  generateFile: vi.fn(),
 }))
 
 vi.mock('./resume-ingestion', () => ({
@@ -76,6 +72,10 @@ vi.mock('@/lib/db/resume-targets', () => ({
 
 vi.mock('@/lib/resume-targets/create-target-resume', () => ({
   createTargetResumeVariant: vi.fn(),
+}))
+
+vi.mock('@/lib/resume-generation/generate-billable-resume', () => ({
+  generateBillableResume: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
@@ -158,6 +158,21 @@ describe('agent tool dispatch', () => {
       session.agentState = mergedSession.agentState
       session.generatedOutput = mergedSession.generatedOutput
       session.atsScore = mergedSession.atsScore
+    })
+    vi.mocked(generateBillableResume).mockResolvedValue({
+      output: {
+        success: true,
+        docxUrl: 'https://example.com/resume.docx',
+        pdfUrl: 'https://example.com/resume.pdf',
+      },
+      patch: {
+        generatedOutput: {
+          status: 'ready',
+          docxPath: 'usr_123/sess_123/resume.docx',
+          pdfPath: 'usr_123/sess_123/resume.pdf',
+          generatedAt: '2026-03-27T12:00:00.000Z',
+        },
+      },
     })
   })
 
@@ -483,20 +498,11 @@ describe('agent tool dispatch', () => {
     const session = buildSession()
     const originalGeneratedOutput = structuredClone(session.generatedOutput)
 
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: false,
         code: 'VALIDATION_ERROR',
         error: 'summary is required.',
-      },
-      patch: {
-        generatedOutput: {
-          status: 'failed',
-          docxPath: undefined,
-          pdfPath: undefined,
-          generatedAt: undefined,
-          error: 'summary is required.',
-        },
       },
       generatedOutput: {
         status: 'failed',
@@ -524,20 +530,11 @@ describe('agent tool dispatch', () => {
   it('returns no persistedPatch when generate_file fails', async () => {
     const session = buildSession()
 
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: false,
         code: 'VALIDATION_ERROR',
         error: 'summary is required.',
-      },
-      patch: {
-        generatedOutput: {
-          status: 'failed',
-          docxPath: undefined,
-          pdfPath: undefined,
-          generatedAt: undefined,
-          error: 'summary is required.',
-        },
       },
       generatedOutput: {
         status: 'failed',
@@ -578,20 +575,11 @@ describe('agent tool dispatch', () => {
     }
     const originalAgentState = structuredClone(session.agentState)
 
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: false,
         code: 'VALIDATION_ERROR',
         error: 'phone is required.',
-      },
-      patch: {
-        generatedOutput: {
-          status: 'failed',
-          docxPath: undefined,
-          pdfPath: undefined,
-          generatedAt: undefined,
-          error: 'phone is required.',
-        },
       },
       generatedOutput: {
         status: 'failed',
@@ -665,20 +653,11 @@ describe('agent tool dispatch', () => {
   it('does not log generatedOutput persistence when generate_file fails', async () => {
     const session = buildSession()
 
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: false,
         code: 'VALIDATION_ERROR',
         error: 'summary is required.',
-      },
-      patch: {
-        generatedOutput: {
-          status: 'failed',
-          docxPath: undefined,
-          pdfPath: undefined,
-          generatedAt: undefined,
-          error: 'summary is required.',
-        },
       },
       generatedOutput: {
         status: 'failed',
@@ -704,7 +683,7 @@ describe('agent tool dispatch', () => {
   it('reads generate_file input from canonical session cvState', async () => {
     const session = buildSession()
 
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: true,
         docxUrl: 'https://example.com/resume.docx',
@@ -732,16 +711,14 @@ describe('agent tool dispatch', () => {
       },
     }, session)
 
-    expect(generateFile).toHaveBeenCalledWith(
-      {
-        cv_state: session.cvState,
-        target_id: undefined,
-      },
-      session.userId,
-      session.id,
-      { type: 'session' },
-      session.agentState,
-    )
+    expect(generateBillableResume).toHaveBeenCalledWith({
+      userId: session.userId,
+      sessionId: session.id,
+      sourceCvState: session.cvState,
+      targetId: undefined,
+      idempotencyKey: undefined,
+      templateTargetSource: session.agentState,
+    })
     expect(execution.patch).toEqual({
       generatedOutput: {
         status: 'ready',
@@ -769,7 +746,7 @@ describe('agent tool dispatch', () => {
       createdAt: new Date('2026-03-27T12:00:00.000Z'),
       updatedAt: new Date('2026-03-27T12:00:00.000Z'),
     })
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: true,
         docxUrl: 'https://example.com/target-resume.docx',
@@ -789,20 +766,18 @@ describe('agent tool dispatch', () => {
     }, session)
 
     expect(getResumeTargetForSession).toHaveBeenCalledWith(session.id, 'target_123')
-    expect(generateFile).toHaveBeenCalledWith(
-      {
-        cv_state: {
-          ...session.cvState,
-          summary: 'Target-specific AWS summary.',
-          skills: ['TypeScript', 'AWS'],
-        },
-        target_id: 'target_123',
+    expect(generateBillableResume).toHaveBeenCalledWith({
+      userId: session.userId,
+      sessionId: session.id,
+      sourceCvState: {
+        ...session.cvState,
+        summary: 'Target-specific AWS summary.',
+        skills: ['TypeScript', 'AWS'],
       },
-      session.userId,
-      session.id,
-      { type: 'target', targetId: 'target_123' },
-      'AWS backend role',
-    )
+      targetId: 'target_123',
+      idempotencyKey: undefined,
+      templateTargetSource: 'AWS backend role',
+    })
     expect(updateResumeTargetGeneratedOutput).toHaveBeenCalledWith(
       session.id,
       'target_123',
@@ -837,7 +812,7 @@ describe('agent tool dispatch', () => {
       createdAt: new Date('2026-03-27T12:00:00.000Z'),
       updatedAt: new Date('2026-03-27T12:00:00.000Z'),
     })
-    vi.mocked(generateFile).mockResolvedValue({
+    vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: false,
         code: 'VALIDATION_ERROR',

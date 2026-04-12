@@ -10,9 +10,8 @@ import type { CVState, ExperienceEntry } from '@/types/cv'
 
 import { CURRENT_SESSION_STATE_VERSION } from '@/lib/db/sessions'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
-import { cvStateToTemplateData } from '@/lib/templates/cv-state-to-template-data'
+import { generateBillableResume } from '@/lib/resume-generation/generate-billable-resume'
 
-import { generateFileDeps } from './generate-file'
 import { dispatchTool } from './index'
 
 const { createCompletion, pdfParse } = vi.hoisted(() => ({
@@ -40,6 +39,10 @@ vi.mock('@/lib/agent/usage-tracker', () => ({
 
 vi.mock('@/lib/db/supabase-admin', () => ({
   getSupabaseAdminClient: vi.fn(),
+}))
+
+vi.mock('@/lib/resume-generation/generate-billable-resume', () => ({
+  generateBillableResume: vi.fn(),
 }))
 
 const rpc = vi.fn()
@@ -107,20 +110,6 @@ function buildOpenAIResponse(text: string) {
   }
 }
 
-function buildStorageSupabase() {
-  return {
-    storage: {
-      from: vi.fn(() => ({
-        createSignedUrl: vi.fn((filePath: string) => Promise.resolve({
-          data: {
-            signedUrl: `https://cdn.example.com/${filePath}`,
-          },
-        })),
-      })),
-    },
-  }
-}
-
 describe('agent pipeline session state evolution', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -137,11 +126,21 @@ describe('agent pipeline session state evolution', () => {
 
       throw new Error(`Unexpected RPC: ${fn}`)
     })
-    vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
-      buildStorageSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
-    )
-    vi.spyOn(generateFileDeps, 'upload').mockResolvedValue(undefined)
-    vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
+    vi.mocked(generateBillableResume).mockResolvedValue({
+      output: {
+        success: true,
+        docxUrl: 'https://cdn.example.com/usr_123/sess_pipeline/resume.docx',
+        pdfUrl: 'https://cdn.example.com/usr_123/sess_pipeline/resume.pdf',
+      },
+      patch: {
+        generatedOutput: {
+          status: 'ready',
+          docxPath: 'usr_123/sess_pipeline/resume.docx',
+          pdfPath: 'usr_123/sess_pipeline/resume.pdf',
+          generatedAt: '2026-03-25T12:00:00.000Z',
+        },
+      },
+    })
   })
 
   it('evolves session state correctly across parse, rewrite, and generate', async () => {
@@ -155,8 +154,6 @@ describe('agent pipeline session state evolution', () => {
       ...session.cvState,
       summary: rewrittenSummary,
     })
-    const expectedTemplateData = cvStateToTemplateData(canonicalCvStateBeforeGeneration, session.agentState)
-
     pdfParse.mockResolvedValue({
       text: parsedResumeText,
       numpages: 2,
@@ -202,8 +199,6 @@ describe('agent pipeline session state evolution', () => {
         keywords_added: ['billing modernization'],
         changes_made: ['Added clearer business impact'],
       })))
-
-    const generateDOCX = vi.spyOn(generateFileDeps, 'generateDOCX').mockResolvedValue(Buffer.from('docx'))
 
     const parseResult = JSON.parse(await dispatchTool('parse_file', {
       file_base64: Buffer.from('fake pdf bytes').toString('base64'),
@@ -255,7 +250,14 @@ describe('agent pipeline session state evolution', () => {
       },
     }, session)) as GenerateFileOutput
 
-    expect(generateDOCX).toHaveBeenCalledWith(expectedTemplateData)
+    expect(generateBillableResume).toHaveBeenCalledWith({
+      userId: session.userId,
+      sessionId: session.id,
+      sourceCvState: canonicalCvStateBeforeGeneration,
+      targetId: undefined,
+      idempotencyKey: undefined,
+      templateTargetSource: session.agentState,
+    })
     expect(generateResult).toEqual({
       success: true,
       docxUrl: 'https://cdn.example.com/usr_123/sess_pipeline/resume.docx',

@@ -85,39 +85,59 @@ function DownloadItem({
   isActive?: boolean
 }) {
   const [isBusy, setIsBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleClick = async () => {
-    if (onPreviewClick) {
-      onPreviewClick()
-      return
+    try {
+      setIsBusy(true)
+      setError(null)
+      await triggerDownload(downloadUrl, label)
+    } catch (downloadError) {
+      console.error('[session-documents-panel] failed to download file', downloadError)
+      setError('Falha no download. Tente novamente.')
+    } finally {
+      setIsBusy(false)
     }
-
-    setIsBusy(true)
-    await triggerDownload(downloadUrl, label)
-    setIsBusy(false)
   }
 
   return (
-    <button
-      type="button"
-      disabled={isBusy}
-      onClick={() => void handleClick()}
-      data-testid="document-item-pdf"
-      className={cn(
-        'group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors disabled:opacity-50',
-        isActive
-          ? 'bg-sidebar-accent text-sidebar-foreground'
-          : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
-      )}
-    >
-      <Badge variant="secondary" className="rounded-sm px-1.5 py-0 font-mono text-[10px]">
-        PDF
-      </Badge>
-      <div className="min-w-0 flex-1 text-left">
-        <p className="truncate">{label}</p>
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => void handleClick()}
+          data-testid="document-item-pdf"
+          className={cn(
+            'group flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors disabled:opacity-50',
+            isActive
+              ? 'bg-sidebar-accent text-sidebar-foreground'
+              : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+          )}
+        >
+          <Badge variant="secondary" className="rounded-sm px-1.5 py-0 font-mono text-[10px]">
+            PDF
+          </Badge>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate">{label}</p>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+        </button>
+        {onPreviewClick ? (
+          <button
+            type="button"
+            onClick={onPreviewClick}
+            data-testid="document-item-preview"
+            className="rounded-md px-2 py-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          >
+            Preview
+          </button>
+        ) : null}
       </div>
-      <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-    </button>
+      {error ? (
+        <p className="px-2 text-[11px] text-destructive">{error}</p>
+      ) : null}
+    </div>
   )
 }
 

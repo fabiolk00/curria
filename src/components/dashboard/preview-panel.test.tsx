@@ -43,16 +43,9 @@ describe('PreviewPanel', () => {
   const getCachedUrl = vi.fn()
   const setCachedUrl = vi.fn()
   const invalidateCache = vi.fn()
-  const createObjectUrl = vi.fn(() => 'blob:preview-resume')
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Blob(['pdf'], { type: 'application/pdf' }), { status: 200 })))
-    vi.stubGlobal('URL', {
-      ...URL,
-      createObjectURL: createObjectUrl,
-      revokeObjectURL: vi.fn(),
-    })
     vi.mocked(usePreviewPanel).mockReturnValue({
       isOpen: false,
       file: null,
@@ -89,12 +82,11 @@ describe('PreviewPanel', () => {
 
     expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-session-id', 'sess_123')
     expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-state', 'ready')
-    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-preview-url', 'blob:preview-resume')
-    expect(screen.getByTestId('preview-panel-frame')).toHaveAttribute('src', 'blob:preview-resume')
+    expect(screen.getByTestId('preview-panel')).toHaveAttribute('data-preview-url', 'https://example.com/resume.pdf')
+    expect(screen.getByTestId('preview-panel-frame')).toHaveAttribute('src', 'https://example.com/resume.pdf')
     expect(screen.getByTestId('preview-download-pdf')).toBeInTheDocument()
     expect(screen.getByTestId('preview-open-external')).toHaveAttribute('href', 'https://example.com/resume.pdf')
-    expect(createObjectUrl).toHaveBeenCalledTimes(1)
-    expect(setCachedUrl).toHaveBeenCalledWith('sess_123:target_123', 'blob:preview-resume')
+    expect(setCachedUrl).toHaveBeenCalledWith('sess_123:target_123', 'https://example.com/resume.pdf')
 
     await userEvent.click(screen.getByTitle('Edit resume'))
 
@@ -108,5 +100,42 @@ describe('PreviewPanel', () => {
       expect(invalidateCache).toHaveBeenCalledWith('sess_123:target_123')
       expect(getDownloadUrls).toHaveBeenCalledTimes(2)
     })
+  })
+
+  it('shows actionable feedback when preview download fails', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network failed'))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(
+      <PreviewPanel
+        inline
+        showCloseButton={false}
+        fileOverride={{
+          sessionId: 'sess_123',
+          targetId: 'target_123',
+          type: 'pdf',
+          label: 'Resume',
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(getDownloadUrls).toHaveBeenCalledTimes(1)
+    })
+
+    const button = screen.getByTestId('preview-download-pdf')
+
+    await userEvent.click(button)
+
+    await waitFor(() => {
+      expect(screen.getByText('Falha ao baixar o PDF. Tente novamente.')).toBeInTheDocument()
+    })
+
+    expect(button).not.toBeDisabled()
+
+    await userEvent.click(button)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

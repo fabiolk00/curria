@@ -51,8 +51,8 @@ describe('getAgentReleaseMetadata', () => {
       releaseId: 'local-dev',
       releaseSource: 'local_dev',
       deploymentEnv: 'development',
-      resolvedAgentModel: 'gpt-5-nano',
-      resolvedDialogModel: 'gpt-5-nano',
+      resolvedAgentModel: 'gpt-5-mini',
+      resolvedDialogModel: 'gpt-5-mini',
     })
     expect(metadata.commitShortSha).toBeUndefined()
     expect(metadata.releaseRef).toBeUndefined()

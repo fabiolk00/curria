@@ -2,6 +2,7 @@ import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import {
   createSignedResumeArtifactUrls,
   generateFile,
+  validateGenerationCvState,
   type GenerateFileExecutionResult,
 } from '@/lib/agent/tools/generate-file'
 import { checkUserQuota, consumeCreditForGeneration } from '@/lib/asaas/quota'
@@ -104,6 +105,20 @@ export async function generateBillableResume(input: {
   idempotencyKey?: string
   templateTargetSource?: Parameters<typeof generateFile>[4]
 }): Promise<BillableGenerationResult> {
+  const validation = validateGenerationCvState(input.sourceCvState)
+  if (!validation.success) {
+    return {
+      output: toolFailure(
+        TOOL_ERROR_CODES.VALIDATION_ERROR,
+        validation.errorMessage,
+      ),
+      generatedOutput: {
+        status: 'failed',
+        error: validation.errorMessage,
+      },
+    }
+  }
+
   const scope: ArtifactScope = input.targetId
     ? { type: 'target', targetId: input.targetId }
     : { type: 'session' }

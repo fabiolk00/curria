@@ -80,6 +80,8 @@ function PreviewPanelContent({
   const [externalUrl, setExternalUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
 
   const cacheKey = `${file.sessionId}:${file.targetId ?? 'base'}`
@@ -93,6 +95,7 @@ function PreviewPanelContent({
     const cachedUrl = getCachedUrl(cacheKey)
     if (cachedUrl) {
       setPreviewUrl(cachedUrl)
+      setExternalUrl(cachedUrl)
       setIsLoading(false)
       return
     }
@@ -105,16 +108,9 @@ function PreviewPanelContent({
         return
       }
 
-      const pdfResponse = await fetch(urls.pdfUrl)
-      if (!pdfResponse.ok) {
-        throw new Error(`Failed to fetch preview PDF (${pdfResponse.status})`)
-      }
-
-      const pdfBlob = await pdfResponse.blob()
-      const objectUrl = URL.createObjectURL(pdfBlob)
-      setPreviewUrl(objectUrl)
+      setPreviewUrl(urls.pdfUrl)
       setExternalUrl(urls.pdfUrl)
-      setCachedUrl(cacheKey, objectUrl)
+      setCachedUrl(cacheKey, urls.pdfUrl)
     } catch (fetchError) {
       console.error('[preview-panel] failed to load signed urls', fetchError)
       setError('Falha ao carregar o arquivo. Tente novamente.')
@@ -143,21 +139,31 @@ function PreviewPanelContent({
       return
     }
 
-    const response = await fetch(previewUrl)
-    if (!response.ok) {
-      throw new Error(`Failed to download preview PDF (${response.status})`)
-    }
+    try {
+      setIsDownloading(true)
+      setDownloadError(null)
 
-    const blob = await response.blob()
-    const objectUrl = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = objectUrl
-    anchor.download = `${file.label}.pdf`
-    anchor.rel = 'noopener noreferrer'
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    URL.revokeObjectURL(objectUrl)
+      const response = await fetch(previewUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to download preview PDF (${response.status})`)
+      }
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = `${file.label}.pdf`
+      anchor.rel = 'noopener noreferrer'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (downloadFailure) {
+      console.error('[preview-panel] failed to download pdf', downloadFailure)
+      setDownloadError('Falha ao baixar o PDF. Tente novamente.')
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const previewState = isLoading ? 'loading' : error ? 'error' : previewUrl ? 'ready' : 'idle'
@@ -191,12 +197,13 @@ function PreviewPanelContent({
               </button>
               <button
                 type="button"
+                disabled={isDownloading}
                 onClick={() => void handleDownload()}
                 data-testid="preview-download-pdf"
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
                 title="Baixar PDF"
               >
-                <Download className="h-3.5 w-3.5" />
+                {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">Download</span>
               </button>
               <a
@@ -224,6 +231,12 @@ function PreviewPanelContent({
           ) : null}
         </div>
       </div>
+
+      {downloadError ? (
+        <div className="border-b border-border bg-destructive/5 px-4 py-2">
+          <p className="text-xs text-destructive">{downloadError}</p>
+        </div>
+      ) : null}
 
       <div className="relative flex-1 overflow-hidden bg-muted/30">
         {isLoading ? (

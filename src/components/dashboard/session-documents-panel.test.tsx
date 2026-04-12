@@ -65,4 +65,28 @@ describe('SessionDocumentsPanel', () => {
     expect(screen.getByText('Resume.pdf')).toBeInTheDocument()
     expect(screen.getByTestId('session-documents-panel')).toHaveAttribute('data-pdf-available', 'true')
   })
+
+  it('re-enables the download button after a failed download attempt', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network failed'))
+    mockUseSessionDocuments.mockReturnValue({
+      files: { docxUrl: null, pdfUrl: 'https://example.com/resume.pdf' },
+      isLoading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(<SessionDocumentsPanel isSidebarOpen />)
+
+    const button = screen.getByTestId('document-item-pdf')
+    await userEvent.click(button)
+
+    expect(screen.getByText('Falha no download. Tente novamente.')).toBeInTheDocument()
+    expect(button).not.toBeDisabled()
+
+    await userEvent.click(button)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

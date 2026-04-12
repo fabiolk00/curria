@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CVState } from '@/types/cv'
 
-import { generateFile, generateFileDeps } from './generate-file'
+import { generateFile, generateFileDeps, validateGenerationCvState } from './generate-file'
 
 function buildCvState(): CVState {
   return {
@@ -419,6 +419,33 @@ describe('generateFile', () => {
         generatedAt: undefined,
         error: 'Falta a data de inicio na sua primeira experiencia - BI Analyst - Grupo Positivo.',
       },
+    })
+  })
+
+  it('does not auto-fill a missing endDate for older experience entries', () => {
+    const validation = validateGenerationCvState({
+      ...buildCvState(),
+      experience: [
+        {
+          title: 'Current Role',
+          company: 'Acme',
+          startDate: '2022',
+          endDate: '',
+          bullets: ['Built billing APIs'],
+        },
+        {
+          title: 'Older Role',
+          company: 'Legacy Co',
+          startDate: '2019',
+          endDate: '',
+          bullets: ['Maintained legacy systems'],
+        },
+      ],
+    })
+
+    expect(validation).toEqual({
+      success: false,
+      errorMessage: 'Falta a data de termino na sua segunda experiencia - Older Role - Legacy Co. Se voce ainda trabalha nela, marque como atual ou informe uma data aproximada.',
     })
   })
 })

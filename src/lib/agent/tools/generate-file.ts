@@ -152,7 +152,7 @@ function getCurrentMonthYear(): string {
 }
 
 function isMostRecentExperienceIndex(index: number, totalEntries: number): boolean {
-  return index === 0 || index === totalEntries - 1
+  return totalEntries > 0 && index === 0
 }
 
 function normalizeGenerationCvState(input: GenerateFileInput['cv_state']): CVState {
@@ -325,7 +325,7 @@ function getValidationErrorMessage(error: z.ZodError<CVState>, cvState: CVState)
   return capValidationErrorMessage(humanizeValidationIssue(firstIssue, cvState))
 }
 
-function validateGenerationCvState(cvState: GenerateFileInput['cv_state']): GenerationValidationResult {
+export function validateGenerationCvState(cvState: GenerateFileInput['cv_state']): GenerationValidationResult {
   const normalizedCvState = normalizeGenerationCvState(cvState)
   const parsedCvState = GenerationReadyCVStateSchema.safeParse(normalizedCvState)
 
