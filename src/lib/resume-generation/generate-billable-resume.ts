@@ -69,6 +69,29 @@ function buildExistingGenerationSuccessResult(existing: ResumeGeneration): Billa
   }
 }
 
+function buildPendingGenerationInProgressResult(existing: ResumeGeneration): BillableGenerationResult {
+  return {
+    output: {
+      success: true,
+      pdfUrl: null,
+      docxUrl: null,
+      creditsUsed: 0,
+      resumeGenerationId: existing.id,
+      inProgress: true,
+    },
+    generatedOutput: {
+      status: 'generating',
+    },
+    patch: {
+      generatedOutput: {
+        status: 'generating',
+        error: undefined,
+      },
+    },
+    resumeGeneration: existing,
+  }
+}
+
 function areCvStatesEqual(left: GenerateFileInput['cv_state'], right?: GenerateFileInput['cv_state']): boolean {
   return Boolean(right) && JSON.stringify(left) === JSON.stringify(right)
 }
@@ -147,6 +170,10 @@ export async function generateBillableResume(input: {
           resumeGeneration: existing,
         }
       }
+
+      if (existing.status === 'pending') {
+        return buildPendingGenerationInProgressResult(existing)
+      }
     }
   }
 
@@ -170,7 +197,7 @@ export async function generateBillableResume(input: {
     }
   }
 
-  const resumeGeneration = await createPendingResumeGeneration({
+  const pendingGeneration = await createPendingResumeGeneration({
     userId: input.userId,
     sessionId: input.sessionId,
     resumeTargetId: input.targetId,
@@ -178,6 +205,11 @@ export async function generateBillableResume(input: {
     idempotencyKey: input.idempotencyKey,
     sourceCvSnapshot: input.sourceCvState,
   })
+  const resumeGeneration = pendingGeneration.generation
+
+  if (!pendingGeneration.wasCreated) {
+    return buildPendingGenerationInProgressResult(resumeGeneration)
+  }
 
   const generationResult: GenerateFileExecutionResult = await generateFile(
     {

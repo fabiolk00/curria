@@ -132,7 +132,36 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ATS score: 80/100.')
     expect(prompt).toContain('Gap match: 76/100.')
     expect(prompt).toContain('Missing skills: PostgreSQL.')
+    expect(prompt).toContain('## Profile Audit Snapshot')
     expect(prompt).toContain('<user_resume_data>')
+  })
+
+  it('includes the realism guardrail when the target fit is weak', () => {
+    const prompt = buildSystemPrompt(buildSession({
+      phase: 'confirm',
+      agentState: {
+        targetFitAssessment: {
+          level: 'weak',
+          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
+          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          assessedAt: '2026-03-25T12:00:00.000Z',
+        },
+        gapAnalysis: {
+          result: {
+            matchScore: 38,
+            missingSkills: ['Kubernetes', 'Go', 'Terraform'],
+            weakAreas: ['experience', 'summary'],
+            improvementSuggestions: ['Build hands-on infrastructure projects first'],
+          },
+          analyzedAt: '2026-03-25T12:00:00.000Z',
+        },
+      },
+    }))
+
+    expect(prompt).toContain('## Career Fit Guardrail')
+    expect(prompt).toContain('If the fit is weak, give an honest realism check before generating anything')
+    expect(prompt).toContain('Current fit level: weak.')
+    expect(prompt).toContain('Current gap score: 38/100.')
   })
 
   it('does not include raw resume text after structured state already exists', () => {

@@ -128,4 +128,87 @@ describe('generateBillableResume', () => {
     expect(mockCreatePendingResumeGeneration).not.toHaveBeenCalled()
     expect(mockGenerateFile).not.toHaveBeenCalled()
   })
+
+  it('short-circuits duplicate in-flight pending generations without rendering twice', async () => {
+    const cvState = buildCvState()
+    mockGetLatestCvVersionForScope.mockResolvedValue({
+      id: 'ver_rewrite',
+      sessionId: 'sess_123',
+      snapshot: cvState,
+      source: 'rewrite',
+      createdAt: new Date('2026-04-12T12:00:00.000Z'),
+    })
+    mockCheckUserQuota.mockResolvedValue(true)
+    mockCreatePendingResumeGeneration.mockResolvedValue({
+      generation: {
+        id: 'gen_pending',
+        userId: 'usr_123',
+        sessionId: 'sess_123',
+        type: 'ATS_ENHANCEMENT',
+        status: 'pending',
+        idempotencyKey: 'dup_key',
+        sourceCvSnapshot: cvState,
+        versionNumber: 1,
+        createdAt: new Date('2026-04-12T12:00:00.000Z'),
+        updatedAt: new Date('2026-04-12T12:00:00.000Z'),
+      },
+      wasCreated: false,
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+      idempotencyKey: 'dup_key',
+    })
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: null,
+      docxUrl: null,
+      creditsUsed: 0,
+      resumeGenerationId: 'gen_pending',
+      inProgress: true,
+    })
+    expect(result.generatedOutput).toEqual({
+      status: 'generating',
+    })
+    expect(result.resumeGeneration?.id).toBe('gen_pending')
+    expect(mockGenerateFile).not.toHaveBeenCalled()
+    expect(mockConsumeCreditForGeneration).not.toHaveBeenCalled()
+  })
+
+  it('returns an in-progress response when the idempotency key already points to a pending generation', async () => {
+    const cvState = buildCvState()
+    mockGetResumeGenerationByIdempotencyKey.mockResolvedValue({
+      id: 'gen_pending_existing',
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      type: 'ATS_ENHANCEMENT',
+      status: 'pending',
+      idempotencyKey: 'dup_key',
+      sourceCvSnapshot: cvState,
+      versionNumber: 1,
+      createdAt: new Date('2026-04-12T12:00:00.000Z'),
+      updatedAt: new Date('2026-04-12T12:00:00.000Z'),
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+      idempotencyKey: 'dup_key',
+    })
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: null,
+      docxUrl: null,
+      creditsUsed: 0,
+      resumeGenerationId: 'gen_pending_existing',
+      inProgress: true,
+    })
+    expect(mockCreatePendingResumeGeneration).not.toHaveBeenCalled()
+    expect(mockGenerateFile).not.toHaveBeenCalled()
+  })
 })

@@ -146,6 +146,54 @@ describe('generate route', () => {
     }, expect.objectContaining({ id: 'sess_123' }))
   })
 
+  it('blocks target generation until the realism override was explicitly confirmed', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue({
+      ...buildSession(),
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Frontend developer with React and CSS.',
+        targetJobDescription: 'Senior DevOps Engineer with Kubernetes, Terraform and AWS.',
+        targetFitAssessment: {
+          level: 'weak' as const,
+          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
+          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          assessedAt: '2026-04-12T12:00:00.000Z',
+        },
+        gapAnalysis: {
+          analyzedAt: '2026-04-12T12:00:00.000Z',
+          result: {
+            matchScore: 32,
+            missingSkills: ['Kubernetes', 'Terraform', 'AWS'],
+            weakAreas: ['experience'],
+            improvementSuggestions: ['Build infrastructure projects before targeting this level.'],
+          },
+        },
+        phaseMeta: {
+          careerFitWarningIssuedAt: '2026-04-12T12:05:00.000Z',
+          careerFitWarningTargetJobDescription: 'Senior DevOps Engineer with Kubernetes, Terraform and AWS.',
+        },
+      },
+    } as never)
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/generate', {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'target', targetId: 'target_123' }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      success: false,
+      error: 'A vaga parece um encaixe fraco para o perfil atual. Confirme explicitamente no chat que deseja continuar antes de gerar esta versao.',
+      code: 'CAREER_FIT_CONFIRMATION_REQUIRED',
+    })
+    expect(dispatchTool).not.toHaveBeenCalled()
+  })
+
   it('returns creditsUsed: 0 for an idempotent replay', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue(buildSession())
@@ -179,6 +227,38 @@ describe('generate route', () => {
       target_id: undefined,
       idempotency_key: 'req_existing',
     }, expect.objectContaining({ id: 'sess_123' }))
+  })
+
+  it('returns 202 when the same generation request is already in progress', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
+      success: true,
+      pdfUrl: null,
+      docxUrl: null,
+      creditsUsed: 0,
+      resumeGenerationId: 'gen_inflight_123',
+      inProgress: true,
+    }))
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/generate', {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'base', clientRequestId: 'req_inflight' }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({
+      success: true,
+      inProgress: true,
+      scope: 'base',
+      targetId: undefined,
+      creditsUsed: 0,
+      generationType: 'ATS_ENHANCEMENT',
+      resumeGenerationId: 'gen_inflight_123',
+    })
   })
 
   it('propagates structured generation failures', async () => {

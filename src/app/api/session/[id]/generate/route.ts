@@ -5,6 +5,7 @@ import { getHttpStatusForToolError, isToolFailure } from '@/lib/agent/tool-error
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { dispatchTool } from '@/lib/agent/tools'
 import { getSession } from '@/lib/db/sessions'
+import { hasConfirmedCareerFitOverride, requiresCareerFitWarning } from '@/lib/agent/profile-review'
 
 const BodySchema = z.discriminatedUnion('scope', [
   z.object({
@@ -38,6 +39,14 @@ export async function POST(
   }
 
   try {
+    if (body.data.scope === 'target' && requiresCareerFitWarning(session) && !hasConfirmedCareerFitOverride(session)) {
+      return NextResponse.json({
+        success: false,
+        error: 'A vaga parece um encaixe fraco para o perfil atual. Confirme explicitamente no chat que deseja continuar antes de gerar esta versao.',
+        code: 'CAREER_FIT_CONFIRMATION_REQUIRED',
+      }, { status: 409 })
+    }
+
     const rawResult = await dispatchTool('generate_file', {
       cv_state: session.cvState,
       target_id: body.data.scope === 'target' ? body.data.targetId : undefined,
@@ -50,6 +59,18 @@ export async function POST(
         { success: false, error: result.error, code: result.code },
         { status: getHttpStatusForToolError(result.code) },
       )
+    }
+
+    if ((result as { inProgress?: boolean }).inProgress) {
+      return NextResponse.json({
+        success: true,
+        inProgress: true,
+        scope: body.data.scope,
+        targetId: body.data.scope === 'target' ? body.data.targetId : undefined,
+        creditsUsed: (result as { creditsUsed?: number }).creditsUsed ?? 0,
+        generationType: body.data.scope === 'target' ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT',
+        resumeGenerationId: (result as { resumeGenerationId?: string }).resumeGenerationId,
+      }, { status: 202 })
     }
 
     return NextResponse.json({

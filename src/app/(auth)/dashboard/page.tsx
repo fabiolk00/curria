@@ -33,6 +33,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const currentCredits = appUser?.creditAccount.creditsRemaining ?? 0
   const activeRecurringPlan = billingInfo?.hasActiveRecurringSubscription ? billingInfo.plan : null
+  const missingContactInfo = {
+    missingEmail: !clerkUser?.primaryEmailAddress?.emailAddress?.trim(),
+    missingPhone: !clerkUser?.primaryPhoneNumber?.phoneNumber?.trim(),
+  }
   const displayName =
     clerkUser?.firstName?.trim()
     || clerkUser?.fullName?.trim()
@@ -43,6 +47,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <ResumeWorkspace
       initialSessionId={initialSessionId || undefined}
       userName={displayName}
+      missingContactInfo={missingContactInfo}
       activeRecurringPlan={activeRecurringPlan}
       currentCredits={currentCredits}
     />

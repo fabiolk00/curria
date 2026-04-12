@@ -3,6 +3,13 @@ import { APIError } from 'openai'
 import { createHash } from 'crypto'
 
 import { buildSystemPrompt, trimMessages } from '@/lib/agent/context-builder'
+import {
+  buildCareerFitWarningText,
+  formatProfileAuditSummary,
+  hasActiveCareerFitWarning,
+  hasConfirmedCareerFitOverride,
+  requiresCareerFitWarning,
+} from '@/lib/agent/profile-review'
 import { AGENT_CONFIG, resolveAgentModelForPhase } from '@/lib/agent/config'
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import { dispatchToolWithContext, getToolDefinitionsForPhase } from '@/lib/agent/tools'
@@ -559,7 +566,116 @@ function resolveGenerationPrerequisiteMessage(session: Session): string | null {
     return 'Ja tenho seu curriculo salvo. Cole a descricao da vaga antes de gerar o curriculo otimizado ATS.'
   }
 
+  if (hasPendingCareerFitOverride(session)) {
+    return buildCareerFitWarningText(session)
+  }
+
   return null
+}
+
+function isCareerFitOverrideConfirmation(message: string): boolean {
+  const normalized = normalizeText(message)
+
+  if (!normalized) {
+    return false
+  }
+
+  return (
+    /\b(entendo|compreendo|eu entendo)\b/.test(normalized)
+    && /\b(quero continuar|quero prosseguir|mesmo assim quero continuar|ainda assim quero continuar|prosseguir mesmo assim|continuar mesmo assim)\b/.test(normalized)
+  )
+}
+
+function shouldShowCareerFitWarning(session: Session): boolean {
+  return requiresCareerFitWarning(session) && !hasActiveCareerFitWarning(session)
+}
+
+function hasPendingCareerFitOverride(session: Session): boolean {
+  const targetJobDescription = session.agentState.targetJobDescription?.trim()
+  const phaseMeta = session.agentState.phaseMeta
+
+  if (!targetJobDescription || !phaseMeta?.careerFitWarningIssuedAt) {
+    return false
+  }
+
+  if (phaseMeta.careerFitWarningTargetJobDescription?.trim() !== targetJobDescription) {
+    return false
+  }
+
+  if (!phaseMeta.careerFitOverrideConfirmedAt) {
+    return true
+  }
+
+  return phaseMeta.careerFitOverrideTargetJobDescription?.trim() !== targetJobDescription
+}
+
+async function markCareerFitWarningIssued(session: Session): Promise<Parameters<typeof applyToolPatchWithVersion>[1] | null> {
+  const targetJobDescription = session.agentState.targetJobDescription?.trim()
+
+  if (!targetJobDescription) {
+    return null
+  }
+
+  const patch = {
+    agentState: {
+      phaseMeta: {
+        careerFitWarningIssuedAt: new Date().toISOString(),
+        careerFitWarningTargetJobDescription: targetJobDescription,
+      },
+    },
+  } satisfies Parameters<typeof applyToolPatchWithVersion>[1]
+
+  await applyToolPatchWithVersion(session, patch)
+  return patch
+}
+
+async function confirmCareerFitOverride(session: Session): Promise<Parameters<typeof applyToolPatchWithVersion>[1] | null> {
+  const targetJobDescription = session.agentState.targetJobDescription?.trim()
+
+  if (!targetJobDescription) {
+    return null
+  }
+
+  const patch = {
+    agentState: {
+      phaseMeta: {
+        careerFitOverrideConfirmedAt: new Date().toISOString(),
+        careerFitOverrideTargetJobDescription: targetJobDescription,
+      },
+    },
+  } satisfies Parameters<typeof applyToolPatchWithVersion>[1]
+
+  await applyToolPatchWithVersion(session, patch)
+  return patch
+}
+
+function buildCareerFitOverrideAcknowledgement(session: Session): string {
+  const profileAudit = formatProfileAuditSummary(session.cvState, 2)
+
+  return [
+    'Entendido. Vou continuar mesmo com esse desalinhamento e focar em deixar sua candidatura o mais competitiva possivel dentro do seu historico real.',
+    profileAudit ? `Antes de seguir, eu tambem reforcaria estes pontos no seu perfil salvo: ${profileAudit}` : null,
+    'Agora posso adaptar seu resumo, experiencia ou competencias para a vaga. Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.',
+  ].filter(Boolean).join(' ')
+}
+
+async function* maybeIssueCareerFitWarning(params: {
+  session: Session
+}): AsyncGenerator<AgentLoopEvent, string | null> {
+  if (!shouldShowCareerFitWarning(params.session)) {
+    return null
+  }
+
+  const patch = await markCareerFitWarningIssued(params.session)
+  if (patch) {
+    yield {
+      type: 'patch',
+      patch,
+      phase: params.session.phase,
+    }
+  }
+
+  return buildCareerFitWarningText(params.session)
 }
 
 function normalizeForJobDetection(text: string): string {
@@ -685,6 +801,13 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
   }
 
   if (hasTargetJobContext && hasStructuredTargetAnalysis) {
+    const careerFitWarning = hasPendingCareerFitOverride(session)
+      ? buildCareerFitWarningText(session)
+      : null
+    if (careerFitWarning) {
+      return careerFitWarning
+    }
+
     const parts = ['Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo.']
 
     if (session.atsScore) {
@@ -722,7 +845,12 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
     return 'Recebi a vaga e vou usá-la como referência. Tente novamente com um pedido curto, como "compare meu currículo com esta vaga" ou "reescreva meu resumo para esta vaga".'
   }
 
-  return 'Recebi sua mensagem, mas esta resposta falhou. Tente repetir o pedido em uma frase curta e objetiva que eu continuo daqui.'
+  const profileAuditSummary = formatProfileAuditSummary(session.cvState, 3)
+  if (profileAuditSummary) {
+    return `Tenho seu curriculo salvo e ja identifiquei alguns pontos que podem reduzir sua visibilidade para recrutadores e ATS: ${profileAuditSummary} Cole a descricao da vaga que eu cruzo isso com a oportunidade certa.`
+  }
+
+  return 'Tenho seu curriculo salvo. Cole a descricao da vaga que eu comparo seu perfil com a oportunidade e sigo com os ajustes mais estrategicos.'
 }
 
 function buildDeterministicVacancyBootstrap(
@@ -734,6 +862,13 @@ function buildDeterministicVacancyBootstrap(
 
   if (!hasTargetJobContext) {
     return buildDeterministicAssistantFallback(session, userMessage)
+  }
+
+  const careerFitWarning = hasPendingCareerFitOverride(session)
+    ? buildCareerFitWarningText(session)
+    : null
+  if (careerFitWarning) {
+    return careerFitWarning
   }
 
   const parts = ['Recebi a vaga e comparei com seu curriculo com foco em aderencia ATS.']
@@ -794,6 +929,11 @@ function buildDeterministicVacancyBootstrap(
     parts.push('Posso otimizar agora seu resumo, experiencia ou competencias com base nessa vaga.')
   }
 
+  const profileAuditSummary = formatProfileAuditSummary(session.cvState, 2)
+  if (profileAuditSummary) {
+    parts.push(`No seu perfil base, eu ainda reforcaria estes pontos: ${profileAuditSummary}`)
+  }
+
   parts.push('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
 
   return parts.join(' ')
@@ -804,6 +944,16 @@ function buildDialogFallback(session: Session, userMessage: string): Determinist
   const hasTargetJobContext = Boolean(session.agentState.targetJobDescription?.trim() || latestMessageLooksLikeVacancy)
   const rewriteFocus = resolveRewriteFocus(userMessage)
   const latestMessageIsRewriteRequest = isDialogRewriteRequest(userMessage)
+  const careerFitWarning = hasPendingCareerFitOverride(session)
+    ? buildCareerFitWarningText(session)
+    : null
+
+  if (careerFitWarning) {
+    return {
+      kind: 'dialog_career_fit_warning',
+      text: careerFitWarning,
+    }
+  }
 
   if (latestMessageLooksLikeVacancy) {
     return {
@@ -1588,6 +1738,20 @@ async function* handleConfirmedGeneration(params: {
   })
 
   if (generationResult.success) {
+    const generationOutput = generationResult.output
+    const generationInProgress = Boolean(
+      generationOutput
+      && typeof generationOutput === 'object'
+      && 'success' in generationOutput
+      && generationOutput.success === true
+      && 'inProgress' in generationOutput
+      && generationOutput.inProgress === true,
+    )
+
+    if (generationInProgress) {
+      return 'Sua geracao ja esta em andamento. Aguarde alguns segundos e tente novamente para recuperar o resultado sem consumir outro credito.'
+    }
+
     let refreshedAtsTotal: number | null = null
 
     if (params.session.agentState.targetJobDescription?.trim()) {
@@ -1712,6 +1876,11 @@ async function* handleDeterministicRewriteRequest(params: {
     return 'Ja tenho seu curriculo salvo. Cole a descricao da vaga antes de pedir a reescrita otimizada.'
   }
 
+  if (hasPendingCareerFitOverride(params.session)) {
+    return buildCareerFitWarningText(params.session)
+      ?? 'Antes de otimizar para essa vaga, preciso do seu ok explicito para seguir mesmo com o desalinhamento atual.'
+  }
+
   if (params.session.phase !== 'dialog') {
     yield* runDeterministicTool({
       session: params.session,
@@ -1791,9 +1960,86 @@ export async function* runAgentLoop(
   let assistantResponded = false
   let cachedSystemPrompt = buildSystemPrompt(session)
   let systemPromptDirty = false
+  const pendingCareerFitOverride = Boolean(
+    session.agentState.targetJobDescription?.trim()
+    && session.agentState.phaseMeta?.careerFitWarningIssuedAt
+    && session.agentState.phaseMeta?.careerFitWarningTargetJobDescription?.trim() === session.agentState.targetJobDescription?.trim()
+    && !session.agentState.phaseMeta?.careerFitOverrideConfirmedAt,
+  )
 
   try {
+    if (pendingCareerFitOverride && isCareerFitOverrideConfirmation(userMessage)) {
+      const patch = await confirmCareerFitOverride(session)
+      if (patch) {
+        yield {
+          type: 'patch',
+          patch,
+          phase: session.phase,
+        }
+      }
+
+      const careerFitAcknowledgement = buildCareerFitOverrideAcknowledgement(session)
+
+      yield {
+        type: 'text',
+        content: careerFitAcknowledgement,
+      }
+
+      assistantResponded = true
+      await appendMessage(session.id, 'assistant', careerFitAcknowledgement)
+
+      yield {
+        type: 'done',
+        requestId,
+        sessionId: session.id,
+        phase: session.phase,
+        atsScore: session.atsScore,
+        messageCount: session.messageCount + 1,
+        maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+        isNewSession,
+        toolIterations,
+      }
+      return
+    }
+
     if (isGenerationApproval(userMessage)) {
+      if (hasPendingCareerFitOverride(session) && hasActiveCareerFitWarning(session)) {
+        const overridePatch = await confirmCareerFitOverride(session)
+        if (overridePatch) {
+          yield {
+            type: 'patch',
+            patch: overridePatch,
+            phase: session.phase,
+          }
+        }
+      }
+
+      const careerFitWarning = pendingCareerFitOverride
+        ? buildCareerFitWarningText(session)
+        : (yield* maybeIssueCareerFitWarning({ session }))
+      if (careerFitWarning) {
+        yield {
+          type: 'text',
+          content: careerFitWarning,
+        }
+
+        assistantResponded = true
+        await appendMessage(session.id, 'assistant', careerFitWarning)
+
+        yield {
+          type: 'done',
+          requestId,
+          sessionId: session.id,
+          phase: session.phase,
+          atsScore: session.atsScore,
+          messageCount: session.messageCount + 1,
+          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+          isNewSession,
+          toolIterations,
+        }
+        return
+      }
+
       const generationPrerequisiteMessage = resolveGenerationPrerequisiteMessage(session)
       const generationAssistantText = generationPrerequisiteMessage
         ?? (yield* handleConfirmedGeneration({
@@ -1839,6 +2085,57 @@ export async function* runAgentLoop(
     }
 
     if (isGenerationRequest(userMessage)) {
+      if (hasPendingCareerFitOverride(session) && hasActiveCareerFitWarning(session)) {
+        const overridePatch = await confirmCareerFitOverride(session)
+        if (overridePatch) {
+          yield {
+            type: 'patch',
+            patch: overridePatch,
+            phase: session.phase,
+          }
+        }
+      }
+
+      const careerFitWarning = pendingCareerFitOverride
+        ? buildCareerFitWarningText(session)
+        : (yield* maybeIssueCareerFitWarning({ session }))
+      if (careerFitWarning) {
+        yield {
+          type: 'text',
+          content: careerFitWarning,
+        }
+
+        assistantResponded = true
+        await appendMessage(session.id, 'assistant', careerFitWarning)
+
+        logInfo('agent.stream.completed', {
+          ...releaseMetadata,
+          requestId,
+          sessionId: session.id,
+          appUserId,
+          phase: session.phase,
+          stateVersion: session.stateVersion,
+          isNewSession,
+          messageCountAfter: session.messageCount + 1,
+          toolLoopsUsed: toolIterations,
+          success: true,
+          latencyMs: Date.now() - requestStartedAt,
+        })
+
+        yield {
+          type: 'done',
+          requestId,
+          sessionId: session.id,
+          phase: session.phase,
+          atsScore: session.atsScore,
+          messageCount: session.messageCount + 1,
+          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
+          isNewSession,
+          toolIterations,
+        }
+        return
+      }
+
       const generationAssistantText = resolveGenerationPrerequisiteMessage(session)
         ?? (yield* handleGenerationConfirmationRequest({
           session,
@@ -1961,7 +2258,9 @@ export async function* runAgentLoop(
         systemPromptDirty = true
       }
 
-      const bootstrapAssistantText = buildDeterministicVacancyBootstrap(session, userMessage, targetPreparation)
+      const bootstrapCareerFitWarning = yield* maybeIssueCareerFitWarning({ session })
+      const bootstrapAssistantText = bootstrapCareerFitWarning
+        ?? buildDeterministicVacancyBootstrap(session, userMessage, targetPreparation)
       const bootstrapFallbackKind = session.atsScore
         || session.agentState.targetFitAssessment
         || session.agentState.gapAnalysis

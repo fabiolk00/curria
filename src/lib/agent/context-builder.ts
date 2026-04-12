@@ -1,4 +1,5 @@
 import { AGENT_CONFIG } from '@/lib/agent/config'
+import { buildCareerFitPromptSnapshot, buildProfileAuditSnapshot } from '@/lib/agent/profile-review'
 import { logWarn } from '@/lib/observability/structured-log'
 import type { Phase, Session } from '@/types/agent'
 
@@ -9,12 +10,16 @@ Language: respond in the same language as the user. If responding in Portuguese,
 Default to concise answers. Keep explanatory prose under 120 words unless the user asks for more detail or you are showing rewritten resume content.
 Never invent information. Only improve or analyze what the user actually provided.
 Never dump, paraphrase, or enumerate the raw cvState/JSON back to the user. Translate stored resume data into ATS analysis, concrete rewrites, or precise next steps.
+If the user shared a resume, LinkedIn profile, or saved profile, proactively point out the main missing or weak profile elements that hurt ATS parsing, recruiter reach, or callback odds, and briefly explain why they matter.
+If the user wants to discuss ATS, resumes, interviews, job search, or career strategy without sharing a profile, switch into a collaborative advisor mode and help with practical back-and-forth guidance.
 
 ## Career fit honesty
 - Be honest about alignment between the user's profile and the target job.
 - If the target role is a poor fit for the user's current background, say so clearly and respectfully.
 - If the profile is adjacent but not fully aligned, say that the fit is partial and explain the main gaps.
 - Do not oversell. Resume rewriting alone does not compensate for major experience mismatch.
+- Before generating or optimizing job-specific materials, compare the user's trajectory, skills, and seniority against the vacancy.
+- If the mismatch is major, explain the gap, recommend more realistic next steps, and wait for explicit user confirmation before proceeding anyway.
 
 ## Job posting URLs
 The user may send job-posting links. If the link content was extracted successfully, it appears in context as extracted vacancy content. Use it as the target job description.
@@ -37,6 +42,7 @@ const PHASE_INSTRUCTIONS: Record<Phase, string> = {
 Goal: receive the target vacancy and move into analysis quickly.
 
 - If extracted resume text is already available in context, treat ingestion as complete.
+- If resume context is already available, surface the most important missing or weak profile elements briefly before asking for the vacancy.
 - If the current turn includes a job description, acknowledge it and call \`set_phase\` with "analysis".
 - If resume context is missing, ask the user to complete their saved profile before continuing.
 - Ask at most one question.`,
@@ -56,6 +62,7 @@ Goal: improve the resume through targeted edits.
 
 - Use existing score, fit, and gap data instead of repeating it.
 - Start with a brief fit judgment.
+- If fit is weak, give a realism check before offering generation and tell the user the main gaps and the safer next step.
 - Ask at most one targeted follow-up question.
 - Rewrite only when needed and keep the response concise.
 - When the user asks to optimize, adapt, improve, or rewrite, prefer producing or triggering an actual rewrite over describing the current resume state.
@@ -65,6 +72,7 @@ Goal: improve the resume through targeted edits.
 Goal: get explicit approval before generating files.
 
 - Present a short final summary: score, key rewrites, and target alignment.
+- If fit is weak, restate the realism warning before asking for approval.
 - Ask explicitly for the approval keyword: "Aceito".
 - Only move to generation after the user explicitly replies with "Aceito" or clicks the approval button.
 - If the user wants more changes, continue the editing flow.`,
@@ -94,6 +102,8 @@ type PromptSectionKey =
   | 'cvState'
   | 'sourceResumeText'
   | 'targetJob'
+  | 'profileAudit'
+  | 'careerFitGuardrail'
   | 'analysisSnapshot'
   | 'rewriteHistory'
   | 'generatedOutput'
@@ -280,6 +290,10 @@ function buildAnalysisSnapshotContext(session: Session): string {
   return lines.length > 0 ? lines.join('\n') : ''
 }
 
+function buildProfileAuditContext(session: Session): string {
+  return buildProfileAuditSnapshot(session.cvState)
+}
+
 function buildRewriteHistoryContext(session: Session): string {
   const entries = Object.entries(session.agentState.rewriteHistory)
     .sort(([, left], [, right]) => {
@@ -334,6 +348,7 @@ function getPhaseSections(session: Session): PromptSection[] {
       sections.push(
         { key: 'cvState', heading: '## Canonical Resume State', body: buildCvStateContext(session, 1_800), minChars: 400 },
         { key: 'sourceResumeText', heading: '## Extracted Resume Text', body: buildResumeTextContext(session, 1_400), minChars: 250 },
+        { key: 'profileAudit', heading: '## Profile Audit Snapshot', body: buildProfileAuditContext(session), minChars: 180 },
         { key: 'targetJob', heading: '## Target Job Description', body: buildTargetJobContext(session, 900), minChars: 200 },
       )
       break
@@ -341,6 +356,7 @@ function getPhaseSections(session: Session): PromptSection[] {
       sections.push(
         { key: 'cvState', heading: '## Canonical Resume State', body: buildCompactCvStateContext(session, 1_700), minChars: 500 },
         { key: 'sourceResumeText', heading: '## Extracted Resume Text', body: buildResumeTextContext(session, 900), minChars: 180 },
+        { key: 'profileAudit', heading: '## Profile Audit Snapshot', body: buildProfileAuditContext(session), minChars: 180 },
         { key: 'targetJob', heading: '## Target Job Description', body: buildTargetJobContext(session, 950), minChars: 220 },
         { key: 'analysisSnapshot', heading: '## Analysis Snapshot', body: buildAnalysisSnapshotContext(session), minChars: 160 },
       )
@@ -348,6 +364,7 @@ function getPhaseSections(session: Session): PromptSection[] {
     case 'dialog':
       sections.push(
         { key: 'cvState', heading: '## Canonical Resume State', body: buildCompactCvStateContext(session, 1_900), minChars: 600 },
+        { key: 'profileAudit', heading: '## Profile Audit Snapshot', body: buildProfileAuditContext(session), minChars: 180 },
         { key: 'targetJob', heading: '## Target Job Description', body: buildTargetJobContext(session, 900), minChars: 220 },
         { key: 'analysisSnapshot', heading: '## Analysis Snapshot', body: buildAnalysisSnapshotContext(session), minChars: 160 },
         { key: 'rewriteHistory', heading: '## Recent Rewrite History', body: buildRewriteHistoryContext(session), minChars: 100 },
@@ -356,8 +373,15 @@ function getPhaseSections(session: Session): PromptSection[] {
     case 'confirm':
       sections.push(
         { key: 'cvState', heading: '## Canonical Resume State', body: buildCompactCvStateContext(session, 1_900), minChars: 600 },
+        { key: 'profileAudit', heading: '## Profile Audit Snapshot', body: buildProfileAuditContext(session), minChars: 180 },
         { key: 'targetJob', heading: '## Target Job Description', body: buildTargetJobContext(session, 850), minChars: 220 },
         { key: 'analysisSnapshot', heading: '## Analysis Snapshot', body: buildAnalysisSnapshotContext(session), minChars: 160 },
+        {
+          key: 'careerFitGuardrail',
+          heading: '## Career Fit Guardrail',
+          body: buildCareerFitPromptSnapshot(session.agentState.targetFitAssessment, session.agentState.gapAnalysis?.result),
+          minChars: 120,
+        },
         { key: 'rewriteHistory', heading: '## Recent Rewrite History', body: buildRewriteHistoryContext(session), minChars: 100 },
       )
       break
@@ -386,6 +410,7 @@ function fitSectionsToBudget(session: Session, sections: PromptSection[], static
     'sourceResumeText',
     'rewriteHistory',
     'analysisSnapshot',
+    'careerFitGuardrail',
     'targetJob',
     'cvState',
     'preloadedResume',

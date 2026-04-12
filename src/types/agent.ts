@@ -39,6 +39,10 @@ export type AgentState = {
     analysisCompletedAt?: string
     confirmRequestedAt?: string
     generationConfirmedAt?: string
+    careerFitWarningIssuedAt?: string
+    careerFitWarningTargetJobDescription?: string
+    careerFitOverrideConfirmedAt?: string
+    careerFitOverrideTargetJobDescription?: string
   }
 }
 
@@ -150,6 +154,15 @@ export type TargetFitAssessment = {
   assessedAt: string
 }
 
+export type CareerFitCheckpoint = {
+  status: 'pending_confirmation'
+  targetJobDescription: string
+  summary: string
+  reasons: string[]
+  nextSteps: string[]
+  assessedAt: string
+}
+
 export type { ToolErrorCode, ToolFailure }
 
 // ── Tool input/output types ───────────────────────────────────────────
@@ -240,11 +253,12 @@ export type GenerateFileInput = {
 export type GenerateFileOutput =
   | {
       success: true
-      pdfUrl: string
+      pdfUrl: string | null
       docxUrl?: string | null
       warnings?: string[]
       creditsUsed?: number
       resumeGenerationId?: string
+      inProgress?: boolean
     }
   | ToolFailure
 

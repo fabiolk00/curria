@@ -176,6 +176,12 @@ describe('runAgentLoop streaming', () => {
         session.agentState = {
           ...session.agentState,
           ...patch.agentState,
+          phaseMeta: patch.agentState.phaseMeta
+            ? {
+              ...session.agentState.phaseMeta,
+              ...patch.agentState.phaseMeta,
+            }
+            : session.agentState.phaseMeta,
         }
       }
     })
@@ -1729,6 +1735,270 @@ describe('runAgentLoop streaming', () => {
     )
   })
 
+  it('surfaces a realism warning before generating when the vacancy is a weak fit and no warning was shown yet', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
+        targetFitAssessment: {
+          level: 'weak' as const,
+          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
+          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          assessedAt: '2026-04-12T12:00:00.000Z',
+        },
+        gapAnalysis: {
+          result: {
+            matchScore: 34,
+            missingSkills: ['Kubernetes', 'Go', 'Terraform'],
+            weakAreas: ['experience', 'summary'],
+            improvementSuggestions: ['Build infrastructure projects before targeting this level.'],
+          },
+          analyzedAt: '2026-04-12T12:00:00.000Z',
+        },
+      },
+    }
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Aceito',
+      appUserId: 'usr_123',
+      requestId: 'req_generation_realism_warning',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('encaixe fraco para o seu perfil atual')
+    expect(finalText).toContain('Entendo, mas quero continuar')
+    expect((session.agentState as { phaseMeta?: { careerFitWarningIssuedAt?: string } }).phaseMeta?.careerFitWarningIssuedAt).toBeDefined()
+    expect((session.agentState as { phaseMeta?: { careerFitWarningTargetJobDescription?: string } }).phaseMeta?.careerFitWarningTargetJobDescription).toContain('Senior Platform Engineer')
+    expect(mockDispatchToolWithContext).not.toHaveBeenCalledWith(
+      'generate_file',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
+  })
+
+  it('still blocks generation after the realism warning until the explicit override is confirmed', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      atsScore: {
+        total: 52,
+        breakdown: {
+          format: 70,
+          structure: 60,
+          keywords: 40,
+          contact: 95,
+          impact: 20,
+        },
+        issues: [],
+        suggestions: [],
+      },
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
+        targetFitAssessment: {
+          level: 'weak' as const,
+          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
+          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          assessedAt: '2026-04-12T12:00:00.000Z',
+        },
+        gapAnalysis: {
+          result: {
+            matchScore: 34,
+            missingSkills: ['Kubernetes', 'Go', 'Terraform'],
+            weakAreas: ['experience', 'summary'],
+            improvementSuggestions: ['Build infrastructure projects before targeting this level.'],
+          },
+          analyzedAt: '2026-04-12T12:00:00.000Z',
+        },
+        phaseMeta: {
+          careerFitWarningIssuedAt: '2026-04-12T12:05:00.000Z',
+          careerFitWarningTargetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
+        },
+      },
+    }
+
+    mockDispatchToolWithContext.mockImplementation(async (toolName) => {
+      if (toolName === 'set_phase') {
+        return {
+          output: { success: true, phase: 'generation' },
+          outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+          persistedPatch: {
+            phase: 'generation',
+          },
+        }
+      }
+
+      if (toolName === 'create_target_resume') {
+        return {
+          output: {
+            success: true,
+            targetId: 'target_weak_123',
+            targetJobDescription: session.agentState.targetJobDescription,
+            derivedCvState: session.cvState,
+          },
+          outputJson: JSON.stringify({ success: true, targetId: 'target_weak_123' }),
+          persistedPatch: {
+            agentState: {
+              targetJobDescription: session.agentState.targetJobDescription,
+            },
+          },
+        }
+      }
+
+      if (toolName === 'generate_file') {
+        return {
+          output: {
+            success: true,
+            pdfUrl: 'https://example.com/resume.pdf',
+          },
+          outputJson: JSON.stringify({ success: true, pdfUrl: 'https://example.com/resume.pdf' }),
+          persistedPatch: {
+            generatedOutput: {
+              status: 'ready',
+              pdfPath: 'usr_123/sess_123/resume.pdf',
+            },
+          },
+        }
+      }
+
+      if (toolName === 'score_ats') {
+        return {
+          output: {
+            success: true,
+            result: {
+              total: 56,
+              breakdown: {
+                format: 70,
+                structure: 60,
+                keywords: 45,
+                contact: 95,
+                impact: 30,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+          outputJson: JSON.stringify({ success: true, result: { total: 56 } }),
+          persistedPatch: {
+            atsScore: {
+              total: 56,
+              breakdown: {
+                format: 70,
+                structure: 60,
+                keywords: 45,
+                contact: 95,
+                impact: 30,
+              },
+              issues: [],
+              suggestions: [],
+            },
+          },
+        }
+      }
+
+      return {
+        output: { success: true },
+        outputJson: JSON.stringify({ success: true }),
+        persistedPatch: undefined,
+      }
+    })
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Aceito',
+      appUserId: 'usr_123',
+      requestId: 'req_generation_after_realism_warning',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Entendo, mas quero continuar')
+    expect(mockDispatchToolWithContext).not.toHaveBeenCalledWith(
+      'generate_file',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
+  })
+
+  it('stores the explicit realism override confirmation and unlocks the targeted flow', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
+        targetFitAssessment: {
+          level: 'weak' as const,
+          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
+          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          assessedAt: '2026-04-12T12:00:00.000Z',
+        },
+        gapAnalysis: {
+          result: {
+            matchScore: 34,
+            missingSkills: ['Kubernetes', 'Go', 'Terraform'],
+            weakAreas: ['experience', 'summary'],
+            improvementSuggestions: ['Build infrastructure projects before targeting this level.'],
+          },
+          analyzedAt: '2026-04-12T12:00:00.000Z',
+        },
+        phaseMeta: {
+          careerFitWarningIssuedAt: '2026-04-12T12:05:00.000Z',
+          careerFitWarningTargetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
+        },
+      },
+    }
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Entendo, mas quero continuar',
+      appUserId: 'usr_123',
+      requestId: 'req_realism_override_confirmed',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('Vou continuar mesmo com esse desalinhamento')
+    expect((session.agentState as { phaseMeta?: { careerFitOverrideConfirmedAt?: string } }).phaseMeta?.careerFitOverrideConfirmedAt).toBeDefined()
+    expect((session.agentState as { phaseMeta?: { careerFitOverrideTargetJobDescription?: string } }).phaseMeta?.careerFitOverrideTargetJobDescription).toContain('Senior Platform Engineer')
+  })
+
   it('generates files directly from dialog when Aceito arrives after a saved vacancy is already in context', async () => {
     const session = {
       ...buildSession(),
@@ -1932,6 +2202,98 @@ describe('runAgentLoop streaming', () => {
       'assistant',
       expect.stringContaining('ATS Score antes: 69/100. ATS agora: 73/100.'),
     )
+  })
+
+  it('treats an in-flight idempotent generation retry as a wait state instead of a hard error', async () => {
+    const session = {
+      ...buildSession(),
+      phase: 'dialog' as const,
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {},
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Senior Analytics Engineer com foco em dbt, SQL e BigQuery.',
+      },
+      atsScore: {
+        total: 43,
+        breakdown: {
+          format: 60,
+          structure: 42,
+          keywords: 38,
+          contact: 95,
+          impact: 30,
+        },
+        issues: [],
+        suggestions: [],
+      },
+    }
+
+    mockDispatchToolWithContext
+      .mockResolvedValueOnce({
+        output: { success: true, phase: 'generation' },
+        outputJson: JSON.stringify({ success: true, phase: 'generation' }),
+        persistedPatch: {
+          phase: 'generation',
+        },
+      })
+      .mockResolvedValueOnce({
+        output: {
+          success: true,
+          targetId: 'target_123',
+          targetJobDescription: 'Senior Analytics Engineer com foco em dbt, SQL e BigQuery.',
+          derivedCvState: session.cvState,
+        },
+        outputJson: JSON.stringify({ success: true, targetId: 'target_123' }),
+        persistedPatch: {
+          agentState: {
+            targetJobDescription: 'Senior Analytics Engineer com foco em dbt, SQL e BigQuery.',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        output: {
+          success: true,
+          pdfUrl: null,
+          docxUrl: null,
+          creditsUsed: 0,
+          resumeGenerationId: 'gen_inflight_123',
+          inProgress: true,
+        },
+        outputJson: JSON.stringify({
+          success: true,
+          pdfUrl: null,
+          docxUrl: null,
+          creditsUsed: 0,
+          resumeGenerationId: 'gen_inflight_123',
+          inProgress: true,
+        }),
+        persistedPatch: {
+          generatedOutput: {
+            status: 'generating',
+          },
+        },
+      })
+
+    const events = []
+    for await (const event of runAgentLoop({
+      session,
+      userMessage: 'Aceito',
+      appUserId: 'usr_123',
+      requestId: 'req_generation_inflight',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      events.push(event)
+    }
+
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => event.content)
+      .join('')
+
+    expect(finalText).toContain('ja esta em andamento')
+    expect(finalText).toContain('sem consumir outro credito')
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'error' }))
   })
 
   it('surfaces placeholder warnings when generation succeeds with incomplete profile fields', async () => {

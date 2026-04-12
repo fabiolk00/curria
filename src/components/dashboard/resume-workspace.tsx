@@ -40,6 +40,10 @@ type MutationKind =
 type ResumeWorkspaceProps = {
   initialSessionId?: string
   userName?: string
+  missingContactInfo?: {
+    missingEmail: boolean
+    missingPhone: boolean
+  }
   activeRecurringPlan?: PlanSlug | null
   currentCredits?: number
 }
@@ -97,6 +101,7 @@ function getManualEditSectionValue(
 export function ResumeWorkspace({
   initialSessionId,
   userName,
+  missingContactInfo,
   activeRecurringPlan = null,
   currentCredits = 0,
 }: ResumeWorkspaceProps) {
@@ -272,6 +277,7 @@ export function ResumeWorkspace({
       <ChatInterface
         sessionId={sessionId}
         userName={userName}
+        missingContactInfo={missingContactInfo}
         disabled={activeMutation !== null}
         currentCredits={availableCredits}
         onSessionChange={(nextSessionId) => setSessionId(nextSessionId)}

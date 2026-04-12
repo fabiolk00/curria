@@ -72,7 +72,7 @@ export async function createPendingResumeGeneration(input: {
   type: ResumeGenerationType
   idempotencyKey?: string
   sourceCvSnapshot: CVState
-}): Promise<ResumeGeneration> {
+}): Promise<{ generation: ResumeGeneration; wasCreated: boolean }> {
   const supabase = getSupabaseAdminClient()
 
   let versionQuery = supabase
@@ -116,7 +116,10 @@ export async function createPendingResumeGeneration(input: {
   if (error && input.idempotencyKey && isDuplicateIdempotencyError(error)) {
     const existing = await getResumeGenerationByIdempotencyKey(input.userId, input.idempotencyKey)
     if (existing) {
-      return existing
+      return {
+        generation: existing,
+        wasCreated: false,
+      }
     }
   }
 
@@ -124,7 +127,10 @@ export async function createPendingResumeGeneration(input: {
     throw new Error(`Failed to create resume generation: ${error?.message ?? 'Unknown error'}`)
   }
 
-  return mapResumeGenerationRow(data)
+  return {
+    generation: mapResumeGenerationRow(data),
+    wasCreated: true,
+  }
 }
 
 function isDuplicateIdempotencyError(error: PostgrestErrorLike): boolean {

@@ -112,8 +112,9 @@ describe('createPendingResumeGeneration', () => {
       },
     })
 
-    expect(result.id).toBe('gen_existing')
-    expect(result.idempotencyKey).toBe('dup_key')
-    expect(result.status).toBe('pending')
+    expect(result.wasCreated).toBe(false)
+    expect(result.generation.id).toBe('gen_existing')
+    expect(result.generation.idempotencyKey).toBe('dup_key')
+    expect(result.generation.status).toBe('pending')
   })
 })

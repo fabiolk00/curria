@@ -637,6 +637,15 @@ describe('/api/agent SSE fallback coverage', () => {
       }),
       'target-derived',
     )
+    const generateFileCall = mockDispatchToolWithContext.mock.calls.find(
+      ([toolName]) => toolName === 'generate_file',
+    )
+    expect(generateFileCall).toBeDefined()
+    expect(generateFileCall?.[1]).toEqual(expect.objectContaining({
+      cv_state: expect.any(Object),
+      idempotency_key: expect.stringMatching(/^generation:sess_dialog_direct_generate_real:chat:/),
+    }))
+    expect(generateFileCall?.[2]).toEqual(expect.objectContaining({ id: session.id }))
     expect(createChatCompletionStreamWithRetry).not.toHaveBeenCalled()
   })
 
@@ -861,7 +870,8 @@ describe('/api/agent SSE fallback coverage', () => {
         total: 51,
       }),
     })
-    expect(finalText).toContain('Pontuacao ATS atual: 51/100.')
-    expect(finalText).toContain('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
+    expect(finalText).toContain('Preciso ser honesto:')
+    expect(finalText).toContain('A aderencia estimada para esta vaga esta em 61/100.')
+    expect(finalText).toContain('Aceito')
   })
 })

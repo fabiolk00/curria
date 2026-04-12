@@ -43,8 +43,13 @@ type SessionMessagePayload = {
   createdAt: string
 }
 
+type MissingContactInfo = {
+  missingEmail: boolean
+  missingPhone: boolean
+}
+
 function hasConversationMessages(items: Message[]): boolean {
-  return items.some((message) => message.id !== "welcome")
+  return items.some((message) => !message.id.startsWith("welcome"))
 }
 
 function isLegacyWelcomeMessage(content: string): boolean {
@@ -98,6 +103,67 @@ Envie o texto da vaga ou o link que vamos avaliar o match com ela!`,
   }
 }
 
+function getTimeGreeting(): string {
+  const hour = new Date().getHours()
+
+  if (hour < 12) {
+    return "Bom dia"
+  }
+
+  if (hour < 18) {
+    return "Boa tarde"
+  }
+
+  return "Boa noite"
+}
+
+function buildMissingContactNotice(missingContactInfo?: MissingContactInfo): string | null {
+  if (!missingContactInfo) {
+    return null
+  }
+
+  if (missingContactInfo.missingEmail && missingContactInfo.missingPhone) {
+    return "Notei que o e-mail e o telefone nao estao preenchidos no perfil; recomendo completar antes de enviar candidaturas."
+  }
+
+  if (missingContactInfo.missingEmail) {
+    return "Notei que o e-mail nao esta preenchido no perfil; recomendo completar antes de enviar candidaturas."
+  }
+
+  if (missingContactInfo.missingPhone) {
+    return "Notei que o telefone nao esta preenchido no perfil; recomendo completar antes de enviar candidaturas."
+  }
+
+  return null
+}
+
+function createWelcomeMessages(firstName?: string, missingContactInfo?: MissingContactInfo): Message[] {
+  const greeting = firstName
+    ? `${getTimeGreeting()}, ${firstName} - prazer.`
+    : `${getTimeGreeting()} - prazer.`
+
+  const messages: Message[] = [{
+    id: "welcome",
+    role: "assistant",
+    content: `${greeting} Tenho seu curriculo salvo aqui.
+
+Quer que eu adapte o curriculo para uma vaga especifica? Mande o link ou cole o texto da vaga.`,
+    timestamp: "",
+  }]
+
+  const missingContactNotice = buildMissingContactNotice(missingContactInfo)
+  if (missingContactNotice) {
+    messages.push({
+      id: "welcome-contact",
+      role: "assistant",
+      content: missingContactNotice,
+      timestamp: "",
+    })
+  }
+
+  return messages
+}
+
 function isCreditExhaustedError(message?: string): boolean {
   return Boolean(message && CREDIT_EXHAUSTED_ERROR_PATTERN.test(message))
 }
@@ -109,8 +175,10 @@ function isRecoverableStreamError(chunk: { code?: string; error?: string }): boo
 
 function normalizeFetchedMessages(
   payload: SessionMessagePayload[],
-  welcomeMessage: Message,
+  welcomeMessages: Message[],
 ): Message[] {
+  const welcomeMessage = welcomeMessages[0]
+
   return payload.map((message, index) => ({
     id: String(index),
     role: message.role as "user" | "assistant",
@@ -167,7 +235,7 @@ function mergeFetchedTranscriptMessages(
   serverMessages: Message[],
   thinkingText: string,
 ): Message[] {
-  const previousConversation = previous.filter((message) => message.id !== "welcome")
+  const previousConversation = previous.filter((message) => !message.id.startsWith("welcome"))
 
   if (previousConversation.length === 0) {
     return serverMessages
@@ -200,6 +268,7 @@ function mergeFetchedTranscriptMessages(
 interface ChatInterfaceProps {
   sessionId?: string
   userName?: string
+  missingContactInfo?: MissingContactInfo
   disabled?: boolean
   currentCredits?: number
   onSessionChange?: (sessionId: string) => void
@@ -233,6 +302,7 @@ function ChatWindowChrome() {
 
 export function ChatInterface({
   sessionId: initialSessionId,
+  missingContactInfo,
   userName = "Você",
   disabled = false,
   currentCredits,
@@ -247,10 +317,12 @@ export function ChatInterface({
     () => getChatCopy(preferredName),
     [preferredName],
   )
+  const welcomeMessages = useMemo(
+    () => createWelcomeMessages(preferredName, missingContactInfo),
+    [missingContactInfo, preferredName],
+  )
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
-  const [messages, setMessages] = useState<Message[]>([
-    createWelcomeMessage(preferredName),
-  ])
+  const [messages, setMessages] = useState<Message[]>(welcomeMessages)
   const [input, setInput] = useState("")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null)
@@ -331,8 +403,6 @@ export function ChatInterface({
   }
 
   useEffect(() => {
-    const welcomeMessage = createWelcomeMessage(preferredName)
-
     setSessionId(initialSessionId)
     setSessionExpired(false)
     setSessionLimitReached(false)
@@ -342,9 +412,9 @@ export function ChatInterface({
       setAtsScore(undefined)
       setMessageCount(0)
       setUploadedFile(null)
-      setMessages([welcomeMessage])
+      setMessages(welcomeMessages)
     }
-  }, [initialSessionId, preferredName])
+  }, [initialSessionId, welcomeMessages])
 
   useEffect(() => {
     onStreamingChange?.(isStreaming)
@@ -384,10 +454,8 @@ export function ChatInterface({
   }, [])
 
   useEffect(() => {
-    const welcomeMessage = createWelcomeMessage(preferredName)
-
     if (!sessionId) {
-      setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
+      setMessages((previous) => (hasConversationMessages(previous) ? previous : welcomeMessages))
       return
     }
 
@@ -405,7 +473,7 @@ export function ChatInterface({
         if (data.messages?.length) {
           const nextMessages = normalizeFetchedMessages(
             data.messages as SessionMessagePayload[],
-            welcomeMessage,
+            welcomeMessages,
           )
 
           setMessages((previous) => {
@@ -414,18 +482,18 @@ export function ChatInterface({
           return
         }
 
-        setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
+        setMessages((previous) => (hasConversationMessages(previous) ? previous : welcomeMessages))
       })
       .catch(() => {
         if (!cancelled) {
-          setMessages((previous) => (hasConversationMessages(previous) ? previous : [welcomeMessage]))
+          setMessages((previous) => (hasConversationMessages(previous) ? previous : welcomeMessages))
         }
       })
 
     return () => {
       cancelled = true
     }
-  }, [copy.thinkingText, preferredName, sessionId])
+  }, [copy.thinkingText, sessionId, welcomeMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
