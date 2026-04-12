@@ -219,6 +219,47 @@ function buildIntakeSession(overrides?: {
   }
 }
 
+function buildContextToolResultWithAppliedPatch(result: {
+  output: Record<string, unknown>
+  outputJson: string
+  persistedPatch?: Record<string, unknown>
+}) {
+  return async (_toolName: string, _input: Record<string, unknown>, session: any) => {
+    const patch = result.persistedPatch
+
+    if (patch?.phase) {
+      session.phase = patch.phase
+    }
+
+    if (patch?.cvState) {
+      session.cvState = {
+        ...session.cvState,
+        ...patch.cvState,
+      }
+    }
+
+    if (patch?.agentState) {
+      session.agentState = {
+        ...session.agentState,
+        ...patch.agentState,
+      }
+    }
+
+    if ('atsScore' in (patch ?? {})) {
+      session.atsScore = patch?.atsScore
+    }
+
+    if (patch?.generatedOutput) {
+      session.generatedOutput = {
+        ...session.generatedOutput,
+        ...patch.generatedOutput,
+      }
+    }
+
+    return result
+  }
+}
+
 describe('/api/agent SSE fallback coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -258,6 +299,10 @@ describe('/api/agent SSE fallback coverage', () => {
     ])
     vi.mocked(appendMessage).mockResolvedValue(undefined)
     vi.mocked(applyToolPatchWithVersion).mockImplementation(async (session, patch) => {
+      if (patch?.phase) {
+        session.phase = patch.phase
+      }
+
       if (patch?.cvState) {
         session.cvState = {
           ...session.cvState,
@@ -269,6 +314,17 @@ describe('/api/agent SSE fallback coverage', () => {
         session.agentState = {
           ...session.agentState,
           ...patch.agentState,
+        }
+      }
+
+      if ('atsScore' in (patch ?? {})) {
+        session.atsScore = patch?.atsScore
+      }
+
+      if (patch?.generatedOutput) {
+        session.generatedOutput = {
+          ...session.generatedOutput,
+          ...patch.generatedOutput,
         }
       }
     })
@@ -686,5 +742,126 @@ describe('/api/agent SSE fallback coverage', () => {
       'assistant',
       'Bom dia! Otimo iniciar. Pode me dizer qual vaga voce esta mirando?',
     ])
+  })
+
+  it('bootstraps summarized requirement-list vacancies into dialog with ATS context', async () => {
+    const session = buildIntakeSession({
+      id: 'sess_requirement_summary_real',
+    })
+
+    vi.mocked(getSession).mockResolvedValue(session)
+    vi.mocked(createChatCompletionStreamWithRetry).mockImplementation(async () => emptyStopStream() as never)
+
+    const requirementSummary = [
+      'Requisitos Desejaveis',
+      '',
+      'Experiencia em analises que envolvem multiplas areas de negocio. Vivencia em GitHub, Looker ou outras ferramentas de data visualization. Capacidade de resolver problemas com foco em resultados para o negocio. Experiencia em digital analytics com ferramentas como Google Analytics, Google Tag Manager e Appsflyer. Conhecimento em tecnicas avancadas de ETL e transformacao de dados.',
+      '',
+      'Resumo dos requisitos: SQL, Google Sheets, Looker Platform, Machine Learning, GitHub, R, BigQuery, SQL Server, Google Analytics, Google Tag Manager, Appsflyer.',
+    ].join('\n')
+
+    mockDispatchToolWithContext
+      .mockImplementationOnce(buildContextToolResultWithAppliedPatch({
+        output: {
+          success: true,
+          result: {
+            total: 51,
+            breakdown: {
+              format: 70,
+              structure: 60,
+              keywords: 45,
+              contact: 95,
+              impact: 35,
+            },
+            issues: [],
+            suggestions: [],
+          },
+        },
+        outputJson: JSON.stringify({ success: true, result: { total: 51 } }),
+        persistedPatch: {
+          atsScore: {
+            total: 51,
+            breakdown: {
+              format: 70,
+              structure: 60,
+              keywords: 45,
+              contact: 95,
+              impact: 35,
+            },
+            issues: [],
+            suggestions: [],
+          },
+        },
+      }))
+      .mockImplementationOnce(buildContextToolResultWithAppliedPatch({
+        output: {
+          success: true,
+          result: {
+            matchScore: 61,
+            missingSkills: ['Looker', 'Machine Learning'],
+            weakAreas: ['resumo profissional'],
+            improvementSuggestions: ['Destaque analytics e ETL no resumo.'],
+          },
+        },
+        outputJson: JSON.stringify({
+          success: true,
+          result: {
+            matchScore: 61,
+            missingSkills: ['Looker', 'Machine Learning'],
+            weakAreas: ['resumo profissional'],
+            improvementSuggestions: ['Destaque analytics e ETL no resumo.'],
+          },
+        }),
+        persistedPatch: {
+          agentState: {
+            gapAnalysis: {
+              analyzedAt: '2026-04-12T20:00:00.000Z',
+              result: {
+                matchScore: 61,
+                missingSkills: ['Looker', 'Machine Learning'],
+                weakAreas: ['resumo profissional'],
+                improvementSuggestions: ['Destaque analytics e ETL no resumo.'],
+              },
+            },
+          },
+        },
+      }))
+      .mockImplementationOnce(buildContextToolResultWithAppliedPatch({
+        output: { success: true, phase: 'dialog' },
+        outputJson: JSON.stringify({ success: true, phase: 'dialog' }),
+        persistedPatch: {
+          phase: 'dialog',
+        },
+      }))
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.id,
+        message: requirementSummary,
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+
+    const events = parseSseDataEvents(await response.text())
+    const doneEvent = events.find((event) => event.type === 'done')
+    const finalText = events
+      .filter((event) => event.type === 'text')
+      .map((event) => String(event.content ?? ''))
+      .join('')
+
+    expect(createChatCompletionStreamWithRetry).not.toHaveBeenCalled()
+    expect(doneEvent).toMatchObject({
+      type: 'done',
+      sessionId: session.id,
+      phase: 'dialog',
+      atsScore: expect.objectContaining({
+        total: 51,
+      }),
+    })
+    expect(finalText).toContain('Pontuacao ATS atual: 51/100.')
+    expect(finalText).toContain('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
   })
 })

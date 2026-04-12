@@ -442,6 +442,59 @@ Python, APIs e Microsoft Fabric.`
     expect(vi.mocked(runAgentLoop).mock.calls.at(-1)?.[0].session.phase).toBe('analysis')
   })
 
+  it('promotes a seeded session to analysis for summarized requirement lists without explicit role wording', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSession).mockResolvedValue({
+      id: 'sess_requirement_summary',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: 'Fabio Silva',
+        email: 'fabio@example.com',
+        phone: '11999999999',
+        summary: 'Engenheiro de Dados com foco em analytics e ETL.',
+        experience: [],
+        skills: ['SQL', 'BigQuery', 'Power BI'],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const requirementSummary = `Requisitos Desejaveis
+
+Experiencia em analises que envolvem multiplas areas de negocio. Vivencia em GitHub, Looker ou outras ferramentas de data visualization. Capacidade de resolver problemas com foco em resultados para o negocio. Experiencia em digital analytics com ferramentas como Google Analytics, Google Tag Manager e Appsflyer. Conhecimento em tecnicas avancadas de ETL e transformacao de dados.
+
+Resumo dos requisitos: SQL, Google Sheets, Looker Platform, Machine Learning, GitHub, R, BigQuery, SQL Server, Google Analytics, Google Tag Manager, Appsflyer.`
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: requirementSummary }),
+    }))
+
+    expect(response.status).toBe(200)
+    await response.text()
+    expect(updateSession).toHaveBeenCalledWith('sess_requirement_summary', {
+      agentState: expect.objectContaining({
+        targetJobDescription: expect.stringContaining('Resumo dos requisitos'),
+      }),
+      phase: 'analysis',
+    })
+    expect(vi.mocked(runAgentLoop).mock.calls.at(-1)?.[0].session.phase).toBe('analysis')
+  })
+
   it('does not persist targetJobDescription for a short non-job message', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
