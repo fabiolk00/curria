@@ -2,16 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react"
 import {
+  ArrowRight,
   BadgeCheck,
+  FileSearch,
   Layers3,
   Linkedin,
   Loader2,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { assessAtsEnhancementReadiness } from "@/lib/profile/ats-enhancement"
+import { cvStateToTemplateData } from "@/lib/templates/cv-state-to-template-data"
 import { cn } from "@/lib/utils"
 import type { CVState } from "@/types/cv"
 
@@ -28,6 +33,10 @@ type ProfileResponse = {
     createdAt: string
     updatedAt: string
   } | null
+}
+
+type UserDataPageProps = {
+  currentCredits?: number
 }
 
 function trimOptional(value?: string): string | undefined {
@@ -98,7 +107,99 @@ const primaryButtonClassName =
 const secondaryButtonClassName =
   "rounded-full border border-slate-300 bg-white px-5 font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800"
 
-export default function UserDataPage() {
+function AtsTemplatePreview({ value }: { value: CVState }) {
+  const template = cvStateToTemplateData(value)
+  const experiences = template.experiences.length > 0
+    ? template.experiences.slice(0, 2)
+    : [{
+        title: "Experiencia principal",
+        company: "Empresa",
+        location: "",
+        period: "Periodo",
+        techStack: "",
+        bullets: [{ text: "Os bullets reescritos para ATS aparecem aqui." }],
+      }]
+
+  return (
+    <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur dark:border-border dark:bg-card/90">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            Template View
+          </p>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Preview do curriculo base
+          </h2>
+        </div>
+        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600 dark:border-border dark:bg-background/50 dark:text-slate-300">
+          Mesmo template final
+        </div>
+      </div>
+
+      <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-border dark:bg-background/40">
+        <div className="space-y-2 border-b border-slate-200 pb-4 dark:border-border">
+          <h3 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            {template.fullName || "Seu nome"}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {template.jobTitle || "Cargo principal"}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {[template.email, template.phone, template.linkedin, template.location].filter(Boolean).join(" • ") || "Contato e links aparecem aqui"}
+          </p>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <section className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Resumo
+            </p>
+            <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+              {template.summary || "Seu resumo profissional aparece aqui no template final."}
+            </p>
+          </section>
+
+          <section className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Skills
+            </p>
+            <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+              {template.skills || "Suas skills priorizadas aparecem aqui."}
+            </p>
+          </section>
+
+          <section className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Experiencia
+            </p>
+            <div className="space-y-3">
+              {experiences.map((experience, index) => (
+                <div key={`${experience.title}-${index}`} className="space-y-1">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {experience.title}{experience.company ? ` - ${experience.company}` : ""}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{experience.period}</p>
+                  <ul className="space-y-1">
+                    {experience.bullets.slice(0, 2).map((bullet, bulletIndex) => (
+                      <li
+                        key={`${experience.title}-${bulletIndex}`}
+                        className="text-sm leading-5 text-slate-700 dark:text-slate-300"
+                      >
+                        • {bullet.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) {
   const router = useRouter()
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [resumeData, setResumeData] = useState<CVState>(() => normalizeResumeData())
@@ -106,6 +207,7 @@ export default function UserDataPage() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRunningAtsEnhancement, setIsRunningAtsEnhancement] = useState(false)
   const [allSectionsClosed, setAllSectionsClosed] = useState(false)
 
   useEffect(() => {
@@ -161,12 +263,48 @@ export default function UserDataPage() {
     setLastUpdatedAt(new Date().toISOString())
   }
 
+  const persistProfile = async (): Promise<void> => {
+    const response = await fetch("/api/profile", {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(sanitizeResumeData(resumeData)),
+    })
+
+    const data = (await response.json()) as ProfileResponse & { error?: string }
+    if (!response.ok || !data.profile) {
+      throw new Error(data.error ?? "Nao foi possivel salvar seu perfil.")
+    }
+
+    setResumeData(normalizeResumeData(data.profile.cvState))
+    setProfileSource(data.profile.source)
+    setLastUpdatedAt(data.profile.updatedAt)
+  }
+
   const handleSave = async (): Promise<void> => {
     setIsSaving(true)
 
     try {
-      const response = await fetch("/api/profile", {
-        method: "PUT",
+      await persistProfile()
+      toast.success("Perfil salvo com sucesso.")
+      router.push("/dashboard")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleAtsEnhancement = async (): Promise<void> => {
+    setIsRunningAtsEnhancement(true)
+
+    try {
+      await persistProfile()
+
+      const response = await fetch("/api/profile/ats-enhancement", {
+        method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
@@ -174,20 +312,22 @@ export default function UserDataPage() {
         body: JSON.stringify(sanitizeResumeData(resumeData)),
       })
 
-      const data = (await response.json()) as ProfileResponse & { error?: string }
-      if (!response.ok || !data.profile) {
-        throw new Error(data.error ?? "Nao foi possivel salvar seu perfil.")
+      const data = (await response.json()) as {
+        success?: boolean
+        sessionId?: string
+        error?: string
       }
 
-      setResumeData(normalizeResumeData(data.profile.cvState))
-      setProfileSource(data.profile.source)
-      setLastUpdatedAt(data.profile.updatedAt)
-      toast.success("Perfil salvo com sucesso.")
-      router.push("/dashboard")
+      if (!response.ok || !data.success || !data.sessionId) {
+        throw new Error(data.error ?? "Nao foi possivel gerar a versao ATS.")
+      }
+
+      toast.success("Versao ATS criada com sucesso.")
+      router.push(`/dashboard?session=${encodeURIComponent(data.sessionId)}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar a versao ATS.")
     } finally {
-      setIsSaving(false)
+      setIsRunningAtsEnhancement(false)
     }
   }
 
@@ -240,6 +380,19 @@ export default function UserDataPage() {
       })}`
     : "Nenhuma atualizacao salva ainda."
 
+  const sanitizedResumeData = useMemo(() => sanitizeResumeData(resumeData), [resumeData])
+  const atsReadiness = useMemo(
+    () => assessAtsEnhancementReadiness(sanitizedResumeData),
+    [sanitizedResumeData],
+  )
+  const atsButtonDisabled = (
+    isLoadingProfile
+    || isSaving
+    || isRunningAtsEnhancement
+    || !atsReadiness.isReady
+    || currentCredits < 1
+  )
+
   return (
     <div
       data-testid="user-data-page"
@@ -253,8 +406,8 @@ export default function UserDataPage() {
 
       <main
         className={cn(
-          "relative mx-auto max-w-5xl space-y-8 px-4 py-8 md:py-12",
-          allSectionsClosed && "space-y-4 py-5 md:grid md:h-[100dvh] md:grid-rows-[auto,minmax(0,1fr),auto] md:gap-3 md:space-y-0 md:overflow-hidden md:py-3",
+          "relative mx-auto max-w-7xl space-y-8 px-4 py-8 md:py-12",
+          allSectionsClosed && "space-y-4 py-5 md:gap-3 md:py-3",
         )}
       >
         <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white/90 shadow-sm backdrop-blur dark:border-border dark:bg-card/90">
@@ -268,10 +421,10 @@ export default function UserDataPage() {
                   </div>
                   <div className="space-y-1.5">
                     <h1 className="max-w-2xl text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 md:text-2xl">
-                      Revise seu currículo com uma base limpa e consistente.
+                      Revise seu curriculo com uma base limpa e consistente.
                     </h1>
                     <p className="max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400 md:text-sm">
-                      Importe do LinkedIn, ajuste os campos manualmente e deixe seu perfil pronto para novas sessões.
+                      Importe do LinkedIn, ajuste os campos manualmente e deixe seu perfil pronto para novas sessoes.
                     </p>
                   </div>
                 </div>
@@ -394,19 +547,102 @@ export default function UserDataPage() {
           </div>
         ) : (
           <>
-            <div
-              className={cn(
-                "rounded-[28px] border border-slate-200 bg-white/90 shadow-sm backdrop-blur dark:border-border dark:bg-card/90",
-                allSectionsClosed ? "min-h-0 p-3 md:h-full md:overflow-hidden md:p-3.5" : "p-4 md:p-6",
-              )}
-            >
-              <VisualResumeEditor
-                value={resumeData}
-                onChange={setResumeData}
-                disabled={isSaving}
-                onAllSectionsClosedChange={setAllSectionsClosed}
-                compactMode={allSectionsClosed}
-              />
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div
+                className={cn(
+                  "rounded-[28px] border border-slate-200 bg-white/90 shadow-sm backdrop-blur dark:border-border dark:bg-card/90",
+                  allSectionsClosed ? "min-h-0 p-3 md:h-full md:overflow-hidden md:p-3.5" : "p-4 md:p-6",
+                )}
+              >
+                <VisualResumeEditor
+                  value={resumeData}
+                  onChange={setResumeData}
+                  disabled={isSaving || isRunningAtsEnhancement}
+                  onAllSectionsClosedChange={setAllSectionsClosed}
+                  compactMode={allSectionsClosed}
+                />
+              </div>
+
+              <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+                <AtsTemplatePreview value={sanitizedResumeData} />
+
+                <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur dark:border-border dark:bg-card/90">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      ATS Enhancement
+                    </div>
+
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                        Melhorar meu curriculo para ATS
+                      </h2>
+                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Use seu perfil base atual para gerar uma nova versao ATS, sem vaga especifica, com analise geral, melhoria de estrutura, palavras-chave e rewrite otimizado.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3">
+                      {[
+                        "analise ATS geral",
+                        "melhoria de palavras-chave",
+                        "melhoria de estrutura",
+                        "rewrite otimizado para ATS",
+                      ].map((item) => (
+                        <div key={item} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-700 dark:border-border dark:bg-background/40 dark:text-slate-300">
+                          <FileSearch className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 dark:border-border dark:bg-background/40 dark:text-slate-300">
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                        O que acontece ao clicar
+                      </p>
+                      <p className="mt-2 leading-6">
+                        Salvo seu snapshot atual, gero uma sessao derivada da base, crio a versao ATS e mantenho a base original preservada para comparacao.
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      disabled={atsButtonDisabled}
+                      onClick={() => void handleAtsEnhancement()}
+                      className="h-11 rounded-full bg-emerald-600 px-5 font-semibold text-white hover:bg-emerald-500 disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
+                    >
+                      {isRunningAtsEnhancement ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Gerando versao ATS
+                        </>
+                      ) : (
+                        <>
+                          Melhorar para ATS (1 credito)
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                      <p>Creditos disponiveis: {currentCredits}</p>
+                      {!atsReadiness.isReady ? (
+                        <p>Complete seu curriculo para gerar uma versao ATS.</p>
+                      ) : null}
+                      {atsReadiness.reasons.length > 0 ? (
+                        <ul className="space-y-1">
+                          {atsReadiness.reasons.map((reason) => (
+                            <li key={reason}>• {reason}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {currentCredits < 1 ? (
+                        <p>Voce precisa de pelo menos 1 credito para gerar essa versao.</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </section>
+              </aside>
             </div>
 
             <div
@@ -418,7 +654,7 @@ export default function UserDataPage() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSaving}
+                disabled={isSaving || isRunningAtsEnhancement}
                 onClick={() => router.push("/dashboard")}
                 className={cn(secondaryButtonClassName, allSectionsClosed && "h-10 px-4")}
               >
@@ -426,7 +662,7 @@ export default function UserDataPage() {
               </Button>
               <Button
                 type="button"
-                disabled={isSaving}
+                disabled={isSaving || isRunningAtsEnhancement}
                 onClick={() => void handleSave()}
                 data-testid="profile-save-button"
                 className={cn(primaryButtonClassName, allSectionsClosed && "h-10 px-4")}
@@ -453,4 +689,3 @@ export default function UserDataPage() {
     </div>
   )
 }
-
