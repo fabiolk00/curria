@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ResumeTarget, Session } from '@/types/agent'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { dispatchTool } from '@/lib/agent/tools'
 import { manualEditSection } from '@/lib/agent/tools/manual-edit'
 import {
   getResumeTargetForSession,
@@ -26,10 +25,6 @@ vi.mock('@/lib/agent/tools/manual-edit', async () => {
     manualEditSection: vi.fn(actual.manualEditSection),
   }
 })
-
-vi.mock('@/lib/agent/tools', () => ({
-  dispatchTool: vi.fn(),
-}))
 
 vi.mock('@/lib/db/resume-targets', () => ({
   getResumeTargetForSession: vi.fn(),
@@ -129,7 +124,6 @@ function buildSession(targets?: ResumeTarget[]): Session & { resumeTargets?: Res
 describe('manual edit route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({ success: true }))
     vi.mocked(getResumeTargetForSession).mockResolvedValue(null)
   })
 
@@ -261,7 +255,7 @@ describe('manual edit route', () => {
     expect(target.derivedCvState.skills).toEqual(['TypeScript', 'AWS'])
   })
 
-  it('saves the full base cvState and regenerates files in one request', async () => {
+  it('saves the full base cvState without generating billable artifacts', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue(buildSession())
 
@@ -294,19 +288,9 @@ describe('manual edit route', () => {
       },
       'manual',
     )
-    expect(dispatchTool).toHaveBeenCalledWith(
-      'generate_file',
-      expect.objectContaining({
-        cv_state: expect.objectContaining({
-          summary: 'Updated base summary.',
-        }),
-        target_id: undefined,
-      }),
-      expect.objectContaining({ id: 'sess_123' }),
-    )
   })
 
-  it('skips persistence and generation when the full base cvState is unchanged', async () => {
+  it('skips persistence when the full base cvState is unchanged', async () => {
     const session = buildSession()
     vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue(session)
@@ -329,10 +313,9 @@ describe('manual edit route', () => {
       changed: false,
     })
     expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
-    expect(dispatchTool).not.toHaveBeenCalled()
   })
 
-  it('updates the current target resume and regenerates target artifacts', async () => {
+  it('updates the current target resume without generating target artifacts', async () => {
     const target = buildTarget()
     vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue(buildSession([target]))
@@ -375,16 +358,6 @@ describe('manual edit route', () => {
         summary: 'Updated target summary.',
       }),
     })
-    expect(dispatchTool).toHaveBeenCalledWith(
-      'generate_file',
-      expect.objectContaining({
-        cv_state: expect.objectContaining({
-          summary: 'Updated target summary.',
-        }),
-        target_id: 'target_123',
-      }),
-      expect.objectContaining({ id: 'sess_123' }),
-    )
   })
 
   it('returns 404 when the requested target resume does not exist', async () => {
@@ -406,7 +379,6 @@ describe('manual edit route', () => {
 
     expect(response.status).toBe(404)
     expect(updateResumeTargetCvStateWithVersion).not.toHaveBeenCalled()
-    expect(dispatchTool).not.toHaveBeenCalled()
   })
 
   it('rejects invalid full-state payloads', async () => {
@@ -428,6 +400,5 @@ describe('manual edit route', () => {
 
     expect(response.status).toBe(400)
     expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
-    expect(dispatchTool).not.toHaveBeenCalled()
   })
 })

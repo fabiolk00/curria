@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 
 import { POST } from './route'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { getSession, createSessionWithCredit, checkUserQuota, incrementMessageCount, updateSession } from '@/lib/db/sessions'
+import { getSession, createSession, createSessionWithCredit, checkUserQuota, incrementMessageCount, updateSession } from '@/lib/db/sessions'
 import { agentLimiter } from '@/lib/rate-limit'
 import { runAgentLoop } from '@/lib/agent/agent-loop'
 import { dispatchTool } from '@/lib/agent/tools'
@@ -136,6 +136,31 @@ describe('agent route billing guard', () => {
     })
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(false)
+    vi.mocked(createSession).mockResolvedValue({
+      id: 'sess_default',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 0,
+      messageCount: 0,
+      creditConsumed: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
     vi.mocked(analyzeGap).mockReset()
   })
 
@@ -153,11 +178,11 @@ describe('agent route billing guard', () => {
     expect(response.status).toBe(401)
     expect(await response.json()).toEqual({ error: 'Unauthorized' })
     expectAgentProvenanceHeaders(response)
-    expect(createSessionWithCredit).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
     expect(incrementMessageCount).not.toHaveBeenCalled()
   })
 
-  it('returns 402 when trying to create a new session with zero credits', async () => {
+  it('creates a new free session even when the user currently has zero credits', async () => {
     const response = await POST(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
       headers: {
@@ -168,11 +193,8 @@ describe('agent route billing guard', () => {
       }),
     }))
 
-    expect(response.status).toBe(402)
-    expect(await response.json()).toEqual({
-      error: 'Seus créditos acabaram. Faça upgrade do seu plano para continuar.',
-      upgradeUrl: '/pricing',
-    })
+    expect(response.status).toBe(200)
+    expect(createSession).toHaveBeenCalledWith('usr_123')
   })
 
   it('returns 400 when body is not valid JSON', async () => {
@@ -208,10 +230,10 @@ describe('agent route billing guard', () => {
     expect(body.error).toBe('Sessão não encontrada. Inicie uma nova análise.')
     expect(body.action).toBe('new_session')
     expect(checkUserQuota).not.toHaveBeenCalled()
-    expect(createSessionWithCredit).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
   })
 
-  it('returns 429 with action metadata when session hits message cap', async () => {
+  it('allows long-running sessions instead of blocking on the old message cap', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_full',
       userId: 'usr_123',
@@ -249,12 +271,8 @@ describe('agent route billing guard', () => {
       }),
     }))
 
-    expect(response.status).toBe(429)
-    const body = await response.json()
-    expect(body.action).toBe('new_session')
-    expect(body.messageCount).toBe(30)
-    expect(body.maxMessages).toBe(30)
-    expect(incrementMessageCount).not.toHaveBeenCalled()
+    expect(response.status).toBe(200)
+    expect(incrementMessageCount).toHaveBeenCalledWith('sess_full')
   })
 
   it('does not consume an existing-session message when file preprocessing fails', async () => {
@@ -308,7 +326,7 @@ describe('agent route billing guard', () => {
   it('persists a pasted job description into agentState before the agent loop starts', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_job_target',
       userId: 'usr_123',
       stateVersion: 1,
@@ -366,7 +384,7 @@ Python, APIs e Microsoft Fabric.`
   it('promotes a new session to analysis when a saved resume already exists and the user pastes a vacancy', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_seeded_resume',
       userId: 'usr_123',
       stateVersion: 1,
@@ -427,7 +445,7 @@ Python, APIs e Microsoft Fabric.`
   it('does not persist targetJobDescription for a short non-job message', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_no_target',
       userId: 'usr_123',
       stateVersion: 1,
@@ -584,7 +602,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('streams SSE done event for a valid new session', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_new',
       userId: 'usr_123',
       stateVersion: 1,
@@ -640,7 +658,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('emits sessionCreated as the very first SSE event for new sessions', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_early',
       userId: 'usr_123',
       stateVersion: 1,
@@ -686,7 +704,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('returns X-Session-Id header for new sessions', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_header',
       userId: 'usr_123',
       stateVersion: 1,
@@ -768,11 +786,11 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     expect(hasSessionCreated).toBe(false)
   })
 
-  it('aborts new-session stream with error when incrementMessageCount fails', async () => {
+  it('aborts new-session stream with error when incrementMessageCount throws', async () => {
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_inc_fail',
       userId: 'usr_123',
       stateVersion: 1,
@@ -797,7 +815,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    vi.mocked(incrementMessageCount).mockResolvedValue(false)
+    vi.mocked(incrementMessageCount).mockRejectedValue(new Error('DB connection lost'))
 
     const response = await POST(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
@@ -819,7 +837,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     const secondData = JSON.parse(events[1].replace('data: ', ''))
     expect(secondData.type).toBe('error')
     expect(secondData.code).toBe('INTERNAL_ERROR')
-    expect(secondData.error).toBe('Erro interno ao registrar mensagem. Tente novamente.')
+    expect(secondData.error).toBe('Algo deu errado. Por favor, tente novamente.')
     expect(clearIntervalSpy).toHaveBeenCalled()
 
     const hasDone = events.some((e) => e.includes('"type":"done"'))
@@ -830,7 +848,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('sends SSE error and closes stream when incrementMessageCount throws', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_throw_inc',
       userId: 'usr_123',
       stateVersion: 1,
@@ -870,7 +888,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('sends SSE error and closes stream when handleFileAttachment throws', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_throw_file',
       userId: 'usr_123',
       stateVersion: 1,
@@ -912,7 +930,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
   it('sends AbortError-specific message when pre-loop work is aborted', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
-    vi.mocked(createSessionWithCredit).mockResolvedValue({
+    vi.mocked(createSession).mockResolvedValue({
       id: 'sess_abort',
       userId: 'usr_123',
       stateVersion: 1,

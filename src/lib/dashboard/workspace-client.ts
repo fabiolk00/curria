@@ -4,7 +4,7 @@ import type {
   ResumeEditorSaveInput,
   ResumeEditorSaveOutput,
 } from '@/types/agent'
-import type { SessionWorkspace } from '@/types/dashboard'
+import type { GenerateResumeResponse, SessionWorkspace } from '@/types/dashboard'
 
 class DashboardApiError extends Error {
   status: number
@@ -79,15 +79,19 @@ export async function saveEditedResume(
 export async function generateResume(
   sessionId: string,
   input: { scope: 'base' } | { scope: 'target'; targetId: string },
-): Promise<void> {
-  await requestJson<{ success: true; scope: 'base' | 'target'; targetId?: string }>(
+  clientRequestId?: string,
+): Promise<GenerateResumeResponse> {
+  return requestJson<GenerateResumeResponse>(
     `/api/session/${sessionId}/generate`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...input,
+        clientRequestId,
+      }),
     },
   )
 }

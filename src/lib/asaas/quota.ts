@@ -1,3 +1,4 @@
+import type { ResumeGenerationType } from '@/types/agent'
 import { PLANS, type PlanSlug } from '@/lib/plans'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
@@ -145,6 +146,25 @@ export async function consumeCredit(appUserId: string): Promise<boolean> {
 
   if (rpcError) return false
   return rpcResult === true
+}
+
+export async function consumeCreditForGeneration(
+  appUserId: string,
+  resumeGenerationId: string,
+  type: ResumeGenerationType,
+): Promise<boolean> {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase.rpc('consume_credit_for_generation', {
+    p_user_id: appUserId,
+    p_resume_generation_id: resumeGenerationId,
+    p_generation_type: type,
+  })
+
+  if (error) {
+    throw new Error(`Failed to consume credit for generation: ${error.message}`)
+  }
+
+  return data === true
 }
 
 export async function revokeSubscription(asaasSubscriptionId: string): Promise<void> {

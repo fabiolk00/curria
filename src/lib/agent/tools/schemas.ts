@@ -54,6 +54,7 @@ const GenerateFileInputSchema = z.object({
     certifications: z.array(z.record(z.unknown())).optional(),
   }).passthrough(),
   target_id: z.string().optional(),
+  idempotency_key: z.string().min(1).max(200).optional(),
 })
 
 /**

@@ -210,7 +210,7 @@ describe("ResumeWorkspace", () => {
     })
   })
 
-  it("decrements local credits after the first completed turn of a new session", async () => {
+  it("keeps local credits unchanged after creating a free new session", async () => {
     renderWorkspace(
       <ResumeWorkspace
         initialSessionId={undefined}
@@ -225,10 +225,10 @@ describe("ResumeWorkspace", () => {
     await userEvent.click(screen.getByRole("button", { name: /simulate new session done/i }))
 
     await waitFor(() => {
-      expect(screen.getByTestId("chat-current-credits")).toHaveTextContent("0")
+      expect(screen.getByTestId("chat-current-credits")).toHaveTextContent("1")
     })
 
-    expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-credits", "0")
+    expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-credits", "1")
   })
 
   it("clears the active session immediately when a new conversation starts", async () => {

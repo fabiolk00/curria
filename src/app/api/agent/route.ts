@@ -5,7 +5,7 @@ import { runAgentLoop } from '@/lib/agent/agent-loop'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import {
   getSession,
-  createSessionWithCredit,
+  createSession,
   incrementMessageCount,
   updateSession,
 } from '@/lib/db/sessions'
@@ -96,10 +96,6 @@ function createAgentJsonResponse(
     }),
     metadata,
   )
-}
-
-function buildSessionLimitReachedError(maxMessages: number): string {
-  return `Esta sessão atingiu o limite de ${maxMessages} mensagens. Inicie uma nova análise para continuar.`
 }
 
 function sanitizeUserInput(input: string): string {
@@ -672,54 +668,8 @@ export async function POST(req: NextRequest) {
       success: true,
     })
 
-    if (session.messageCount >= AGENT_CONFIG.maxMessagesPerSession) {
-      logWarn('agent.session.message_cap_reached', {
-        ...releaseMetadata,
-        requestId,
-        sessionId: session.id,
-        appUserId,
-        phase: session.phase,
-        stateVersion: session.stateVersion,
-        messageCount: session.messageCount,
-        maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-        success: false,
-      })
-      const response = createAgentJsonResponse(
-        {
-          error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
-          action: 'new_session',
-          messageCount: session.messageCount,
-          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-        },
-        { status: 429 },
-        releaseMetadata,
-      )
-      response.headers.set('Retry-After', '0')
-      return response
-    }
   } else {
-    // Atomic: verify credit availability + consume credit + create session in single RPC.
-    // If RPC returns null, credits were insufficient.
-    const newSession = await createSessionWithCredit(appUserId)
-    if (!newSession) {
-      logWarn('agent.session.create_blocked_no_credit', {
-        ...releaseMetadata,
-        requestId,
-        appUserId,
-        success: false,
-        latencyMs: Date.now() - requestStartedAt,
-      })
-      return createAgentJsonResponse(
-        {
-          error: 'Seus créditos acabaram. Faça upgrade do seu plano para continuar.',
-          upgradeUrl: '/pricing',
-        },
-        { status: 402 },
-        releaseMetadata,
-      )
-    }
-
-    session = newSession
+    session = await createSession(appUserId)
     isNewSession = true
     logInfo('agent.session.created', {
       ...releaseMetadata,
@@ -729,7 +679,7 @@ export async function POST(req: NextRequest) {
       phase: session.phase,
       stateVersion: session.stateVersion,
       isNewSession: true,
-      creditConsumed: 1,
+      creditConsumed: 0,
       success: true,
       latencyMs: Date.now() - requestStartedAt,
     })
@@ -753,33 +703,7 @@ export async function POST(req: NextRequest) {
         message = await handleFileAttachment(message, file, fileMime, session!, appUserId, requestId, req.signal)
       }
 
-      const messageCountIncremented = await incrementMessageCount(session!.id)
-      if (!messageCountIncremented) {
-        logWarn('agent.session.message_cap_reached', {
-          ...releaseMetadata,
-          requestId,
-          sessionId: session!.id,
-          appUserId,
-          phase: session!.phase,
-          stateVersion: session!.stateVersion,
-          messageCount: AGENT_CONFIG.maxMessagesPerSession,
-          maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-          success: false,
-        })
-        const response = createAgentJsonResponse(
-          {
-            error: buildSessionLimitReachedError(AGENT_CONFIG.maxMessagesPerSession),
-            action: 'new_session',
-            messageCount: AGENT_CONFIG.maxMessagesPerSession,
-            maxMessages: AGENT_CONFIG.maxMessagesPerSession,
-          },
-          { status: 429 },
-          releaseMetadata,
-        )
-        response.headers.set('Retry-After', '0')
-        return response
-      }
-
+      await incrementMessageCount(session!.id)
     } catch (err) {
       const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
       const errorMessage = isAbort
@@ -834,15 +758,7 @@ export async function POST(req: NextRequest) {
             message = await handleFileAttachment(message, file, fileMime, session!, appUserId, requestId, req.signal)
           }
 
-          const messageCountIncremented = await incrementMessageCount(session!.id)
-          if (!messageCountIncremented) {
-            sendStreamError(
-              'Erro interno ao registrar mensagem. Tente novamente.',
-              TOOL_ERROR_CODES.INTERNAL_ERROR,
-              heartbeat,
-            )
-            return
-          }
+          await incrementMessageCount(session!.id)
 
         } catch (err) {
           const isAbort = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'

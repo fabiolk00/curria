@@ -3,7 +3,7 @@ title: CurrIA Testing Rules
 audience: [developers]
 related: [README.md, CODE_STYLE.md, ERROR_HANDLING.md]
 status: current
-updated: 2026-04-01
+updated: 2026-04-12
 ---
 
 # Testing Rules
@@ -34,11 +34,15 @@ Back to [Developer Rules](./README.md) | [All Docs](../INDEX.md)
 - duplicate webhook delivery behavior
 - failure retry behavior
 - no double-credit regressions
+- session creation and chat paths staying free
+- idempotent resume-generation retries returning `creditsUsed: 0`
+- unpaid or failed generations not exposing downloadable artifact URLs
 
 ### File generation
 - reads canonical `cvState`
 - persists only artifact metadata
 - does not persist signed URLs
+- bills only for successful AI-generated resume outcomes, not manual edits or plain export retries
 
 ### Browser funnel coverage
 - guest access to protected dashboard routes redirects to `/login`

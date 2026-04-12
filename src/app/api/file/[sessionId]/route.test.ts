@@ -293,6 +293,51 @@ describe('GET /api/file/[sessionId]', () => {
     expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
   })
 
+  it('does not serve session downloads when a failed artifact still has a stale pdfPath', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({
+      id: 'usr_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      authIdentity: {
+        id: 'identity_123',
+        userId: 'usr_123',
+        provider: 'clerk',
+        providerSubject: 'user_123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      creditAccount: {
+        id: 'cred_usr_123',
+        userId: 'usr_123',
+        creditsRemaining: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    vi.mocked(getSession).mockResolvedValue({
+      ...buildSession(),
+      generatedOutput: {
+        status: 'failed',
+        pdfPath: 'usr_123/sess_123/resume.pdf',
+        error: 'No credits available to finalize this generation.',
+      },
+    })
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/file/sess_123'),
+      { params: { sessionId: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      docxUrl: null,
+      pdfUrl: null,
+      available: false,
+    })
+    expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
+  })
+
   it('returns empty urls when target artifacts do not exist yet', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',

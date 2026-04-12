@@ -12,13 +12,13 @@ import {
 } from '@/lib/db/sessions'
 import { isToolFailure, TOOL_ERROR_CODES, toolFailure, toolFailureFromUnknown } from '@/lib/agent/tool-errors'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
+import { generateBillableResume } from '@/lib/resume-generation/generate-billable-resume'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
 import type {
   ApplyGapActionInput,
   AnalyzeGapInput,
   CVVersionSource,
   CreateTargetResumeInput,
-  GenerateFileInput,
   ParseFileInput,
   RewriteSectionInput,
   ScoreATSInput,
@@ -29,7 +29,6 @@ import type {
 } from '@/types/agent'
 import type { Phase } from '@/types/cv'
 
-import { generateFile } from './generate-file'
 import { applyGapAction } from './gap-to-action'
 import { analyzeGap } from './gap-analysis'
 import { parseFile } from './parse-file'
@@ -414,6 +413,9 @@ export async function executeTool(
 
     case 'generate_file': {
       const targetId = typeof toolInput.target_id === 'string' ? toolInput.target_id : undefined
+      const idempotencyKey = typeof toolInput.idempotency_key === 'string'
+        ? toolInput.idempotency_key
+        : undefined
       const target = targetId
         ? await getResumeTargetForSession(session.id, targetId)
         : null
@@ -424,18 +426,14 @@ export async function executeTool(
         }
       }
 
-      const result = await generateFile(
-        {
-          cv_state: target?.derivedCvState ?? session.cvState,
-          target_id: targetId,
-        } satisfies GenerateFileInput,
-        session.userId,
-        session.id,
-        target
-          ? { type: 'target', targetId: target.id }
-          : { type: 'session' },
-        target?.targetJobDescription ?? session.agentState,
-      )
+      const result = await generateBillableResume({
+        userId: session.userId,
+        sessionId: session.id,
+        sourceCvState: target?.derivedCvState ?? session.cvState,
+        targetId,
+        idempotencyKey,
+        templateTargetSource: target?.targetJobDescription ?? session.agentState,
+      })
 
       if (target && result.generatedOutput) {
         await updateResumeTargetGeneratedOutput(session.id, target.id, result.generatedOutput)

@@ -52,6 +52,14 @@ function getErrorMessage(error: unknown): string {
   return "NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o."
 }
 
+function createClientRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 function getManualEditSectionValue(
   workspace: SessionWorkspace | null,
   section: ManualEditSection | null,
@@ -244,7 +252,12 @@ export function ResumeWorkspace({
     setStatusMessage(null)
 
     try {
-      await generateResume(sessionId, { scope: "base" })
+      const result = await generateResume(
+        sessionId,
+        { scope: "base" },
+        createClientRequestId(),
+      )
+      setAvailableCredits((previous) => Math.max(previous - result.creditsUsed, 0))
       await refreshWorkspace(sessionId)
       setStatusMessage("Arquivos da base gerados com sucesso.")
     } catch (error) {
@@ -264,10 +277,6 @@ export function ResumeWorkspace({
         onSessionChange={(nextSessionId) => setSessionId(nextSessionId)}
         onStreamingChange={setIsStreaming}
         onAgentTurnCompleted={(payload) => {
-          if (payload.isNewSession) {
-            setAvailableCredits((previous) => Math.max(previous - 1, 0))
-          }
-
           setSessionId(payload.sessionId)
           void refreshWorkspace(payload.sessionId)
         }}

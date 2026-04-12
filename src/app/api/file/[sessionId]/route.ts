@@ -57,9 +57,9 @@ export async function GET(
   }
 
   const artifactMetadata = target?.generatedOutput ?? session.generatedOutput
-  const { pdfPath } = artifactMetadata
+  const { pdfPath, status } = artifactMetadata
 
-  if (!pdfPath) {
+  if (status !== 'ready' || !pdfPath) {
     return NextResponse.json(
       {
         docxUrl: null,

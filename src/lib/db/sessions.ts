@@ -9,7 +9,6 @@ import type {
   ToolPatch,
 } from '@/types/agent'
 import type { ATSScoreResult, CVState } from '@/types/cv'
-import { AGENT_CONFIG } from '@/lib/agent/config'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import {
@@ -20,7 +19,6 @@ import {
 
 // Increment only when the top-level session state bundle shape or interpretation changes.
 export const CURRENT_SESSION_STATE_VERSION = 1
-const SESSION_MESSAGE_CAP = AGENT_CONFIG.maxMessagesPerSession
 
 const EMPTY_CV_STATE: CVState = {
   fullName: '', email: '', phone: '', summary: '',
@@ -270,38 +268,9 @@ export async function createSession(appUserId: string): Promise<Session> {
   }
 }
 
-/**
- * Atomically consumes one credit and creates a new session in a single transaction.
- * Returns the new session if successful, or null if no credits are available.
- * Prevents credit loss when session creation would fail after a non-atomic credit decrement.
- * Seeds cvState from UserProfile if available.
- */
 export async function createSessionWithCredit(appUserId: string): Promise<Session | null> {
-  const supabase = getSupabaseAdminClient()
-
-  const { data, error } = await supabase.rpc('consume_credit_and_create_session', {
-    p_user_id: appUserId,
-  })
-
-  if (error) throw new Error(`Failed to create session with credit: ${error.message}`)
-
-  // RPC returns NULL when no credits available
-  if (!data) return null
-
-  const session = mapSessionRow(data as SessionRow)
-
-  // If session has empty cvState, seed from UserProfile
-  if (!session.cvState || Object.keys(session.cvState).length === 0 ||
-      (session.cvState.fullName === '' && session.cvState.email === '')) {
-    const profileCvState = await seedCvStateFromProfile(appUserId)
-    if (profileCvState && Object.keys(profileCvState).length > 0) {
-      // Update session with seeded cvState
-      await updateSession(session.id, { cvState: profileCvState })
-      session.cvState = profileCvState
-    }
-  }
-
-  return session
+  void appUserId
+  throw new Error('createSessionWithCredit is deprecated. Use createSession() and consume credits only after a successful resume generation.')
 }
 
 export async function updateSession(
@@ -408,35 +377,39 @@ export async function applyToolPatchWithVersion(
 
 export async function incrementMessageCount(sessionId: string): Promise<boolean> {
   const supabase = getSupabaseAdminClient()
-  const { data, error } = await supabase.rpc('increment_message_count', { session_id: sessionId })
-
-  // Fallback: if RPC doesn't exist, use optimistic locking
-  if (error && error.message.includes('function') && error.message.includes('does not exist')) {
-    const { data: sessionData } = await supabase
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data: sessionData, error: selectError } = await supabase
       .from('sessions')
       .select('message_count')
       .eq('id', sessionId)
       .single()
 
-    if (!sessionData || sessionData.message_count >= SESSION_MESSAGE_CAP) return false
+    if (selectError || !sessionData) {
+      throw new Error(`Failed to load session message count: ${selectError?.message ?? 'Session not found'}`)
+    }
 
-    // Atomic update with optimistic lock
-    const { data: updateData } = await supabase
+    const currentCount = sessionData.message_count ?? 0
+    const { data: updatedRow, error: updateError } = await supabase
       .from('sessions')
       .update({
-        message_count: sessionData.message_count + 1,
+        message_count: currentCount + 1,
         ...createUpdatedAtTimestamp(),
       })
       .eq('id', sessionId)
-      .eq('message_count', sessionData.message_count)  // Only update if value hasn't changed
-      .lt('message_count', SESSION_MESSAGE_CAP)  // Only update if below cap
+      .eq('message_count', currentCount)
       .select('message_count')
+      .maybeSingle()
 
-    return updateData !== null && updateData.length > 0
+    if (updateError) {
+      throw new Error(`Failed to increment message count: ${updateError.message}`)
+    }
+
+    if (updatedRow) {
+      return true
+    }
   }
 
-  if (error) throw new Error(`Failed to increment message count: ${error.message}`)
-  return data === true
+  throw new Error('Failed to increment message count after concurrent update retries.')
 }
 
 export async function getMessages(sessionId: string, limit = 24): Promise<Message[]> {

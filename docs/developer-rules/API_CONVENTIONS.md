@@ -3,7 +3,7 @@ title: CurrIA API Conventions
 audience: [developers]
 related: [README.md, CODE_STYLE.md, ERROR_HANDLING.md]
 status: current
-updated: 2026-04-06
+updated: 2026-04-12
 ---
 
 # API Conventions
@@ -61,8 +61,10 @@ export async function POST(req: NextRequest) {
 - Applies Upstash rate limiting
 - Validates `{ sessionId?, message, file?, fileMime? }`
 - Creates sessions only through this route
-- Consumes one credit on new session creation only
-- Enforces the 30-message cap
+- Session creation is free
+- Chat messages are free
+- Generation requests must only consume credits after a successful resume-generation outcome
+- Supports long-running sessions; the old 30-message cap is not a billing boundary anymore
 - Streams SSE responses
 - Returns `X-Session-Id` for new sessions
 - Emits `sessionCreated` as the earliest SSE event for new sessions
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
 
 ## `/api/session`
 - `GET` returns the current app user's sessions
-- `POST` is intentionally blocked to prevent bypassing credit consumption
+- `POST` is intentionally blocked to prevent bypassing the `/api/agent` session/bootstrap flow and related billing guards
 
 ## `/api/session/[id]/messages`
 - Requires auth
@@ -96,6 +98,7 @@ export async function POST(req: NextRequest) {
 - Returns transient signed URLs as JSON: `{ docxUrl, pdfUrl }`
 - Accepts `?targetId=<id>` for target-specific generated files
 - Must not persist signed URLs in session state or target state
+- Must only return downloadable URLs for artifacts whose persisted generation status is `ready`
 
 ## `/api/checkout`
 - Requires auth

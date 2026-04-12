@@ -3,7 +3,7 @@ title: CurrIA Billing Implementation
 audience: [developers, operations]
 related: [../INDEX.md, README.md, MIGRATION_GUIDE.md, OPS_RUNBOOK.md]
 status: current
-updated: 2026-04-07
+updated: 2026-04-12
 ---
 
 # Billing Implementation
@@ -19,13 +19,15 @@ CurrIA billing is webhook-driven.
 - `user_quotas` stores subscription metadata plus the UI-facing display total in `credits_remaining`.
 - `billing_checkouts` is the source of truth for post-cutover paid checkout resolution.
 - `processed_events` guarantees idempotent webhook processing.
+- Resume-generation billing is anchored on successful `resume_generations`, not session creation or chat volume.
+- `credit_consumptions` gives the auditable record for each consumed generation credit.
 
 ## Data Model
 
 ### `credit_accounts`
 
 - Owns the runtime balance.
-- Every new-session credit check reads from this table.
+- Every successful resume-generation charge reads and mutates this table.
 - Billing credit grants add to the current balance.
 
 ### `user_quotas`
@@ -55,6 +57,32 @@ CurrIA billing is webhook-driven.
 
 - Stores webhook fingerprints and payloads.
 - Prevents duplicate credit grants and duplicate metadata updates.
+
+### `resume_generations`
+
+- Stores every billable resume-generation attempt.
+- Tracks:
+  - generation type: `ATS_ENHANCEMENT` or `JOB_TARGETING`
+  - lifecycle: `pending`, `completed`, `failed`
+  - idempotency key
+  - source CV snapshot and generated CV state
+  - artifact paths when generation completes successfully
+- A session may contain many resume generations.
+
+### `credit_consumptions`
+
+- Stores the auditable spend record for each billed generation.
+- Links one consumed credit event to one `resume_generations` row.
+- Prevents double-charge by enforcing one consumption record per generation.
+
+## Runtime Billing Boundaries
+
+- Starting a session is free.
+- Sending chat messages is free.
+- Pasting or analyzing a job description is free.
+- Manual preview edits are free.
+- A credit is consumed only after a resume generation succeeds.
+- Replaying the same logical generation request through an idempotency key must return the existing result with `creditsUsed = 0`.
 
 ## Checkout Flow
 

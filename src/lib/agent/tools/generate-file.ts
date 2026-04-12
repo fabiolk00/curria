@@ -16,7 +16,7 @@ import { cvStateToTemplateData, type TemplateData } from '@/lib/templates/cv-sta
 import type { AgentState, GenerateFileInput, GenerateFileOutput, GeneratedOutput, ToolPatch } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
-type GenerateFileExecutionResult = {
+export type GenerateFileExecutionResult = {
   output: GenerateFileOutput
   patch?: ToolPatch
   generatedOutput?: GeneratedOutput

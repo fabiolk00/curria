@@ -185,6 +185,14 @@ async function getCvVersionsForSession(sessionId: string): Promise<CVVersion[]> 
   return data.map(mapCvVersionRow)
 }
 
+export async function getLatestCvVersionForScope(
+  sessionId: string,
+  targetResumeId?: string,
+): Promise<CVVersion | null> {
+  const versions = await getCvVersionsForSession(sessionId)
+  return getLatestRelevantCvVersion(versions, targetResumeId) ?? null
+}
+
 export async function getCvVersionForSession(sessionId: string, versionId: string): Promise<CVVersion | null> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase

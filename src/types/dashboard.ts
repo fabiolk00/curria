@@ -1,4 +1,4 @@
-import type { GeneratedOutput, Phase } from '@/types/agent'
+import type { GeneratedOutput, Phase, ResumeGenerationType } from '@/types/agent'
 import type {
   ATSScoreResult,
   CVState,
@@ -131,6 +131,15 @@ export type SessionWorkspace = {
     updatedAt: string
   }
   targets: SerializedResumeTarget[]
+}
+
+export type GenerateResumeResponse = {
+  success: true
+  scope: 'base' | 'target'
+  targetId?: string
+  creditsUsed: number
+  generationType: ResumeGenerationType
+  resumeGenerationId?: string
 }
 
 type CompareSnapshotRef =

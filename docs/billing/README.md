@@ -5,7 +5,7 @@ related:
   - ../INDEX.md
   - IMPLEMENTATION.md
 status: current
-updated: 2026-04-07
+updated: 2026-04-12
 ---
 
 # Billing Documentation
@@ -23,6 +23,8 @@ Recent additions covered by these docs:
 - webhook reconciliation for one-time payments that arrive with `checkoutSession` but no `externalReference`
 - UI display-total persistence for dynamic credit denominators in the dashboard
 - hardening of generic text primary-key generation so billing and app writes do not depend on missing schema defaults
+- resume-generation billing via `resume_generations` and `credit_consumptions`
+- idempotent credit consumption tied to successful generated resume outcomes instead of session creation
 
 Historical validation snapshots were removed on purpose. For current rollout verification, use:
 

@@ -9,10 +9,12 @@ import { getSession } from '@/lib/db/sessions'
 const BodySchema = z.discriminatedUnion('scope', [
   z.object({
     scope: z.literal('base'),
+    clientRequestId: z.string().min(1).max(200).optional(),
   }),
   z.object({
     scope: z.literal('target'),
     targetId: z.string().min(1),
+    clientRequestId: z.string().min(1).max(200).optional(),
   }),
 ])
 
@@ -39,6 +41,7 @@ export async function POST(
     const rawResult = await dispatchTool('generate_file', {
       cv_state: session.cvState,
       target_id: body.data.scope === 'target' ? body.data.targetId : undefined,
+      idempotency_key: body.data.clientRequestId,
     }, session)
     const result = JSON.parse(rawResult) as unknown
 
@@ -53,6 +56,9 @@ export async function POST(
       success: true,
       scope: body.data.scope,
       targetId: body.data.scope === 'target' ? body.data.targetId : undefined,
+      creditsUsed: (result as { creditsUsed?: number }).creditsUsed ?? 0,
+      generationType: body.data.scope === 'target' ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT',
+      resumeGenerationId: (result as { resumeGenerationId?: string }).resumeGenerationId,
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

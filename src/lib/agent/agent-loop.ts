@@ -1,5 +1,6 @@
 import type OpenAI from 'openai'
 import { APIError } from 'openai'
+import { createHash } from 'crypto'
 
 import { buildSystemPrompt, trimMessages } from '@/lib/agent/context-builder'
 import { AGENT_CONFIG, resolveAgentModelForPhase } from '@/lib/agent/config'
@@ -492,6 +493,18 @@ function buildResumeTextForScoring(session: Session): string {
   }
 
   return canonicalResumeText
+}
+
+function buildChatGenerationIdempotencyKey(session: Session): string {
+  const scope = session.agentState.targetJobDescription?.trim() ? 'job_targeting' : 'ats_enhancement'
+  const payload = JSON.stringify({
+    scope,
+    cvState: session.cvState,
+    targetJobDescription: session.agentState.targetJobDescription ?? null,
+  })
+  const fingerprint = createHash('sha256').update(payload).digest('hex').slice(0, 24)
+
+  return `generation:${session.id}:chat:${scope}:${fingerprint}`
 }
 
 type TargetPreparationResult = {
@@ -1560,6 +1573,7 @@ async function* handleConfirmedGeneration(params: {
     toolName: 'generate_file',
     toolInput: {
       cv_state: params.session.cvState,
+      idempotency_key: buildChatGenerationIdempotencyKey(params.session),
     },
     requestId: params.requestId,
     signal: params.signal,

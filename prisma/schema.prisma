@@ -26,6 +26,13 @@ enum JobApplicationStatus {
   @@map("job_application_status")
 }
 
+enum ResumeGenerationType {
+  ATS_ENHANCEMENT
+  JOB_TARGETING
+
+  @@map("resume_generation_type")
+}
+
 model Session {
   id             String    @id @default(cuid())
   userId         String    @map("user_id")
@@ -45,6 +52,7 @@ model Session {
   messages       Message[]
   cvVersions     CVVersion[]
   resumeTargets  ResumeTarget[]
+  resumeGenerations ResumeGeneration[]
 
   @@index([userId])
   @@map("sessions")
@@ -78,6 +86,7 @@ model ResumeTarget {
 
   session              Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   cvVersions           CVVersion[]
+  resumeGenerations    ResumeGeneration[]
 
   @@index([sessionId, createdAt])
   @@map("resume_targets")
@@ -212,6 +221,8 @@ model User {
   billingInfo    CustomerBillingInfo?
   profile        UserProfile?
   linkedInImportJobs LinkedInImportJob[]
+  resumeGenerations ResumeGeneration[]
+  creditConsumptions CreditConsumption[]
 
   @@map("users")
 }
@@ -296,4 +307,48 @@ model CustomerBillingInfo {
 
   @@index([userId])
   @@map("customer_billing_info")
+}
+
+model ResumeGeneration {
+  id               String               @id @default(cuid())
+  userId           String               @map("user_id")
+  sessionId        String?              @map("session_id")
+  resumeTargetId   String?              @map("resume_target_id")
+  type             ResumeGenerationType
+  status           String               @default("pending")
+  idempotencyKey   String?              @unique @map("idempotency_key")
+  sourceCvSnapshot Json                 @map("source_cv_snapshot")
+  generatedCvState Json?                @map("generated_cv_state")
+  outputPdfPath    String?              @map("output_pdf_path")
+  outputDocxPath   String?              @map("output_docx_path")
+  failureReason    String?              @map("failure_reason")
+  versionNumber    Int                  @default(1) @map("version_number")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session          Session?             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  resumeTarget     ResumeTarget?        @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
+  creditConsumptions CreditConsumption[]
+
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([resumeTargetId, createdAt])
+  @@map("resume_generations")
+}
+
+model CreditConsumption {
+  id                 String               @id @default(cuid())
+  userId             String               @map("user_id")
+  resumeGenerationId String               @unique @map("resume_generation_id")
+  type               ResumeGenerationType
+  creditsUsed        Int                  @default(1) @map("credits_used")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeGeneration   ResumeGeneration     @relation(fields: [resumeGenerationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("credit_consumptions")
 }

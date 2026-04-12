@@ -1499,13 +1499,6 @@ describe('runAgentLoop streaming', () => {
         }),
       }),
     }))
-    expect(events).toContainEqual(expect.objectContaining({
-      type: 'patch',
-      patch: expect.objectContaining({
-        phase: 'dialog',
-      }),
-      phase: 'dialog',
-    }))
     expect(mockAppendMessage).toHaveBeenCalledWith(
       'sess_123',
       'assistant',
@@ -1670,7 +1663,6 @@ describe('runAgentLoop streaming', () => {
       'patch',
       'toolResult',
       'patch',
-      'patch',
       'toolStart',
       'toolResult',
       'patch',
@@ -1729,13 +1721,12 @@ describe('runAgentLoop streaming', () => {
 
     expect(mockCreateChatCompletionStreamWithRetry).not.toHaveBeenCalled()
     expect(finalText).toBe('Quando fizer sentido, clique em "Aceito" para gerar seu curriculo.')
-    expect(events).toContainEqual(expect.objectContaining({
-      type: 'patch',
-      patch: expect.objectContaining({
-        phase: 'confirm',
-      }),
-      phase: 'confirm',
-    }))
+    expect(mockDispatchToolWithContext).not.toHaveBeenCalledWith(
+      'generate_file',
+      expect.any(Object),
+      expect.any(Object),
+      undefined,
+    )
   })
 
   it('generates files directly from dialog when Aceito arrives after a saved vacancy is already in context', async () => {
@@ -1901,6 +1892,15 @@ describe('runAgentLoop streaming', () => {
     }
 
     expect(mockCreateChatCompletionStreamWithRetry).not.toHaveBeenCalled()
+    expect(mockDispatchToolWithContext).toHaveBeenCalledWith(
+      'generate_file',
+      expect.objectContaining({
+        cv_state: expect.any(Object),
+        idempotency_key: expect.stringMatching(/^generation:sess_123:chat:/),
+      }),
+      expect.objectContaining({ id: 'sess_123' }),
+      undefined,
+    )
     expect(events.map((event) => event.type)).toEqual([
       'toolStart',
       'toolResult',

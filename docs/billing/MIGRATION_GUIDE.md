@@ -2,7 +2,11 @@
 
 ## Goal
 
-Apply the billing hardening changes safely and verify that post-cutover checkout resolution and pre-cutover recurring renewals both work.
+Apply the billing hardening changes safely and verify that:
+
+- post-cutover checkout resolution and pre-cutover recurring renewals both work
+- resume-generation billing is enabled
+- credits are consumed on successful generation outcomes instead of session creation
 
 ## 1. Apply the SQL Migration
 
@@ -15,6 +19,7 @@ npx prisma db execute --file prisma/migrations/20260406_fix_billing_checkout_tim
 npx prisma db execute --file prisma/migrations/20260407_persist_billing_display_totals.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_text_id_generation.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_standard_timestamps.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260412_resume_generation_billing.sql --schema prisma/schema.prisma
 ```
 
 If your deployment flow requires manual SQL execution, run the contents of:
@@ -25,6 +30,7 @@ If your deployment flow requires manual SQL execution, run the contents of:
 - `prisma/migrations/20260407_persist_billing_display_totals.sql`
 - `prisma/migrations/20260407_harden_text_id_generation.sql`
 - `prisma/migrations/20260407_harden_standard_timestamps.sql`
+- `prisma/migrations/20260412_resume_generation_billing.sql`
 
 against the target database before deploying code that depends on `billing_checkouts`, the updated RPC signatures, and the persisted dashboard display totals.
 
@@ -110,8 +116,26 @@ FROM information_schema.routines
 WHERE routine_schema = 'public'
   AND routine_name IN (
     'apply_billing_credit_grant_event',
-    'apply_billing_subscription_metadata_event'
+    'apply_billing_subscription_metadata_event',
+    'consume_credit_for_generation'
   );
+```
+
+### Resume-generation table checks
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN ('resume_generations', 'credit_consumptions');
+```
+
+### Resume-generation enum check
+
+```sql
+SELECT typname
+FROM pg_type
+WHERE typname = 'resume_generation_type';
 ```
 
 ## 3. Pre-Cutover Recurring Audit
@@ -204,6 +228,14 @@ Track:
 - `billing.pre_cutover_missing_metadata`
 - `asaas.webhook.failed`
 - `asaas.webhook.duplicate_skipped`
+
+Also validate the new generation-billing behavior:
+
+- start a session and confirm no credit is consumed
+- chat and run fit analysis and confirm no credit is consumed
+- generate an ATS-enhanced resume and confirm exactly one `credit_consumptions` row is written
+- generate a job-targeted resume and confirm exactly one `credit_consumptions` row is written
+- retry the same generation request and confirm the existing result is reused with no second charge
 
 Useful SQL:
 

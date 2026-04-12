@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { dispatchTool } from '@/lib/agent/tools'
-import { getHttpStatusForToolError, isToolFailure } from '@/lib/agent/tool-errors'
+import { getHttpStatusForToolError } from '@/lib/agent/tool-errors'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { manualEditSection, ManualEditInputSchema } from '@/lib/agent/tools/manual-edit'
 import { CVStateSchema } from '@/lib/cv/schema'
@@ -11,7 +10,6 @@ import {
   updateResumeTargetCvStateWithVersion,
 } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession, mergeToolPatch } from '@/lib/db/sessions'
-import type { Session } from '@/types/agent'
 
 function didCanonicalStateChange(previous: string, next: string): boolean {
   return previous !== next
@@ -32,27 +30,6 @@ const ResumeEditorSaveSchema = z.discriminatedUnion('scope', [
 const ManualEditRequestSchema = z.union([ManualEditInputSchema, ResumeEditorSaveSchema])
 
 type ResumeEditorSaveInput = z.infer<typeof ResumeEditorSaveSchema>
-
-async function generateArtifacts(
-  session: Session,
-  targetId: string | undefined,
-  cvState: ResumeEditorSaveInput['cvState'],
-): Promise<{ success: true } | NextResponse> {
-  const rawResult = await dispatchTool('generate_file', {
-    cv_state: cvState,
-    target_id: targetId,
-  }, session)
-  const result = JSON.parse(rawResult) as unknown
-
-  if (isToolFailure(result)) {
-    return NextResponse.json(
-      { success: false, error: result.error, code: result.code, changed: true },
-      { status: getHttpStatusForToolError(result.code) },
-    )
-  }
-
-  return { success: true }
-}
 
 export async function POST(
   req: NextRequest,
@@ -103,11 +80,6 @@ export async function POST(
           derivedCvState: body.data.cvState,
         })
 
-        const generationResult = await generateArtifacts(session, body.data.targetId, body.data.cvState)
-        if (generationResult instanceof NextResponse) {
-          return generationResult
-        }
-
         return NextResponse.json({
           success: true,
           scope: 'target',
@@ -130,11 +102,6 @@ export async function POST(
       }
 
       await applyToolPatchWithVersion(session, { cvState: body.data.cvState }, 'manual')
-
-      const generationResult = await generateArtifacts(session, undefined, body.data.cvState)
-      if (generationResult instanceof NextResponse) {
-        return generationResult
-      }
 
       return NextResponse.json({
         success: true,

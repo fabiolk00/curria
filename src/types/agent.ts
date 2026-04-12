@@ -44,6 +44,8 @@ export type AgentState = {
 
 export type CVVersionSource = 'ingestion' | 'rewrite' | 'manual' | 'target-derived'
 export type CVVersionScope = 'base' | 'target-derived'
+export type ResumeGenerationType = 'ATS_ENHANCEMENT' | 'JOB_TARGETING'
+export type ResumeGenerationStatus = 'pending' | 'completed' | 'failed'
 
 export type CVVersion = {
   id: string
@@ -69,6 +71,33 @@ export type ResumeTarget = {
   generatedOutput?: GeneratedOutput
   createdAt: Date
   updatedAt: Date
+}
+
+export type ResumeGeneration = {
+  id: string
+  userId: string
+  sessionId?: string
+  resumeTargetId?: string
+  type: ResumeGenerationType
+  status: ResumeGenerationStatus
+  idempotencyKey?: string
+  sourceCvSnapshot: CVState
+  generatedCvState?: CVState
+  outputPdfPath?: string
+  outputDocxPath?: string
+  failureReason?: string
+  versionNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type CreditConsumption = {
+  id: string
+  userId: string
+  resumeGenerationId: string
+  type: ResumeGenerationType
+  creditsUsed: number
+  createdAt: Date
 }
 
 export type GeneratedOutput = {
@@ -205,10 +234,18 @@ type SetPhaseOutput =
 export type GenerateFileInput = {
   cv_state: CVState
   target_id?: string
+  idempotency_key?: string
 }
 
 export type GenerateFileOutput =
-  | { success: true; pdfUrl: string; docxUrl?: string | null; warnings?: string[] }
+  | {
+      success: true
+      pdfUrl: string
+      docxUrl?: string | null
+      warnings?: string[]
+      creditsUsed?: number
+      resumeGenerationId?: string
+    }
   | ToolFailure
 
 export type ManualEditSection = 'contact' | RewriteSectionInput['section']

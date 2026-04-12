@@ -83,6 +83,8 @@ describe('generate route', () => {
       success: true,
       docxUrl: 'https://example.com/docx',
       pdfUrl: 'https://example.com/pdf',
+      creditsUsed: 1,
+      resumeGenerationId: 'gen_123',
     }))
 
     const response = await POST(
@@ -94,9 +96,18 @@ describe('generate route', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'base',
+      targetId: undefined,
+      creditsUsed: 1,
+      generationType: 'ATS_ENHANCEMENT',
+      resumeGenerationId: 'gen_123',
+    })
     expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
       cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
       target_id: undefined,
+      idempotency_key: undefined,
     }, expect.objectContaining({ id: 'sess_123' }))
   })
 
@@ -107,6 +118,8 @@ describe('generate route', () => {
       success: true,
       docxUrl: 'https://example.com/docx',
       pdfUrl: 'https://example.com/pdf',
+      creditsUsed: 1,
+      resumeGenerationId: 'gen_target_123',
     }))
 
     const response = await POST(
@@ -122,7 +135,50 @@ describe('generate route', () => {
       success: true,
       scope: 'target',
       targetId: 'target_123',
+      creditsUsed: 1,
+      generationType: 'JOB_TARGETING',
+      resumeGenerationId: 'gen_target_123',
     })
+    expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
+      cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
+      target_id: 'target_123',
+      idempotency_key: undefined,
+    }, expect.objectContaining({ id: 'sess_123' }))
+  })
+
+  it('returns creditsUsed: 0 for an idempotent replay', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
+      success: true,
+      docxUrl: null,
+      pdfUrl: 'https://example.com/pdf',
+      creditsUsed: 0,
+      resumeGenerationId: 'gen_existing_123',
+    }))
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/generate', {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'base', clientRequestId: 'req_existing' }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'base',
+      targetId: undefined,
+      creditsUsed: 0,
+      generationType: 'ATS_ENHANCEMENT',
+      resumeGenerationId: 'gen_existing_123',
+    })
+    expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
+      cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
+      target_id: undefined,
+      idempotency_key: 'req_existing',
+    }, expect.objectContaining({ id: 'sess_123' }))
   })
 
   it('propagates structured generation failures', async () => {
