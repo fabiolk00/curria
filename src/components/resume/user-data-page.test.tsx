@@ -120,7 +120,8 @@ describe("UserDataPage", () => {
       expect(screen.getByText("Melhorar para ATS (1 credito)")).toBeEnabled()
     })
 
-    expect(screen.getByText("Creditos disponiveis: 2")).toBeInTheDocument()
+    expect(screen.getByText("Creditos disponiveis")).toBeInTheDocument()
+    expect(screen.getByText("2")).toBeInTheDocument()
   })
 
   it("starts the ATS enhancement flow and redirects to the generated session", async () => {

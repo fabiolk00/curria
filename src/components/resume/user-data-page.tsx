@@ -13,7 +13,6 @@ import {
   Loader2,
   Upload,
   MapPin,
-  ShieldCheck,
   Sparkles,
   Target,
   TextSelect,
@@ -22,6 +21,7 @@ import {
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,6 +48,7 @@ type ProfileResponse = {
 
 type UserDataPageProps = {
   currentCredits?: number
+  userImageUrl?: string | null
 }
 
 type AtsFeature = {
@@ -150,7 +151,10 @@ function buildInitials(fullName: string): string {
   return initials || "CV"
 }
 
-export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) {
+export default function UserDataPage({
+  currentCredits = 0,
+  userImageUrl = null,
+}: UserDataPageProps) {
   const router = useRouter()
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [resumeData, setResumeData] = useState<CVState>(() => normalizeResumeData())
@@ -370,28 +374,26 @@ export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) 
 
             {isPreviewCollapsed ? (
               <div className="flex flex-col items-center gap-4 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <span className="text-sm font-semibold text-primary">{initials}</span>
-                </div>
+                <Avatar className="h-10 w-10 border border-border/60">
+                  <AvatarImage src={userImageUrl ?? undefined} alt={template.fullName || "Sua foto de perfil"} />
+                  <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
               </div>
             ) : (
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="p-5">
-                  <div className="mb-1 flex items-center justify-between gap-3 pr-10">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Template View
-                    </p>
-                    <Badge variant="secondary" className="px-2 py-0.5 text-[10px]">
-                      Mesmo template final
-                    </Badge>
-                  </div>
                   <h2 className="mb-4 text-base font-semibold text-foreground">Preview do curriculo base</h2>
 
                   <div className="mb-5 rounded-lg bg-muted/50 p-4">
                     <div className="mb-3 flex items-start gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <span className="text-lg font-semibold text-primary">{initials}</span>
-                      </div>
+                      <Avatar className="h-12 w-12 shrink-0 border border-border/60">
+                        <AvatarImage src={userImageUrl ?? undefined} alt={template.fullName || "Sua foto de perfil"} />
+                        <AvatarFallback className="bg-primary/10 text-lg font-semibold text-primary">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold text-foreground">
                           {template.fullName || "Seu nome"}
@@ -498,12 +500,6 @@ export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) 
               <header className="shrink-0 border-b border-border bg-card px-6 py-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge className="border-0 bg-primary/10 text-primary hover:bg-primary/10">
-                        <Sparkles className="mr-1 h-3 w-3" />
-                        Base profissional
-                      </Badge>
-                    </div>
                     <h1 className="text-xl font-semibold text-foreground text-balance">
                       Revise seu curriculo com uma base limpa e consistente.
                     </h1>
@@ -575,8 +571,7 @@ export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) 
                 <div className="p-5">
                 <div className="mb-4 flex items-center gap-2">
                   <Badge className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
-                    <ShieldCheck className="h-3 w-3" />
-                    ATS Enhancement
+                    ATS - Aprimorar Curriculo
                   </Badge>
                 </div>
 
@@ -593,7 +588,7 @@ export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) 
                   {atsFeatures.map((feature) => {
                     const Icon = feature.icon
 
-                    const checked = feature.id !== "rewrite"
+                    const checked = true
                     return (
                       <div
                         key={feature.id}
@@ -620,28 +615,11 @@ export default function UserDataPage({ currentCredits = 0 }: UserDataPageProps) 
                   </CardContent>
                 </Card>
 
-                <Card className="mb-5 border-border py-0 shadow-none">
-                  <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    O que acontece ao clicar
-                  </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Salvo seu snapshot atual, gero uma sessao derivada da base, crio a versao ATS e mantenho a base original preservada para comparacao.
-                  </p>
-                  </CardContent>
-                </Card>
-
                 <div className="mb-5 px-1 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Creditos disponiveis</span>
                     <span className="font-semibold text-foreground">{currentCredits}</span>
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Creditos disponiveis: {currentCredits}
-                  </p>
                   {!atsReadiness.isReady ? (
                     <p className="mt-2 text-xs text-muted-foreground">
                       Complete seu curriculo para gerar uma versao ATS.
