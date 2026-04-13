@@ -216,10 +216,14 @@ export default function UserDataPage({
     }
   }, [])
 
-  const handleImportSuccess = (data: ResumeData, nextProfilePhotoUrl?: string | null) => {
+  const handleImportSuccess = (
+    data: ResumeData,
+    nextProfilePhotoUrl?: string | null,
+    nextProfileSource?: string | null,
+  ) => {
     setIsImportOpen(false)
     setResumeData(normalizeResumeData(data))
-    setProfileSource("linkedin")
+    setProfileSource(nextProfileSource ?? "linkedin")
     setProfilePhotoUrl(nextProfilePhotoUrl ?? null)
     setLastUpdatedAt(new Date().toISOString())
   }
@@ -300,6 +304,10 @@ export default function UserDataPage({
 
     if (profileSource === "linkedin") {
       return "Base salva a partir do LinkedIn"
+    }
+
+    if (profileSource === "pdf") {
+      return "Base salva a partir de curriculo importado"
     }
 
     if (profileSource === "manual") {

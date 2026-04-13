@@ -20,7 +20,22 @@ vi.mock("sonner", () => ({
 }))
 
 vi.mock("./resume-builder", () => ({
-  ImportResumeModal: () => null,
+  ImportResumeModal: ({ onImportSuccess }: { onImportSuccess: (data: unknown, profilePhotoUrl?: string | null, source?: string | null) => void }) => (
+    <button
+      type="button"
+      onClick={() => onImportSuccess({
+        fullName: "Ana Silva",
+        email: "ana@example.com",
+        phone: "555-0100",
+        summary: "Imported summary",
+        experience: [],
+        skills: [],
+        education: [],
+      }, null, "pdf")}
+    >
+      mock-import
+    </button>
+  ),
 }))
 
 vi.mock("./visual-resume-editor", () => ({
@@ -209,5 +224,22 @@ describe("UserDataPage", () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard?session=sess_ats_123")
     })
+  })
+
+  it("updates the source badge when a PDF import succeeds", async () => {
+    const user = userEvent.setup()
+
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        profile: null,
+      }),
+    })) as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await user.click(await screen.findByText("mock-import"))
+
+    expect(screen.getByText("Base salva a partir de curriculo importado")).toBeInTheDocument()
   })
 })

@@ -5,19 +5,8 @@ import { CVStateSchema } from '@/lib/cv/schema'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import { logError, logInfo } from '@/lib/observability/structured-log'
+import { getExistingUserProfile, type UserProfileRow } from '@/lib/profile/user-profiles'
 import type { CVState } from '@/types/cv'
-
-type UserProfileRow = {
-  id: string
-  user_id: string
-  cv_state: unknown
-  source: string
-  linkedin_url: string | null
-  profile_photo_url: string | null
-  extracted_at: string
-  created_at: string
-  updated_at: string
-}
 
 function mapProfileResponse(data: UserProfileRow) {
   return {
@@ -45,21 +34,6 @@ function normalizeLinkedinUrl(cvState: CVState, currentValue?: string | null): s
   return linkedinValue
 }
 
-async function getExistingProfile(appUserId: string): Promise<UserProfileRow | null> {
-  const supabase = getSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', appUserId)
-    .single()
-
-  if (error && error.code !== 'PGRST116') {
-    throw new Error(error.message)
-  }
-
-  return (data as UserProfileRow | null) ?? null
-}
-
 export async function GET() {
   const appUser = await getCurrentAppUser()
   if (!appUser) {
@@ -71,7 +45,7 @@ export async function GET() {
   }
 
   try {
-    const data = await getExistingProfile(appUser.id)
+    const data = await getExistingUserProfile(appUser.id)
 
     if (!data) {
       logInfo('[api/profile] No profile found', {
@@ -127,7 +101,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const existingProfile = await getExistingProfile(appUser.id)
+    const existingProfile = await getExistingUserProfile(appUser.id)
     const supabase = getSupabaseAdminClient()
     const payload = {
       id: existingProfile?.id ?? createDatabaseId(),

@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowRight,
+  CheckCircle2,
   FileText,
   Linkedin,
   Loader2,
@@ -26,17 +27,19 @@ import type { CVState } from "@/types/cv"
 
 export type ResumeData = Partial<CVState>
 type JobStatus = "active" | "completed" | "failed" | "delayed" | "waiting"
+type FileImportStage = "idle" | "uploading" | "extracting" | "completed" | "failed"
 
 type ImportResumeModalProps = {
   isOpen: boolean
   onClose: () => void
-  onImportSuccess: (data: ResumeData, profilePhotoUrl?: string | null) => void
+  onImportSuccess: (data: ResumeData, profilePhotoUrl?: string | null, source?: string | null) => void
 }
 
 type ProfileResponse = {
   profile: {
     cvState: ResumeData
     profilePhotoUrl: string | null
+    source?: string | null
   } | null
 }
 
@@ -44,6 +47,16 @@ type ImportStatusResponse = {
   status: JobStatus
   error?: string
   errorMessage?: string
+}
+
+type FileUploadResponse = {
+  profile?: {
+    cvState: ResumeData
+    profilePhotoUrl: string | null
+    source: string
+  } | null
+  error?: string
+  warning?: string
 }
 
 function statusLabel(status: JobStatus): string {
@@ -61,15 +74,66 @@ function statusLabel(status: JobStatus): string {
   }
 }
 
+function fileImportLabel(stage: FileImportStage): string {
+  switch (stage) {
+    case "idle":
+      return "Pronto para importar"
+    case "uploading":
+      return "Enviando arquivo"
+    case "extracting":
+      return "Extraindo e organizando dados"
+    case "completed":
+      return "Importacao concluida"
+    case "failed":
+      return "Importacao falhou"
+  }
+}
+
 export function ImportResumeModal({
   isOpen,
   onClose,
   onImportSuccess,
 }: ImportResumeModalProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const activeFileImportIdRef = useRef(0)
+  const isFileImportInFlightRef = useRef(false)
   const [linkedinUrl, setLinkedinUrl] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isLinkedinSubmitting, setIsLinkedinSubmitting] = useState(false)
+  const [activeFileImportId, setActiveFileImportId] = useState<number | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null)
+  const [fileImportStage, setFileImportStage] = useState<FileImportStage>("idle")
+  const [fileImportMessage, setFileImportMessage] = useState<string | null>(null)
+
+  const invalidateActiveFileImport = (): void => {
+    activeFileImportIdRef.current += 1
+    isFileImportInFlightRef.current = false
+    setActiveFileImportId(null)
+  }
+
+  const resetFileImportState = (): void => {
+    setSelectedFile(null)
+    setFileImportStage("idle")
+    setFileImportMessage(null)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const handleClose = (): void => {
+    invalidateActiveFileImport()
+    resetFileImportState()
+    onClose()
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      invalidateActiveFileImport()
+      resetFileImportState()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!jobId) {
@@ -107,6 +171,7 @@ export function ImportResumeModal({
           onImportSuccess(
             profileData.profile.cvState,
             profileData.profile.profilePhotoUrl ?? null,
+            profileData.profile.source ?? "linkedin",
           )
           setLinkedinUrl("")
           setJobId(null)
@@ -132,7 +197,7 @@ export function ImportResumeModal({
   }, [jobId, onImportSuccess])
 
   const handleLinkedInImport = async (): Promise<void> => {
-    setIsSubmitting(true)
+    setIsLinkedinSubmitting(true)
 
     try {
       const response = await fetch("/api/profile/extract", {
@@ -155,15 +220,83 @@ export function ImportResumeModal({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao iniciar a importacao do LinkedIn.")
     } finally {
-      setIsSubmitting(false)
+      setIsLinkedinSubmitting(false)
     }
   }
 
-  const isBusy = isSubmitting || jobId !== null
+  const handleFileImport = async (): Promise<void> => {
+    if (!selectedFile) {
+      toast.error("Selecione um arquivo PDF para importar.")
+      return
+    }
+
+    if (isFileImportInFlightRef.current) {
+      return
+    }
+
+    isFileImportInFlightRef.current = true
+    const importId = activeFileImportIdRef.current + 1
+    activeFileImportIdRef.current = importId
+    setActiveFileImportId(importId)
+    setFileImportStage("uploading")
+    setFileImportMessage("Estamos enviando seu curriculo para leitura segura.")
+
+    try {
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+
+      setFileImportStage("extracting")
+      setFileImportMessage("Extraindo o texto e preenchendo as secoes automaticamente.")
+
+      const response = await fetch("/api/profile/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      })
+
+      const data = (await response.json()) as FileUploadResponse
+      if (!response.ok || !data.profile) {
+        throw new Error(data.error ?? "Nao foi possivel importar seu curriculo.")
+      }
+
+      if (activeFileImportIdRef.current !== importId || !isOpen) {
+        return
+      }
+
+      onImportSuccess(
+        data.profile.cvState,
+        data.profile.profilePhotoUrl ?? null,
+        data.profile.source,
+      )
+      resetFileImportState()
+      setFileImportStage("completed")
+      setFileImportMessage("Os dados importados ja foram aplicados ao formulario.")
+      if (data.warning) {
+        toast.warning(data.warning)
+      }
+      toast.success("Curriculo importado com sucesso.")
+    } catch (error) {
+      if (activeFileImportIdRef.current !== importId || !isOpen) {
+        return
+      }
+
+      setFileImportStage("failed")
+      setFileImportMessage(null)
+      toast.error(error instanceof Error ? error.message : "Erro ao importar seu curriculo.")
+    } finally {
+      if (activeFileImportIdRef.current === importId) {
+        isFileImportInFlightRef.current = false
+        setActiveFileImportId(null)
+      }
+    }
+  }
+
+  const isBusy = isLinkedinSubmitting || activeFileImportId !== null || jobId !== null
+  const showFileStatus = fileImportStage !== "idle"
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="overflow-hidden sm:max-w-3xl">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500" />
         <DialogHeader className="space-y-4 pt-3">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-blue-50/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
@@ -173,7 +306,7 @@ export function ImportResumeModal({
           <div className="space-y-2">
             <DialogTitle className="text-2xl">Importar perfil profissional</DialogTitle>
             <DialogDescription>
-              Use o LinkedIn para preencher sua base profissional e revisar tudo antes de salvar.
+              Use o LinkedIn ou um curriculo em PDF para preencher sua base profissional e revisar tudo antes de salvar.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -187,7 +320,7 @@ export function ImportResumeModal({
               <div>
                 <h3 className="font-semibold text-foreground">LinkedIn</h3>
                 <p className="text-sm text-muted-foreground">
-                  Cole o link do seu perfil público e acompanhe a importação em tempo real.
+                  Cole o link do seu perfil publico e acompanhe a importacao em tempo real.
                 </p>
               </div>
             </div>
@@ -226,7 +359,7 @@ export function ImportResumeModal({
                     Status da importacao: {statusLabel(jobStatus)}
                   </div>
                   <p className="mt-2 text-blue-800 dark:text-blue-200">
-                    Assim que terminar, os dados importados aparecem automaticamente no formulário.
+                    Assim que terminar, os dados importados aparecem automaticamente no formulario.
                   </p>
                 </div>
               )}
@@ -239,38 +372,93 @@ export function ImportResumeModal({
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">PDF ou DOCX</h3>
+                <h3 className="font-semibold text-foreground">PDF</h3>
                 <p className="text-sm text-muted-foreground">
-                  Esta opção ainda está em preparação. Por enquanto, use o LinkedIn ou preencha manualmente.
+                  Envie seu curriculo para preencher a base profissional usando a mesma estrutura do editor.
                 </p>
               </div>
             </div>
 
-            <div className="flex min-h-36 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-4 text-center text-sm text-muted-foreground">
-              <div className="space-y-2">
-                <Upload className="mx-auto h-5 w-5" />
-                <p>Arraste seu arquivo aqui ou clique para selecionar.</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">
-                  Upload ainda indisponível
+            <div className="space-y-3">
+              <label
+                htmlFor="resume-file-upload"
+                className="flex min-h-36 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-4 text-center text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/50"
+              >
+                <div className="space-y-2">
+                  <Upload className="mx-auto h-5 w-5" />
+                  <p>{selectedFile ? selectedFile.name : "Clique para selecionar um PDF."}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">
+                    Ate 5 MB
+                  </p>
+                </div>
+              </label>
+
+              <Input
+                ref={fileInputRef}
+                id="resume-file-upload"
+                type="file"
+                className="sr-only"
+                accept=".pdf,application/pdf"
+                disabled={isBusy}
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              />
+
+              <Button
+                type="button"
+                className="w-full rounded-full"
+                disabled={isBusy || !selectedFile}
+                onClick={() => void handleFileImport()}
+              >
+                {activeFileImportId !== null ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Importando curriculo
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-4 w-4" />
+                    Importar arquivo
+                  </>
+                )}
+              </Button>
+
+              {showFileStatus ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-100">
+                  <div className="flex items-center gap-2 font-medium">
+                    {fileImportStage === "completed" ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <Loader2 className={`h-4 w-4 ${fileImportStage === "failed" ? "" : "animate-spin"}`} />
+                    )}
+                    Status da importacao: {fileImportLabel(fileImportStage)}
+                  </div>
+                  {fileImportMessage ? (
+                    <p className="mt-2 text-slate-700 dark:text-slate-300">{fileImportMessage}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  PDFs escaneados podem nao ter texto suficiente para leitura automatica. Se isso acontecer, use um PDF com texto selecionavel ou preencha manualmente.
                 </p>
               </div>
-            </div>
-
-            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                Upload por PDF ainda não está habilitado nesta entrega. O fluxo ativo continua sendo o LinkedIn.
-              </p>
             </div>
           </section>
         </div>
 
         <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={onClose} className="rounded-full">
+          <Button variant="outline" onClick={handleClose} className="rounded-full">
             Fechar
           </Button>
-          <Button disabled className="rounded-full">
-            PDF em breve
+          <Button
+            type="button"
+            disabled={isBusy || !selectedFile}
+            className="rounded-full"
+            onClick={() => void handleFileImport()}
+          >
+            Importar arquivo
           </Button>
         </DialogFooter>
       </DialogContent>

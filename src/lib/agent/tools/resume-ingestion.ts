@@ -282,7 +282,7 @@ export async function ingestResumeText(
   resumeText: string,
   currentCvState: CVState,
   userId: string,
-  sessionId: string,
+  sessionId?: string,
   externalSignal?: AbortSignal,
 ): Promise<ResumeIngestionResult> {
   const response = await callOpenAIWithRetry(
@@ -372,4 +372,3 @@ Rules:
     confidenceScore: payload.confidenceScore,
   }
 }
-

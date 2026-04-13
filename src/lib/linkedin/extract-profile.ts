@@ -1,7 +1,5 @@
-import { createDatabaseId } from '@/lib/db/ids'
-import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
-import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 import { logError, logInfo } from '@/lib/observability/structured-log'
+import { saveImportedUserProfile } from '@/lib/profile/user-profiles'
 import type { CVState } from '@/types/cv'
 
 import {
@@ -9,25 +7,6 @@ import {
   fetchLinkedInProfile,
   mapLinkdAPIToCvState,
 } from './linkdapi'
-
-type ExistingUserProfileRow = {
-  id: string
-}
-
-async function getExistingProfileId(appUserId: string): Promise<string | undefined> {
-  const supabase = getSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('id')
-    .eq('user_id', appUserId)
-    .single()
-
-  if (error && error.code !== 'PGRST116') {
-    throw new Error(`Failed to load existing profile: ${error.message}`)
-  }
-
-  return (data as ExistingUserProfileRow | null)?.id
-}
 
 /**
  * Pure orchestration: fetch LinkedIn profile, map to cvState, persist to UserProfile.
@@ -42,29 +21,21 @@ export async function extractAndSaveProfile(
   const profileData = await fetchLinkedInProfile(linkedinUrl)
   const cvState = mapLinkdAPIToCvState(profileData)
   const profilePhotoUrl = extractLinkedInProfilePhotoUrl(profileData)
-  const existingProfileId = await getExistingProfileId(appUserId)
 
-  const supabase = getSupabaseAdminClient()
-  const { error } = await supabase.from('user_profiles').upsert(
-    {
-      id: existingProfileId ?? createDatabaseId(),
-      user_id: appUserId,
-      cv_state: cvState,
+  try {
+    await saveImportedUserProfile({
+      appUserId,
+      cvState,
       source: 'linkedin',
-      linkedin_url: linkedinUrl,
-      profile_photo_url: profilePhotoUrl ?? null,
-      extracted_at: new Date().toISOString(),
-      ...createUpdatedAtTimestamp(),
-    },
-    { onConflict: 'user_id' },
-  )
-
-  if (error) {
+      linkedinUrl,
+      profilePhotoUrl: profilePhotoUrl ?? null,
+    })
+  } catch (error) {
     logError('[extract-profile] Database upsert failed', {
       appUserId,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     })
-    throw new Error(`Failed to save profile: ${error.message}`)
+    throw error
   }
 
   logInfo('[extract-profile] Profile extracted and saved', {

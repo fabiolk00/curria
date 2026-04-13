@@ -70,7 +70,7 @@ describe('extractAndSaveProfile', () => {
     expect(result.cvState.fullName).toBe('Fabio Test')
     expect(result.profilePhotoUrl).toBe('https://cdn.example.com/profile-photo.jpg')
     expect(mockFrom).toHaveBeenCalledWith('user_profiles')
-    expect(mockSelect).toHaveBeenCalledWith('id')
+    expect(mockSelect).toHaveBeenCalledWith('*')
     expect(mockEq).toHaveBeenCalledWith('user_id', 'usr_test_123')
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
