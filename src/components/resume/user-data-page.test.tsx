@@ -710,6 +710,9 @@ describe("UserDataPage", () => {
     expect(screen.getByText("keyword matching e gap analysis quando houver vaga")).toBeInTheDocument()
     expect(screen.getByText("reescrita estrategica de resumo e bullets")).toBeInTheDocument()
     expect(screen.getByText("template ATS em PDF textual, simples e pt-BR")).toBeInTheDocument()
+    expect(screen.getByTestId("ats-panel-badge")).toHaveClass("bg-foreground", "text-background")
+    expect(screen.getByTestId("ats-feature-analysis")).toHaveClass("border-emerald-500/50", "bg-emerald-50")
+    expect(screen.getByTestId("ats-panel-cta")).toHaveClass("bg-emerald-600", "text-white")
     expect(screen.getByText("Melhorar para ATS (1 credito)")).toBeInTheDocument()
   })
 

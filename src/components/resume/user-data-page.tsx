@@ -7,16 +7,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  FileOutput,
   FileSearch,
   Layers3,
   Linkedin,
   Loader2,
   Upload,
   MapPin,
+  PenLine,
   Sparkles,
   Target,
-  TextSelect,
-  ListChecks,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -24,7 +24,7 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -131,8 +131,8 @@ function sanitizeResumeData(value: CVState): CVState {
 const atsFeatures: AtsFeature[] = [
   { id: "analysis", label: "parse e leitura estruturada do curriculo", icon: FileSearch },
   { id: "keywords", label: "keyword matching e gap analysis quando houver vaga", icon: Target },
-  { id: "structure", label: "reescrita estrategica de resumo e bullets", icon: TextSelect },
-  { id: "rewrite", label: "template ATS em PDF textual, simples e pt-BR", icon: ListChecks },
+  { id: "structure", label: "reescrita estrategica de resumo e bullets", icon: PenLine },
+  { id: "rewrite", label: "template ATS em PDF textual, simples e pt-BR", icon: FileOutput },
 ]
 
 function formatUpdatedLabel(lastUpdatedAt: string | null): string {
@@ -709,56 +709,59 @@ export default function UserDataPage({
             )}
             </section>
 
-            <aside className="flex w-80 shrink-0 flex-col bg-card">
+            <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Badge className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
+                <div className="mb-4">
+                  <Badge
+                    data-testid="ats-panel-badge"
+                    className="bg-foreground px-3 py-1 font-medium text-background hover:bg-foreground/90"
+                  >
                     ATS - Aprimorar Curriculo
                   </Badge>
                 </div>
 
-                <Card className="mb-5 border-border py-0 shadow-none">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold">
-                      Melhorar meu curriculo para ATS
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Usa o seu perfil base para gerar uma versao ATS em pt-BR seguindo o modelo padrao da plataforma: estrutura linear, sem elementos que atrapalham parsing, linguagem objetiva e foco em verdade, matching e clareza.
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <div className="mb-5">
+                  <h2 className="mb-2 text-lg font-semibold text-foreground">
+                    Melhorar meu curriculo para ATS
+                  </h2>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Usa o seu perfil base para gerar uma versao ATS em pt-BR seguindo o modelo padrao da plataforma: estrutura linear, sem elementos que atrapalham parsing, linguagem objetiva e foco em verdade, matching e clareza.
+                  </p>
+                </div>
+
+                <div className="mb-6 space-y-3">
                   {atsFeatures.map((feature) => {
                     const Icon = feature.icon
 
-                    const checked = true
                     return (
                       <div
                         key={feature.id}
+                        data-testid={`ats-feature-${feature.id}`}
                         className={cn(
-                          "flex items-center gap-3 rounded-lg border p-3 text-left",
-                          checked ? "border-primary/50 bg-primary/5" : "border-border",
+                          "flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
+                          "border-emerald-500/50 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/20",
                         )}
                       >
                         <input
                           type="checkbox"
-                          checked={checked}
+                          checked
                           readOnly
-                          className="h-4 w-4 rounded border-border accent-primary"
+                          aria-label={feature.label}
+                          className="mt-0.5 h-4 w-4 rounded border-emerald-600 accent-emerald-600"
                         />
-                        <div className="text-muted-foreground">
+                        <div className="mt-0.5 text-muted-foreground">
                           <Icon className="h-4 w-4" />
                         </div>
-                        <span className="flex-1 text-sm font-medium text-foreground">
+                        <span className="flex-1 text-sm leading-snug text-foreground">
                           {feature.label}
                         </span>
                       </div>
                     )
                   })}
-                  </CardContent>
-                </Card>
+                </div>
 
-                <div className="mb-5 px-1 text-sm">
+                <div className="mb-4 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Creditos disponiveis</span>
                     <span className="font-semibold text-foreground">{currentCredits}</span>
@@ -786,8 +789,9 @@ export default function UserDataPage({
                 type="button"
                 disabled={atsButtonDisabled}
                 onClick={() => void handleAtsEnhancement()}
-                className="h-11 w-full gap-2"
+                className="h-12 w-full gap-2 rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700 disabled:bg-emerald-600/60"
                 size="lg"
+                data-testid="ats-panel-cta"
               >
                 {isRunningAtsEnhancement ? (
                   <>
