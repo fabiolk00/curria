@@ -420,6 +420,50 @@ function buildCertificationPeriod(value?: string): string {
   return value?.trim() ?? ''
 }
 
+function extractStructuredSummary(summary: string): string {
+  const trimmed = summary.trim()
+  if (!trimmed.startsWith('{')) {
+    return trimmed
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>
+
+    if (Array.isArray(parsed.items)) {
+      const lines = parsed.items
+        .flatMap((item) => {
+          if (typeof item === 'string') {
+            return item
+          }
+
+          if (!item || typeof item !== 'object') {
+            return []
+          }
+
+          const record = item as Record<string, unknown>
+          const content = [record.content, record.text]
+            .find((candidate) => typeof candidate === 'string')
+
+          return typeof content === 'string' ? content : []
+        })
+        .map((item) => item.replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+
+      if (lines.length > 0) {
+        return lines.join(' ')
+      }
+    }
+
+    if (typeof parsed.content === 'string' && parsed.content.trim()) {
+      return parsed.content.replace(/\s+/g, ' ').trim()
+    }
+  } catch {
+    return trimmed
+  }
+
+  return trimmed
+}
+
 export function cvStateToTemplateData(
   cvState: CVState,
   source?: TemplateSource,
@@ -464,7 +508,7 @@ export function cvStateToTemplateData(
     phone: cvState.phone.trim(),
     location: cvState.location?.trim() ?? '',
     linkedin: cvState.linkedin?.trim() ?? '',
-    summary: cvState.summary.trim(),
+    summary: extractStructuredSummary(cvState.summary),
     skills: remainingSkills.join(', '),
     skillGroups,
     experiences,

@@ -163,4 +163,15 @@ describe('cvStateToTemplateData', () => {
 
     expect(result.experiences[0]?.period).toBe('Jan 2022')
   })
+
+  it('sanitizes structured summary payloads before building the ATS template', () => {
+    const result = cvStateToTemplateData({
+      ...buildCvState(),
+      summary: '{"section":"summary","title":"Resumo profissional","items":[{"type":"text","content":"Engenheiro de Dados com foco em ETL e modelagem."},{"type":"text","content":"Experiencia com Databricks, SQL e Power BI."}]}',
+    })
+
+    expect(result.summary).toBe(
+      'Engenheiro de Dados com foco em ETL e modelagem. Experiencia com Databricks, SQL e Power BI.',
+    )
+  })
 })

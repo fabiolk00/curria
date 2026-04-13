@@ -227,6 +227,29 @@ describe('rewriteSection', () => {
     })
   })
 
+  it('recovers summary rewrites when the model nests content inside a serialized section payload', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      rewritten_content: '{"section":"summary","title":"Resumo profissional","items":[{"type":"text","content":"Engenheiro de Dados com experiencia em ETL e analytics."},{"type":"text","content":"Atuacao com PySpark, SQL e Power BI para decisoes estrategicas."}]}',
+      section_data: '{"section":"summary","title":"Resumo profissional","items":[{"type":"text","content":"Engenheiro de Dados com experiencia em ETL e analytics."},{"type":"text","content":"Atuacao com PySpark, SQL e Power BI para decisoes estrategicas."}]}',
+      keywords_added: ['PySpark', 'Power BI'],
+      changes_made: ['Resumo consolidado a partir do payload estruturado'],
+    })))
+
+    const result = await rewriteSection({
+      section: 'summary',
+      current_content: 'Resumo original',
+      instructions: 'Rewrite summary',
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output).toEqual({
+      success: true,
+      rewritten_content: 'Engenheiro de Dados com experiencia em ETL e analytics. Atuacao com PySpark, SQL e Power BI para decisoes estrategicas.',
+      section_data: 'Engenheiro de Dados com experiencia em ETL e analytics. Atuacao com PySpark, SQL e Power BI para decisoes estrategicas.',
+      keywords_added: ['PySpark', 'Power BI'],
+      changes_made: ['Resumo consolidado a partir do payload estruturado'],
+    })
+  })
+
   it('normalizes common experience payload variants instead of failing the rewrite', async () => {
     createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
       rewritten_content: 'Experiencia profissional reestruturada.',

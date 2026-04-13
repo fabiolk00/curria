@@ -103,6 +103,49 @@ function normalizeBullets(value: unknown): string[] {
     .filter(Boolean)
 }
 
+function extractStructuredTextContent(value: string): string | null {
+  const parsed = extractJsonLikeObject(value)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null
+  }
+
+  const record = parsed as Record<string, unknown>
+  const itemTexts = Array.isArray(record.items)
+    ? record.items
+        .flatMap((item) => {
+          if (typeof item === 'string') {
+            return item
+          }
+
+          if (!item || typeof item !== 'object') {
+            return []
+          }
+
+          const itemRecord = item as Record<string, unknown>
+          const content = [itemRecord.content, itemRecord.text]
+            .find((candidate) => typeof candidate === 'string')
+
+          return typeof content === 'string' ? content : []
+        })
+        .map((item) => item.replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+    : []
+
+  if (itemTexts.length > 0) {
+    return itemTexts.join(' ')
+  }
+
+  if (typeof record.content === 'string' && record.content.trim()) {
+    return record.content.replace(/\s+/g, ' ').trim()
+  }
+
+  if (typeof record.rewritten_content === 'string' && record.rewritten_content.trim() !== value.trim()) {
+    return record.rewritten_content.replace(/\s+/g, ' ').trim()
+  }
+
+  return null
+}
+
 function parseCurrentExperienceEntries(rawContent: string): ExperienceEntry[] {
   const parsed = extractJsonLikeObject(rawContent)
   return Array.isArray(parsed)
@@ -255,6 +298,20 @@ function normalizeRewritePayload(
 
     if (typeof record.rewritten_content !== 'string' && typeof record.section_data === 'string') {
       record.rewritten_content = record.section_data
+    }
+
+    if (typeof record.section_data === 'string') {
+      const normalizedSummary = extractStructuredTextContent(record.section_data)
+      if (normalizedSummary) {
+        record.section_data = normalizedSummary
+      }
+    }
+
+    if (typeof record.rewritten_content === 'string') {
+      const normalizedRewrittenContent = extractStructuredTextContent(record.rewritten_content)
+      if (normalizedRewrittenContent) {
+        record.rewritten_content = normalizedRewrittenContent
+      }
     }
   }
 
