@@ -361,16 +361,18 @@ describe("UserDataPage", () => {
     const educationHeading = screen.getByText("Educacao")
     const certificationsHeading = screen.getByText("Certificacoes")
 
-    expect(skillsHeading).toBeDefined()
+    if (!skillsHeading) {
+      throw new Error("Expected preview Skills heading to be rendered as an H4 element.")
+    }
 
     expect(
       personalHeading.compareDocumentPosition(summaryHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
-      summaryHeading.compareDocumentPosition(skillsHeading as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+      summaryHeading.compareDocumentPosition(skillsHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
-      skillsHeading?.compareDocumentPosition(experienceHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      skillsHeading.compareDocumentPosition(experienceHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
       experienceHeading.compareDocumentPosition(educationHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
