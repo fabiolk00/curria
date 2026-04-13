@@ -4,11 +4,11 @@ export const embeddedClerkAppearance = {
     cardBox: "w-full shadow-none",
     card: "border-0 bg-transparent shadow-none rounded-none p-0",
     input:
-      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] !h-12 !rounded-xl !border !border-input !bg-background !px-4 !shadow-none outline-none ring-0",
+      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] border-0 bg-transparent px-4 shadow-none outline-none ring-0",
     formFieldInput:
-      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] !h-12 !rounded-xl !border !border-input !bg-background !px-4 !shadow-none outline-none ring-0",
+      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] border-0 bg-transparent px-4 shadow-none outline-none ring-0",
     formFieldInputGroup:
-      "!h-12 !rounded-xl !border !border-input !bg-background !shadow-none overflow-hidden",
+      "rounded-xl border border-input bg-background shadow-none overflow-hidden",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     socialButtonsBlockButton:
