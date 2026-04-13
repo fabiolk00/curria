@@ -239,10 +239,10 @@ export function VisualResumeEditor({
   compactMode = false,
 }: VisualResumeEditorProps) {
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
-    personal: false,
-    summary: false,
+    personal: true,
+    summary: true,
     experience: false,
-    skills: false,
+    skills: true,
     education: false,
     certifications: false,
   })
