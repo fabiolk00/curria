@@ -5,9 +5,9 @@ import type { ReactNode } from "react"
 import Logo from "@/components/logo"
 
 const features = [
-  "Continue de onde parou no seu curriculo otimizado.",
-  "Converse com IA e gere seu curriculo otimizado.",
-  "Suas analises ATS e PDFs ficam salvos na sua conta.",
+  "Continue de onde parou no seu curr\u00edculo otimizado.",
+  "Converse com IA e gere seu curr\u00edculo otimizado.",
+  "Suas an\u00e1lises ATS e PDFs ficam salvos na sua conta.",
 ]
 
 export default function AuthShell({
@@ -38,13 +38,13 @@ export default function AuthShell({
 
           <div className="flex max-w-lg flex-1 flex-col justify-center">
             <h1 className="mb-6 text-4xl font-bold leading-tight text-white md:text-5xl">
-              Pare de enviar curriculos genericos.
+              Pare de enviar curr\u00edculos gen\u00e9ricos.
             </h1>
             <p className="mb-4 text-lg leading-relaxed text-white/70">
-              Adapte seu curriculo para cada vaga em minutos e aumente suas chances de entrevistas.
+              Adapte seu curr\u00edculo para cada vaga em minutos e aumente suas chances de entrevistas.
             </p>
-            <p className="text-base text-white/50">
-              Voce precisa de um curriculo certo para a vaga certa.
+            <p className="text-base text-white">
+              Voc\u00ea precisa de um curr\u00edculo certo para a vaga certa.
             </p>
           </div>
 
