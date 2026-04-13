@@ -3,6 +3,8 @@ export const embeddedClerkAppearance = {
     rootBox: "w-full",
     cardBox: "w-full shadow-none",
     card: "border-0 bg-transparent shadow-none rounded-none p-0",
+    input:
+      "h-12 w-full border-0 bg-transparent px-4 py-3 text-sm text-foreground shadow-none outline-none ring-0",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     socialButtonsBlockButton:
@@ -15,7 +17,9 @@ export const embeddedClerkAppearance = {
     formFieldInput:
       "h-full w-full border-0 bg-transparent px-4 py-3 text-sm text-foreground shadow-none focus:ring-0 focus:outline-none",
     formFieldInputGroup:
-      "min-h-12 rounded-xl border border-border bg-background shadow-none transition-colors focus-within:border-foreground/20",
+      "min-h-12 overflow-hidden rounded-xl border border-border bg-background shadow-none transition-colors focus-within:border-foreground/20",
+    formInputGroup:
+      "min-h-12 overflow-hidden rounded-xl border border-border bg-background shadow-none transition-colors focus-within:border-foreground/20",
     formFieldLabel: "text-sm font-medium text-foreground",
     footerActionLink: "text-foreground/70 underline-offset-4 hover:text-foreground hover:underline",
     alert: "rounded-2xl border border-amber-200 bg-amber-50 text-amber-900",
