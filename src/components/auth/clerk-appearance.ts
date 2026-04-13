@@ -13,7 +13,9 @@ export const embeddedClerkAppearance = {
     formButtonPrimary:
       "h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 shadow-none",
     formFieldInput:
-      "h-12 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground shadow-none",
+      "h-full w-full border-0 bg-transparent px-4 py-3 text-sm text-foreground shadow-none focus:ring-0 focus:outline-none",
+    formFieldInputGroup:
+      "min-h-12 rounded-xl border border-border bg-background shadow-none transition-colors focus-within:border-foreground/20",
     formFieldLabel: "text-sm font-medium text-foreground",
     footerActionLink: "text-foreground/70 underline-offset-4 hover:text-foreground hover:underline",
     alert: "rounded-2xl border border-amber-200 bg-amber-50 text-amber-900",

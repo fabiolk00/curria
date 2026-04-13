@@ -33,13 +33,13 @@ Current Phase Name: Transcript Integrity and End-to-End Agent Verification
 Current Plan: Complete
 Total Plans in Phase: 3
 Status: Completed
-Last activity: 2026-04-12 -- Completed quick task 260412-o24: migrate credits from session billing to resume generation billing
+Last activity: 2026-04-13 -- Completed quick task 260413-dh7: fix broken login and signup input box layout
 Last Activity Description: Phase 7 complete - transcript integrity verified and replay tooling shipped
 
 Phase: 7 (Transcript Integrity and End-to-End Agent Verification) - COMPLETE
 Plan: 3 of 3
 Status: Completed
-Last activity: 2026-04-12 -- Completed quick task 260412-o24: migrate credits from session billing to resume generation billing
+Last activity: 2026-04-13 -- Completed quick task 260413-dh7: fix broken login and signup input box layout
 
 Progress: [##########] 100%
 
@@ -106,3 +106,4 @@ Resume file: None
 |------|----|------|--------|
 | 2026-04-10 | 260410-pis | Replace custom login/signup forms with embedded Clerk auth components | Complete |
 | 2026-04-12 | 260412-o24 | migrate credits from session billing to resume generation billing | Complete |
+| 2026-04-13 | 260413-dh7 | fix broken login and signup input box layout | Complete |
