@@ -223,8 +223,8 @@ export default function SignupForm() {
       label: "Pelo menos 1 caractere especial",
       met:
         password.length > 0 &&
-        (!requiresSpecialCharacter ||
-          (!passwordComplexity.require_special_char && /[^A-Za-z0-9]/.test(password))),
+        /[^A-Za-z0-9]/.test(password) &&
+        (!requiresSpecialCharacter || !passwordComplexity.require_special_char),
     },
   ]
 
