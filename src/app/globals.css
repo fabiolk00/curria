@@ -123,3 +123,34 @@
     color-scheme: dark;
   }
 }
+
+@layer components {
+  .cl-formField .cl-formFieldInput:not(.cl-formFieldInput__password) {
+    height: 3rem !important;
+    border: 1px solid oklch(var(--border)) !important;
+    border-radius: 0.75rem !important;
+    background-color: oklch(var(--background)) !important;
+    box-shadow: none !important;
+  }
+
+  .cl-formField .cl-formFieldInputGroup {
+    min-height: 3rem !important;
+    border: 1px solid oklch(var(--border)) !important;
+    border-radius: 0.75rem !important;
+    background-color: oklch(var(--background)) !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  .cl-formField .cl-formFieldInputGroup:focus-within {
+    border-color: oklch(var(--foreground) / 0.2) !important;
+  }
+
+  .cl-formField .cl-formFieldInputGroup .cl-formFieldInput {
+    height: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+}
