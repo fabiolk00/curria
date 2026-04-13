@@ -3,6 +3,10 @@ export const embeddedClerkAppearance = {
     rootBox: "w-full",
     cardBox: "w-full shadow-none",
     card: "border-0 bg-transparent shadow-none rounded-none p-0",
+    input:
+      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] shadow-none border-0 bg-transparent outline-none ring-0",
+    formFieldInput:
+      "appearance-none [-webkit-appearance:none] [-moz-appearance:none] shadow-none border-0 bg-transparent outline-none ring-0",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     socialButtonsBlockButton:
