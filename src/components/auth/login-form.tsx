@@ -2,7 +2,6 @@
 
 import { useSignIn } from "@clerk/nextjs"
 import { Eye, EyeOff } from "lucide-react"
-import { useSearchParams } from "next/navigation"
 import { useState, type FormEvent } from "react"
 
 import {
@@ -14,13 +13,12 @@ import {
 } from "@/components/auth/auth-form-ui"
 import { getClerkErrorMessage } from "@/components/auth/clerk-error"
 import { Button } from "@/components/ui/button"
-import { getSafeRedirectPath } from "@/lib/auth/redirects"
 import { navigateToUrl } from "@/lib/navigation/external"
+
+const POST_LOGIN_REDIRECT_PATH = "/dashboard/resumes/new"
 
 export default function LoginForm() {
   const { isLoaded, signIn, setActive } = useSignIn()
-  const searchParams = useSearchParams()
-  const redirectTo = getSafeRedirectPath(searchParams.get("redirect_to"))
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -48,7 +46,7 @@ export default function LoginForm() {
 
       if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId })
-        navigateToUrl(redirectTo)
+        navigateToUrl(POST_LOGIN_REDIRECT_PATH)
         return
       }
 
@@ -74,7 +72,7 @@ export default function LoginForm() {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: redirectTo,
+        redirectUrlComplete: POST_LOGIN_REDIRECT_PATH,
       })
     } catch (error) {
       setErrorMessage(

@@ -7,13 +7,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import LoginForm from "./login-form"
 
 const {
-  mockSearchParamsGet,
   mockCreate,
   mockAuthenticateWithRedirect,
   mockSetActive,
   mockNavigateToUrl,
 } = vi.hoisted(() => ({
-  mockSearchParamsGet: vi.fn(),
   mockCreate: vi.fn(),
   mockAuthenticateWithRedirect: vi.fn(),
   mockSetActive: vi.fn(),
@@ -31,12 +29,6 @@ vi.mock("@clerk/nextjs", () => ({
   }),
 }))
 
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => ({
-    get: mockSearchParamsGet,
-  }),
-}))
-
 vi.mock("@/lib/navigation/external", () => ({
   navigateToUrl: mockNavigateToUrl,
 }))
@@ -44,7 +36,6 @@ vi.mock("@/lib/navigation/external", () => ({
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSearchParamsGet.mockReturnValue(null)
     mockCreate.mockResolvedValue({
       status: "complete",
       createdSessionId: "sess_123",
@@ -62,11 +53,8 @@ describe("LoginForm", () => {
     expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeInTheDocument()
   })
 
-  it("submits email and password through Clerk and redirects safely", async () => {
+  it("submits email and password through Clerk and always redirects to the new resume flow", async () => {
     const user = userEvent.setup()
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "redirect_to" ? "/pricing?checkoutPlan=monthly" : null,
-    )
 
     render(<LoginForm />)
 
@@ -84,15 +72,12 @@ describe("LoginForm", () => {
 
     await waitFor(() => {
       expect(mockSetActive).toHaveBeenCalledWith({ session: "sess_123" })
-      expect(mockNavigateToUrl).toHaveBeenCalledWith("/pricing?checkoutPlan=monthly")
+      expect(mockNavigateToUrl).toHaveBeenCalledWith("/dashboard/resumes/new")
     })
   })
 
-  it("starts the Google redirect flow with the safe redirect target", async () => {
+  it("starts the Google redirect flow with the new resume destination", async () => {
     const user = userEvent.setup()
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "redirect_to" ? "/dashboard" : null,
-    )
 
     render(<LoginForm />)
 
@@ -102,7 +87,7 @@ describe("LoginForm", () => {
       expect(mockAuthenticateWithRedirect).toHaveBeenCalledWith({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrlComplete: "/dashboard/resumes/new",
       })
     })
   })
