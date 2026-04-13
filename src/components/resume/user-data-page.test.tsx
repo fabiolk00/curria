@@ -282,6 +282,55 @@ describe("UserDataPage", () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
+  it("shows a friendly ATS modal for partially filled experience rows before starting ATS", async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        profile: {
+          id: "profile_123",
+          source: "manual",
+          cvState: {
+            fullName: "Ana Silva",
+            email: "ana@example.com",
+            phone: "555-0100",
+            linkedin: "https://linkedin.com/in/ana",
+            location: "Sao Paulo",
+            summary: "Analista de dados com foco em BI.",
+            experience: [{
+              title: "",
+              company: "",
+              location: "",
+              startDate: "2022",
+              endDate: "2024",
+              bullets: [],
+            }],
+            skills: ["SQL", "Power BI", "ETL", "Excel"],
+            education: [],
+            certifications: [],
+          },
+          linkedinUrl: null,
+          extractedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }))
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await user.click(await screen.findByText("Melhorar para ATS (1 credito)"))
+
+    expect(screen.getByText("Complete seu perfil antes de melhorar para ATS")).toBeInTheDocument()
+    expect(screen.getByText("• Experiencia 1: adicione o cargo.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiencia 1: adicione a empresa.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiencia 1: adicione pelo menos um resultado ou responsabilidade.")).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
   it("updates the source badge when a PDF import succeeds", async () => {
     const user = userEvent.setup()
 

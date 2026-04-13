@@ -11,6 +11,17 @@ function hasAnyExperienceContent(cvState: CVState): boolean {
   )
 }
 
+function hasAnyExperienceEntryData(entry: CVState['experience'][number]): boolean {
+  return Boolean(
+    entry.title.trim()
+    || entry.company.trim()
+    || entry.location?.trim()
+    || entry.startDate.trim()
+    || entry.endDate.trim()
+    || entry.bullets.some((bullet) => bullet.trim()),
+  )
+}
+
 export function assessAtsEnhancementReadiness(cvState: CVState): AtsBaseReadiness {
   const hasPersonalData = Boolean(
     cvState.fullName.trim()
@@ -62,9 +73,7 @@ export function getAtsEnhancementBlockingItems(cvState: CVState): string[] {
     items.push('Resumo ou experiencia: preencha pelo menos uma dessas secoes.')
   }
 
-  const experienceEntries = cvState.experience.filter((entry) =>
-    Boolean(entry.title.trim() || entry.company.trim() || entry.bullets.some((bullet) => bullet.trim())),
-  )
+  const experienceEntries = cvState.experience.filter(hasAnyExperienceEntryData)
 
   if (experienceEntries.length === 0) {
     items.push('Experiencia: inclua pelo menos uma experiencia profissional.')
