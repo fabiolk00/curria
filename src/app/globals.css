@@ -136,7 +136,7 @@ body .cl-formFieldInput.cl-input {
   line-height: 20px !important;
   padding: 0 14px !important;
   border: 2px solid oklch(0.86 0 0) !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   background: oklch(var(--background)) !important;
   box-shadow: none !important;
   -webkit-appearance: none !important;
@@ -153,7 +153,7 @@ body .cl-formField__password .cl-formFieldInputGroup {
   min-height: 40px !important;
   height: 40px !important;
   border: 2px solid oklch(0.86 0 0) !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   background: oklch(var(--background)) !important;
   box-shadow: none !important;
   overflow: hidden;
