@@ -74,7 +74,7 @@ export default function SignupForm() {
         setPasswordComplexity(result.complexity ?? {})
       },
     })
-  }, [isSignUpLoaded, password])
+  }, [isSignUpLoaded, password, signUp])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {

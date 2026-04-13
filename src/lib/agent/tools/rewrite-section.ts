@@ -270,7 +270,7 @@ function normalizeRewritePayload(
         .map((entry) => {
           const title = entry?.title?.trim()
           const company = entry?.company?.trim()
-          const bullets = Array.isArray(entry?.bullets) ? entry.bullets.filter(Boolean) : []
+          const bullets: string[] = Array.isArray(entry?.bullets) ? entry.bullets.filter(Boolean) : []
           return [
             [title, company].filter(Boolean).join(' - '),
             ...bullets.map((bullet) => `- ${bullet}`),
