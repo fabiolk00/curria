@@ -68,6 +68,18 @@ function mergeCvState(currentCvState: CVState, patch?: Partial<CVState>): CVStat
   }
 }
 
+function shouldReplaceImportedProfile(
+  existingProfile: Pick<UserProfileRow, 'source'> | null,
+  replaceLinkedinImport: boolean,
+) {
+  if (!existingProfile) {
+    return false
+  }
+
+  return existingProfile.source === 'pdf'
+    || (existingProfile.source === 'linkedin' && replaceLinkedinImport)
+}
+
 export async function POST(req: NextRequest) {
   const appUser = await getCurrentAppUser(req)
   if (!appUser) {
@@ -138,9 +150,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const replaceImportedProfile = shouldReplaceImportedProfile(
+      existingProfile,
+      replaceLinkedinImport,
+    )
     const currentCvState = existingProfile
       ? (
-        replaceLinkedinImport && existingProfile.source === 'linkedin'
+        replaceImportedProfile
           ? createEmptyCvState()
           : existingProfile.cv_state as CVState
       )
@@ -177,8 +193,8 @@ export async function POST(req: NextRequest) {
       appUserId: appUser.id,
       cvState: nextCvState,
       source: 'pdf',
-      linkedinUrl: replaceLinkedinImport ? nextCvState.linkedin ?? null : undefined,
-      profilePhotoUrl: replaceLinkedinImport ? null : undefined,
+      linkedinUrl: replaceImportedProfile ? nextCvState.linkedin ?? null : undefined,
+      profilePhotoUrl: replaceImportedProfile ? null : undefined,
     })
 
     logInfo('[api/profile/upload] Resume imported', {
