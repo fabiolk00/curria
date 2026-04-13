@@ -18,6 +18,24 @@ import { getSafeRedirectPath } from "@/lib/auth/redirects"
 import { buildDefaultCheckoutOnboardingPath } from "@/lib/billing/checkout-navigation"
 import { navigateToUrl } from "@/lib/navigation/external"
 
+type ClerkPasswordSettings = {
+  min_length?: number
+  require_special_char?: boolean
+}
+
+function getClerkPasswordSettings(client: unknown): ClerkPasswordSettings | null {
+  if (!client || typeof client !== "object") {
+    return null
+  }
+
+  const candidate = client as {
+    passwordSettings?: ClerkPasswordSettings
+    password_settings?: ClerkPasswordSettings
+  }
+
+  return candidate.passwordSettings ?? candidate.password_settings ?? null
+}
+
 export default function SignupForm() {
   const { isLoaded, isSignedIn } = useAuth()
   const { client } = useClerk()
@@ -42,8 +60,9 @@ export default function SignupForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [passwordComplexity, setPasswordComplexity] = useState<Record<string, boolean>>({})
 
-  const minimumLength = client?.passwordSettings.min_length ?? 8
-  const requiresSpecialCharacter = client?.passwordSettings.require_special_char ?? false
+  const passwordSettings = getClerkPasswordSettings(client)
+  const minimumLength = passwordSettings?.min_length ?? 8
+  const requiresSpecialCharacter = passwordSettings?.require_special_char ?? false
 
   useEffect(() => {
     if (!isSignUpLoaded || !signUp) {
