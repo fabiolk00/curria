@@ -255,7 +255,7 @@ export default function UserDataPage({
     try {
       await persistProfile()
       toast.success("Perfil salvo com sucesso.")
-      router.push("/dashboard")
+      router.push("/dashboard/resume/new")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
     } finally {
@@ -639,7 +639,7 @@ export default function UserDataPage({
               </div>
             ) : (
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <div className="space-y-3 p-6">
+                  <div className="space-y-4 p-6">
                     <VisualResumeEditor
                       value={resumeData}
                       onChange={setResumeData}
@@ -647,6 +647,34 @@ export default function UserDataPage({
                       onAllSectionsClosedChange={setAllSectionsClosed}
                       compactMode={allSectionsClosed}
                     />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isSaving || isRunningAtsEnhancement}
+                        onClick={() => router.push("/dashboard")}
+                        className="h-10 flex-1"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={isSaving || isRunningAtsEnhancement}
+                        onClick={() => void handleSave()}
+                        data-testid="profile-save-button"
+                        className="h-10 flex-1 bg-black text-white hover:bg-black/90"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Salvando
+                          </>
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
             )}
@@ -744,35 +772,6 @@ export default function UserDataPage({
                   </>
                   )}
                 </Button>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSaving || isRunningAtsEnhancement}
-                  onClick={() => router.push("/dashboard")}
-                  className="h-10 flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isSaving || isRunningAtsEnhancement}
-                  onClick={() => void handleSave()}
-                  data-testid="profile-save-button"
-                  className="h-10 flex-1"
-                  variant="secondary"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Salvando
-                    </>
-                  ) : (
-                    "Salvar"
-                  )}
-                </Button>
-              </div>
             </div>
               </div>
               </div>

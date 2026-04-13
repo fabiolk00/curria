@@ -243,6 +243,76 @@ describe("UserDataPage", () => {
     expect(screen.getByText("Base salva a partir de curriculo importado")).toBeInTheDocument()
   })
 
+  it("renders cancelar and salvar below the editor and keeps salvar black", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        profile: null,
+      }),
+    })) as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    const editor = await screen.findByTestId("visual-resume-editor")
+    const cancelarButton = screen.getByRole("button", { name: "Cancelar" })
+    const salvarButton = screen.getByTestId("profile-save-button")
+
+    expect(
+      editor.compareDocumentPosition(cancelarButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      cancelarButton.compareDocumentPosition(salvarButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(salvarButton).toHaveClass("bg-black", "text-white")
+  })
+
+  it("redirects to /dashboard/resume/new after saving", async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          profile: null,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          profile: {
+            id: "profile_123",
+            source: "manual",
+            cvState: {
+              fullName: "",
+              email: "",
+              phone: "",
+              linkedin: "",
+              location: "",
+              summary: "",
+              experience: [],
+              skills: [],
+              education: [],
+              certifications: [],
+            },
+            linkedinUrl: null,
+            profilePhotoUrl: null,
+            extractedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await user.click(await screen.findByTestId("profile-save-button"))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/new")
+    })
+  })
+
   it("renders the base preview sections in the requested order", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({
       ok: true,
