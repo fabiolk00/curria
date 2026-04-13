@@ -5,11 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import UserDataPage from "./user-data-page"
 
 const mockPush = vi.fn()
+let mockPathname = "/dashboard/resume/new"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => mockPathname,
 }))
 
 vi.mock("sonner", () => ({
@@ -57,6 +59,27 @@ vi.mock("./visual-resume-editor", () => ({
 describe("UserDataPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockPathname = "/dashboard/resume/new"
+  })
+
+  it("loads the saved profile with a no-store fetch to avoid stale setup data", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        profile: null,
+      }),
+    }))
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await screen.findByText("Perfil ainda nao salvo")
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/profile", expect.objectContaining({
+      credentials: "include",
+      cache: "no-store",
+    }))
   })
 
   it("opens a friendly modal when the base profile is incomplete for ATS", async () => {
@@ -569,8 +592,59 @@ describe("UserDataPage", () => {
     expect(salvarButton).toHaveClass("bg-black", "text-white")
   })
 
-  it("redirects to /dashboard/resume/new after saving", async () => {
+  it("keeps the current setup route after saving without forcing a same-route push", async () => {
     const user = userEvent.setup()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          profile: null,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          profile: {
+            id: "profile_123",
+            source: "manual",
+            cvState: {
+              fullName: "",
+              email: "",
+              phone: "",
+              linkedin: "",
+              location: "",
+              summary: "",
+              experience: [],
+              skills: [],
+              education: [],
+              certifications: [],
+            },
+            linkedinUrl: null,
+            profilePhotoUrl: null,
+            extractedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await user.click(await screen.findByTestId("profile-save-button"))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it("redirects to /dashboard/resume/new after saving when opened from another route", async () => {
+    const user = userEvent.setup()
+    mockPathname = "/dashboard"
+
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
@@ -614,6 +688,29 @@ describe("UserDataPage", () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/new")
     })
+  })
+
+  it("locks the ATS card process copy on the setup page", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        profile: null,
+      }),
+    })) as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    expect(await screen.findByText("Melhorar meu curriculo para ATS")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Usa o seu perfil base para gerar uma versao ATS em pt-BR seguindo o modelo padrao da plataforma: estrutura linear, sem elementos que atrapalham parsing, linguagem objetiva e foco em verdade, matching e clareza.",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("parse e leitura estruturada do curriculo")).toBeInTheDocument()
+    expect(screen.getByText("keyword matching e gap analysis quando houver vaga")).toBeInTheDocument()
+    expect(screen.getByText("reescrita estrategica de resumo e bullets")).toBeInTheDocument()
+    expect(screen.getByText("template ATS em PDF textual, simples e pt-BR")).toBeInTheDocument()
+    expect(screen.getByText("Melhorar para ATS (1 credito)")).toBeInTheDocument()
   })
 
   it("renders the base preview sections in the requested order", async () => {

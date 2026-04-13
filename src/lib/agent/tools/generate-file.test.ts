@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import zlib from 'zlib'
 
 import type { CVState } from '@/types/cv'
 
@@ -39,6 +40,43 @@ function buildSupabase() {
   }
 }
 
+function extractInflatedPdfText(buffer: Buffer): string {
+  const pdfSource = buffer.toString('latin1')
+  const streamMarker = 'stream\n'
+  const endStreamMarker = '\nendstream'
+  const inflatedChunks: string[] = []
+  let searchIndex = 0
+
+  while (searchIndex < pdfSource.length) {
+    const streamStart = pdfSource.indexOf(streamMarker, searchIndex)
+    if (streamStart === -1) {
+      break
+    }
+
+    const dataStart = streamStart + streamMarker.length
+    const streamEnd = pdfSource.indexOf(endStreamMarker, dataStart)
+    if (streamEnd === -1) {
+      break
+    }
+
+    const compressedChunk = buffer.subarray(dataStart, streamEnd)
+
+    try {
+      const inflatedChunk = zlib.inflateSync(compressedChunk).toString('latin1')
+      const decodedChunk = inflatedChunk.replace(/<([0-9A-Fa-f]+)>/g, (_, hex: string) =>
+        Buffer.from(hex, 'hex').toString('latin1'),
+      )
+      inflatedChunks.push(decodedChunk)
+    } catch {
+      // Ignore non-text streams and keep scanning the remaining PDF objects.
+    }
+
+    searchIndex = streamEnd + endStreamMarker.length
+  }
+
+  return inflatedChunks.join('\n')
+}
+
 describe('generateFile', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -48,16 +86,30 @@ describe('generateFile', () => {
   it('persists generated output paths but not signed URLs', async () => {
     const supabase = buildSupabase()
     const upload = vi.fn().mockResolvedValue(undefined)
-    const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
 
     vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
       supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
     )
     vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
-    vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
 
     const result = await generateFile({
-      cv_state: buildCvState(),
+      cv_state: {
+        ...buildCvState(),
+        linkedin: 'https://linkedin.com/in/ana-silva',
+        location: 'Sao Paulo, Brasil',
+        summary: 'Backend engineer with ATS-friendly communication.',
+        skills: ['TypeScript', 'PostgreSQL', 'English Native'],
+        education: [{
+          degree: 'Bacharel em Sistemas de Informacao',
+          institution: 'USP',
+          year: '2018',
+        }],
+        certifications: [{
+          name: 'AWS Cloud Practitioner',
+          issuer: 'Amazon',
+          year: '2024',
+        }],
+      },
     }, 'usr_123', 'sess_123')
 
     expect(result.output).toEqual({
@@ -74,6 +126,41 @@ describe('generateFile', () => {
     })
     expect(result.patch?.generatedOutput).not.toHaveProperty('docxUrl')
     expect(result.patch?.generatedOutput).not.toHaveProperty('pdfUrl')
+
+    const uploadedPdfBuffer = upload.mock.calls[0]?.[2] as Buffer | undefined
+    expect(uploadedPdfBuffer).toBeInstanceOf(Buffer)
+
+    const pdfText = extractInflatedPdfText(uploadedPdfBuffer as Buffer)
+
+    expect(pdfText).toContain('Ana Silva')
+    expect(pdfText).toContain('Sao Paulo, Brasil')
+    expect(pdfText).toContain('ana@example.com | 555-0100')
+    expect(pdfText).toContain('https://linkedin.com/in/ana-silva')
+    expect(pdfText).toContain('Backend engineer with ATS-friendly communication.')
+    expect(pdfText).toContain('RESUMO PROFISSIONAL')
+    expect(pdfText).toContain('HABILIDADES')
+    expect(pdfText).toContain('EXPERIENCIA PROFISSIONAL')
+    expect(pdfText).toContain('EDUCACAO')
+    expect(pdfText).toContain('CERTIFICACOES')
+    expect(pdfText).toContain('IDIOMAS')
+    expect(pdfText).toContain('Analise de Dados: PostgreSQL')
+    expect(pdfText).toContain('Programacao: TypeScript')
+    expect(pdfText).toContain('Backend Engineer')
+    expect(pdfText).toContain('Acme')
+    expect(pdfText).toContain('2022 - Atual')
+    expect(pdfText).toContain('- Built billing APIs')
+    expect(pdfText).toContain('Bacharel em Sistemas de Informacao')
+    expect(pdfText).toContain('USP - 2018')
+    expect(pdfText).toContain('AWS Cloud Practitioner - Amazon | 2024')
+    expect(pdfText).toContain('Ingles: Nativo')
+    expect(pdfText).not.toContain('COMPETENCIAS-CHAVE')
+    expect(pdfText).not.toContain('FORMACAO ACADEMICA')
+
+    expect(pdfText.indexOf('RESUMO PROFISSIONAL')).toBeLessThan(pdfText.indexOf('HABILIDADES'))
+    expect(pdfText.indexOf('HABILIDADES')).toBeLessThan(pdfText.indexOf('EXPERIENCIA PROFISSIONAL'))
+    expect(pdfText.indexOf('EXPERIENCIA PROFISSIONAL')).toBeLessThan(pdfText.indexOf('EDUCACAO'))
+    expect(pdfText.indexOf('EDUCACAO')).toBeLessThan(pdfText.indexOf('CERTIFICACOES'))
+    expect(pdfText.indexOf('CERTIFICACOES')).toBeLessThan(pdfText.indexOf('IDIOMAS'))
   })
 
   it('persists failed status and explicit error on failure', async () => {
@@ -339,17 +426,7 @@ describe('generateFile', () => {
     })
   })
 
-  it('autofills the missing end date for the most recent experience during generation', async () => {
-    const supabase = buildSupabase()
-    const upload = vi.fn().mockResolvedValue(undefined)
-    const generatePDF = vi.fn().mockResolvedValue(Buffer.from('pdf'))
-
-    vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
-      supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
-    )
-    vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
-    vi.spyOn(generateFileDeps, 'generatePDF').mockImplementation(generatePDF)
-
+  it('does not fabricate an end date for the current role during ATS generation', async () => {
     const result = await generateFile({
       cv_state: {
         ...buildCvState(),
@@ -372,15 +449,11 @@ describe('generateFile', () => {
       },
     }, 'usr_123', 'sess_123')
 
-    expect(result.output.success).toBe(true)
-    expect(generatePDF).toHaveBeenCalledWith(expect.objectContaining({
-      experiences: expect.arrayContaining([
-        expect.objectContaining({
-          company: 'Pravaler',
-          period: expect.stringMatching(/01\/2024 .* \d{2}\/\d{4}/),
-        }),
-      ]),
-    }))
+    expect(result.output).toEqual({
+      success: false,
+      code: 'VALIDATION_ERROR',
+      error: 'Falta a data de termino na sua primeira experiencia - Senior Analytics Engineer - Pravaler. Se voce ainda trabalha nela, marque como atual ou informe uma data aproximada.',
+    })
   })
 
   it('returns a precise human-readable validation message for missing experience details', async () => {
@@ -445,7 +518,7 @@ describe('generateFile', () => {
 
     expect(validation).toEqual({
       success: false,
-      errorMessage: 'Falta a data de termino na sua segunda experiencia - Older Role - Legacy Co. Se voce ainda trabalha nela, marque como atual ou informe uma data aproximada.',
+      errorMessage: 'Falta a data de termino na sua primeira experiencia - Current Role - Acme. Se voce ainda trabalha nela, marque como atual ou informe uma data aproximada.',
     })
   })
 })

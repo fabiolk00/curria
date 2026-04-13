@@ -10,6 +10,10 @@ export type TemplateData = {
   linkedin: string
   summary: string
   skills: string
+  skillGroups: Array<{
+    label: string
+    items: string[]
+  }>
   experiences: Array<{
     title: string
     company: string
@@ -25,6 +29,8 @@ export type TemplateData = {
   }>
   certifications: Array<{
     name: string
+    issuer: string
+    period: string
   }>
   languages: Array<{
     language: string
@@ -34,24 +40,139 @@ export type TemplateData = {
   hasLanguages: boolean
 }
 
+export const ATS_SECTION_HEADINGS = {
+  summary: 'Resumo Profissional',
+  skills: 'Habilidades',
+  experience: 'Experiencia Profissional',
+  education: 'Educacao',
+  certifications: 'Certificacoes',
+  languages: 'Idiomas',
+} as const
+
 type TemplateSource = Pick<AgentState, 'targetJobDescription'> | string | null | undefined
 
-type ExtractedTechStack = {
-  techStack: string
-  bullets: string[]
+type SkillGroupDefinition = {
+  label: string
+  patterns: RegExp[]
 }
 
 const LANGUAGE_ALIASES: Array<{
   canonical: string
   pattern: RegExp
 }> = [
-  { canonical: 'English', pattern: /^(?:english|ingl[eê]s)\b/i },
-  { canonical: 'Portuguese', pattern: /^(?:portuguese|portugu[eê]s)\b/i },
-  { canonical: 'Spanish', pattern: /^(?:spanish|espanhol)\b/i },
-  { canonical: 'French', pattern: /^(?:french|franc[eê]s)\b/i },
-  { canonical: 'German', pattern: /^(?:german|alem[aã]o)\b/i },
-  { canonical: 'Italian', pattern: /^(?:italian|italiano)\b/i },
-  { canonical: 'Dutch', pattern: /^(?:dutch|holand[eê]s)\b/i },
+  { canonical: 'Ingles', pattern: /^(?:english|ingles)\b/i },
+  { canonical: 'Portugues', pattern: /^(?:portuguese|portugues)\b/i },
+  { canonical: 'Espanhol', pattern: /^(?:spanish|espanhol)\b/i },
+  { canonical: 'Frances', pattern: /^(?:french|frances)\b/i },
+  { canonical: 'Alemao', pattern: /^(?:german|alemao)\b/i },
+  { canonical: 'Italiano', pattern: /^(?:italian|italiano)\b/i },
+  { canonical: 'Holandes', pattern: /^(?:dutch|holandes)\b/i },
+]
+
+const SKILL_GROUP_DEFINITIONS: SkillGroupDefinition[] = [
+  {
+    label: 'Analise de Dados',
+    patterns: [
+      /\bsql\b/i,
+      /postgres/i,
+      /mysql/i,
+      /bigquery/i,
+      /snowflake/i,
+      /redshift/i,
+      /analytics?/i,
+      /analise/i,
+      /data analysis/i,
+      /data modeling/i,
+      /modelagem/i,
+      /report/i,
+      /reporting/i,
+    ],
+  },
+  {
+    label: 'Business Intelligence',
+    patterns: [
+      /\bbi\b/i,
+      /power bi/i,
+      /qlik/i,
+      /tableau/i,
+      /looker/i,
+      /metabase/i,
+      /dashboard/i,
+      /visualiza/i,
+    ],
+  },
+  {
+    label: 'Cloud',
+    patterns: [
+      /\baws\b/i,
+      /\bazure\b/i,
+      /\bgcp\b/i,
+      /google cloud/i,
+      /\bcloud\b/i,
+    ],
+  },
+  {
+    label: 'Programacao',
+    patterns: [
+      /python/i,
+      /pyspark/i,
+      /\bspark\b/i,
+      /scala/i,
+      /java/i,
+      /typescript/i,
+      /javascript/i,
+      /node/i,
+      /react/i,
+      /\.net/i,
+      /c#/i,
+    ],
+  },
+  {
+    label: 'Engenharia de Dados',
+    patterns: [
+      /\betl\b/i,
+      /\belt\b/i,
+      /data pipeline/i,
+      /pipeline/i,
+      /airflow/i,
+      /\bdbt\b/i,
+      /orchestration/i,
+      /kafka/i,
+      /data engineering/i,
+      /engenharia de dados/i,
+      /performance/i,
+      /optimization/i,
+      /otimiz/i,
+    ],
+  },
+  {
+    label: 'Ferramentas e Plataformas',
+    patterns: [
+      /excel/i,
+      /github/i,
+      /\bgit\b/i,
+      /jira/i,
+      /confluence/i,
+      /salesforce/i,
+      /sap/i,
+      /crm/i,
+      /erp/i,
+    ],
+  },
+  {
+    label: 'Metodologias e Colaboracao',
+    patterns: [
+      /agile/i,
+      /scrum/i,
+      /kanban/i,
+      /stakeholder/i,
+      /governance/i,
+      /governanca/i,
+      /lgpd/i,
+      /product/i,
+      /negocio/i,
+    ],
+  },
 ]
 
 function resolveTargetJobDescription(source: TemplateSource): string | null {
@@ -160,32 +281,6 @@ function reorderBulletsByRelevance(bullets: string[], targetJobDescription: stri
   return rankedBullets.map(({ bullet }) => bullet)
 }
 
-function extractTechStackAndBullets(bullets: string[]): ExtractedTechStack {
-  if (bullets.length === 0) {
-    return { techStack: '', bullets: [] }
-  }
-
-  const [firstBullet, ...remainingBullets] = bullets
-  const parts = firstBullet
-    .split(/[,|/;]+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-
-  const looksLikeTechStack =
-    parts.length >= 2 &&
-    parts.every((part) => /[A-Za-z]/.test(part)) &&
-    parts.some((part) => part.length <= 30)
-
-  if (!looksLikeTechStack) {
-    return { techStack: '', bullets }
-  }
-
-  return {
-    techStack: firstBullet.trim(),
-    bullets: remainingBullets,
-  }
-}
-
 function extractLanguages(skills: string[]): Array<{ language: string; level: string }> {
   return skills.flatMap((skill) => {
     const trimmedSkill = skill.trim()
@@ -199,7 +294,7 @@ function extractLanguages(skills: string[]): Array<{ language: string; level: st
       }
 
       const remainder = trimmedSkill.replace(alias.pattern, '').trim()
-      const level = remainder.replace(/^[-–:|]+/, '').trim()
+      const level = normalizeLanguageLevel(remainder.replace(/^[-:|]+/, '').trim())
 
       return [
         {
@@ -213,14 +308,116 @@ function extractLanguages(skills: string[]): Array<{ language: string; level: st
   })
 }
 
-function formatPeriod(startDate: string, endDate: string | 'present'): string {
-  const normalizedEndDate = endDate?.trim()
+function normalizeLanguageLevel(level: string): string {
+  const normalizedLevel = normalizeForComparison(level)
 
-  if (!normalizedEndDate || normalizedEndDate.toLowerCase() === 'present') {
-    return `${startDate} – Presente`
+  if (!normalizedLevel) {
+    return ''
   }
 
-  return `${startDate} – ${normalizedEndDate}`
+  if (/^(native|native speaker|mother tongue)$/.test(normalizedLevel)) {
+    return 'Nativo'
+  }
+
+  if (/^(fluent|fluency)$/.test(normalizedLevel)) {
+    return 'Fluente'
+  }
+
+  if (/^(advanced)$/.test(normalizedLevel)) {
+    return 'Avancado'
+  }
+
+  if (/^(intermediate)$/.test(normalizedLevel)) {
+    return 'Intermediario'
+  }
+
+  if (/^(basic|beginner|elementary)$/.test(normalizedLevel)) {
+    return 'Basico'
+  }
+
+  if (/^(proficient|proficiency)$/.test(normalizedLevel)) {
+    return 'Proficiente'
+  }
+
+  return level
+}
+
+function splitLanguagesFromSkills(skills: string[]): {
+  languages: Array<{ language: string; level: string }>
+  remainingSkills: string[]
+} {
+  const languages = extractLanguages(skills)
+  const remainingSkills = skills.filter((skill) => {
+    const trimmedSkill = skill.trim()
+    if (!trimmedSkill) {
+      return false
+    }
+
+    return !LANGUAGE_ALIASES.some((alias) => alias.pattern.test(trimmedSkill))
+  })
+
+  return {
+    languages,
+    remainingSkills,
+  }
+}
+
+function buildSkillGroups(skills: string[]): Array<{ label: string; items: string[] }> {
+  const grouped = new Map<string, string[]>()
+  const uncategorized: string[] = []
+
+  for (const skill of skills) {
+    const trimmedSkill = skill.trim()
+    if (!trimmedSkill) {
+      continue
+    }
+
+    const matchingGroup = SKILL_GROUP_DEFINITIONS.find((group) =>
+      group.patterns.some((pattern) => pattern.test(trimmedSkill)),
+    )
+
+    if (!matchingGroup) {
+      uncategorized.push(trimmedSkill)
+      continue
+    }
+
+    const currentItems = grouped.get(matchingGroup.label) ?? []
+    currentItems.push(trimmedSkill)
+    grouped.set(matchingGroup.label, currentItems)
+  }
+
+  const orderedGroups = SKILL_GROUP_DEFINITIONS
+    .map((group) => ({
+      label: group.label,
+      items: grouped.get(group.label) ?? [],
+    }))
+    .filter((group) => group.items.length > 0)
+
+  if (uncategorized.length > 0) {
+    orderedGroups.push({
+      label: 'Outras Competencias',
+      items: uncategorized,
+    })
+  }
+
+  return orderedGroups
+}
+
+function formatPeriod(startDate: string, endDate: string | 'present'): string {
+  const normalizedStartDate = startDate.trim()
+  const normalizedEndDate = endDate?.trim()
+
+  if (/^(?:present|atual)$/i.test(normalizedEndDate)) {
+    return `${normalizedStartDate} - Atual`
+  }
+
+  return normalizedEndDate
+    ? `${normalizedStartDate} - ${normalizedEndDate}`
+    : normalizedStartDate
+}
+
+function buildCertificationPeriod(value?: string): string {
+  return value?.trim() ?? ''
 }
 
 export function cvStateToTemplateData(
@@ -228,21 +425,21 @@ export function cvStateToTemplateData(
   source?: TemplateSource,
 ): TemplateData {
   const targetJobDescription = resolveTargetJobDescription(source)
-  const skills = reorderSkillsByRelevance(cvState.skills, targetJobDescription)
+  const orderedSkills = reorderSkillsByRelevance(cvState.skills, targetJobDescription)
+  const { languages, remainingSkills } = splitLanguagesFromSkills(orderedSkills)
+  const skillGroups = buildSkillGroups(remainingSkills)
 
-  const experiences = cvState.experience.map((experience) => {
-    const extracted = extractTechStackAndBullets(experience.bullets)
-    const orderedBullets = reorderBulletsByRelevance(extracted.bullets, targetJobDescription)
-
-    return {
-      title: experience.title,
-      company: experience.company,
-      location: experience.location ?? '',
-      period: formatPeriod(experience.startDate, experience.endDate),
-      techStack: extracted.techStack,
-      bullets: orderedBullets.map((bullet) => ({ text: bullet })),
-    }
-  })
+  const experiences = cvState.experience.map((experience) => ({
+    title: experience.title.trim(),
+    company: experience.company.trim(),
+    location: experience.location?.trim() ?? '',
+    period: formatPeriod(experience.startDate, experience.endDate),
+    techStack: '',
+    bullets: reorderBulletsByRelevance(experience.bullets, targetJobDescription)
+      .map((bullet) => bullet.trim())
+      .filter(Boolean)
+      .map((bullet) => ({ text: bullet })),
+  }))
 
   const education = cvState.education
     .map((entry) => ({
@@ -250,15 +447,15 @@ export function cvStateToTemplateData(
       institution: entry.institution.trim(),
       period: entry.year.trim(),
     }))
-    .filter((entry) => entry.degree.length > 0)
+    .filter((entry) => entry.degree.length > 0 || entry.institution.length > 0 || entry.period.length > 0)
 
   const certifications = (cvState.certifications ?? [])
     .map((entry) => ({
       name: entry.name.trim(),
+      issuer: entry.issuer.trim(),
+      period: buildCertificationPeriod(entry.year),
     }))
     .filter((entry) => entry.name.length > 0)
-
-  const languages = extractLanguages(cvState.skills)
 
   return {
     fullName: cvState.fullName.trim(),
@@ -268,7 +465,8 @@ export function cvStateToTemplateData(
     location: cvState.location?.trim() ?? '',
     linkedin: cvState.linkedin?.trim() ?? '',
     summary: cvState.summary.trim(),
-    skills: skills.join(', '),
+    skills: remainingSkills.join(', '),
+    skillGroups,
     experiences,
     education,
     certifications,

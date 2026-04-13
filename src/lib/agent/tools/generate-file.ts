@@ -12,7 +12,7 @@ import { z } from 'zod'
 
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import { CVStateSchema } from '@/lib/cv/schema'
-import { cvStateToTemplateData, type TemplateData } from '@/lib/templates/cv-state-to-template-data'
+import { ATS_SECTION_HEADINGS, cvStateToTemplateData, type TemplateData } from '@/lib/templates/cv-state-to-template-data'
 import type { AgentState, GenerateFileInput, GenerateFileOutput, GeneratedOutput, ToolPatch } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
@@ -35,7 +35,7 @@ type ArtifactScope =
   | { type: 'session' }
   | { type: 'target'; targetId: string }
 
-const MARGIN = 50
+const MARGIN = 78
 const PAGE_WIDTH = 595
 const PAGE_HEIGHT = 842
 const USABLE_WIDTH = PAGE_WIDTH - 2 * MARGIN
@@ -146,19 +146,9 @@ function normalizeNullableString(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
-function getCurrentMonthYear(): string {
-  const now = new Date()
-  return `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
-}
-
-function isMostRecentExperienceIndex(index: number, totalEntries: number): boolean {
-  return totalEntries > 0 && index === 0
-}
-
 function normalizeGenerationCvState(input: GenerateFileInput['cv_state']): CVState {
   const source = (input && typeof input === 'object' ? input : {}) as Partial<CVState>
   const rawExperience = Array.isArray(source.experience) ? source.experience : []
-  const currentMonthYear = getCurrentMonthYear()
 
   return {
     fullName: normalizeNullableString(source.fullName),
@@ -176,9 +166,7 @@ function normalizeGenerationCvState(input: GenerateFileInput['cv_state']): CVSta
         company: normalizeNullableString(entry.company),
         location: normalizeNullableString(entry.location) || undefined,
         startDate: normalizeNullableString(entry.startDate),
-        endDate: normalizedEndDate.length > 0
-          ? normalizedEndDate
-          : (isMostRecentExperienceIndex(index, entries.length) ? currentMonthYear : ''),
+        endDate: normalizedEndDate,
         bullets: Array.isArray(entry.bullets)
           ? entry.bullets.map((bullet) => normalizeNullableString(bullet))
           : [],
@@ -497,18 +485,67 @@ function isTemplateData(source: ResumeTemplateSource): source is TemplateData {
   return typeof source === 'object' && source !== null && 'experiences' in source
 }
 
-function createDocxHeading(text: string): Paragraph {
+function buildContactLines(templateData: TemplateData): string[] {
+  const lines: string[] = []
+
+  if (templateData.location.trim().length > 0) {
+    lines.push(templateData.location.trim())
+  }
+
+  const contactLine = [
+    templateData.email.trim(),
+    templateData.phone.trim(),
+  ].filter(Boolean)
+
+  if (contactLine.length > 0) {
+    lines.push(contactLine.join(' | '))
+  }
+
+  if (templateData.linkedin.trim().length > 0) {
+    lines.push(templateData.linkedin.trim())
+  }
+
+  return lines
+}
+
+function buildSkillGroupLines(templateData: TemplateData): string[] {
+  if (templateData.skillGroups.length > 0) {
+    return templateData.skillGroups.map((group) => `${group.label}: ${group.items.join(', ')}`)
+  }
+
+  if (templateData.skills.trim().length > 0) {
+    return [templateData.skills.trim()]
+  }
+
+  return []
+}
+
+function formatExperienceMetadata(experience: TemplateData['experiences'][number]): string {
+  const parts = [experience.period.trim()]
+
+  if (experience.location.trim().length > 0) {
+    parts.push(experience.location.trim())
+  }
+
+  return parts.join(' | ')
+}
+
+function formatCertificationLine(certification: TemplateData['certifications'][number]): string {
+  const trailingParts = [certification.issuer.trim(), certification.period.trim()].filter(Boolean)
+
+  return trailingParts.length > 0
+    ? `${certification.name.trim()} - ${trailingParts.join(' | ')}`
+    : certification.name.trim()
+}
+
+function formatLanguageLine(language: TemplateData['languages'][number]): string {
+  return language.level.trim().length > 0
+    ? `${language.language}: ${language.level.trim()}`
+    : language.language
+}
+
+function createDocxSeparator(): Paragraph {
   return new Paragraph({
-    children: [
-      new TextRun({
-        text: text.toUpperCase(),
-        font: 'Helvetica',
-        size: 22,
-        bold: true,
-        color: '000000',
-      }),
-    ],
-    spacing: { before: 240, after: 120 },
     border: {
       bottom: {
         color: 'BBBBBB',
@@ -517,6 +554,22 @@ function createDocxHeading(text: string): Paragraph {
         size: 6,
       },
     },
+    spacing: { after: 180 },
+  })
+}
+
+function createDocxHeading(text: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text: text.toUpperCase(),
+        font: 'Helvetica',
+        size: 28,
+        bold: true,
+        color: '000000',
+      }),
+    ],
+    spacing: { before: 0, after: 120 },
     heading: HeadingLevel.HEADING_2,
   })
 }
@@ -530,7 +583,7 @@ function createDocxBody(
       new TextRun({
         text,
         font: 'Helvetica',
-        size: 18,
+        size: 20,
         bold: options.bold ?? false,
         italics: options.italics ?? false,
         color: options.color ?? '1A1A1A',
@@ -546,7 +599,7 @@ function createDocxBullet(text: string): Paragraph {
       new TextRun({
         text,
         font: 'Helvetica',
-        size: 18,
+        size: 20,
         color: '1A1A1A',
       }),
     ],
@@ -557,12 +610,8 @@ function createDocxBullet(text: string): Paragraph {
 }
 
 function buildDocxDocument(templateData: TemplateData): Document {
-  const contactLine = [
-    templateData.email,
-    templateData.phone,
-    templateData.linkedin,
-    templateData.location,
-  ].filter(Boolean).join('  |  ')
+  const contactLines = buildContactLines(templateData)
+  const skillLines = buildSkillGroupLines(templateData)
 
   const children: Paragraph[] = [
     new Paragraph({
@@ -579,15 +628,14 @@ function buildDocxDocument(templateData: TemplateData): Document {
     }),
   ]
 
-  if (templateData.jobTitle) {
+  for (const line of contactLines) {
     children.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: templateData.jobTitle,
+            text: line,
             font: 'Helvetica',
-            size: 18,
-            italics: true,
+            size: 20,
             color: '555555',
           }),
         ],
@@ -597,85 +645,77 @@ function buildDocxDocument(templateData: TemplateData): Document {
   }
 
   children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: contactLine,
-          font: 'Helvetica',
-          size: 18,
-          color: '555555',
-        }),
-      ],
-      spacing: { after: 180 },
-      border: {
-        bottom: {
-          color: 'BBBBBB',
-          space: 1,
-          style: BorderStyle.SINGLE,
-          size: 6,
-        },
-      },
-    }),
-    createDocxHeading('Resumo Profissional'),
+    createDocxSeparator(),
+    createDocxHeading(ATS_SECTION_HEADINGS.summary),
     createDocxBody(templateData.summary),
-    createDocxHeading('Habilidades'),
-    createDocxBody(templateData.skills),
   )
 
-  if (templateData.experiences.length > 0) {
-    children.push(createDocxHeading('Experi\\u00EAncia Profissional'))
+  if (skillLines.length > 0) {
+    children.push(
+      createDocxSeparator(),
+      createDocxHeading(ATS_SECTION_HEADINGS.skills),
+    )
 
-    for (const experience of templateData.experiences) {
+    for (const line of skillLines) {
+      children.push(createDocxBody(line))
+    }
+  }
+
+  if (templateData.experiences.length > 0) {
+    children.push(createDocxSeparator(), createDocxHeading(ATS_SECTION_HEADINGS.experience))
+
+    templateData.experiences.forEach((experience, index) => {
       children.push(
-        createDocxBody(`${experience.title}${experience.company ? ` - ${experience.company}` : ''}`, {
+        createDocxBody(experience.title, {
           bold: true,
         }),
-        createDocxBody(experience.period, {
+        createDocxBody(experience.company, {
+          color: '1A1A1A',
+        }),
+        createDocxBody(formatExperienceMetadata(experience), {
           color: '555555',
         }),
       )
 
-      if (experience.techStack) {
-        children.push(
-          createDocxBody(`Tech stack: ${experience.techStack}`, {
-            color: '555555',
-          }),
-        )
-      }
-
       for (const bullet of experience.bullets) {
         children.push(createDocxBullet(bullet.text))
       }
-    }
+
+      if (index < templateData.experiences.length - 1) {
+        children.push(createDocxSeparator())
+      }
+    })
   }
 
   if (templateData.education.length > 0) {
-    children.push(createDocxHeading('Educa\\u00E7\\u00E3o'))
+    children.push(createDocxSeparator(), createDocxHeading(ATS_SECTION_HEADINGS.education))
 
     for (const education of templateData.education) {
       children.push(
+        createDocxBody(education.degree, {
+          bold: true,
+        }),
         createDocxBody(
-          `${education.degree}${education.institution ? ` - ${education.institution}` : ''}${education.period ? ` - ${education.period}` : ''}`,
+          [education.institution, education.period].filter(Boolean).join(' - '),
+          { color: '555555' },
         ),
       )
     }
   }
 
   if (templateData.hasCertifications) {
-    children.push(createDocxHeading('Certifica\\u00E7\\u00F5es'))
+    children.push(createDocxSeparator(), createDocxHeading(ATS_SECTION_HEADINGS.certifications))
 
     for (const certification of templateData.certifications) {
-      children.push(createDocxBody(certification.name))
+      children.push(createDocxBody(formatCertificationLine(certification)))
     }
   }
 
   if (templateData.hasLanguages) {
-    children.push(createDocxHeading('Idiomas'))
+    children.push(createDocxSeparator(), createDocxHeading(ATS_SECTION_HEADINGS.languages))
 
     for (const language of templateData.languages) {
-      children.push(
-        createDocxBody(language.level ? `${language.language} - ${language.level}` : language.language),
-      )
+      children.push(createDocxBody(formatLanguageLine(language)))
     }
   }
 
@@ -685,7 +725,7 @@ function buildDocxDocument(templateData: TemplateData): Document {
         document: {
           run: {
             font: 'Helvetica',
-            size: 18,
+            size: 20,
             color: '1A1A1A',
           },
           paragraph: {
@@ -743,12 +783,12 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
     return y - size - 4
   }
 
-  function drawLine(activePage: typeof page, y: number): void {
+  function drawSeparator(activePage: typeof page, y: number): void {
     activePage.drawLine({
       start: { x: MARGIN, y },
       end: { x: PAGE_WIDTH - MARGIN, y },
       thickness: 0.5,
-      color: rgb(0, 0, 0),
+      color: rgb(0.82, 0.82, 0.82),
     })
   }
 
@@ -777,21 +817,19 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
   }
 
   function drawSectionHeading(activePage: typeof page, title: string, y: number): number {
-    let nextY = y - 12
+    let nextY = y - 18
     activePage.drawText(title.toUpperCase(), {
       x: MARGIN,
       y: nextY,
-      size: 10,
+      size: 14,
       font: fontBold,
       color: rgb(0, 0, 0),
     })
-    nextY -= 16
-    drawLine(activePage, nextY)
-    return nextY - 6
+    return nextY - 20
   }
 
-  function checkPageOverflow(y: number): typeof page {
-    if (y < MARGIN + 60) {
+  function checkPageOverflow(y: number, minimumRemainingHeight = 80): typeof page {
+    if (y < MARGIN + minimumRemainingHeight) {
       page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT])
       currentY = PAGE_HEIGHT - MARGIN
     }
@@ -799,108 +837,129 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
     return page
   }
 
+  function drawWrappedLines(lines: string[], indent = 0, color = rgb(0, 0, 0)): void {
+    for (const line of lines) {
+      page = checkPageOverflow(currentY, 40)
+      currentY = drawText(page, line, MARGIN + indent, currentY, 10, font, color)
+    }
+  }
+
+  function drawBulletParagraphs(lines: string[]): void {
+    for (const bullet of lines) {
+      const bulletLines = wrapText(bullet, font, 10, USABLE_WIDTH - 16)
+
+      for (let lineIndex = 0; lineIndex < bulletLines.length; lineIndex++) {
+        page = checkPageOverflow(currentY, 40)
+        const prefix = lineIndex === 0 ? '- ' : '  '
+        currentY = drawText(page, `${prefix}${bulletLines[lineIndex]}`, MARGIN + 14, currentY, 10, font)
+      }
+    }
+  }
+
+  const contactLines = buildContactLines(templateData)
+  const skillLines = buildSkillGroupLines(templateData)
+
   currentY = drawText(page, templateData.fullName, MARGIN, currentY, 18, fontBold)
 
-  if (templateData.jobTitle) {
-    currentY = drawText(page, templateData.jobTitle, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
+  for (const line of contactLines) {
+    currentY = drawText(page, line, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
   }
 
-  const contactParts = [
-    templateData.email,
-    templateData.phone,
-    templateData.linkedin,
-    templateData.location,
-  ].filter(Boolean)
-  const contactLine = contactParts.join('  |  ')
-  currentY = drawText(page, contactLine, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
-  currentY -= 6
-  drawLine(page, currentY)
-  currentY -= 12
+  currentY -= 8
 
   if (templateData.summary) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Resumo Profissional', currentY)
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.summary, currentY)
 
     const summaryLines = wrapText(templateData.summary, font, 10, USABLE_WIDTH)
-    for (const line of summaryLines) {
-      page = checkPageOverflow(currentY)
-      currentY = drawText(page, line, MARGIN, currentY, 10, font)
-    }
-    currentY -= 6
+    drawWrappedLines(summaryLines)
+    currentY -= 10
   }
 
-  if (templateData.skills.trim().length > 0) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Habilidades', currentY)
+  if (skillLines.length > 0) {
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.skills, currentY)
 
-    const skillsLines = wrapText(templateData.skills, font, 10, USABLE_WIDTH)
-    for (const line of skillsLines) {
-      page = checkPageOverflow(currentY)
-      currentY = drawText(page, line, MARGIN, currentY, 10, font)
+    for (const line of skillLines) {
+      const wrappedSkillLine = wrapText(line, font, 10, USABLE_WIDTH)
+      drawWrappedLines(wrappedSkillLine)
     }
-    currentY -= 6
+    currentY -= 10
   }
 
   if (templateData.experiences.length > 0) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Experi\\u00EAncia Profissional', currentY)
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.experience, currentY)
 
-    for (const experience of templateData.experiences) {
-      page = checkPageOverflow(currentY)
-      const titleLine = `${experience.title}${experience.company ? ` - ${experience.company}` : ''}`
-      currentY = drawText(page, titleLine, MARGIN, currentY, 12, fontBold)
-
-      currentY = drawText(page, experience.period, MARGIN, currentY, 10, font, rgb(0.3, 0.3, 0.3))
-      if (experience.techStack) {
-        currentY = drawText(page, `Tech stack: ${experience.techStack}`, MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
-      }
+    for (let index = 0; index < templateData.experiences.length; index += 1) {
+      const experience = templateData.experiences[index]
+      page = checkPageOverflow(currentY, 120)
+      currentY = drawText(page, experience.title, MARGIN, currentY, 10, fontBold)
+      currentY = drawText(page, experience.company, MARGIN, currentY, 10, font)
+      currentY = drawText(page, formatExperienceMetadata(experience), MARGIN, currentY, 10, font, rgb(0.35, 0.35, 0.35))
       currentY -= 2
 
-      for (const bullet of experience.bullets) {
-        page = checkPageOverflow(currentY)
-        const bulletLines = wrapText(bullet.text, font, 10, USABLE_WIDTH - 15)
-
-        for (let lineIndex = 0; lineIndex < bulletLines.length; lineIndex++) {
-          page = checkPageOverflow(currentY)
-          const prefix = lineIndex === 0 ? '- ' : '  '
-          currentY = drawText(page, prefix + bulletLines[lineIndex], MARGIN + 15, currentY, 10, font)
-        }
-      }
+      drawBulletParagraphs(experience.bullets.map((bullet) => bullet.text))
       currentY -= 6
+
+      if (index < templateData.experiences.length - 1) {
+        page = checkPageOverflow(currentY, 60)
+        drawSeparator(page, currentY)
+        currentY -= 18
+      }
     }
   }
 
   if (templateData.education.length > 0) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Forma\\u00E7\\u00E3o Acad\\u00EAmica', currentY)
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.education, currentY)
 
     for (const education of templateData.education) {
-      page = checkPageOverflow(currentY)
-      const educationLine = `${education.degree}${education.institution ? ` - ${education.institution}` : ''}${education.period ? ` - ${education.period}` : ''}`
-      currentY = drawText(page, educationLine, MARGIN, currentY, 10, font)
+      page = checkPageOverflow(currentY, 80)
+      currentY = drawText(page, education.degree, MARGIN, currentY, 10, fontBold)
+      currentY = drawText(
+        page,
+        [education.institution, education.period].filter(Boolean).join(' - '),
+        MARGIN,
+        currentY,
+        10,
+        font,
+        rgb(0.35, 0.35, 0.35),
+      )
     }
-    currentY -= 6
+    currentY -= 10
   }
 
   if (templateData.hasCertifications) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Certifica\\u00E7\\u00F5es', currentY)
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.certifications, currentY)
 
     for (const certification of templateData.certifications) {
-      page = checkPageOverflow(currentY)
-      currentY = drawText(page, certification.name, MARGIN, currentY, 10, font)
+      page = checkPageOverflow(currentY, 60)
+      currentY = drawText(page, formatCertificationLine(certification), MARGIN, currentY, 10, font)
     }
-    currentY -= 6
+    currentY -= 10
   }
 
   if (templateData.hasLanguages) {
-    page = checkPageOverflow(currentY)
-    currentY = drawSectionHeading(page, 'Idiomas', currentY)
+    page = checkPageOverflow(currentY, 120)
+    drawSeparator(page, currentY)
+    currentY -= 10
+    currentY = drawSectionHeading(page, ATS_SECTION_HEADINGS.languages, currentY)
 
     for (const language of templateData.languages) {
-      page = checkPageOverflow(currentY)
-      const languageLine = language.level ? `${language.language} - ${language.level}` : language.language
-      currentY = drawText(page, languageLine, MARGIN, currentY, 10, font)
+      page = checkPageOverflow(currentY, 60)
+      currentY = drawText(page, formatLanguageLine(language), MARGIN, currentY, 10, font)
     }
   }
 

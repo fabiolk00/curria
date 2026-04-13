@@ -18,7 +18,7 @@ import {
   TextSelect,
   ListChecks,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -129,10 +129,10 @@ function sanitizeResumeData(value: CVState): CVState {
 }
 
 const atsFeatures: AtsFeature[] = [
-  { id: "analysis", label: "analise ATS geral", icon: FileSearch },
-  { id: "keywords", label: "melhoria de palavras-chave", icon: Target },
-  { id: "structure", label: "melhoria de estrutura", icon: ListChecks },
-  { id: "rewrite", label: "rewrite otimizado para ATS", icon: TextSelect },
+  { id: "analysis", label: "parse e leitura estruturada do curriculo", icon: FileSearch },
+  { id: "keywords", label: "keyword matching e gap analysis quando houver vaga", icon: Target },
+  { id: "structure", label: "reescrita estrategica de resumo e bullets", icon: TextSelect },
+  { id: "rewrite", label: "template ATS em PDF textual, simples e pt-BR", icon: ListChecks },
 ]
 
 function formatUpdatedLabel(lastUpdatedAt: string | null): string {
@@ -165,6 +165,7 @@ export default function UserDataPage({
   userImageUrl = null,
 }: UserDataPageProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [resumeData, setResumeData] = useState<CVState>(() => normalizeResumeData())
   const [profileSource, setProfileSource] = useState<string | null>(null)
@@ -185,6 +186,7 @@ export default function UserDataPage({
       try {
         const response = await fetch("/api/profile", {
           credentials: "include",
+          cache: "no-store",
         })
 
         if (!response.ok) {
@@ -265,7 +267,10 @@ export default function UserDataPage({
     try {
       await persistProfile()
       toast.success("Perfil salvo com sucesso.")
-      router.push("/dashboard/resume/new")
+
+      if (pathname !== "/dashboard/resume/new") {
+        router.push("/dashboard/resume/new")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
     } finally {
@@ -719,7 +724,7 @@ export default function UserDataPage({
                       Melhorar meu curriculo para ATS
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Use seu perfil base atual para gerar uma nova versao ATS, sem vaga especifica, com analise geral, melhoria de estrutura, palavras-chave e rewrite otimizado.
+                      Usa o seu perfil base para gerar uma versao ATS em pt-BR seguindo o modelo padrao da plataforma: estrutura linear, sem elementos que atrapalham parsing, linguagem objetiva e foco em verdade, matching e clareza.
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-3">

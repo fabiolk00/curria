@@ -156,6 +156,29 @@ describe('POST /api/profile/ats-enhancement', () => {
     }, expect.objectContaining({ id: 'sess_ats_123' }))
   })
 
+  it('sends PT-BR ATS rewriting guidance into the enhancement flow', async () => {
+    await POST(new NextRequest('https://example.com/api/profile/ats-enhancement', {
+      method: 'POST',
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(dispatchToolWithContext).toHaveBeenNthCalledWith(1, 'rewrite_section', expect.objectContaining({
+      section: 'summary',
+      instructions: expect.stringContaining('Brazilian Portuguese (pt-BR)'),
+    }), expect.objectContaining({ id: 'sess_ats_123' }))
+    expect(dispatchToolWithContext).toHaveBeenNthCalledWith(2, 'rewrite_section', expect.objectContaining({
+      section: 'experience',
+      instructions: expect.stringContaining('acao + contexto + resultado'),
+    }), expect.objectContaining({ id: 'sess_ats_123' }))
+    expect(dispatchToolWithContext).toHaveBeenNthCalledWith(3, 'rewrite_section', expect.objectContaining({
+      section: 'skills',
+      instructions: expect.stringContaining('habilidades section'),
+    }), expect.objectContaining({ id: 'sess_ats_123' }))
+    expect(dispatchToolWithContext).toHaveBeenNthCalledWith(3, 'rewrite_section', expect.objectContaining({
+      instructions: expect.stringContaining('resumo profissional, habilidades, experiencia profissional, educacao, certificacoes, idiomas'),
+    }), expect.objectContaining({ id: 'sess_ats_123' }))
+  })
+
   it('rejects incomplete profiles before creating the ATS version', async () => {
     const response = await POST(new NextRequest('https://example.com/api/profile/ats-enhancement', {
       method: 'POST',

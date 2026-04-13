@@ -5,6 +5,7 @@ import { validateGenerationCvState } from '@/lib/agent/tools/generate-file'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { CVStateSchema } from '@/lib/cv/schema'
 import { checkUserQuota } from '@/lib/db/sessions'
+import { ATS_SECTION_HEADINGS } from '@/lib/templates/cv-state-to-template-data'
 import {
   assessAtsEnhancementReadiness,
   buildResumeTextFromCvState,
@@ -13,29 +14,45 @@ import {
 import { createSession, applyToolPatchWithVersion } from '@/lib/db/sessions'
 import type { ToolFailure } from '@/types/agent'
 
+function buildAtsResumeStyleGuide(): string {
+  return [
+    'Act as a senior ATS resume strategist for Brazilian job seekers.',
+    'Write in Brazilian Portuguese (pt-BR) with professional, concise, recruiter-friendly language.',
+    'Never invent employers, tools, certifications, projects, metrics, or results.',
+    'Optimize for ATS parsing, semantic keyword matching, and human readability at the same time.',
+    `Prefer a predictable ATS structure: ${ATS_SECTION_HEADINGS.summary.toLowerCase()}, ${ATS_SECTION_HEADINGS.skills.toLowerCase()}, ${ATS_SECTION_HEADINGS.experience.toLowerCase()}, ${ATS_SECTION_HEADINGS.education.toLowerCase()}, ${ATS_SECTION_HEADINGS.certifications.toLowerCase()}, ${ATS_SECTION_HEADINGS.languages.toLowerCase()}.`,
+    'Avoid keyword stuffing, vague cliches, decorative language, and anything that sounds inflated or fictional.',
+  ].join('\n')
+}
+
 function buildSummaryInstructions(): string {
   return [
-    'Rewrite the professional summary to improve general ATS performance without targeting a specific vacancy.',
-    'Keep it truthful, concise, and impactful in Brazilian Portuguese.',
-    'Emphasize clarity, role positioning, seniority cues, measurable outcomes when supported, and recruiter readability.',
-    'Do not invent employers, tools, certifications, or achievements.',
+    buildAtsResumeStyleGuide(),
+    'Rewrite only the resumo profissional for generic ATS enhancement without a specific vacancy.',
+    'Use 3 to 5 lines with this logic: profissao + senioridade/anos + especialidade + stack principal + tipo de impacto.',
+    'Prioritize clarity, positioning, technologies already supported by the resume, and credible business impact.',
+    'Do not use empty cliches such as proativo, dedicado, comunicativo, apaixonado por desafios.',
   ].join('\n\n')
 }
 
 function buildExperienceInstructions(): string {
   return [
-    'Rewrite the professional experience section to improve general ATS performance without targeting a specific vacancy.',
-    'Strengthen action verbs, clarity, measurable outcomes, and keyword relevance based on the existing career history.',
-    'Preserve the same roles and employers, but improve bullets for stronger ATS readability.',
-    'Do not invent achievements, metrics, or technologies not grounded in the current resume.',
+    buildAtsResumeStyleGuide(),
+    'Rewrite only the experiencia profissional section for generic ATS enhancement without a specific vacancy.',
+    'Preserve the same cargos, empresas, datas, and factual scope.',
+    'Rewrite each bullet with the logic acao + contexto + resultado ou finalidade legitima.',
+    'Start bullets with strong verbs, keep them objective, and remove weak phrasing such as responsavel por.',
+    'Do not invent achievements, metrics, tools, or responsibilities that are not grounded in the existing resume.',
   ].join('\n\n')
 }
 
 function buildSkillsInstructions(): string {
   return [
-    'Rewrite and reorder the skills section to improve general ATS performance without targeting a specific vacancy.',
-    'Group or reorder skills for clarity, prioritize the strongest and most marketable ones first, and remove obvious redundancy.',
-    'Keep the list truthful and realistic.',
+    buildAtsResumeStyleGuide(),
+    `Rewrite and reorder only the ${ATS_SECTION_HEADINGS.skills.toLowerCase()} section for generic ATS enhancement without a specific vacancy.`,
+    'Keep only real skills already supported by the resume or clearly informed by the user.',
+    'Prioritize stronger market signals first and remove redundancy.',
+    'Think in ATS-friendly groups such as analise de dados, business intelligence, cloud, programacao, engenharia de dados, ferramentas, and metodologias when relevant.',
   ].join('\n\n')
 }
 
