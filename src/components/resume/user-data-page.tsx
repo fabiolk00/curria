@@ -713,6 +713,7 @@ export default function UserDataPage({
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportSuccess={handleImportSuccess}
+        currentProfileSource={profileSource}
       />
     </div>
   )

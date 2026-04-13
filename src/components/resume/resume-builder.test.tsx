@@ -123,6 +123,66 @@ describe("ImportResumeModal", () => {
     })
   })
 
+  it("asks for confirmation before replacing a LinkedIn-imported profile with PDF data", async () => {
+    const user = userEvent.setup()
+    const onImportSuccess = vi.fn()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        profile: {
+          cvState: {
+            fullName: "Bruna Costa",
+            email: "",
+            phone: "",
+            summary: "Product designer",
+            experience: [],
+            skills: [],
+            education: [],
+          },
+          profilePhotoUrl: null,
+          source: "pdf",
+        },
+      }),
+    })
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(
+      <ImportResumeModal
+        isOpen
+        onClose={vi.fn()}
+        onImportSuccess={onImportSuccess}
+        currentProfileSource="linkedin"
+      />,
+    )
+
+    const input = screen.getByLabelText(/clique para selecionar um pdf/i)
+    const file = new File(["pdf"], "resume.pdf", { type: "application/pdf" })
+
+    await user.upload(input, file)
+    await user.click(screen.getAllByRole("button", { name: /importar arquivo/i })[0])
+
+    expect(
+      screen.getByRole("heading", { name: /substituir perfil importado do linkedin/i }),
+    ).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole("button", { name: /substituir pelo pdf/i }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    const [, requestInit] = fetchMock.mock.calls[0]
+    const formData = requestInit.body as FormData
+    expect(formData.get("replaceLinkedinImport")).toBe("true")
+    expect(onImportSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ fullName: "Bruna Costa" }),
+      null,
+      "pdf",
+    )
+  })
+
   it("resets file import state when the modal closes and reopens", async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn().mockResolvedValue({

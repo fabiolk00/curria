@@ -28,6 +28,7 @@ const FILE_TOO_LARGE_MESSAGE = 'Arquivo muito grande. Envie um curriculo de ate 
 const SCANNED_PDF_MESSAGE = 'Nao conseguimos extrair texto desse PDF. Se ele for escaneado, tente outro PDF com texto selecionavel ou preencha manualmente.'
 const EXTRACTION_FAILURE_MESSAGE = 'Nao foi possivel identificar dados suficientes no arquivo enviado.'
 const NO_PROFILE_CHANGES_MESSAGE = 'Esse arquivo nao trouxe novas informacoes para o seu perfil atual.'
+const REPLACE_LINKEDIN_CONFIRMATION_MESSAGE = 'Voce ja importou seu perfil pelo LinkedIn. Confirme se deseja substituir essas informacoes pelo PDF.'
 const START_IMPORT_FAILURE_MESSAGE = 'Nao foi possivel importar seu curriculo agora. Tente novamente em instantes.'
 
 function mapProfileResponse(data: UserProfileRow) {
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   const uploadedFile = formData.get('file')
+  const replaceLinkedinImport = formData.get('replaceLinkedinImport') === 'true'
   if (
     !uploadedFile
     || typeof uploadedFile === 'string'
@@ -126,8 +128,22 @@ export async function POST(req: NextRequest) {
     }
 
     const existingProfile = await getExistingUserProfile(appUser.id)
+    if (existingProfile?.source === 'linkedin' && !replaceLinkedinImport) {
+      return NextResponse.json(
+        {
+          error: REPLACE_LINKEDIN_CONFIRMATION_MESSAGE,
+          requiresConfirmation: true,
+        },
+        { status: 409 },
+      )
+    }
+
     const currentCvState = existingProfile
-      ? existingProfile.cv_state as CVState
+      ? (
+        replaceLinkedinImport && existingProfile.source === 'linkedin'
+          ? createEmptyCvState()
+          : existingProfile.cv_state as CVState
+      )
       : createEmptyCvState()
 
     const ingestionResult = await ingestResumeText(
@@ -161,12 +177,15 @@ export async function POST(req: NextRequest) {
       appUserId: appUser.id,
       cvState: nextCvState,
       source: 'pdf',
+      linkedinUrl: replaceLinkedinImport ? nextCvState.linkedin ?? null : undefined,
+      profilePhotoUrl: replaceLinkedinImport ? null : undefined,
     })
 
     logInfo('[api/profile/upload] Resume imported', {
       appUserId: appUser.id,
       fileType: metadata.data.type,
       fileSize: uploadedFile.size,
+      replaceLinkedinImport,
       strategy: ingestionResult.strategy,
       changedFields: ingestionResult.changedFields.join(','),
       preservedFields: ingestionResult.preservedFields.join(','),

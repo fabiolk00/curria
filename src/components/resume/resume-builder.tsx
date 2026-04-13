@@ -14,6 +14,16 @@ import {
 import { toast } from "sonner"
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,6 +43,7 @@ type ImportResumeModalProps = {
   isOpen: boolean
   onClose: () => void
   onImportSuccess: (data: ResumeData, profilePhotoUrl?: string | null, source?: string | null) => void
+  currentProfileSource?: string | null
 }
 
 type ProfileResponse = {
@@ -57,6 +68,7 @@ type FileUploadResponse = {
   } | null
   error?: string
   warning?: string
+  requiresConfirmation?: boolean
 }
 
 function statusLabel(status: JobStatus): string {
@@ -93,6 +105,7 @@ export function ImportResumeModal({
   isOpen,
   onClose,
   onImportSuccess,
+  currentProfileSource = null,
 }: ImportResumeModalProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const activeFileImportIdRef = useRef(0)
@@ -105,6 +118,7 @@ export function ImportResumeModal({
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null)
   const [fileImportStage, setFileImportStage] = useState<FileImportStage>("idle")
   const [fileImportMessage, setFileImportMessage] = useState<string | null>(null)
+  const [isReplaceConfirmOpen, setIsReplaceConfirmOpen] = useState(false)
 
   const invalidateActiveFileImport = (): void => {
     activeFileImportIdRef.current += 1
@@ -116,6 +130,7 @@ export function ImportResumeModal({
     setSelectedFile(null)
     setFileImportStage("idle")
     setFileImportMessage(null)
+    setIsReplaceConfirmOpen(false)
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -224,7 +239,7 @@ export function ImportResumeModal({
     }
   }
 
-  const handleFileImport = async (): Promise<void> => {
+  const runFileImport = async (replaceLinkedinImport: boolean): Promise<void> => {
     if (!selectedFile) {
       toast.error("Selecione um arquivo PDF para importar.")
       return
@@ -244,6 +259,7 @@ export function ImportResumeModal({
     try {
       const formData = new FormData()
       formData.append("file", selectedFile)
+      formData.append("replaceLinkedinImport", String(replaceLinkedinImport))
 
       setFileImportStage("extracting")
       setFileImportMessage("Extraindo o texto e preenchendo as secoes automaticamente.")
@@ -255,6 +271,11 @@ export function ImportResumeModal({
       })
 
       const data = (await response.json()) as FileUploadResponse
+      if (response.status === 409 && data.requiresConfirmation) {
+        setIsReplaceConfirmOpen(true)
+        return
+      }
+
       if (!response.ok || !data.profile) {
         throw new Error(data.error ?? "Nao foi possivel importar seu curriculo.")
       }
@@ -291,11 +312,21 @@ export function ImportResumeModal({
     }
   }
 
+  const handleFileImport = async (): Promise<void> => {
+    if (currentProfileSource === "linkedin") {
+      setIsReplaceConfirmOpen(true)
+      return
+    }
+
+    await runFileImport(false)
+  }
+
   const isBusy = isLinkedinSubmitting || activeFileImportId !== null || jobId !== null
   const showFileStatus = fileImportStage !== "idle"
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="overflow-hidden sm:max-w-3xl">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-500" />
         <DialogHeader className="space-y-4 pt-3">
@@ -462,6 +493,30 @@ export function ImportResumeModal({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <AlertDialog open={isReplaceConfirmOpen} onOpenChange={setIsReplaceConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Substituir perfil importado do LinkedIn?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voce ja importou seu perfil pelo LinkedIn. Se continuar, vamos substituir essas informacoes pelos dados extraidos do PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                setIsReplaceConfirmOpen(false)
+                void runFileImport(true)
+              }}
+            >
+              Substituir pelo PDF
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

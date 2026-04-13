@@ -125,6 +125,47 @@ describe('POST /api/profile/upload', () => {
     )
   })
 
+  it('requires confirmation before replacing a LinkedIn-imported profile', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValueOnce(appUser)
+    vi.mocked(parseFile).mockResolvedValueOnce({
+      success: true,
+      text: 'Ana Silva\nana@example.com\nBackend engineer',
+      pageCount: 1,
+    })
+    vi.mocked(getExistingUserProfile).mockResolvedValueOnce({
+      id: 'profile_123',
+      user_id: 'usr_123',
+      cv_state: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '',
+        summary: 'Imported from LinkedIn',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      source: 'linkedin',
+      linkedin_url: 'https://linkedin.com/in/ana',
+      profile_photo_url: 'https://cdn.example.com/profile.jpg',
+      extracted_at: '2026-04-13T16:00:00.000Z',
+      created_at: '2026-04-13T16:00:00.000Z',
+      updated_at: '2026-04-13T16:00:00.000Z',
+    })
+
+    const res = await POST(
+      makeRequest(new File(['pdf'], 'resume.pdf', { type: 'application/pdf' })),
+    )
+    const json = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(json.requiresConfirmation).toBe(true)
+    expect(json.error).toBe(
+      'Voce ja importou seu perfil pelo LinkedIn. Confirme se deseja substituir essas informacoes pelo PDF.',
+    )
+    expect(ingestResumeText).not.toHaveBeenCalled()
+    expect(saveImportedUserProfile).not.toHaveBeenCalled()
+  })
+
   it('imports a PDF into an empty profile', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValueOnce(appUser)
     vi.mocked(parseFile).mockResolvedValueOnce({
@@ -265,6 +306,113 @@ describe('POST /api/profile/upload', () => {
         education: [],
       },
       source: 'pdf',
+    })
+  })
+
+  it('replaces LinkedIn-imported data with a clean PDF import after confirmation', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValueOnce(appUser)
+    vi.mocked(parseFile).mockResolvedValueOnce({
+      success: true,
+      text: 'resume text',
+      pageCount: 1,
+    })
+    vi.mocked(getExistingUserProfile).mockResolvedValueOnce({
+      id: 'profile_123',
+      user_id: 'usr_123',
+      cv_state: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '',
+        linkedin: 'https://linkedin.com/in/ana',
+        summary: 'Imported from LinkedIn',
+        experience: [{ title: 'Role', company: 'Acme', startDate: '2020', endDate: '2023', bullets: [] }],
+        skills: ['LinkedIn skill'],
+        education: [],
+      },
+      source: 'linkedin',
+      linkedin_url: 'https://linkedin.com/in/ana',
+      profile_photo_url: 'https://cdn.example.com/profile.jpg',
+      extracted_at: '2026-04-13T16:00:00.000Z',
+      created_at: '2026-04-13T16:00:00.000Z',
+      updated_at: '2026-04-13T16:00:00.000Z',
+    })
+    vi.mocked(ingestResumeText).mockResolvedValueOnce({
+      strategy: 'populate_empty',
+      confidenceScore: 0.8,
+      changedFields: ['fullName', 'summary'],
+      preservedFields: [],
+      patch: {
+        cvState: {
+          fullName: 'Bruna Costa',
+          email: '',
+          phone: '',
+          summary: 'Product designer',
+          experience: [],
+          skills: [],
+          education: [],
+        },
+      },
+    })
+    vi.mocked(saveImportedUserProfile).mockResolvedValueOnce({
+      id: 'profile_123',
+      user_id: 'usr_123',
+      cv_state: {
+        fullName: 'Bruna Costa',
+        email: '',
+        phone: '',
+        summary: 'Product designer',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      source: 'pdf',
+      linkedin_url: null,
+      profile_photo_url: null,
+      extracted_at: '2026-04-13T16:00:00.000Z',
+      created_at: '2026-04-13T16:00:00.000Z',
+      updated_at: '2026-04-13T16:00:00.000Z',
+    })
+
+    const formData = new FormData()
+    formData.append('file', new File(['pdf'], 'resume.pdf', { type: 'application/pdf' }))
+    formData.append('replaceLinkedinImport', 'true')
+    const req = {
+      formData: async () => formData,
+      signal: new AbortController().signal,
+    } as NextRequest
+
+    const res = await POST(req)
+
+    expect(res.status).toBe(200)
+    expect(ingestResumeText).toHaveBeenCalledWith(
+      'resume text',
+      {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      'usr_123',
+      undefined,
+      expect.any(AbortSignal),
+    )
+    expect(saveImportedUserProfile).toHaveBeenCalledWith({
+      appUserId: 'usr_123',
+      cvState: {
+        fullName: 'Bruna Costa',
+        email: '',
+        phone: '',
+        summary: 'Product designer',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      source: 'pdf',
+      linkedinUrl: null,
+      profilePhotoUrl: null,
     })
   })
 
