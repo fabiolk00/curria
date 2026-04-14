@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AGENT_CONFIG } from "@/lib/agent/config"
 import { cn } from "@/lib/utils"
 import type { AgentDoneChunk, AgentStreamChunk, Phase } from "@/types/agent"
+import type { CVState } from "@/types/cv"
 
 import { ChatMessage } from "./chat-message"
 
@@ -34,10 +35,7 @@ interface Message {
 type ProfileResponse = {
   profile: {
     profilePhotoUrl: string | null
-    cvState?: {
-      email?: string
-      phone?: string
-    }
+    cvState?: Partial<CVState>
   } | null
 }
 
@@ -50,6 +48,138 @@ type SessionMessagePayload = {
 type MissingContactInfo = {
   missingEmail: boolean
   missingPhone: boolean
+}
+
+function hasAnyExperienceEntryData(entry: CVState["experience"][number]): boolean {
+  return Boolean(
+    entry.title.trim()
+    || entry.company.trim()
+    || entry.location?.trim()
+    || entry.startDate.trim()
+    || entry.endDate.trim()
+    || entry.bullets.some((bullet) => bullet.trim()),
+  )
+}
+
+function hasAnyEducationEntryData(entry: CVState["education"][number]): boolean {
+  return Boolean(
+    entry.degree.trim()
+    || entry.institution.trim()
+    || entry.year.trim()
+    || entry.gpa?.trim(),
+  )
+}
+
+function buildFallbackProfileWarningItems(missingContactInfo?: MissingContactInfo): string[] {
+  if (!missingContactInfo) {
+    return []
+  }
+
+  const items: string[] = []
+
+  if (missingContactInfo.missingEmail) {
+    items.push("Dados pessoais: adicione seu e-mail.")
+  }
+
+  if (missingContactInfo.missingPhone) {
+    items.push("Dados pessoais: adicione seu telefone.")
+  }
+
+  return items
+}
+
+function normalizeCvState(cvState: Partial<CVState>): CVState {
+  return {
+    fullName: cvState.fullName ?? "",
+    email: cvState.email ?? "",
+    phone: cvState.phone ?? "",
+    linkedin: cvState.linkedin ?? "",
+    location: cvState.location ?? "",
+    summary: cvState.summary ?? "",
+    experience: Array.isArray(cvState.experience) ? cvState.experience : [],
+    skills: Array.isArray(cvState.skills) ? cvState.skills : [],
+    education: Array.isArray(cvState.education) ? cvState.education : [],
+    certifications: Array.isArray(cvState.certifications) ? cvState.certifications : [],
+  }
+}
+
+function buildLiveProfileWarningItems(rawCvState: Partial<CVState>): string[] {
+  const cvState = normalizeCvState(rawCvState)
+  const items: string[] = []
+
+  if (!cvState.fullName.trim()) {
+    items.push("Dados pessoais: adicione seu nome completo.")
+  }
+
+  if (!cvState.email.trim()) {
+    items.push("Dados pessoais: adicione seu e-mail.")
+  }
+
+  if (!cvState.phone.trim()) {
+    items.push("Dados pessoais: adicione seu telefone.")
+  }
+
+  if (!cvState.summary.trim()) {
+    items.push("Resumo profissional: escreva um resumo curto com seu posicionamento e seus principais resultados.")
+  }
+
+  if (cvState.skills.filter((skill) => skill.trim().length > 0).length < 3) {
+    items.push("Skills: adicione pelo menos 3 skills relevantes.")
+  }
+
+  const experienceEntries = cvState.experience.filter(hasAnyExperienceEntryData)
+
+  if (experienceEntries.length === 0) {
+    items.push("Experiencia: inclua pelo menos uma experiencia profissional.")
+  }
+
+  for (const [index, entry] of experienceEntries.entries()) {
+    const itemNumber = index + 1
+
+    if (!entry.title.trim()) {
+      items.push(`Experiencia ${itemNumber}: adicione o cargo.`)
+    }
+
+    if (!entry.company.trim()) {
+      items.push(`Experiencia ${itemNumber}: adicione a empresa.`)
+    }
+
+    if (!entry.startDate.trim()) {
+      items.push(`Experiencia ${itemNumber}: adicione a data de inicio.`)
+    }
+
+    if (!entry.endDate.trim()) {
+      items.push(`Experiencia ${itemNumber}: adicione a data de termino ou marque como atual.`)
+    }
+
+    if (!entry.bullets.some((bullet) => bullet.trim())) {
+      items.push(`Experiencia ${itemNumber}: adicione pelo menos um resultado ou responsabilidade.`)
+    }
+  }
+
+  const educationEntries = cvState.education.filter(hasAnyEducationEntryData)
+
+  if (educationEntries.length === 0) {
+    items.push("Educacao: adicione pelo menos uma formacao academica.")
+  }
+
+  for (const [index, entry] of educationEntries.entries()) {
+    const itemNumber = index + 1
+
+    if (!entry.degree.trim()) {
+      items.push(`Formacao ${itemNumber}: adicione o curso ou graduacao.`)
+    }
+
+    if (!entry.institution.trim()) {
+      items.push(`Formacao ${itemNumber}: adicione a instituicao.`)
+    }
+
+    if (!entry.year.trim()) {
+      items.push(`Formacao ${itemNumber}: adicione o ano principal.`)
+    }
+  }
+
+  return Array.from(new Set(items))
 }
 
 function hasConversationMessages(items: Message[]): boolean {
@@ -121,27 +251,19 @@ function getTimeGreeting(): string {
   return "Boa noite"
 }
 
-function buildMissingContactNotice(missingContactInfo?: MissingContactInfo): string | null {
-  if (!missingContactInfo) {
+function buildProfileWarningNotice(profileWarningItems?: string[]): string | null {
+  if (!profileWarningItems || profileWarningItems.length === 0) {
     return null
   }
 
-  if (missingContactInfo.missingEmail && missingContactInfo.missingPhone) {
-    return "Notei que o e-mail e o telefone nao estao preenchidos no perfil; recomendo completar antes de enviar candidaturas."
-  }
+  const intro = profileWarningItems.length === 1
+    ? "Notei um ponto no seu perfil que vale completar antes de enviar candidaturas:"
+    : "Notei alguns pontos no seu perfil que vale completar antes de enviar candidaturas:"
 
-  if (missingContactInfo.missingEmail) {
-    return "Notei que o e-mail nao esta preenchido no perfil; recomendo completar antes de enviar candidaturas."
-  }
-
-  if (missingContactInfo.missingPhone) {
-    return "Notei que o telefone nao esta preenchido no perfil; recomendo completar antes de enviar candidaturas."
-  }
-
-  return null
+  return `${intro}\n\n${profileWarningItems.map((item) => `- ${item}`).join("\n")}`
 }
 
-function createWelcomeMessages(firstName?: string, missingContactInfo?: MissingContactInfo): Message[] {
+function createWelcomeMessages(firstName?: string, profileWarningItems?: string[]): Message[] {
   const greeting = firstName
     ? `${getTimeGreeting()}, ${firstName} - prazer.`
     : `${getTimeGreeting()} - prazer.`
@@ -155,12 +277,12 @@ Quer que eu adapte o curriculo para uma vaga especifica? Mande o link ou cole o 
     timestamp: "",
   }]
 
-  const missingContactNotice = buildMissingContactNotice(missingContactInfo)
-  if (missingContactNotice) {
+  const profileWarningNotice = buildProfileWarningNotice(profileWarningItems)
+  if (profileWarningNotice) {
     messages.push({
       id: "welcome-contact",
       role: "assistant",
-      content: missingContactNotice,
+      content: profileWarningNotice,
       timestamp: "",
     })
   }
@@ -321,10 +443,10 @@ export function ChatInterface({
     () => getChatCopy(preferredName),
     [preferredName],
   )
-  const [liveMissingContactInfo, setLiveMissingContactInfo] = useState<MissingContactInfo | undefined>(undefined)
+  const [liveProfileWarningItems, setLiveProfileWarningItems] = useState<string[] | undefined>(undefined)
   const welcomeMessages = useMemo(
-    () => createWelcomeMessages(preferredName, liveMissingContactInfo),
-    [liveMissingContactInfo, preferredName],
+    () => createWelcomeMessages(preferredName, liveProfileWarningItems),
+    [liveProfileWarningItems, preferredName],
   )
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId)
   const [messages, setMessages] = useState<Message[]>(welcomeMessages)
@@ -438,7 +560,7 @@ export function ChatInterface({
         if (!response.ok) {
           if (isMounted) {
             setProfilePhotoUrl(null)
-            setLiveMissingContactInfo(missingContactInfo)
+            setLiveProfileWarningItems(buildFallbackProfileWarningItems(missingContactInfo))
           }
           return
         }
@@ -450,18 +572,15 @@ export function ChatInterface({
 
         setProfilePhotoUrl(data.profile?.profilePhotoUrl ?? null)
         if (!data.profile?.cvState) {
-          setLiveMissingContactInfo(missingContactInfo)
+          setLiveProfileWarningItems(buildFallbackProfileWarningItems(missingContactInfo))
           return
         }
 
-        setLiveMissingContactInfo({
-          missingEmail: !data.profile.cvState.email?.trim(),
-          missingPhone: !data.profile.cvState.phone?.trim(),
-        })
+        setLiveProfileWarningItems(buildLiveProfileWarningItems(data.profile.cvState))
       } catch {
         if (isMounted) {
           setProfilePhotoUrl(null)
-          setLiveMissingContactInfo(missingContactInfo)
+          setLiveProfileWarningItems(buildFallbackProfileWarningItems(missingContactInfo))
         }
       }
     }

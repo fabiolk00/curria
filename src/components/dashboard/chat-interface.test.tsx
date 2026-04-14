@@ -180,19 +180,37 @@ describe("ChatInterface", () => {
     })
 
     expect(
-      screen.queryByText(/telefone nao esta preenchido no perfil/i),
+      screen.queryByText(/adicione seu telefone/i),
     ).not.toBeInTheDocument()
   })
 
-  it("shows the phone warning when the live profile is actually missing that field", async () => {
+  it("shows warnings for missing base profile items except certifications", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (typeof url === "string" && url === "/api/profile") {
         return new Response(JSON.stringify({
           profile: {
             profilePhotoUrl: null,
             cvState: {
+              fullName: "Fabio",
               email: "fabio@example.com",
               phone: "",
+              linkedin: "",
+              location: "Sao Paulo",
+              summary: "",
+              skills: ["SQL", "Power BI", "Python"],
+              experience: [{
+                title: "Analista de Dados",
+                company: "Empresa X",
+                startDate: "2022",
+                endDate: "2024",
+                bullets: ["Criei dashboards"],
+              }],
+              education: [{
+                degree: "Sistemas de Informacao",
+                institution: "USP",
+                year: "2021",
+              }],
+              certifications: [],
             },
           },
         }), { status: 200 })
@@ -205,9 +223,14 @@ describe("ChatInterface", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/telefone nao esta preenchido no perfil/i),
+        screen.getByText(/adicione seu telefone/i),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/resumo profissional: escreva um resumo curto/i),
       ).toBeInTheDocument()
     })
+
+    expect(screen.queryByText(/certificacao/i)).not.toBeInTheDocument()
   })
 
   it("preserves the optimistic conversation when the first message is sent before /api/profile resolves", async () => {
@@ -295,7 +318,7 @@ describe("ChatInterface", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/e-mail nao esta preenchido no perfil/i),
+        screen.getByText(/adicione seu e-mail/i),
       ).toBeInTheDocument()
     })
   })
@@ -318,7 +341,7 @@ describe("ChatInterface", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/telefone nao esta preenchido no perfil/i),
+        screen.getByText(/adicione seu telefone/i),
       ).toBeInTheDocument()
     })
   })
