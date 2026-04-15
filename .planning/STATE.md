@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Agent Response Time and Runtime Performance
-current_phase: 25
-current_phase_name: Chat and ATS Enhancement Request-Path Reduction
-current_plan: 25-02
-status: ready_for_execution
-stopped_at: Phase 25-01 complete; ready to execute 25-02
-last_updated: "2026-04-14T23:55:00.0000000-03:00"
-last_activity: 2026-04-14 -- Completed 25-01 by moving existing-session setup into SSE and emitting earlier preparation progress for heavier chat turns
+current_phase: 26
+current_phase_name: Agent Runtime Simplification and Budget Optimization
+current_plan: 26-01
+status: ready_for_planning
+stopped_at: Phase 25 complete; ready to plan Phase 26
+last_updated: "2026-04-15T01:56:00.0000000-03:00"
+last_activity: 2026-04-15 -- Completed Phase 25 with chat request-path reduction, ATS deferral boundaries, and focused verification proof
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 2
-  percent: 30
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -28,20 +28,20 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Current Phase: 25
-Current Phase Name: Chat and ATS Enhancement Request-Path Reduction
-Current Plan: 25-02
+Current Phase: 26
+Current Phase Name: Agent Runtime Simplification and Budget Optimization
+Current Plan: 26-01
 Total Plans in Phase: 3
-Status: Ready for execution
-Last activity: 2026-04-14 -- Completed 25-01 by moving existing-session setup into SSE and emitting earlier preparation progress for heavier chat turns
-Last Activity Description: Existing-session ATS/chat setup now runs inside SSE with earlier visible progress for heavier turns, the chat UI clears that temporary preparation state when text begins, and focused route/UI regression proof is committed.
+Status: Ready for planning
+Last activity: 2026-04-15 -- Completed Phase 25 with chat request-path reduction, ATS deferral boundaries, and focused verification proof
+Last Activity Description: Phase 25 is fully closed with committed summaries and verification. Existing-session chat setup now streams earlier, ordinary ATS chat no longer blocks on inline rewrite work, and Phase 26 should focus on runtime simplification plus prompt/tool budget reduction.
 
-Phase: 25 (Chat and ATS Enhancement Request-Path Reduction)
-Plan: 1 of 3
-Status: Ready for execution
-Last activity: 2026-04-14 -- Completed 25-01 by moving existing-session setup into SSE and emitting earlier preparation progress for heavier chat turns
+Phase: 26 (Agent Runtime Simplification and Budget Optimization)
+Plan: 0 of 3
+Status: Ready for planning
+Last activity: 2026-04-15 -- Phase 25 completed and Phase 26 is next
 
-Progress: [###-------] 30%
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Recent decisions affecting the next cycle:
 - The intended execution mode for v1.3 is autonomous phase progression from Phase 24 onward unless a true blocker is encountered.
 - Phase 24 proved where latency is spent in the main agent route, so Phase 25 can focus on shrinking the synchronous path instead of adding more instrumentation first.
 - Phase 25-01 moved existing-session turn setup into the SSE lifecycle and added an early preparation progress chunk for heavier chat/ATS turns, so visible response can start before ATS/job-targeting setup fully completes.
+- Phase 25-02 now defers ordinary ATS enhancement rewrite work out of the general chat path and only keeps it inline for confirmation or generation-sensitive turns.
 - The approved Phase 21 cleanup slices currently produce no import or low-risk local cleanup diff under the staged lint baseline.
 - Raw `ts-prune` and `madge` output must be classified before deletion because App Router pages, tests, and middleware appear as expected false positives.
 - The reviewed inventory proves only a small subset of current dead-code findings are safe deletion candidates; most remaining output is framework or test noise.
@@ -92,13 +93,13 @@ Recent decisions affecting the next cycle:
 ### Blockers/Concerns
 
 - No active implementation blocker is currently known for v1.3 setup.
-- Phase 25 still needs 25-02 and 25-03 to reduce ATS-specific inline work further and then publish full verification proof.
+- Phase 26 still needs planning and execution to reduce runtime complexity, prompt weight, and tool-loop cost after the request-path reduction landed.
 - Runtime optimization must avoid regressing billing, auth, ownership, and canonical state guarantees.
 
 ## Session Continuity
 
 Last session: 2026-04-14T22:35:00.0000000-03:00
-Stopped at: Phase 25-01 complete; ready to execute 25-02
+Stopped at: Phase 25 complete; ready to plan Phase 26
 Resume file: None
 
 ## Quick Tasks Completed

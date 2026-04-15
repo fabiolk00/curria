@@ -884,7 +884,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     expect(hasSessionCreated).toBe(false)
   })
 
-  it('emits early preparation progress for existing ATS-heavy sessions before the final stream output', async () => {
+  it('emits early preparation progress for existing job-targeting sessions before the final stream output', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_existing_ats_progress',
       userId: 'usr_123',
@@ -903,6 +903,8 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
         parseStatus: 'parsed',
         rewriteHistory: {},
         sourceResumeText: 'Resumo salvo',
+        targetJobDescription: 'Senior Analytics Engineer com foco em SQL, BigQuery e comunicacao com negocio.',
+        rewriteStatus: 'pending',
       },
       generatedOutput: { status: 'idle' },
       creditsUsed: 1,
@@ -932,7 +934,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     expect(events.at(-1)).toMatchObject({
       type: 'done',
     })
-    expect(runAtsEnhancementPipeline).toHaveBeenCalled()
+    expect(runJobTargetingPipeline).toHaveBeenCalled()
   })
 
   it('aborts new-session stream with error when incrementMessageCount throws', async () => {
@@ -1168,23 +1170,21 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
 
     const events = parseSseDataEvents(await response.text())
     expect(events.map((event) => event.type)).toEqual([
-      'toolStart',
       'text',
       'toolStart',
       'toolResult',
       'patch',
       'done',
     ])
-    expect(events[0]).toEqual({ type: 'toolStart', toolName: 'preparo da resposta' })
-    expect(events[1]).toEqual({ type: 'text', content: 'Hello' })
-    expect(events[2]).toEqual({ type: 'toolStart', toolName: 'parse_file' })
-    expect(events[3]).toEqual({ type: 'toolResult', toolName: 'parse_file', output: { success: true } })
-    expect(events[4]).toEqual({
+    expect(events[0]).toEqual({ type: 'text', content: 'Hello' })
+    expect(events[1]).toEqual({ type: 'toolStart', toolName: 'parse_file' })
+    expect(events[2]).toEqual({ type: 'toolResult', toolName: 'parse_file', output: { success: true } })
+    expect(events[3]).toEqual({
       type: 'patch',
       patch: { agentState: { parseStatus: 'parsed' } },
       phase: 'analysis',
     })
-    expect(events[5]).toEqual({
+    expect(events[4]).toEqual({
       type: 'done',
       sessionId: 'sess_forwarding',
       phase: 'analysis',

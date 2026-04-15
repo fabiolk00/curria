@@ -310,6 +310,37 @@ function shouldRunJobTargetingPipeline(session: Session): boolean {
   )
 }
 
+function normalizeForInlineAtsDecision(message: string): string {
+  return message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function shouldRunAtsEnhancementPipelineInline(session: Session, userMessage: string): boolean {
+  if (
+    session.agentState.workflowMode !== 'ats_enhancement'
+    || !hasResumeContextForAutoGap(session)
+    || (session.agentState.optimizedCvState && session.agentState.rewriteStatus === 'completed')
+  ) {
+    return false
+  }
+
+  if (session.phase === 'confirm' || session.phase === 'generation') {
+    return true
+  }
+
+  const normalizedMessage = normalizeForInlineAtsDecision(userMessage)
+  return (
+    normalizedMessage === 'aceito'
+    || normalizedMessage.includes('gerar curriculo')
+    || normalizedMessage.includes('gere o curriculo')
+    || normalizedMessage.includes('gerar arquivo')
+    || normalizedMessage.includes('gere o arquivo')
+  )
+}
+
 async function persistTargetJobAgentState(
   session: Pick<Session, 'id' | 'phase' | 'stateVersion'> & { agentState: Session['agentState']; updatedAt: Date },
   agentState: Session['agentState'],
@@ -622,6 +653,7 @@ async function handleFileAttachment(
 
 function shouldEmitExistingSessionPreparationProgress(
   session: Session,
+  userMessage: string,
   hasFileAttachment: boolean,
 ): boolean {
   if (hasFileAttachment) {
@@ -631,8 +663,13 @@ function shouldEmitExistingSessionPreparationProgress(
   const predictedWorkflowMode = resolveWorkflowMode(session)
   if (
     predictedWorkflowMode === 'ats_enhancement'
-    && hasResumeContextForAutoGap(session)
-    && (!session.agentState.optimizedCvState || session.agentState.rewriteStatus !== 'completed')
+    && shouldRunAtsEnhancementPipelineInline({
+      ...session,
+      agentState: {
+        ...session.agentState,
+        workflowMode: predictedWorkflowMode,
+      },
+    }, userMessage)
   ) {
     return true
   }
@@ -680,11 +717,23 @@ async function runPreLoopSetup(params: {
 
   await timing.runStage(`workflow_mode_${stageSuffix}`, () => persistWorkflowMode(session))
   if (
+    shouldRunAtsEnhancementPipelineInline(session, nextMessage)
+  ) {
+    await timing.runStage(`ats_pipeline_${stageSuffix}`, () => runAtsEnhancementPipeline(session))
+  } else if (
     session.agentState.workflowMode === 'ats_enhancement'
     && hasResumeContextForAutoGap(session)
     && (!session.agentState.optimizedCvState || session.agentState.rewriteStatus !== 'completed')
   ) {
-    await timing.runStage(`ats_pipeline_${stageSuffix}`, () => runAtsEnhancementPipeline(session))
+    logInfo('agent.ats_enhancement.deferred', {
+      requestId,
+      appUserId,
+      sessionId: session.id,
+      phase: session.phase,
+      isNewSession,
+      workflowMode: session.agentState.workflowMode,
+      success: true,
+    })
   }
   if (shouldRunJobTargetingPipeline(session)) {
     await timing.runStage(`job_targeting_pipeline_${stageSuffix}`, () => runJobTargetingPipeline(session))
@@ -886,7 +935,7 @@ export async function POST(req: NextRequest) {
   // ── SSE stream ──────────────────────────────────────────────────────
   const encoder = new TextEncoder()
   const shouldEmitPreparationProgress = !isNewSession
-    && shouldEmitExistingSessionPreparationProgress(session, Boolean(file && fileMime))
+    && shouldEmitExistingSessionPreparationProgress(session, message, Boolean(file && fileMime))
 
   const stream = new ReadableStream({
     async start(controller) {

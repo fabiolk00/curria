@@ -896,7 +896,7 @@ describe('/api/agent SSE fallback coverage', () => {
     expect(finalText).toContain('Aceito')
   })
 
-  it('persists workflowMode as ats_enhancement before streaming a resume-only session', async () => {
+  it('persists workflowMode as ats_enhancement without blocking ordinary resume-only chat on ATS rewrite work', async () => {
     const session = buildDialogSession({
       id: 'sess_workflow_resume_only',
       agentState: {
@@ -928,7 +928,7 @@ describe('/api/agent SSE fallback coverage', () => {
         }),
       }),
     )
-    expect(mockRunAtsEnhancementPipeline).toHaveBeenCalledWith(session)
+    expect(mockRunAtsEnhancementPipeline).not.toHaveBeenCalled()
     expect(mockRunJobTargetingPipeline).not.toHaveBeenCalled()
   })
 
@@ -968,6 +968,39 @@ describe('/api/agent SSE fallback coverage', () => {
     )
     expect(mockRunJobTargetingPipeline).toHaveBeenCalledWith(session)
     expect(mockRunAtsEnhancementPipeline).not.toHaveBeenCalled()
+  })
+
+  it('still runs ATS enhancement inline when the user is already confirming generation', async () => {
+    const session = {
+      ...buildDialogSession({
+        id: 'sess_workflow_resume_confirm',
+        agentState: {
+          targetJobDescription: undefined,
+          workflowMode: 'ats_enhancement',
+          rewriteStatus: 'pending',
+          optimizedCvState: undefined,
+        },
+      }),
+      phase: 'confirm' as const,
+    }
+
+    vi.mocked(getSession).mockResolvedValue(session)
+    vi.mocked(createChatCompletionStreamWithRetry).mockImplementation(
+      async () => emptyStopStream() as never,
+    )
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.id,
+        message: 'Aceito',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    await response.text()
+    expect(mockRunAtsEnhancementPipeline).toHaveBeenCalledWith(session)
   })
 
   it('logs first-response timing data after the SSE stream completes', async () => {

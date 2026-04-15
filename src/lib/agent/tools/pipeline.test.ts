@@ -286,6 +286,7 @@ describe('ATS enhancement reliability hardening', () => {
 
   it('persists stage-aware ATS workflow metadata and logs completion', async () => {
     const session = buildSession()
+    const originalSummary = session.cvState.summary
     const optimizedCvState = {
       ...buildCvState(),
       summary: 'Analista de dados com foco em BI, SQL e automacao orientada a impacto.',
@@ -312,6 +313,9 @@ describe('ATS enhancement reliability hardening', () => {
     const result = await runAtsEnhancementPipeline(session)
 
     expect(result.success).toBe(true)
+    expect(session.cvState.summary).toBe(originalSummary)
+    expect(session.agentState.optimizedCvState?.summary).toContain('Analista de dados com foco em BI')
+    expect(session.agentState.optimizedCvState?.summary).not.toBe(originalSummary)
     expect(session.agentState.atsWorkflowRun).toMatchObject({
       status: 'completed',
       currentStage: 'persist_version',
