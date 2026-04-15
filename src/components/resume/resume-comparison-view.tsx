@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowRight, Check, Download, Loader2, Pencil } from "lucide-react"
+import { Download, Loader2, Pencil } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
+import Logo from "@/components/logo"
 import { cn } from "@/lib/utils"
 import type { CVState } from "@/types/cv"
 
@@ -342,11 +343,10 @@ export function ResumeComparisonView({
           isVisible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
         )}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
-              <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+            <Logo linkTo="#" size="default" />
+            <div className="hidden h-6 w-px bg-zinc-200 dark:bg-zinc-700 sm:block" />
             <div>
               <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {title}
@@ -358,10 +358,9 @@ export function ResumeComparisonView({
           </div>
           <Button
             onClick={onContinue}
-            className="gap-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+            className="gap-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Continuar
-            <ArrowRight className="h-4 w-4" />
+            Voltar ao Perfil
           </Button>
         </div>
       </header>
@@ -409,10 +408,9 @@ export function ResumeComparisonView({
       <div className="shrink-0 border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:hidden">
         <Button
           onClick={onContinue}
-          className="w-full gap-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+          className="w-full gap-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
-          Continuar para o dashboard
-          <ArrowRight className="h-4 w-4" />
+          Voltar ao Perfil
         </Button>
       </div>
 
