@@ -1,6 +1,6 @@
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 
@@ -125,6 +125,11 @@ function createDeferredResponse() {
     resolve: resolve!,
     reject: reject!,
   }
+}
+
+function submitComposer(textarea: HTMLElement, value: string) {
+  fireEvent.change(textarea, { target: { value } })
+  fireEvent.keyDown(textarea, { key: "Enter", code: "Enter" })
 }
 
 describe("ChatInterface", () => {
@@ -260,8 +265,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Primeira mensagem antes do perfil")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Primeira mensagem antes do perfil")
 
     await waitFor(() => {
       expect(screen.getByText("Primeira mensagem antes do perfil")).toBeInTheDocument()
@@ -373,8 +377,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_42" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Melhore meu currículo")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Melhore meu currículo")
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledTimes(1)
@@ -402,8 +405,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_waiting" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Ainda estou pensando")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Ainda estou pensando")
 
     await waitFor(() => {
       const messages = screen.getAllByTestId("message-assistant")
@@ -458,8 +460,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_confirm" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "gere o arquivo")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "gere o arquivo")
 
     await waitFor(() => {
       expect(screen.getByTestId("chat-accept-generate")).toBeInTheDocument()
@@ -507,8 +508,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_dialog_ready" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "vaga alvo")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "vaga alvo")
 
     await waitFor(() => {
       expect(screen.getByTestId("chat-accept-generate")).toBeInTheDocument()
@@ -535,8 +535,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_capped" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Mais uma mensagem")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Mais uma mensagem")
 
     await waitFor(() => {
       expect(screen.getByText(/atingiu o limite de mensagens/i)).toBeInTheDocument()
@@ -572,8 +571,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Preciso de mais créditos")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Preciso de mais créditos")
 
     await waitFor(() => {
       expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
@@ -608,8 +606,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Streamed credit error")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Streamed credit error")
 
     await waitFor(() => {
       expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
@@ -676,8 +673,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_recoverable" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Reescreva meu currículo para essa vaga")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Reescreva meu currículo para essa vaga")
 
     await waitFor(() => {
       const assistantMessages = screen.getAllByTestId("message-assistant")
@@ -735,8 +731,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "reescreva")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "reescreva")
 
     await waitFor(() => {
       const assistantMessages = screen.getAllByTestId("message-assistant")
@@ -797,8 +792,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "reescreva")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "reescreva")
 
     await waitFor(() => {
       const assistantMessages = screen.getAllByTestId("message-assistant")
@@ -856,8 +850,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="stale_id" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Oi")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Oi")
 
     await waitFor(() => {
       expect(
@@ -893,8 +886,7 @@ describe("ChatInterface", () => {
       return new Response(JSON.stringify({ messages: [] }), { status: 200 })
     })
 
-    await userEvent.type(textarea, "Forçar reset")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Forçar reset")
 
     await waitFor(() => {
       expect(textarea).toBeDisabled()
@@ -938,8 +930,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Nova sessão")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Nova sessão")
 
     await waitFor(() => {
       expect(onSessionChange).toHaveBeenCalledWith("sess_hdr")
@@ -974,8 +965,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Fallback test")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Fallback test")
 
     await waitFor(() => {
       expect(onSessionChange).toHaveBeenCalledWith("sess_sse_only")
@@ -1010,8 +1000,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Minha primeira mensagem")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Minha primeira mensagem")
 
     await waitFor(() => {
       expect(screen.getByText(/Minha primeira mensagem/i)).toBeInTheDocument()
@@ -1041,8 +1030,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Teste sem delta")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Teste sem delta")
 
     await waitFor(() => {
       const messages = screen.getAllByTestId("message-assistant")
@@ -1064,8 +1052,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Quero iniciar uma análise")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Quero iniciar uma análise")
 
     await waitFor(() => {
       expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
@@ -1102,8 +1089,7 @@ describe("ChatInterface", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Continuar")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Continuar")
 
     await waitFor(() => {
       expect(onCreditsExhausted).toHaveBeenCalledTimes(1)
@@ -1122,8 +1108,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Teste")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Teste")
 
     await waitFor(() => {
       const messages = screen.getAllByTestId("message-assistant")
@@ -1152,8 +1137,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_tool" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Execute a ferramenta")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Execute a ferramenta")
 
     await waitFor(() => {
       expect(screen.getByTestId("tool-status")).toHaveTextContent("Executando parse_file...")
@@ -1181,8 +1165,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_patch" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Aplique a mudança")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Aplique a mudança")
 
     await waitFor(() => {
       expect(screen.queryByTestId("tool-status")).not.toBeInTheDocument()
@@ -1210,8 +1193,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_text_clear" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Aplique a mudanca")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Aplique a mudanca")
 
     await waitFor(() => {
       expect(screen.queryByTestId("tool-status")).not.toBeInTheDocument()
@@ -1252,8 +1234,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Sincronize a sessão")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Sincronize a sessão")
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith("/api/session/sess_done", {
@@ -1294,8 +1275,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Finalize")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Finalize")
 
     await waitFor(() => {
       const messages = screen.getAllByTestId("message-assistant")
@@ -1351,8 +1331,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Atualize o estado")
-    await userEvent.keyboard("{Enter}")
+    submitComposer(textarea, "Atualize o estado")
 
     await waitFor(() => {
       expect(screen.getByTestId("chat-interface")).toHaveAttribute("data-session-id", "sess_state_hooks")

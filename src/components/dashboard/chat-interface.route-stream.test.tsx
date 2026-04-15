@@ -1,8 +1,7 @@
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
-import { render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { ChatInterface } from "./chat-interface"
@@ -343,8 +342,8 @@ describe("ChatInterface real /api/agent transcript integration", () => {
     render(<ChatInterface sessionId={session.id} userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "reescreva")
-    await userEvent.keyboard("{Enter}")
+    fireEvent.change(textarea, { target: { value: "reescreva" } })
+    fireEvent.keyDown(textarea, { key: "Enter", code: "Enter" })
 
     await waitFor(() => {
       const assistantMessages = screen.getAllByTestId("message-assistant")
@@ -434,8 +433,8 @@ describe("ChatInterface real /api/agent transcript integration", () => {
     render(<ChatInterface sessionId={session.id} userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, jobDescription)
-    await userEvent.keyboard("{Enter}")
+    fireEvent.change(textarea, { target: { value: jobDescription } })
+    fireEvent.keyDown(textarea, { key: "Enter", code: "Enter" })
 
     await waitFor(() => {
       const assistantMessages = screen.getAllByTestId("message-assistant")

@@ -1,6 +1,6 @@
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 
@@ -192,15 +192,14 @@ describe("JobApplicationsTracker", () => {
     })
 
     await user.click(screen.getByRole("button", { name: /adicionar primeira vaga/i }))
-    await user.type(screen.getByLabelText("Cargo"), "Senior Frontend Engineer")
-    await user.type(screen.getByLabelText("Empresa"), "Fintech Corp")
-    await user.type(screen.getByLabelText("Salário"), "R$ 15.000,00")
-    await user.type(screen.getByLabelText("Localização"), "Remote")
-    await user.type(screen.getByLabelText("Nome do currículo enviado"), "curriculo_v3.pdf")
-    await user.clear(screen.getByLabelText("Benefícios"))
-    await user.type(screen.getByLabelText("Benefícios"), "VR | R$ 1.200{enter}Plano de Saúde")
-    await user.type(screen.getByLabelText("Descrição da vaga"), "Build dashboard flows")
-    await user.type(screen.getByLabelText("Observações"), "Critical role")
+    fireEvent.change(screen.getByLabelText("Cargo"), { target: { value: "Senior Frontend Engineer" } })
+    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "Fintech Corp" } })
+    fireEvent.change(screen.getByLabelText("Salário"), { target: { value: "R$ 15.000,00" } })
+    fireEvent.change(screen.getByLabelText("Localização"), { target: { value: "Remote" } })
+    fireEvent.change(screen.getByLabelText("Nome do currículo enviado"), { target: { value: "curriculo_v3.pdf" } })
+    fireEvent.change(screen.getByLabelText("Benefícios"), { target: { value: "VR | R$ 1.200\nPlano de Saúde" } })
+    fireEvent.change(screen.getByLabelText("Descrição da vaga"), { target: { value: "Build dashboard flows" } })
+    fireEvent.change(screen.getByLabelText("Observações"), { target: { value: "Critical role" } })
     await user.selectOptions(screen.getByRole("combobox"), "entrevista")
     await user.click(screen.getByRole("button", { name: /criar vaga/i }))
 
@@ -237,13 +236,11 @@ describe("JobApplicationsTracker", () => {
     await user.click(screen.getByRole("button", { name: /editar/i }))
 
     const companyInput = screen.getByLabelText("Empresa")
-    await user.clear(companyInput)
-    await user.type(companyInput, "New Fintech")
+    fireEvent.change(companyInput, { target: { value: "New Fintech" } })
     await user.selectOptions(screen.getByRole("combobox"), "negativa")
 
     const notesInput = screen.getByLabelText("Observações")
-    await user.clear(notesInput)
-    await user.type(notesInput, "Updated notes")
+    fireEvent.change(notesInput, { target: { value: "Updated notes" } })
 
     await user.click(screen.getByRole("button", { name: /salvar alterações/i }))
 
@@ -328,7 +325,7 @@ describe("JobApplicationsTracker", () => {
     expect(screen.getByText("Frontend Role 0")).toBeInTheDocument()
     expect(screen.queryByText("Backend Role 1")).not.toBeInTheDocument()
 
-    await user.type(screen.getByPlaceholderText(/buscar por empresa ou cargo/i), "Fintech 12")
+    fireEvent.change(screen.getByPlaceholderText(/buscar por empresa ou cargo/i), { target: { value: "Fintech 12" } })
     expect(screen.getByText("Frontend Role 12")).toBeInTheDocument()
     expect(screen.queryByText("Frontend Role 0")).not.toBeInTheDocument()
   })
@@ -346,9 +343,9 @@ describe("JobApplicationsTracker", () => {
     })
 
     await user.click(screen.getByRole("button", { name: /adicionar primeira vaga/i }))
-    await user.type(screen.getByLabelText("Cargo"), "Senior Frontend Engineer")
-    await user.type(screen.getByLabelText("Empresa"), "Fintech Corp")
-    await user.type(screen.getByLabelText("Nome do currículo enviado"), "curriculo_v3.pdf")
+    fireEvent.change(screen.getByLabelText("Cargo"), { target: { value: "Senior Frontend Engineer" } })
+    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "Fintech Corp" } })
+    fireEvent.change(screen.getByLabelText("Nome do currículo enviado"), { target: { value: "curriculo_v3.pdf" } })
     await user.click(screen.getByRole("button", { name: /criar vaga/i }))
 
     await waitFor(() => {
@@ -368,9 +365,9 @@ describe("JobApplicationsTracker", () => {
     })
 
     await user.click(screen.getByRole("button", { name: /adicionar primeira vaga/i }))
-    await user.type(screen.getByLabelText("Cargo"), "Senior Frontend Engineer")
-    await user.type(screen.getByLabelText("Empresa"), "Fintech Corp")
-    await user.type(screen.getByLabelText(/Nome do curr[íi]culo enviado/i), "curriculo_v3.pdf")
+    fireEvent.change(screen.getByLabelText("Cargo"), { target: { value: "Senior Frontend Engineer" } })
+    fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "Fintech Corp" } })
+    fireEvent.change(screen.getByLabelText(/Nome do curr[íi]culo enviado/i), { target: { value: "curriculo_v3.pdf" } })
     await user.click(screen.getByRole("button", { name: /criar vaga/i }))
 
     await waitFor(() => {

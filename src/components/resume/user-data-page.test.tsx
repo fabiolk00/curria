@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
@@ -384,10 +384,9 @@ describe("UserDataPage", () => {
 
     render(<UserDataPage currentCredits={2} />)
 
-    await user.type(
-      await screen.findByTestId("target-job-description-input"),
-      "Vaga para analista de dados senior com foco em produto e SQL.",
-    )
+    fireEvent.change(await screen.findByTestId("target-job-description-input"), {
+      target: { value: "Vaga para analista de dados senior com foco em produto e SQL." },
+    })
 
     expect(screen.getByText("Adaptar meu curriculo para esta vaga")).toBeInTheDocument()
     expect(screen.getByText("Adaptar para vaga (1 credito)")).toBeInTheDocument()
@@ -450,7 +449,7 @@ describe("UserDataPage", () => {
     render(<UserDataPage currentCredits={2} />)
 
     const input = await screen.findByTestId("target-job-description-input")
-    await user.type(input, "Vaga para analista.")
+    fireEvent.change(input, { target: { value: "Vaga para analista." } })
 
     expect(screen.getByText("Adaptar meu curriculo para esta vaga")).toBeInTheDocument()
 
@@ -559,10 +558,9 @@ describe("UserDataPage", () => {
 
     render(<UserDataPage currentCredits={2} />)
 
-    await user.type(
-      await screen.findByTestId("target-job-description-input"),
-      "Vaga para analista de dados senior com foco em produto e SQL.",
-    )
+    fireEvent.change(await screen.findByTestId("target-job-description-input"), {
+      target: { value: "Vaga para analista de dados senior com foco em produto e SQL." },
+    })
     await user.click(screen.getByText("Adaptar para vaga (1 credito)"))
 
     await waitFor(() => {
