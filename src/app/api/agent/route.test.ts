@@ -345,6 +345,55 @@ describe('agent route billing guard', () => {
     expect(incrementMessageCount).not.toHaveBeenCalled()
   })
 
+  it('passes the setup-transformed file message into the agent loop', async () => {
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSession).mockResolvedValue({
+      id: 'sess_file_success',
+      userId: 'usr_123',
+      stateVersion: 1,
+      phase: 'intake',
+      cvState: {
+        fullName: '',
+        email: '',
+        phone: '',
+        summary: '',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+      agentState: {
+        parseStatus: 'empty',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'idle' },
+      creditsUsed: 1,
+      messageCount: 0,
+      creditConsumed: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({ success: true }))
+    vi.mocked(incrementMessageCount).mockResolvedValue(true)
+
+    const response = await POST(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: '',
+        file: 'base64data',
+        fileMime: 'application/pdf',
+      }),
+    }))
+
+    expect(response.status).toBe(200)
+    await response.text()
+    expect(runAgentLoop).toHaveBeenCalledWith(expect.objectContaining({
+      userMessage: expect.stringContaining('anexado'),
+      session: expect.objectContaining({ id: 'sess_file_success' }),
+    }))
+  })
+
   it('persists a pasted job description into agentState before the agent loop starts', async () => {
     vi.mocked(getSession).mockResolvedValue(null)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
