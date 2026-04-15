@@ -140,11 +140,12 @@ Current milestone: `v1.5 Verification Closure and Runtime Residuals` started on 
 - [x] Phase 30: Checkout and sensitive authenticated mutations now enforce canonical-host or trusted-browser boundaries with committed regression proof.
 - [x] Phase 31: Long-vacancy generation and release-critical browser stability are protected by committed regression and CI gates.
 - [x] Phase 31.1: Non-E2E runtime defaults, artificial delay removal, and CI-visible profiling proof now exist, with residual runtime debt explicitly documented.
+- [x] Phase 33: Milestone closeout metadata, decimal-phase archive counts, and next-cycle planning state now have repo-native proof and aligned summaries.
 
 ### Active
 
-- [ ] Milestone closeout keeps roadmap, traceability, archive, and state metadata aligned without manual repair, including decimal phases.
 - [ ] The remaining non-E2E runtime outliers are either reduced further or formalized behind an explicit accepted budget and proof path.
+- [ ] The milestone metadata checker stays green as future archive and planning changes land.
 
 ### Out of Scope
 
@@ -202,4 +203,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Archive prior roadmap and requirements before expanding scope again.
 
 ---
-*Last updated: 2026-04-15 after Phase 33 wave 1 metadata hardening*
+*Last updated: 2026-04-15 after Phase 33 archive-integrity completion*

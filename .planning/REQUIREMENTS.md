@@ -42,8 +42,8 @@
 |-------------|-------|--------|
 | VER-01 | Phase 32 | Complete |
 | VER-02 | Phase 32 | Complete |
-| DOC-01 | Phase 33 | Pending |
-| DOC-02 | Phase 33 | Pending |
+| DOC-01 | Phase 33 | Complete |
+| DOC-02 | Phase 33 | Complete |
 | PERF-04 | Phase 34 | Pending |
 | PERF-05 | Phase 34 | Pending |
 

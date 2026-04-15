@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-current_phase: 33
-current_phase_name: Milestone Archive and Traceability Integrity
+current_phase: 34
+current_phase_name: Non-E2E Runtime Residual Budgeting
 current_plan: None
-status: executing
-stopped_at: Phase 33 planning complete; ready for execution
-last_updated: "2026-04-16T00:18:00.000Z"
-last_activity: 2026-04-15 -- Phase 33 planning complete
+status: ready
+stopped_at: Phase 33 completed; Phase 34 ready for planning
+last_updated: "2026-04-16T00:40:00.000Z"
+last_activity: 2026-04-15 -- Phase 33 execution complete
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 3
-  percent: 33
+  completed_plans: 5
+  percent: 67
 ---
 
 # Project State
@@ -24,25 +24,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Phase 33 execution for archive and traceability integrity after the `v1.4` verification backfill
+**Current focus:** Phase 34 planning for residual non-E2E runtime budgeting after the archive-integrity contract landed
 
 ## Current Position
 
-Current Phase: 33
-Current Phase Name: Milestone Archive and Traceability Integrity
+Current Phase: 34
+Current Phase Name: Non-E2E Runtime Residual Budgeting
 Current Plan: None
 Total Plans in Phase: 2
 Status: Ready to plan
-Last activity: 2026-04-15 -- Phase 33 planning complete
-Last Activity Description: Phase 33 planned - 2 plans ready for archive and traceability integrity work
+Last activity: 2026-04-15 -- Phase 33 execution complete
+Last Activity Description: Phase 33 completed - milestone metadata contract and next-cycle proof are now versioned in the repo
 
-Progress: [###-------] 33%
+Progress: [######----] 67%
 
 ## Performance Metrics
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 61
+- Total plans completed: 63
 - Milestones archived: 4
 
 ## Accumulated Context
@@ -64,6 +64,7 @@ Baseline carried forward from earlier shipped milestones:
 - v1.4 archived: milestone history moved to `.planning/milestones/` and the audit debt was accepted explicitly instead of being hidden
 - v1.5 started: verification closure, archive metadata integrity, and residual non-E2E runtime budgeting are now the active milestone focus
 - Phase 32 completed: the `v1.4` archive now includes committed `VERIFICATION.md` artifacts and the archived milestone audit no longer fails on missing-proof fallback
+- Phase 33 completed: milestone summaries, decimal-phase counts, and next-cycle planning state now have a repo-native metadata checker and aligned archive narrative
 
 ### Decisions
 
@@ -83,10 +84,11 @@ Recent decisions affecting the next cycle:
 - Non-E2E tests now default to `node` unless they explicitly need `jsdom`, recovery tests can bypass production backoff safely, and CI uses the same named profiling command as local runtime proof.
 - Archive quality now matters enough that missing phase verification artifacts should be treated as milestone debt, not silently ignored.
 - The `v1.4` archive now treats backfilled phase verification as canonical audit input, while the remaining non-E2E runtime ceiling issue stays explicit accepted debt.
+- Milestone metadata, decimal phases, and next-cycle reset state should be checked through repo-native proof instead of manual recounting.
 
 ### Pending Todos
 
-- Execute Phase 33.
+- Plan Phase 34.
 
 ### Blockers or Concerns
 
@@ -97,7 +99,7 @@ Recent decisions affecting the next cycle:
 ## Session Continuity
 
 Last session: 2026-04-15T23:30:00.0000000-03:00
-Stopped at: Phase 32 completed; Phase 33 ready for planning
+Stopped at: Phase 33 completed; Phase 34 ready for planning
 Resume file: None
 
 ## Quick Tasks Completed

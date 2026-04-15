@@ -50,21 +50,32 @@ assertIncludes(
   'keep the archived phase verification layer durable',
   'PROJECT.md must describe verification closure as shipped and durable, not still missing.'
 )
-assertIncludes(
-  project,
-  'metadata consistent enough that inserted decimal phases do not require manual repair',
-  'PROJECT.md must keep decimal-phase closeout integrity as an active milestone goal.'
-)
 assertExcludes(
   project,
   'backfill or replace the missing verification layer',
   'PROJECT.md still frames the resolved verification backfill as pending next work.'
 )
+assertIncludes(
+  project,
+  '[x] Phase 33: Milestone closeout metadata',
+  'PROJECT.md must reflect Phase 33 as validated once archive-integrity work lands.'
+)
+assertIncludes(
+  project,
+  '[ ] The remaining non-E2E runtime outliers',
+  'PROJECT.md must keep the residual runtime work active after Phase 33.'
+)
 
-assertIncludes(roadmap, 'Phase 33: Milestone Archive and Traceability Integrity', 'ROADMAP.md must keep Phase 33 active.')
-assertIncludes(requirements, 'DOC-01', 'REQUIREMENTS.md must retain DOC-01 traceability.')
-assertIncludes(requirements, 'DOC-02', 'REQUIREMENTS.md must retain DOC-02 traceability.')
-assertIncludes(state, 'current_phase: 33', 'STATE.md must stay pointed at Phase 33 during this work.')
+assertIncludes(
+  roadmap,
+  '| 33. Milestone Archive and Traceability Integrity | 2/2 | Complete |',
+  'ROADMAP.md must mark Phase 33 complete.'
+)
+assertIncludes(roadmap, '`/gsd-plan-phase 34`', 'ROADMAP.md must point to the next logical phase entrypoint.')
+assertIncludes(requirements, '| DOC-01 | Phase 33 | Complete |', 'REQUIREMENTS.md must mark DOC-01 complete after Phase 33.')
+assertIncludes(requirements, '| DOC-02 | Phase 33 | Complete |', 'REQUIREMENTS.md must mark DOC-02 complete after Phase 33.')
+assertIncludes(state, 'current_phase: 34', 'STATE.md must advance to Phase 34 after Phase 33 completion.')
 assertIncludes(state, 'milestone: v1.5', 'STATE.md must stay pointed at active milestone v1.5.')
+assertIncludes(state, 'Status: Ready to plan', 'STATE.md must leave the next phase in a plannable state.')
 
 console.log('Milestone metadata audit passed.')

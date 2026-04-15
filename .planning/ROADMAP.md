@@ -46,8 +46,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 33-01: Harden milestone closeout and archive metadata handling for decimal phases and shipped stats
-- [ ] 33-02: Add regression proof for traceability, archive output, and next-cycle planning reset behavior
+- [x] 33-01: Harden milestone closeout and archive metadata handling for decimal phases and shipped stats
+- [x] 33-02: Add regression proof for traceability, archive output, and next-cycle planning reset behavior
 
 ### Phase 34: Non-E2E Runtime Residual Budgeting
 **Goal**: Narrow the remaining non-E2E runtime pain to an explicit contract by profiling the post-v1.4 outliers and either reducing them further or formalizing an accepted budget.
@@ -73,7 +73,7 @@ The intended operating mode for this milestone is:
 
 Recommended entrypoint:
 
-`/gsd-plan-phase 33`
+`/gsd-plan-phase 34`
 
 ## Current Milestone
 
@@ -87,7 +87,7 @@ Phases execute in numeric order: 32 -> 33 -> 34
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Phase Verification Backfill and Audit Contract | 3/3 | Complete | 2026-04-15 |
-| 33. Milestone Archive and Traceability Integrity | 0/2 | Not started | - |
+| 33. Milestone Archive and Traceability Integrity | 2/2 | Complete | 2026-04-15 |
 | 34. Non-E2E Runtime Residual Budgeting | 0/2 | Not started | - |
 
 ## Archived Milestones
