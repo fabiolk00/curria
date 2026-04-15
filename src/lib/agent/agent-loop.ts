@@ -29,6 +29,13 @@ import {
   resolveMaxHistoryMessages,
   resolveMaxToolIterations,
 } from '@/lib/agent/config'
+import {
+  recoverAssistantResponse,
+  recoverConciseTurn,
+  recoverTruncatedTurn,
+  recoverZeroTextTurn,
+  type StreamTurnResult,
+} from '@/lib/agent/agent-recovery'
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import { dispatchToolWithContext, getToolDefinitionsForPhase } from '@/lib/agent/tools'
 import { calculateUsageCostCents, trackApiUsage } from '@/lib/agent/usage-tracker'
@@ -83,20 +90,6 @@ type AccumulatedToolCall = {
   id: string
   name: string
   argumentsRaw: string
-}
-
-type StreamTurnResult = {
-  assistantText: string
-  toolCalls: AccumulatedToolCall[]
-  finishReason: OpenAI.Chat.Completions.ChatCompletionChunk.Choice['finish_reason'] | null
-  model: string
-  usage?: {
-    inputTokens: number
-    outputTokens: number
-  }
-  usedLengthRecovery?: boolean
-  usedZeroTextRecovery?: boolean
-  usedConciseRecovery?: boolean
 }
 
 type DeterministicToolOutcome = {
@@ -1155,166 +1148,6 @@ async function* streamAssistantTurn(params: {
   }
 }
 
-async function* recoverTruncatedTurn(params: {
-  initialTurn: StreamTurnResult
-  session: Session
-  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
-  cachedSystemPrompt: string
-  requestId: string
-  appUserId: string
-  requestStartedAt: number
-  signal?: AbortSignal
-  maxCompletionTokens: number
-}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
-  let accumulatedAssistantText = params.initialTurn.assistantText
-  let finishReason = params.initialTurn.finishReason
-  let usage = params.initialTurn.usage
-  let recoveryAttempts = 0
-
-  while (finishReason === 'length' && recoveryAttempts < 2 && !params.signal?.aborted) {
-    recoveryAttempts++
-
-    const continuationTurn = yield* streamAssistantTurn({
-      session: params.session,
-      messages: [
-        ...params.messages,
-        { role: 'assistant', content: accumulatedAssistantText },
-        { role: 'user', content: LENGTH_RECOVERY_PROMPT },
-      ],
-      cachedSystemPrompt: params.cachedSystemPrompt,
-      requestId: params.requestId,
-      appUserId: params.appUserId,
-      requestStartedAt: params.requestStartedAt,
-      signal: params.signal,
-      maxCompletionTokens: Math.min(params.maxCompletionTokens, 450),
-    })
-
-    const shouldReplacePriorText = isBootstrapLikeAssistantText(accumulatedAssistantText)
-      && !isBootstrapLikeAssistantText(continuationTurn.assistantText)
-      && isConcreteRewriteContinuationText(continuationTurn.assistantText)
-
-    accumulatedAssistantText = shouldReplacePriorText
-      ? continuationTurn.assistantText
-      : `${accumulatedAssistantText}${continuationTurn.assistantText}`
-    finishReason = continuationTurn.finishReason
-    usage = mergeUsage(usage, continuationTurn.usage)
-
-    if (continuationTurn.toolCalls.length > 0) {
-      return {
-        assistantText: accumulatedAssistantText,
-        toolCalls: continuationTurn.toolCalls,
-        finishReason,
-        model: continuationTurn.model,
-        usage,
-        usedLengthRecovery: true,
-      }
-    }
-  }
-
-  return {
-    assistantText: accumulatedAssistantText,
-    toolCalls: [],
-    finishReason,
-    model: params.initialTurn.model,
-    usage,
-    usedLengthRecovery: recoveryAttempts > 0,
-  }
-}
-
-async function* recoverZeroTextTurn(params: {
-  initialTurn: StreamTurnResult
-  session: Session
-  userMessage: string
-  requestId: string
-  appUserId: string
-  requestStartedAt: number
-  signal?: AbortSignal
-  maxCompletionTokens: number
-}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
-  let lastTurn = params.initialTurn
-  let usage = params.initialTurn.usage
-  let recoveryAttempts = 0
-
-  while (recoveryAttempts < 2 && !params.signal?.aborted) {
-    recoveryAttempts++
-
-    const recoveryTurn = yield* streamAssistantTurn({
-      session: params.session,
-      messages: [
-        {
-          role: 'user',
-          content: buildRecoveryUserPrompt({
-            session: params.session,
-            userMessage: params.userMessage,
-            mode: 'empty',
-            attempt: recoveryAttempts,
-          }),
-        },
-      ],
-      cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
-      requestId: params.requestId,
-      appUserId: params.appUserId,
-      requestStartedAt: params.requestStartedAt,
-      signal: params.signal,
-      maxCompletionTokens: Math.min(params.maxCompletionTokens, 550),
-    })
-
-    usage = mergeUsage(usage, recoveryTurn.usage)
-    lastTurn = {
-      ...recoveryTurn,
-      usage,
-    }
-
-    if (recoveryTurn.toolCalls.length > 0 || recoveryTurn.assistantText.trim() || recoveryTurn.finishReason !== 'length') {
-      return {
-        ...lastTurn,
-        usedZeroTextRecovery: true,
-      }
-    }
-  }
-
-  return {
-    ...lastTurn,
-    model: lastTurn.model || params.initialTurn.model,
-    usage,
-    usedZeroTextRecovery: recoveryAttempts > 0,
-  }
-}
-
-async function* recoverConciseTurn(params: {
-  session: Session
-  userMessage: string
-  requestId: string
-  appUserId: string
-  requestStartedAt: number
-  signal?: AbortSignal
-}): AsyncGenerator<AgentTextChunk, StreamTurnResult> {
-  const turn = yield* streamAssistantTurn({
-    session: params.session,
-    messages: [
-      {
-        role: 'user',
-        content: buildRecoveryUserPrompt({
-          session: params.session,
-          userMessage: params.userMessage,
-          mode: 'concise',
-        }),
-      },
-    ],
-    cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
-    requestId: params.requestId,
-    appUserId: params.appUserId,
-    requestStartedAt: params.requestStartedAt,
-    signal: params.signal,
-    maxCompletionTokens: AGENT_CONFIG.conciseFallbackMaxTokens,
-  })
-
-  return {
-    ...turn,
-    usedConciseRecovery: true,
-  }
-}
-
 async function* runDeterministicTool(params: {
   session: Session
   toolName: string
@@ -2322,6 +2155,10 @@ export async function* runAgentLoop(
             requestStartedAt,
             signal,
             maxCompletionTokens: phaseOutputBudget,
+            lengthRecoveryPrompt: LENGTH_RECOVERY_PROMPT,
+            streamAssistantTurn,
+            isBootstrapLikeAssistantText,
+            isConcreteRewriteContinuationText,
           })
         } else {
           turn = yield* recoverZeroTextTurn({
@@ -2333,6 +2170,9 @@ export async function* runAgentLoop(
             requestStartedAt,
             signal,
             maxCompletionTokens: phaseOutputBudget,
+            recoverySystemPrompt: RECOVERY_SYSTEM_PROMPT,
+            buildRecoveryUserPrompt,
+            streamAssistantTurn,
           })
         }
       }
@@ -2349,6 +2189,10 @@ export async function* runAgentLoop(
           appUserId,
           requestStartedAt,
           signal,
+          conciseFallbackMaxTokens: AGENT_CONFIG.conciseFallbackMaxTokens,
+          recoverySystemPrompt: RECOVERY_SYSTEM_PROMPT,
+          buildRecoveryUserPrompt,
+          streamAssistantTurn,
         })
 
         turn = mergeConciseRecoveryTurn(turn, conciseTurn)
@@ -2487,93 +2331,29 @@ export async function* runAgentLoop(
     }
 
     if (!assistantResponded && !signal?.aborted) {
-      // Recovery attempt with retry logic: up to 3 attempts with exponential backoff
-      let recoverySucceeded = false
-      let finalAssistantText = ''
-      const maxRecoveryAttempts = 3
-
-      for (let recoveryAttempt = 1; recoveryAttempt <= maxRecoveryAttempts && !recoverySucceeded && !signal?.aborted; recoveryAttempt++) {
-        if (recoveryAttempt > 1) {
-          // Wait before retry: 1s, 2s delays
-          const delayMs = Math.pow(2, recoveryAttempt - 2) * 1000
-          await new Promise(resolve => setTimeout(resolve, delayMs))
-        }
-
-        const recoveryTurn = yield* streamAssistantTurn({
-          session,
-          messages: [
-            {
-              role: 'user',
-              content: buildRecoveryUserPrompt({
-                session,
-                userMessage,
-                mode: 'empty',
-                attempt: recoveryAttempt,
-              }),
-            },
-          ],
-          cachedSystemPrompt: RECOVERY_SYSTEM_PROMPT,
-          requestId,
-          appUserId,
-          requestStartedAt,
-          signal,
-          maxCompletionTokens: resolveConciseFallbackMaxTokens(session.phase),
-          // No tools in recovery mode, so no tool_choice needed
-        })
-
-        if (recoveryTurn.usage) {
-          await trackTurnUsage({
-            session,
-            appUserId,
-            releaseMetadata,
-            model: recoveryTurn.model,
-            usage: recoveryTurn.usage,
-            finishReason: recoveryTurn.finishReason,
-            toolCalls: recoveryTurn.toolCalls.length,
-            assistantTextChars: recoveryTurn.assistantText.length,
-            requestId,
-            systemPromptChars: cachedSystemPrompt.length,
-            historyChars: calculateHistoryChars(messages),
-            allowedToolCount: 0,
-            usedLengthRecovery: false,
-            usedZeroTextRecovery: false,
-            usedConciseRecovery: true,
-          })
-        }
-
-        // Check if recovery was successful (got assistant text)
-        if (recoveryTurn.assistantText?.trim()) {
-          recoverySucceeded = true
-          finalAssistantText = recoveryTurn.assistantText.trim()
-        }
-      }
-
-      if (!recoverySucceeded) {
-        // Final fallback after all recovery attempts failed
-        const fallback = resolveDeterministicAssistantFallback(session, userMessage)
-        finalAssistantText = fallback.text
-        yield {
-          type: 'text',
-          content: finalAssistantText,
-        }
-      }
+      const recovery = yield* recoverAssistantResponse({
+        session,
+        userMessage,
+        requestId,
+        appUserId,
+        requestStartedAt,
+        signal,
+        cachedSystemPrompt,
+        historyChars: calculateHistoryChars(messages),
+        releaseMetadata,
+        toolIterations,
+        recoverySystemPrompt: RECOVERY_SYSTEM_PROMPT,
+        conciseFallbackMaxTokens: resolveConciseFallbackMaxTokens(session.phase),
+        buildRecoveryUserPrompt,
+        streamAssistantTurn,
+        trackTurnUsage,
+        resolveAgentModelForPhase,
+        resolveDeterministicAssistantFallback,
+        logWarn,
+      })
 
       assistantResponded = true
-      await appendMessage(session.id, 'assistant', finalAssistantText)
-
-      logWarn(recoverySucceeded ? 'agent.response.empty_recovered' : 'agent.response.empty_fallback', {
-        ...releaseMetadata,
-        requestId,
-        sessionId: session.id,
-        appUserId,
-        phase: session.phase,
-        stateVersion: session.stateVersion,
-        model: resolveAgentModelForPhase(session.phase),
-        fallbackKind: recoverySucceeded ? undefined : resolveDeterministicAssistantFallback(session, userMessage).kind,
-        finalAssistantTextChars: finalAssistantText.length,
-        toolIterations,
-        success: true,
-      })
+      await appendMessage(session.id, 'assistant', recovery.assistantText)
     }
 
     logInfo('agent.stream.completed', {
