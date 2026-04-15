@@ -15,10 +15,10 @@ import { dispatchTool } from '@/lib/agent/tools'
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { TOOL_ERROR_CODES, type ToolErrorCode } from '@/lib/agent/tool-errors'
 import { deriveTargetFitAssessment } from '@/lib/agent/target-fit'
+import { prepareUserMessage } from '@/lib/agent/message-preparation'
 import { agentLimiter } from '@/lib/rate-limit'
 import { AGENT_CONFIG } from '@/lib/agent/config'
-import { extractUrl } from '@/lib/agent/url-extractor'
-import { scrapeJobPosting } from '@/lib/agent/scraper'
+import { detectTargetJobDescription, type TargetJobDetection } from '@/lib/agent/vacancy-analysis'
 import { createRequestTimingTracker } from '@/lib/observability/request-timing'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import { getAgentReleaseMetadata, type AgentReleaseMetadata } from '@/lib/runtime/release-metadata'
@@ -99,120 +99,6 @@ function createAgentJsonResponse(
     }),
     metadata,
   )
-}
-
-function sanitizeUserInput(input: string): string {
-  return input
-    .replace(/<\/?user_resume_data>/gi, '')
-    .replace(/<\/?user_resume_text>/gi, '')
-    .replace(/<\/?target_job_description>/gi, '')
-    .replace(/<\/?system>/gi, '')
-    .replace(/<\/?instructions>/gi, '')
-    .replace(/<\/?assistant>/gi, '')
-    .replace(/<\/?tool_call>/gi, '')
-    .replace(/<\/?function>/gi, '')
-    .trim()
-}
-
-function normalizeForJobDescriptionDetection(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
-
-type TargetJobDetection = {
-  targetJobDescription: string
-  confidence: 'medium' | 'high'
-}
-
-function detectTargetJobDescription(message: string): TargetJobDetection | undefined {
-  const trimmed = message.trim()
-  if (trimmed.length < 140) {
-    return undefined
-  }
-
-  if (trimmed.includes('[Link da vaga:') || trimmed.includes('[Conteúdo extraído automaticamente]')) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: 'high',
-    }
-  }
-
-  const normalized = normalizeForJobDescriptionDetection(trimmed)
-  const sectionSignals = [
-    'responsabilidades',
-    'responsibility',
-    'responsibilities',
-    'requisitos',
-    'requirements',
-    'resumo dos requisitos',
-    'requisitos desejaveis',
-    'qualificacoes',
-    'qualifications',
-    'diferenciais',
-    'nice to have',
-    'o que procuramos',
-    'we are looking for',
-    'sobre a vaga',
-    'about the role',
-    'atribuicoes',
-    'atividades',
-    'job description',
-  ]
-  const sectionHits = sectionSignals.filter((signal) => normalized.includes(signal)).length
-  const roleHit = /\b(analista|engenheiro|developer|desenvolvedor|cientista|gerente|coordenador|consultor|product|designer|arquiteto|devops|sre|qa|bi|dados|data)\b/.test(normalized)
-  const hiringIntentHit = /\b(vaga|cargo|posicao|position|role|opportunity|buscamos|contratando)\b/.test(normalized)
-  const lines = trimmed.split(/\n+/).map((line) => line.trim()).filter(Boolean)
-  const hasStructuredLayout = lines.length >= 5 || /(^|\n)\s*[-*•]/.test(trimmed) || trimmed.includes(':')
-  const summarizedRequirementsHit = normalized.includes('resumo dos requisitos') || normalized.includes('requisitos desejaveis')
-  const keywordListHit = /(?:sql|python|r|looker|bigquery|google analytics|google tag manager|appsflyer|github|machine learning|etl|power bi|tableau|dbt|airflow|google sheets|sql server).*(?:,|\n).*(?:sql|python|r|looker|bigquery|google analytics|google tag manager|appsflyer|github|machine learning|etl|power bi|tableau|dbt|airflow|google sheets|sql server).*(?:,|\n).*(?:sql|python|r|looker|bigquery|google analytics|google tag manager|appsflyer|github|machine learning|etl|power bi|tableau|dbt|airflow|google sheets|sql server)/.test(normalized)
-  let score = 0
-
-  score += Math.min(sectionHits, 4) * 2
-  if (roleHit) score += 2
-  if (hiringIntentHit) score += 2
-  if (hasStructuredLayout) score += 2
-  if (summarizedRequirementsHit) score += 2
-  if (keywordListHit) score += 2
-  if (trimmed.length >= 260) score += 1
-
-  if (sectionHits >= 2 && hasStructuredLayout) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: sectionHits >= 3 ? 'high' : 'medium',
-    }
-  }
-
-  if (sectionHits >= 3) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: 'high',
-    }
-  }
-
-  if (hiringIntentHit && roleHit && trimmed.length >= 220 && hasStructuredLayout) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: score >= 7 ? 'high' : 'medium',
-    }
-  }
-
-  if (summarizedRequirementsHit && keywordListHit && trimmed.length >= 180) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: score >= 7 ? 'high' : 'medium',
-    }
-  }
-
-  if (score >= 8) {
-    return {
-      targetJobDescription: trimmed,
-      confidence: 'medium',
-    }
-  }
-
-  return undefined
 }
 
 function hasResumeContextForAutoGap(session: Pick<Session, 'cvState' | 'agentState'>): boolean {
@@ -539,56 +425,6 @@ function parseJsonObject(value: string): Record<string, unknown> | null {
   } catch {
     return null
   }
-}
-
-/**
- * Prepares the user message by scraping job URLs and sanitizing content.
- */
-async function prepareUserMessage(
-  rawMessage: string,
-  appUserId: string,
-  requestId: string,
-): Promise<string> {
-  let message = sanitizeUserInput(rawMessage)
-
-  const detectedUrl = extractUrl(message)
-  if (!detectedUrl) return message
-
-  const scrapeResult = await scrapeJobPosting(detectedUrl)
-  const detectedUrlHost = (() => {
-    try {
-      return new URL(detectedUrl).hostname
-    } catch {
-      return 'invalid-url'
-    }
-  })()
-
-  if (scrapeResult.success && scrapeResult.text) {
-    const sanitizedScrapedText = sanitizeUserInput(scrapeResult.text)
-    message = message.replace(
-      detectedUrl,
-      `[Link da vaga: ${detectedUrl}]\n\n[Conteúdo extraído automaticamente]:\n${sanitizedScrapedText}`,
-    )
-    logInfo('agent.scrape.completed', {
-      requestId,
-      appUserId,
-      detectedUrlHost,
-      scrapeSucceeded: true,
-      scrapedTextLength: scrapeResult.text.length,
-      success: true,
-    })
-  } else {
-    logWarn('agent.scrape.completed', {
-      requestId,
-      appUserId,
-      detectedUrlHost,
-      scrapeSucceeded: false,
-      success: false,
-    })
-    message = `${message}\n\n[Nota do sistema: Tentei acessar o link ${detectedUrl} mas não consegui extrair o conteúdo. Motivo: ${scrapeResult.error}]`
-  }
-
-  return message
 }
 
 /**
@@ -1096,3 +932,4 @@ export async function POST(req: NextRequest) {
 
   return applyAgentReleaseHeaders(new Response(stream, { headers }), releaseMetadata)
 }
+

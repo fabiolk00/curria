@@ -1,0 +1,25 @@
+# Plan 28-01 Summary
+
+## Objective
+
+Extract route-level message preparation and shared vacancy-analysis logic into explicit services without changing the visible `/api/agent` contract.
+
+## What Changed
+
+- Moved route message sanitization and URL-scrape preparation into `src/lib/agent/message-preparation.ts`.
+- Moved target-job and vacancy heuristics into `src/lib/agent/vacancy-analysis.ts`.
+- Updated `src/app/api/agent/route.ts` to import the new helpers instead of owning the full implementations inline.
+- Updated `src/lib/agent/agent-intents.ts` to consume and re-export the shared `looksLikeJobDescription` contract so existing loop imports stay stable.
+
+## Verification
+
+- `npm run typecheck`
+- `npm test -- src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts`
+
+## Deviations
+
+- The two planned tasks landed in one implementation slice because both required coordinated edits to `src/app/api/agent/route.ts`. The summary keeps that explicit rather than pretending the route changes were independently atomic.
+
+## Outcome
+
+The `/api/agent` entrypoint now delegates message preparation and vacancy analysis to dedicated agent modules while preserving existing route and SSE behavior.
