@@ -59,7 +59,7 @@ function ResumeDocument({
         "p-4 sm:p-6 md:p-8",
         isOptimized
           ? "border-emerald-200 dark:border-emerald-900/50"
-          : "border-zinc-200 dark:border-zinc-800"
+          : "border-red-200 dark:border-red-900/50"
       )}
     >
       {/* Action buttons */}
@@ -398,8 +398,8 @@ export function ResumeComparisonView({
           {/* Original */}
           <div>
             <div className="mb-2 flex items-center gap-2 sm:mb-3">
-              <span className="h-2 w-2 rounded-full bg-zinc-400" />
-              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 sm:text-sm">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="text-xs font-medium text-red-600 dark:text-red-400 sm:text-sm">
                 Original
               </span>
             </div>
