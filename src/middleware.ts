@@ -20,6 +20,7 @@ const isPublicRoute = createRouteMatcher([
   '/sso-callback(.*)',
   '/api/webhook/asaas(.*)',
   '/api/webhook/clerk(.*)',
+  '/preview-comparison(.*)',
 ])
 
 /**
