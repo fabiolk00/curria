@@ -1,0 +1,23 @@
+---
+phase: 29-agent-recovery-streaming-and-persistence-decomposition
+plan: "03"
+type: summary
+status: completed
+---
+
+# Plan 29-03 Summary
+
+## What changed
+
+- Added `src/lib/agent/agent-recovery.test.ts` with direct seam coverage for truncated-response continuation, zero-text retry flow, and deterministic fallback behavior.
+- Added `src/lib/agent/agent-persistence.test.ts` with direct proof for transcript appends, persisted patch handoffs, and done-chunk packaging from the current session snapshot.
+- Closed the phase by rerunning the loop and route regression suites so the extracted seams are protected both directly and through the existing brownfield integration contracts.
+
+## Verification
+
+- `npm run typecheck`
+- `npm test -- src/lib/agent/agent-recovery.test.ts src/lib/agent/agent-persistence.test.ts src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts src/lib/agent/streaming-loop.test.ts`
+
+## Outcome
+
+- Phase 29 now ends with committed regression proof for the extracted recovery, streaming, and persistence boundaries, reducing the risk of future runtime refactors in the agent back half.
