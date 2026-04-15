@@ -283,6 +283,8 @@ describe("ResumeWorkspace", () => {
           },
           targetingPlan: {
             targetRole: "Analista de BI",
+            targetRoleConfidence: "high",
+            focusKeywords: ["sql", "power bi"],
             mustEmphasize: [],
             shouldDeemphasize: [],
             missingButCannotInvent: [],
@@ -357,6 +359,8 @@ describe("ResumeWorkspace", () => {
           },
           targetingPlan: {
             targetRole: "Responsabilidades E Atribuições",
+            targetRoleConfidence: "high",
+            focusKeywords: ["sql"],
             mustEmphasize: [],
             shouldDeemphasize: [],
             missingButCannotInvent: [],
@@ -376,5 +380,48 @@ describe("ResumeWorkspace", () => {
 
     expect(await screen.findByText("Possível bug de leitura da vaga")).toBeInTheDocument()
     expect(screen.getByText(/Responsabilidades E Atribuições/)).toBeInTheDocument()
+  })
+  it("highlights a possible parsing bug when targetRole confidence is low", async () => {
+    mockGetSessionWorkspace.mockResolvedValue({
+      ...buildWorkspace(),
+      session: {
+        ...buildWorkspace().session,
+        id: "sess_failed_low_confidence_role",
+        updatedAt: "2026-04-15T23:16:39.170Z",
+        agentState: {
+          ...buildWorkspace().session.agentState,
+          workflowMode: "job_targeting",
+          rewriteStatus: "failed",
+          rewriteValidation: {
+            valid: false,
+            issues: [{
+              severity: "medium",
+              section: "skills",
+              message: "A lista de skills otimizada introduziu habilidade ou ferramenta sem base no currÃ­culo original.",
+            }],
+          },
+          targetingPlan: {
+            targetRole: "Vaga Alvo",
+            targetRoleConfidence: "low",
+            focusKeywords: ["power bi", "sql"],
+            mustEmphasize: [],
+            shouldDeemphasize: [],
+            missingButCannotInvent: [],
+            sectionStrategy: {
+              summary: [],
+              experience: [],
+              skills: [],
+              education: [],
+              certifications: [],
+            },
+          },
+        },
+      },
+    })
+
+    renderWorkspace(<ResumeWorkspace initialSessionId="sess_failed_low_confidence_role" userName="Fabio" />)
+
+    expect(await screen.findByText(/bug de leitura da vaga/i)).toBeInTheDocument()
+    expect(screen.getByText(/Vaga Alvo/)).toBeInTheDocument()
   })
 })

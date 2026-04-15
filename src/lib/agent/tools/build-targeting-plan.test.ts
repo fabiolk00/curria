@@ -44,6 +44,7 @@ describe('buildTargetingPlan', () => {
     })
 
     expect(plan.targetRole).toBe('Engenheira De Dados')
+    expect(plan.targetRoleConfidence).toBe('high')
   })
 
   it('preserves explicit role labels when present', () => {
@@ -58,6 +59,7 @@ describe('buildTargetingPlan', () => {
     })
 
     expect(plan.targetRole).toBe('Analytics Engineer')
+    expect(plan.targetRoleConfidence).toBe('high')
   })
 
   it('falls back to richer prose when the explicit role label is too weak', () => {
@@ -72,6 +74,41 @@ describe('buildTargetingPlan', () => {
     })
 
     expect(plan.targetRole).toBe('Analista De BI')
+    expect(plan.targetRoleConfidence).toBe('high')
+  })
+
+  it('ignores english heading text and keeps semantic focus when the role is absent', () => {
+    const plan = buildTargetingPlan({
+      cvState: buildCvState(),
+      targetJobDescription: [
+        'About The Job',
+        'Responsibilities',
+        'Build Power BI dashboards and SQL models for analytics reporting.',
+        'Requirements',
+        'Strong SQL and Power BI experience.',
+      ].join('\n'),
+      gapAnalysis,
+    })
+
+    expect(plan.targetRole).toBe('Vaga Alvo')
+    expect(plan.targetRoleConfidence).toBe('low')
+    expect(plan.focusKeywords).toEqual(expect.arrayContaining(['power bi', 'sql']))
+    expect(plan.mustEmphasize).toEqual(expect.arrayContaining(['SQL']))
+  })
+
+  it('does not promote recruiter prose to target role', () => {
+    const plan = buildTargetingPlan({
+      cvState: buildCvState(),
+      targetJobDescription: [
+        'Buscamos profissionais com forte experiência em Power BI e análise de dados.',
+        'Atuação com SQL, dashboards e indicadores executivos.',
+      ].join('\n'),
+      gapAnalysis,
+    })
+
+    expect(plan.targetRole).toBe('Vaga Alvo')
+    expect(plan.targetRoleConfidence).toBe('low')
+    expect(plan.focusKeywords).toEqual(expect.arrayContaining(['power bi', 'sql']))
   })
 
   it('does not treat weak areas as invented missing requirements', () => {

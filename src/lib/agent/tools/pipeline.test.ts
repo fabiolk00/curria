@@ -407,6 +407,8 @@ describe('ATS enhancement reliability hardening', () => {
       },
       targetingPlan: {
         targetRole: 'Analytics Engineer',
+        targetRoleConfidence: 'high',
+        focusKeywords: ['sql', 'bigquery'],
         mustEmphasize: ['SQL', 'BigQuery'],
         shouldDeemphasize: ['ETL'],
         missingButCannotInvent: ['BigQuery'],
@@ -423,6 +425,7 @@ describe('ATS enhancement reliability hardening', () => {
     })
 
     expect(result.success).toBe(true)
+    expect(result.optimizedCvState?.skills).toEqual(['SQL', 'Power BI', 'ETL'])
     expect(result.summary).toMatchObject({
       changedSections: ['summary', 'experience', 'skills', 'education', 'certifications'],
       keywordCoverageImprovement: ['SQL', 'BigQuery'],
@@ -453,6 +456,7 @@ describe('ATS enhancement reliability hardening', () => {
     expect(session.agentState.workflowMode).toBe('job_targeting')
     expect(session.agentState.targetingPlan).toMatchObject({
       targetRole: expect.any(String),
+      targetRoleConfidence: expect.any(String),
     })
     expect(session.agentState.lastRewriteMode).toBe('job_targeting')
     expect(mockCreateCvVersion).toHaveBeenCalledWith(expect.objectContaining({
@@ -508,5 +512,28 @@ describe('ATS enhancement reliability hardening', () => {
       issueMessages: expect.stringContaining('O resumo targetizado passou a se apresentar diretamente como o cargo alvo'),
       targetRole: 'Analista De BI',
     }))
+  })
+
+  it('builds a low-confidence target role plan from freeform vacancy text while keeping the flow usable', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'About The Job',
+      'Buscamos profissionais com forte experiência em Power BI e análise de dados.',
+      'Requisitos: SQL, Power BI e dashboards executivos.',
+    ].join('\n')
+    session.agentState.rewriteStatus = 'pending'
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput(buildCvState(), section),
+    }))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(session.agentState.targetingPlan).toMatchObject({
+      targetRole: 'Vaga Alvo',
+      targetRoleConfidence: 'low',
+    })
   })
 })

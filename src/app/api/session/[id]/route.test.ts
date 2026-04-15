@@ -114,6 +114,8 @@ describe('session workspace route', () => {
         },
         targetingPlan: {
           targetRole: 'Aws Backend Engineer',
+          targetRoleConfidence: 'high',
+          focusKeywords: ['aws', 'typescript'],
           mustEmphasize: ['TypeScript'],
           shouldDeemphasize: [],
           missingButCannotInvent: ['AWS'],
@@ -222,7 +224,6 @@ describe('session workspace route', () => {
         agentState: {
           workflowMode: 'job_targeting',
           parseStatus: 'parsed',
-          parseError: undefined,
           parseConfidenceScore: 0.9,
           targetJobDescription: 'AWS role',
           targetFitAssessment: {
@@ -242,6 +243,8 @@ describe('session workspace route', () => {
           },
           targetingPlan: {
             targetRole: 'Aws Backend Engineer',
+            targetRoleConfidence: 'high',
+            focusKeywords: ['aws', 'typescript'],
             mustEmphasize: ['TypeScript'],
             shouldDeemphasize: [],
             missingButCannotInvent: ['AWS'],

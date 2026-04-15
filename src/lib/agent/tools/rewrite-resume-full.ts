@@ -12,6 +12,71 @@ import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 type RewriteSectionName = RewriteSectionInput['section']
 
+function normalize(value: string | undefined): string {
+  return (value ?? '').trim().toLowerCase()
+}
+
+function matchesFocusSignal(value: string, signals: string[]): boolean {
+  const normalizedValue = normalize(value)
+
+  return signals.some((signal) => {
+    const normalizedSignal = normalize(signal)
+    return normalizedSignal.length >= 3
+      && (normalizedValue.includes(normalizedSignal) || normalizedSignal.includes(normalizedValue))
+  })
+}
+
+function sanitizeJobTargetedSkills(
+  originalSkills: CVState['skills'],
+  rewrittenSkills: CVState['skills'],
+  targetingPlan: TargetingPlan,
+): CVState['skills'] {
+  const originalEntries = originalSkills.reduce<Array<{ value: string; normalized: string; originalIndex: number }>>((entries, skill, originalIndex) => {
+    const normalized = normalize(skill)
+    if (!normalized || entries.some((entry) => entry.normalized === normalized)) {
+      return entries
+    }
+
+    entries.push({ value: skill, normalized, originalIndex })
+    return entries
+  }, [])
+
+  const rewrittenOrder = new Map<string, number>()
+  rewrittenSkills.forEach((skill, index) => {
+    const normalized = normalize(skill)
+    if (normalized && !rewrittenOrder.has(normalized)) {
+      rewrittenOrder.set(normalized, index)
+    }
+  })
+
+  const focusSignals = targetingPlan.mustEmphasize.length > 0
+    ? targetingPlan.mustEmphasize
+    : targetingPlan.focusKeywords
+
+  return [...originalEntries]
+    .sort((left, right) => {
+      const leftFocus = matchesFocusSignal(left.value, focusSignals) ? 1 : 0
+      const rightFocus = matchesFocusSignal(right.value, focusSignals) ? 1 : 0
+      if (leftFocus !== rightFocus) {
+        return rightFocus - leftFocus
+      }
+
+      const leftRewrittenIndex = rewrittenOrder.get(left.normalized)
+      const rightRewrittenIndex = rewrittenOrder.get(right.normalized)
+
+      if (leftRewrittenIndex !== undefined && rightRewrittenIndex !== undefined) {
+        return leftRewrittenIndex - rightRewrittenIndex
+      }
+
+      if (leftRewrittenIndex !== undefined || rightRewrittenIndex !== undefined) {
+        return leftRewrittenIndex !== undefined ? -1 : 1
+      }
+
+      return left.originalIndex - right.originalIndex
+    })
+    .map((entry) => entry.value)
+}
+
 function buildAtsResumeStyleGuide(): string {
   return [
     'Act as a senior ATS resume strategist for Brazilian job seekers.',
@@ -96,7 +161,12 @@ function buildTargetJobSectionInstructions(
 ): string {
   const shared = [
     buildJobTargetingStyleGuide(targetJobDescription),
-    `Target role: ${targetingPlan.targetRole}`,
+    targetingPlan.targetRoleConfidence === 'high'
+      ? `Target role: ${targetingPlan.targetRole}`
+      : 'No reliable target role title was extracted. Anchor the rewrite on the vacancy requirements, tools, responsibilities, and seniority signals instead of forcing a literal role claim.',
+    targetingPlan.focusKeywords.length > 0
+      ? `Vacancy semantic focus: ${targetingPlan.focusKeywords.join(', ')}.`
+      : '',
     targetingPlan.mustEmphasize.length > 0
       ? `Must emphasize when factually supported: ${targetingPlan.mustEmphasize.join(', ')}.`
       : 'Must emphasize the strongest overlaps already proven in the resume.',
@@ -115,7 +185,9 @@ function buildTargetJobSectionInstructions(
         ...shared,
         ...targetingPlan.sectionStrategy.summary,
         'Rewrite only the professional summary.',
-        'Use 3 to 5 concise lines aligned to the target role without claiming skills or experiences the candidate does not have.',
+        targetingPlan.targetRoleConfidence === 'high'
+          ? 'Use 3 to 5 concise lines aligned to the target role without claiming skills or experiences the candidate does not have.'
+          : 'Use 3 to 5 concise lines aligned to the vacancy context without claiming a literal role identity, skills, or experiences the candidate does not have.',
       ].join('\n\n')
     case 'experience':
       return [
@@ -303,7 +375,13 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
       optimizedCvState = applySectionData(
         optimizedCvState,
         section,
-        result.output.section_data,
+        params.mode === 'job_targeting' && section === 'skills'
+          ? sanitizeJobTargetedSkills(
+              params.cvState.skills,
+              result.output.section_data as CVState['skills'],
+              targetingPlan!,
+            )
+          : result.output.section_data,
       )
       changedSections.push(section)
       notes.push(...result.output.changes_made)

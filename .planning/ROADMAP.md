@@ -97,7 +97,7 @@ Recommended entrypoint:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 32 -> 33 -> 34 -> 35
+Phases execute in numeric order: 32 -> 33 -> 34 -> 35 -> 36
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -105,6 +105,7 @@ Phases execute in numeric order: 32 -> 33 -> 34 -> 35
 | 33. Milestone Archive and Traceability Integrity | 2/2 | Complete | 2026-04-15 |
 | 34. Non-E2E Runtime Residual Budgeting | 2/2 | Complete | 2026-04-15 |
 | 35. Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation | 2/2 | Complete | 2026-04-15 |
+| 36. Make target job analysis robust to freeform vacancy text and reduce rewrite failures from weak target-role parsing | 1/1 | Complete | 2026-04-15 |
 
 ## Archived Milestones
 
@@ -113,3 +114,16 @@ Phases execute in numeric order: 32 -> 33 -> 34 -> 35
 - [v1.2 Code Hygiene and Dead Code Reduction](./milestones/v1.2-ROADMAP.md)
 - [v1.1 Agent Reliability and Response Continuity](./milestones/v1.1-ROADMAP.md)
 - [v1.0 Launch Hardening for the Core Funnel](./milestones/v1.0-ROADMAP.md)
+
+### Phase 36: Make target job analysis robust to freeform vacancy text and reduce rewrite failures from weak target-role parsing
+**Goal**: Make job targeting resilient when the user pastes arbitrary vacancy text, so the system derives useful targeting context from vacancy semantics instead of brittle heading or title parsing.
+**Requirements**: [VAC-01, VAC-02]
+**Depends on**: Phase 35
+**Success Criteria** (what must be TRUE):
+  1. Job targeting can derive grounded emphasis from freeform vacancy text even when no clean role title exists.
+  2. Headings, recruiter prose, and other noisy vacancy lines no longer become the main `targetRole` anchor.
+  3. The rewrite flow reduces preventable validation failures from unsupported skill injection while preserving factual honesty.
+**Plans**: 1 plan
+
+Plans:
+- [x] 36-01: Re-anchor target-job analysis on vacancy semantics and sanitize rewrite output for freeform input

@@ -8,7 +8,7 @@ function normalize(value: string | undefined): string {
 function isLikelySectionHeading(value: string): boolean {
   const normalized = normalize(value).replace(/[:\-]+$/g, '').trim()
 
-  return /^(requisitos(?:\s+obrigatorios)?|responsabilidades|qualificacoes|desejavel|diferenciais|beneficios|sobre\s+a?\s*vaga|sobre\s+o\s+time|descricao|resumo|atividades)$/i.test(normalized)
+  return /^(requisitos(?:\s+obrigatorios)?|responsabilidades?(?:\s+e\s+atribuicoes)?|atribuicoes|qualificacoes|desejavel|diferenciais|beneficios|sobre\s+a?\s*vaga|sobre\s+o\s+time|descricao|resumo|atividades|about\s+the\s+job|about\s+the\s+role|job\s+description|responsibilities|requirements|qualifications|vaga\s+alvo)$/i.test(normalized)
 }
 
 function isUsableTargetRole(value: string): boolean {

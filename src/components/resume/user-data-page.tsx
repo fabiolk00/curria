@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils"
 import type { ResumeGenerationType } from "@/types/agent"
 import type { CVState } from "@/types/cv"
 
+import { ResumeComparisonView } from "./resume-comparison-view"
 import { ImportResumeModal, type ResumeData } from "./resume-builder"
 import { VisualResumeEditor, normalizeResumeData } from "./visual-resume-editor"
 
@@ -82,6 +83,25 @@ type SetupGenerationCopy = {
   failure: string
   modalTitle: string
   modalDescription: string
+}
+
+type SmartGenerationResponse = {
+  success?: boolean
+  sessionId?: string
+  generationType?: ResumeGenerationType
+  originalCvState?: CVState
+  optimizedCvState?: CVState
+  error?: string
+  reasons?: string[]
+  missingItems?: string[]
+}
+
+type ComparisonData = {
+  sessionId: string
+  generationType: ResumeGenerationType
+  originalCvState: CVState
+  optimizedCvState: CVState
+  targetJobDescription?: string
 }
 
 function trimOptional(value?: string): string | undefined {
@@ -273,6 +293,7 @@ export default function UserDataPage({
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false)
   const [isAtsRequirementsOpen, setIsAtsRequirementsOpen] = useState(false)
   const [atsMissingItems, setAtsMissingItems] = useState<string[]>([])
+  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -402,14 +423,7 @@ export default function UserDataPage({
         }),
       })
 
-      const data = (await response.json()) as {
-        success?: boolean
-        sessionId?: string
-        generationType?: ResumeGenerationType
-        error?: string
-        reasons?: string[]
-        missingItems?: string[]
-      }
+      const data = (await response.json()) as SmartGenerationResponse
 
       if (response.status === 400 && (data.missingItems?.length || data.reasons?.length)) {
         setAtsMissingItems(data.missingItems ?? data.reasons ?? [])
@@ -426,6 +440,18 @@ export default function UserDataPage({
           ? "Versão adaptada para a vaga criada com sucesso."
           : "Versão ATS criada com sucesso.",
       )
+
+      if (data.originalCvState && data.optimizedCvState) {
+        setComparisonData({
+          sessionId: data.sessionId,
+          generationType: data.generationType ?? "ATS_ENHANCEMENT",
+          originalCvState: data.originalCvState,
+          optimizedCvState: data.optimizedCvState,
+          targetJobDescription: trimOptional(targetJobDescription),
+        })
+        return
+      }
+
       router.push(`/dashboard?session=${encodeURIComponent(data.sessionId)}`)
     } catch (error) {
       toast.error(extractErrorMessage(error, generationCopy.failure))
@@ -509,6 +535,19 @@ export default function UserDataPage({
   const setupGenerationButtonDisabled = isBusy || currentCredits < 1
   const initials = buildInitials(template.fullName)
   const avatarSrc = profilePhotoUrl ?? userImageUrl ?? undefined
+
+  if (comparisonData) {
+    return (
+      <ResumeComparisonView
+        originalCvState={comparisonData.originalCvState}
+        optimizedCvState={comparisonData.optimizedCvState}
+        generationType={comparisonData.generationType}
+        sessionId={comparisonData.sessionId}
+        targetJobDescription={comparisonData.targetJobDescription}
+        onContinue={() => router.push(`/dashboard?session=${encodeURIComponent(comparisonData.sessionId)}`)}
+      />
+    )
+  }
 
   return (
     <div

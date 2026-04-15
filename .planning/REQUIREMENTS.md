@@ -25,6 +25,11 @@
 - [x] **COH-01**: When deterministic ATS enhancement or job targeting has already produced `optimizedCvState`, later chat rewrite requests and deterministic helper flows use that effective optimized source instead of stale base `cvState`.
 - [x] **COH-02**: Target resume derivation paths, including tool-driven target resume creation after ATS enhancement, remain consistent with the latest optimized resume state and are protected by committed regression coverage.
 
+### Freeform Vacancy Robustness
+
+- [x] **VAC-01**: Job targeting derives useful targeting context from arbitrary pasted vacancy text by prioritizing skills, responsibilities, and other semantic signals even when no clean role title is present.
+- [x] **VAC-02**: Under freeform vacancy input, job-targeting rewrites remain factually grounded and reduce preventable validation failures caused by unsupported skill injection or weak `targetRole` parsing.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -53,10 +58,12 @@
 | PERF-05 | Phase 34 | Complete |
 | COH-01 | Phase 35 | Complete |
 | COH-02 | Phase 35 | Complete |
+| VAC-01 | Phase 36 | Complete |
+| VAC-02 | Phase 36 | Complete |
 
 **Coverage:**
-- v1.5 requirements: 8 total
-- Mapped to phases: 8
+- v1.5 requirements: 10 total
+- Mapped to phases: 10
 - Unmapped: 0
 
 ---

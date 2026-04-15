@@ -182,7 +182,7 @@ describe("UserDataPage", () => {
     expect(screen.getByText("2")).toBeInTheDocument()
   })
 
-  it("starts the ATS enhancement flow and redirects to the generated session", async () => {
+  it("opens the generated comparison before following to the dashboard session", async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
@@ -270,6 +270,61 @@ describe("UserDataPage", () => {
         json: async () => ({
           success: true,
           sessionId: "sess_ats_123",
+          generationType: "ATS_ENHANCEMENT",
+          originalCvState: {
+            fullName: "Ana Silva",
+            email: "ana@example.com",
+            phone: "555-0100",
+            linkedin: "https://linkedin.com/in/ana",
+            location: "Sao Paulo",
+            summary: "Analista de dados com foco em BI.",
+            experience: [{
+              title: "Analista de Dados",
+              company: "Acme",
+              location: "Sao Paulo",
+              startDate: "2022",
+              endDate: "2024",
+              bullets: ["Criei dashboards executivos."],
+            }],
+            skills: ["SQL", "Power BI", "ETL", "Excel"],
+            education: [{
+              degree: "Bacharel em Sistemas de Informacao",
+              institution: "USP",
+              year: "2020",
+            }],
+            certifications: [{
+              name: "AWS Cloud Practitioner",
+              issuer: "Amazon",
+              year: "2024",
+            }],
+          },
+          optimizedCvState: {
+            fullName: "Ana Silva",
+            email: "ana@example.com",
+            phone: "555-0100",
+            linkedin: "https://linkedin.com/in/ana",
+            location: "Sao Paulo",
+            summary: "Analista de dados com foco em BI, ETL e dashboards orientados a resultado.",
+            experience: [{
+              title: "Analista de Dados",
+              company: "Acme",
+              location: "Sao Paulo",
+              startDate: "2022",
+              endDate: "2024",
+              bullets: ["Criei dashboards executivos com foco em indicadores prioritários."],
+            }],
+            skills: ["SQL", "Power BI", "ETL", "Dashboards"],
+            education: [{
+              degree: "Bacharel em Sistemas de Informacao",
+              institution: "USP",
+              year: "2020",
+            }],
+            certifications: [{
+              name: "AWS Cloud Practitioner",
+              issuer: "Amazon",
+              year: "2024",
+            }],
+          },
         }),
       })
 
@@ -280,6 +335,12 @@ describe("UserDataPage", () => {
     const button = await screen.findByText("Melhorar para ATS (1 crédito)")
     await user.click(button)
 
+    expect(await screen.findByTestId("resume-comparison-view")).toBeInTheDocument()
+    expect(screen.getByText("Confira a versão otimizada para ATS")).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole("button", { name: "Seguir com esta versão ATS" }))
+
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard?session=sess_ats_123")
     })
@@ -288,7 +349,7 @@ describe("UserDataPage", () => {
     }))
   })
 
-  it("switches to job targeting mode when a target job description is provided", async () => {
+  it("shows the comparison screen for job targeting before continuing to the dashboard", async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
@@ -377,6 +438,60 @@ describe("UserDataPage", () => {
           success: true,
           sessionId: "sess_target_123",
           generationType: "JOB_TARGETING",
+          originalCvState: {
+            fullName: "Ana Silva",
+            email: "ana@example.com",
+            phone: "555-0100",
+            linkedin: "https://linkedin.com/in/ana",
+            location: "Sao Paulo",
+            summary: "Analista de dados com foco em BI.",
+            experience: [{
+              title: "Analista de Dados",
+              company: "Acme",
+              location: "Sao Paulo",
+              startDate: "2022",
+              endDate: "2024",
+              bullets: ["Criei dashboards executivos."],
+            }],
+            skills: ["SQL", "Power BI", "ETL", "Excel"],
+            education: [{
+              degree: "Bacharel em Sistemas de Informacao",
+              institution: "USP",
+              year: "2020",
+            }],
+            certifications: [{
+              name: "AWS Cloud Practitioner",
+              issuer: "Amazon",
+              year: "2024",
+            }],
+          },
+          optimizedCvState: {
+            fullName: "Ana Silva",
+            email: "ana@example.com",
+            phone: "555-0100",
+            linkedin: "https://linkedin.com/in/ana",
+            location: "Sao Paulo",
+            summary: "Analista de dados sênior com foco em produto, SQL e indicadores para a vaga alvo.",
+            experience: [{
+              title: "Analista de Dados",
+              company: "Acme",
+              location: "Sao Paulo",
+              startDate: "2022",
+              endDate: "2024",
+              bullets: ["Criei dashboards executivos com foco em produto e acompanhamento de KPIs."],
+            }],
+            skills: ["SQL", "Power BI", "Produto", "KPIs"],
+            education: [{
+              degree: "Bacharel em Sistemas de Informacao",
+              institution: "USP",
+              year: "2020",
+            }],
+            certifications: [{
+              name: "AWS Cloud Practitioner",
+              issuer: "Amazon",
+              year: "2024",
+            }],
+          },
         }),
       })
 
@@ -392,6 +507,11 @@ describe("UserDataPage", () => {
     expect(screen.getByText("Adaptar para vaga (1 crédito)")).toBeInTheDocument()
 
     await user.click(screen.getByText("Adaptar para vaga (1 crédito)"))
+
+    expect(await screen.findByTestId("resume-comparison-view")).toBeInTheDocument()
+    expect(screen.getByText("Confira a versão adaptada para a vaga")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Seguir com esta versão para a vaga" }))
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard?session=sess_target_123")
@@ -673,9 +793,9 @@ describe("UserDataPage", () => {
     await user.click(await screen.findByText("Melhorar para ATS (1 crédito)"))
 
     expect(screen.getByText("Complete seu perfil antes de melhorar para ATS")).toBeInTheDocument()
-    expect(screen.getByText("• Experiencia 1: adicione o cargo.")).toBeInTheDocument()
-    expect(screen.getByText("• Experiencia 1: adicione a empresa.")).toBeInTheDocument()
-    expect(screen.getByText("• Experiencia 1: adicione pelo menos um resultado ou responsabilidade.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiência 1: adicione o cargo.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiência 1: adicione a empresa.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiência 1: adicione pelo menos um resultado ou responsabilidade.")).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(mockPush).not.toHaveBeenCalled()
   })
@@ -821,7 +941,7 @@ describe("UserDataPage", () => {
         status: 400,
         json: async () => ({
           error: "Complete seu currículo para gerar uma versão ATS.",
-          missingItems: ["Experiencia 1: adicione pelo menos um resultado ou responsabilidade."],
+          missingItems: ["Experiência 1: adicione pelo menos um resultado ou responsabilidade."],
         }),
       })
 
@@ -832,7 +952,7 @@ describe("UserDataPage", () => {
     await user.click(await screen.findByText("Melhorar para ATS (1 crédito)"))
 
     expect(screen.getByText("Complete seu perfil antes de melhorar para ATS")).toBeInTheDocument()
-    expect(screen.getByText("• Experiencia 1: adicione pelo menos um resultado ou responsabilidade.")).toBeInTheDocument()
+    expect(screen.getByText("• Experiência 1: adicione pelo menos um resultado ou responsabilidade.")).toBeInTheDocument()
     expect(mockPush).not.toHaveBeenCalled()
   })
 
@@ -990,10 +1110,10 @@ describe("UserDataPage", () => {
         "Usa o seu perfil base para gerar uma versão ATS em pt-BR seguindo o modelo padrão da plataforma: estrutura linear, sem elementos que atrapalham parsing, linguagem objetiva e foco em verdade, matching e clareza.",
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText("parse e leitura estruturada do currículo")).toBeInTheDocument()
-    expect(screen.getByText("score ATS geral, clareza e legibilidade do currículo")).toBeInTheDocument()
-    expect(screen.getByText("reescrita estrategica de resumo e bullets")).toBeInTheDocument()
-    expect(screen.getByText("template ATS em PDF textual, simples e pt-BR")).toBeInTheDocument()
+    expect(screen.getByText("Construção e leitura estruturada do currículo")).toBeInTheDocument()
+    expect(screen.getByText("Score ATS geral, clareza e legibilidade do currículo.")).toBeInTheDocument()
+    expect(screen.getByText("Reescrita estratégica de resumo e bullets.")).toBeInTheDocument()
+    expect(screen.getByText("Template ATS em PDF textual, simples e objetivo.")).toBeInTheDocument()
     expect(screen.getByTestId("ats-panel-badge")).toHaveClass("bg-foreground", "text-background")
     expect(screen.getByTestId("ats-feature-analysis")).toHaveClass("border-emerald-500/50", "bg-emerald-50")
     expect(screen.getByTestId("ats-panel-cta")).toHaveClass("bg-emerald-600", "text-white")
@@ -1046,8 +1166,8 @@ describe("UserDataPage", () => {
     const summaryHeading = screen.getByText("Resumo")
     const skillsHeading = screen.getAllByText("Skills").find((element) => element.tagName === "H4")
     const experienceHeading = screen.getByText("Experiencia")
-    const educationHeading = screen.getByText("Educacao")
-    const certificationsHeading = screen.getByText("Certificacoes")
+    const educationHeading = screen.getByText("Educação")
+    const certificationsHeading = screen.getByText("Certificações")
 
     if (!skillsHeading) {
       throw new Error("Expected preview Skills heading to be rendered as an H4 element.")
@@ -1069,7 +1189,7 @@ describe("UserDataPage", () => {
       educationHeading.compareDocumentPosition(certificationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
-    expect(await screen.findByText("Educacao")).toBeInTheDocument()
+    expect(await screen.findByText("Educação")).toBeInTheDocument()
     expect(screen.getByText("Bacharel em Sistemas de Informacao")).toBeInTheDocument()
     expect(screen.getByText("USP - 2023")).toBeInTheDocument()
     expect(screen.getByText("• AWS Cloud Practitioner")).toBeInTheDocument()

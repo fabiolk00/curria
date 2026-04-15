@@ -35,7 +35,9 @@ describe('validateRewrite', () => {
       {
         mode: 'job_targeting',
         targetingPlan: {
-          targetRole: 'Requisitos Obrigatórios',
+          targetRole: 'Requisitos Obrigatorios',
+          targetRoleConfidence: 'low',
+          focusKeywords: ['sql'],
           mustEmphasize: [],
           shouldDeemphasize: [],
           missingButCannotInvent: [],
@@ -50,9 +52,7 @@ describe('validateRewrite', () => {
       },
     )
 
-    expect(result.issues).not.toContainEqual(expect.objectContaining({
-      message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
-    }))
+    expect(result.issues.some((issue) => issue.message.includes('cargo alvo'))).toBe(false)
   })
 
   it('still flags unsupported real target-role claims', () => {
@@ -66,6 +66,8 @@ describe('validateRewrite', () => {
         mode: 'job_targeting',
         targetingPlan: {
           targetRole: 'Analytics Engineer',
+          targetRoleConfidence: 'high',
+          focusKeywords: ['analytics engineer'],
           mustEmphasize: [],
           shouldDeemphasize: [],
           missingButCannotInvent: [],
@@ -97,6 +99,8 @@ describe('validateRewrite', () => {
         mode: 'job_targeting',
         targetingPlan: {
           targetRole: 'Analytics Engineer',
+          targetRoleConfidence: 'high',
+          focusKeywords: ['analytics engineer'],
           mustEmphasize: [],
           shouldDeemphasize: [],
           missingButCannotInvent: ['summary'],
@@ -111,8 +115,6 @@ describe('validateRewrite', () => {
       },
     )
 
-    expect(result.issues).not.toContainEqual(expect.objectContaining({
-      message: 'A versão targetizada tentou apagar gaps reais adicionando alinhamento não comprovado com a vaga.',
-    }))
+    expect(result.issues.some((issue) => issue.message.includes('apagar gaps reais'))).toBe(false)
   })
 })

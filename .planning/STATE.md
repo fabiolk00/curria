@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-current_phase: 35
-current_phase_name: Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation
+current_phase: 36
+current_phase_name: Make target job analysis robust to freeform vacancy text and reduce rewrite failures from weak target-role parsing
 current_plan: None
 status: ready
-stopped_at: Quick task 260415-r14 completed
-last_updated: "2026-04-15T22:35:00.000Z"
-last_activity: 2026-04-15 -- Completed quick task 260415-r14: Improve job-targeting validation observability, harden targetRole extraction, and cover the validation failure path with tests
+stopped_at: Phase 36 complete
+last_updated: "2026-04-15T20:37:00.000Z"
+last_activity: 2026-04-15 -- Completed Phase 36: job targeting now treats arbitrary vacancy text semantically and degrades safely under weak role-title extraction
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Current Phase: 35
-Current Phase Name: Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation
+Current Phase: 36
+Current Phase Name: Make target job analysis robust to freeform vacancy text and reduce rewrite failures from weak target-role parsing
 Current Plan: None
-Total Plans in Phase: 2
+Total Plans in Phase: 1
 Status: Ready for audit
-Last activity: 2026-04-15 -- Phase 35 execution complete
-Last Activity Description: Phase 35 completed - chat rewrites and target resume derivation now prefer the effective optimized resume state with regression proof
+Last activity: 2026-04-15 -- Phase 36 execution complete
+Last Activity Description: Job targeting now derives semantic vacancy focus under arbitrary pasted text, sanitizes unsupported skills before validation, and exposes low-confidence parsing more clearly
 
 Progress: [##########] 100%
 
@@ -68,6 +68,8 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 34 completed: the dominant residual suite was reduced materially and the repo now gates it through an explicit resume-builder runtime budget check
 - Phase 35 added: rewrite follow-up and target-resume derivation coherence will now be audited against the earlier ATS and job-targeting optimized-state contract
 - Phase 35 completed: effective optimized-state selection now keeps follow-up rewrites and target resume derivation aligned with the deterministic ATS and job-targeting contract
+- Phase 36 added: freeform vacancy text will now be treated as a semantic targeting input instead of depending on brittle role-title parsing
+- Phase 36 completed: job targeting now uses semantic vacancy focus, low-confidence role fallback, and supported-skill sanitization to stay useful under arbitrary pasted vacancy text
 
 ### Decisions
 

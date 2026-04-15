@@ -81,6 +81,8 @@ export type RewriteValidationResult = {
 
 export type TargetingPlan = {
   targetRole: string
+  targetRoleConfidence: 'high' | 'low'
+  focusKeywords: string[]
   mustEmphasize: string[]
   shouldDeemphasize: string[]
   missingButCannotInvent: string[]

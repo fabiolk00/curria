@@ -88,7 +88,7 @@ function isSuspiciousTargetRole(value?: string): boolean {
     return false
   }
 
-  return /^(responsabilidades?(?:\s+e\s+atribuicoes)?|atribuicoes|requisitos(?:\s+e\s+qualificacoes)?|qualificacoes|descricao|atividades)$/.test(normalized)
+  return /^(responsabilidades?(?:\s+e\s+atribuicoes)?|atribuicoes|requisitos(?:\s+e\s+qualificacoes)?|qualificacoes|descricao|atividades|about\s+the\s+job|about\s+the\s+role|job\s+description|responsibilities|requirements|qualifications|vaga\s+alvo)$/.test(normalized)
 }
 
 function formatValidationSectionLabel(section?: string): string {
@@ -275,7 +275,8 @@ export function ResumeWorkspace({
   const targetCount = workspace?.targets.length ?? 0
   const rewriteFailureKey = buildRewriteFailureKey(workspace)
   const rewriteValidationIssues = workspace?.session.agentState.rewriteValidation?.issues ?? []
-  const suspiciousTargetRole = isSuspiciousTargetRole(workspace?.session.agentState.targetingPlan?.targetRole)
+  const suspiciousTargetRole = workspace?.session.agentState.targetingPlan?.targetRoleConfidence === "low"
+    || isSuspiciousTargetRole(workspace?.session.agentState.targetingPlan?.targetRole)
   const rewriteFailureCopy = getRewriteFailureCopy(workspace)
 
   useEffect(() => {

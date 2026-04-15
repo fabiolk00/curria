@@ -148,6 +148,8 @@ describe('POST /api/profile/smart-generation', () => {
       creditsUsed: 1,
       resumeGenerationId: 'gen_123',
       generationType: 'ATS_ENHANCEMENT',
+      originalCvState: buildCvState(),
+      optimizedCvState: buildCvState(),
     })
     expect(runAtsEnhancementPipeline).toHaveBeenCalledWith(expect.objectContaining({
       id: 'sess_generation_123',
@@ -198,6 +200,11 @@ describe('POST /api/profile/smart-generation', () => {
       creditsUsed: 1,
       resumeGenerationId: 'gen_123',
       generationType: 'JOB_TARGETING',
+      originalCvState: buildCvState(),
+      optimizedCvState: {
+        ...buildCvState(),
+        summary: 'Analista de dados orientada a produto e indicadores para a vaga alvo.',
+      },
     })
     expect(runJobTargetingPipeline).toHaveBeenCalledWith(expect.objectContaining({
       id: 'sess_generation_123',

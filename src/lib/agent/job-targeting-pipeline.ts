@@ -165,6 +165,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     'agent.job_targeting.plan_built',
     createJobTargetingLogContext(session, 'targeting_plan', {
       targetRole: targetingPlan.targetRole,
+      targetRoleConfidence: targetingPlan.targetRoleConfidence,
       emphasizeCount: targetingPlan.mustEmphasize.length,
       missingCount: targetingPlan.missingButCannotInvent.length,
     }),
@@ -273,6 +274,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         issueSections: validationIssueSections.join(', ') || undefined,
         issueMessages: validationIssueMessages.join(' | ') || undefined,
         targetRole: targetingPlan.targetRole,
+        targetRoleConfidence: targetingPlan.targetRoleConfidence,
       }),
     )
 
@@ -354,6 +356,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       success: true,
       issueCount: validation.issues.length,
       targetRole: targetingPlan.targetRole,
+      targetRoleConfidence: targetingPlan.targetRoleConfidence,
     }),
   )
 
