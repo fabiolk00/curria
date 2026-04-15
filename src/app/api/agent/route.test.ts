@@ -6,6 +6,8 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getSession, createSession, createSessionWithCredit, checkUserQuota, incrementMessageCount, updateSession } from '@/lib/db/sessions'
 import { agentLimiter } from '@/lib/rate-limit'
 import { runAgentLoop } from '@/lib/agent/agent-loop'
+import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
+import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchTool } from '@/lib/agent/tools'
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 
@@ -66,6 +68,14 @@ vi.mock('@/lib/agent/agent-loop', () => ({
   runAgentLoop: vi.fn(async function* () {
     yield { type: 'done', requestId: 'test', sessionId: 's1', phase: 'intake', atsScore: undefined, messageCount: 1, maxMessages: 15, isNewSession: true, toolIterations: 0 }
   }),
+}))
+
+vi.mock('@/lib/agent/ats-enhancement-pipeline', () => ({
+  runAtsEnhancementPipeline: vi.fn(),
+}))
+
+vi.mock('@/lib/agent/job-targeting-pipeline', () => ({
+  runJobTargetingPipeline: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
@@ -162,6 +172,8 @@ describe('agent route billing guard', () => {
       updatedAt: new Date(),
     })
     vi.mocked(analyzeGap).mockReset()
+    vi.mocked(runAtsEnhancementPipeline).mockResolvedValue(undefined)
+    vi.mocked(runJobTargetingPipeline).mockResolvedValue(undefined)
   })
 
   it('returns provenance headers on the safe unauthenticated parity request without creating a session', async () => {
@@ -532,10 +544,22 @@ Resumo dos requisitos: SQL, Google Sheets, Looker Platform, Machine Learning, Gi
     }))
 
     expect(response.status).toBe(200)
-    expect(updateSession).not.toHaveBeenCalled()
+    expect(updateSession).toHaveBeenCalledWith('sess_no_target', {
+      agentState: expect.objectContaining({
+        workflowMode: 'resume_review',
+      }),
+    })
+    expect(vi.mocked(updateSession).mock.calls.some(([, payload]) =>
+      typeof payload === 'object'
+      && payload !== null
+      && 'agentState' in payload
+      && typeof payload.agentState === 'object'
+      && payload.agentState !== null
+      && 'targetJobDescription' in payload.agentState,
+    )).toBe(false)
   })
 
-  it('stores the detected target job without kicking off background gap analysis', async () => {
+  it('stores the detected target job and delegates follow-up work to the synchronous job-targeting pipeline', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_gap_ready',
       userId: 'usr_123',
@@ -592,10 +616,18 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
         targetJobDescription: expect.stringContaining('Power BI'),
       }),
     })
+    expect(runJobTargetingPipeline).toHaveBeenCalledTimes(1)
+    expect(runJobTargetingPipeline).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'sess_gap_ready',
+      phase: 'dialog',
+      agentState: expect.objectContaining({
+        targetJobDescription: expect.stringContaining('Power BI'),
+      }),
+    }))
     expect(analyzeGap).not.toHaveBeenCalled()
   })
 
-  it('does not start background gap analysis for existing sessions anymore', async () => {
+  it('does not call analyzeGap directly from the route for existing sessions anymore', async () => {
     vi.mocked(getSession).mockResolvedValue({
       id: 'sess_gap_background',
       userId: 'usr_123',
@@ -649,6 +681,7 @@ Python, APIs, Microsoft Fabric e storytelling de dados.`
     }))
 
     expect(response.status).toBe(200)
+    expect(runJobTargetingPipeline).toHaveBeenCalledTimes(1)
     expect(analyzeGap).not.toHaveBeenCalled()
   })
 
