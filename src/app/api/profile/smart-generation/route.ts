@@ -183,5 +183,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     creditsUsed: output.creditsUsed ?? 0,
     resumeGenerationId: output.resumeGenerationId,
     generationType: copy.generationType,
+    originalCvState: cvState,
+    optimizedCvState: pipeline.optimizedCvState,
   })
 }

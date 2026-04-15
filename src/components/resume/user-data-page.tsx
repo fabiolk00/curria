@@ -42,6 +42,7 @@ import type { ResumeGenerationType } from "@/types/agent"
 import type { CVState } from "@/types/cv"
 
 import { ImportResumeModal, type ResumeData } from "./resume-builder"
+import { ResumeComparisonView } from "./resume-comparison-view"
 import { VisualResumeEditor, normalizeResumeData } from "./visual-resume-editor"
 
 type ProfileResponse = {
@@ -69,6 +70,13 @@ type AtsFeature = {
 }
 
 type SetupGenerationMode = "ats_enhancement" | "job_targeting"
+
+type ComparisonData = {
+  originalCvState: CVState
+  optimizedCvState: CVState
+  generationType: "ATS_ENHANCEMENT" | "JOB_TARGETING"
+  sessionId: string
+}
 
 type SetupGenerationCopy = {
   badge: string
@@ -273,6 +281,8 @@ export default function UserDataPage({
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false)
   const [isAtsRequirementsOpen, setIsAtsRequirementsOpen] = useState(false)
   const [atsMissingItems, setAtsMissingItems] = useState<string[]>([])
+  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
+  const [showComparison, setShowComparison] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -409,6 +419,8 @@ export default function UserDataPage({
         error?: string
         reasons?: string[]
         missingItems?: string[]
+        originalCvState?: CVState
+        optimizedCvState?: CVState
       }
 
       if (response.status === 400 && (data.missingItems?.length || data.reasons?.length)) {
@@ -421,6 +433,20 @@ export default function UserDataPage({
         throw new Error(extractErrorMessage(data.error, generationCopy.failure))
       }
 
+      // Se temos os dados para comparacao, mostrar a tela de comparacao
+      if (data.originalCvState && data.optimizedCvState) {
+        setComparisonData({
+          originalCvState: data.originalCvState,
+          optimizedCvState: data.optimizedCvState,
+          generationType: data.generationType === "JOB_TARGETING" ? "JOB_TARGETING" : "ATS_ENHANCEMENT",
+          sessionId: data.sessionId,
+        })
+        // Pequeno delay para transicao suave
+        setTimeout(() => setShowComparison(true), 100)
+        return
+      }
+
+      // Fallback: redirecionar direto se nao tiver dados de comparacao
       toast.success(
         data.generationType === "JOB_TARGETING"
           ? "Versão adaptada para a vaga criada com sucesso."
@@ -505,10 +531,33 @@ export default function UserDataPage({
     [sanitizedResumeData],
   )
   const updatedLabel = formatUpdatedLabel(lastUpdatedAt)
+  const handleContinueToDashboard = () => {
+    if (!comparisonData) return
+    
+    toast.success(
+      comparisonData.generationType === "JOB_TARGETING"
+        ? "Versão adaptada para a vaga criada com sucesso."
+        : "Versão ATS criada com sucesso.",
+    )
+    router.push(`/dashboard?session=${encodeURIComponent(comparisonData.sessionId)}`)
+  }
+
   const isBusy = isLoadingProfile || isSaving || isRunningAtsEnhancement
   const setupGenerationButtonDisabled = isBusy || currentCredits < 1
   const initials = buildInitials(template.fullName)
   const avatarSrc = profilePhotoUrl ?? userImageUrl ?? undefined
+
+  // Mostrar tela de comparacao apos geracao
+  if (showComparison && comparisonData) {
+    return (
+      <ResumeComparisonView
+        originalCvState={comparisonData.originalCvState}
+        optimizedCvState={comparisonData.optimizedCvState}
+        generationType={comparisonData.generationType}
+        onContinue={handleContinueToDashboard}
+      />
+    )
+  }
 
   return (
     <div
