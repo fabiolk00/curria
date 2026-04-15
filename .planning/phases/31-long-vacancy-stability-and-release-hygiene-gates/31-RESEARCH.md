@@ -1,0 +1,110 @@
+# Phase 31 Research: Long Vacancy Stability and Release Hygiene Gates
+
+**Date:** 2026-04-15
+**Phase:** 31-long-vacancy-stability-and-release-hygiene-gates
+
+## Goal
+
+Eliminate the known long-vacancy workspace instability, remove broken encoding artifacts from user-visible surfaces, and tighten CI around the workspace, preview, and generation paths that matter most for release confidence.
+
+## Evidence Collected
+
+### The known long-vacancy failure is already reproducible in committed E2E artifacts
+
+- `test-results/long-vacancy-generation-lo-535cd-emplate-rendering-stability-chromium/error-context.md` shows the current failure mode clearly:
+  - the Playwright test times out after repeated generation cycles
+  - `data-base-output-ready` stays `"false"` instead of returning to `"true"`
+  - the workspace remains `data-busy="true"` after reload
+- The failing scenario is not synthetic noise. `tests/e2e/long-vacancy-generation.spec.ts` intentionally stresses a near-limit vacancy payload, runs three generation cycles, reloads the dashboard between them, and expects the preview and documents panel to stay ready after every cycle.
+- This maps directly to `REL-01`: a brownfield generation path that should survive repeated workspace refreshes and preview remounts is not durable enough yet.
+
+### The likely break seam is the mocked workspace or reload handoff, not just the assertion timeout
+
+- `tests/e2e/fixtures/api-mocks.ts` owns the dashboard mock contract for:
+  - `/api/session/*`
+  - `/api/session/*/generate`
+  - `/api/file/*`
+  - `/api/agent`
+- That fixture mutates `workspace.session.generatedOutput` in-memory through `markGeneratedOutputReady(...)` when generation succeeds, and `src/components/dashboard/resume-workspace.tsx` derives `data-base-output-ready` strictly from `workspace.session.generatedOutput`.
+- Because the failing snapshot shows `data-base-output-ready="false"` after reload, the most likely seam is one of:
+  - the repeated reload path loses the mocked generated-output state
+  - the workspace refresh and preview refresh do not settle deterministically after generation
+  - the E2E mock contract does not faithfully preserve ready-state behavior across repeated cycles
+- Phase 31 should therefore plan around the real seam: workspace rehydration and preview-critical state after generation, not only a longer Playwright timeout.
+
+### Broken encoding artifacts are present in both production-facing copy and agent-side system text
+
+- Repo search found user-visible or operator-visible mojibake in active source files, including:
+  - `src/components/dashboard/chat-interface.tsx`
+  - `src/lib/agent/pre-loop-setup.ts`
+  - `src/lib/agent/message-preparation.ts`
+  - `src/lib/agent/vacancy-analysis.ts`
+- The current E2E error snapshot also shows broken strings rendered in the browser UI, including the sidebar sessions label, the greeting heading, and the plan-unavailable copy.
+- Some broken strings already appear in committed tests too, especially `src/components/dashboard/chat-interface.test.tsx` and `src/lib/agent/vacancy-analysis.test.ts`.
+- This means `REL-02` is not just cosmetic text cleanup. The repo currently contains committed regression vectors that can reintroduce mojibake even after the UI is fixed.
+
+### Existing browser and component coverage is strong enough to support focused release gates
+
+- Existing committed suites already cover the main release-critical surfaces:
+  - `tests/e2e/long-vacancy-generation.spec.ts`
+  - `tests/e2e/core-funnel.spec.ts`
+  - `src/components/dashboard/resume-workspace.test.tsx`
+  - `src/components/dashboard/preview-panel.test.tsx`
+  - `src/components/dashboard/chat-interface.test.tsx`
+  - `src/lib/agent/pre-loop-setup.test.ts`
+  - `src/lib/agent/vacancy-analysis.test.ts`
+- CI currently runs all Vitest tests and the full Chromium E2E project in `.github/workflows/ci.yml`, but it does not explicitly call out the long-vacancy stress path or a release-critical browser subset as a named gate.
+- `package.json` already has `agent:stress-long-vacancy`, which means Phase 31 can promote an existing command into CI instead of inventing a new harness from scratch.
+
+### The milestone’s remaining reliability work splits cleanly into product-stability first, gate-hardening second
+
+- Plan `31-01` should fix the user-facing defects directly:
+  - stabilize repeated long-vacancy generation through workspace reload and preview remount behavior
+  - remove broken encoding artifacts from active user-facing and agent-visible copy
+  - lock the behavior with focused unit and browser proof
+- Plan `31-02` should then tighten release hygiene:
+  - promote the release-critical suites into explicit CI steps
+  - make workspace or preview or generation-state regressions block merges earlier and more readably
+  - keep the gate targeted to milestone-critical stability rather than turning CI into a broad overhaul
+
+## Recommended Plan Split
+
+### Wave 1
+
+- `31-01`: Fix long vacancy generation and encoding regressions with focused browser and component proof.
+
+### Wave 2
+
+- `31-02`: Strengthen CI and release gates for workspace, preview, and generation-state stability.
+
+## Risks and Constraints
+
+- The milestone is still brownfield-hardening work; Phase 31 should preserve the current workspace UX unless a behavior change is required for correctness.
+- Encoding cleanup should prefer ASCII or correctly encoded UTF-8 strings consistently across source and tests instead of patching only rendered snapshots.
+- Release gates should stay narrow and useful. The goal is to block merges on high-value regressions, not to add slow or noisy automation that teams will bypass.
+- The long-vacancy stress path should remain deterministic in CI, which means mocks and reload behavior may need cleanup before any additional retries or timeouts are considered.
+
+## Validation Architecture
+
+### Automated proof
+
+1. Keep `npm run typecheck` green after each slice.
+2. Use targeted workspace and encoding suites during implementation:
+   - `npm test -- src/components/dashboard/resume-workspace.test.tsx src/components/dashboard/preview-panel.test.tsx src/components/dashboard/chat-interface.test.tsx src/lib/agent/pre-loop-setup.test.ts src/lib/agent/vacancy-analysis.test.ts`
+3. Use the real browser proof for the known bug:
+   - `npm run test:e2e -- tests/e2e/long-vacancy-generation.spec.ts --project=chromium`
+4. Before phase verification, rerun the broader browser stability net:
+   - `npm run test:e2e -- tests/e2e/core-funnel.spec.ts tests/e2e/long-vacancy-generation.spec.ts --project=chromium`
+
+### Manual proof
+
+1. Run one long-vacancy generation flow locally in the browser and confirm repeated base generation keeps the preview and documents panel ready after reload.
+2. Spot-check the dashboard shell and chat welcome copy to confirm mojibake no longer appears in visible workspace strings.
+
+### Success signal for Phase 31
+
+Phase 31 is complete only when all of the following are true:
+
+- long-vacancy generation remains ready across repeated generate-and-reload cycles
+- broken encoding artifacts are removed from active workspace and agent copy and protected by committed regression proof
+- CI has an explicit release-critical gate for workspace, preview, and generation-state stability

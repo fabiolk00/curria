@@ -1,0 +1,74 @@
+---
+phase: 31
+slug: long-vacancy-stability-and-release-hygiene-gates
+status: draft
+nyquist_compliant: true
+wave_0_complete: false
+created: 2026-04-15
+---
+
+# Phase 31 - Validation Strategy
+
+> Per-phase validation contract for feedback sampling during execution.
+
+---
+
+## Test Infrastructure
+
+| Property | Value |
+|----------|-------|
+| **Framework** | Existing Vitest component and agent suites plus Playwright Chromium E2E |
+| **Config files** | `vitest.config.ts`, `playwright.config.ts`, `.github/workflows/ci.yml`, `package.json` |
+| **Quick run command** | `npm run typecheck` |
+| **Primary targeted suite** | `npm test -- src/components/dashboard/resume-workspace.test.tsx src/components/dashboard/preview-panel.test.tsx src/components/dashboard/chat-interface.test.tsx src/lib/agent/pre-loop-setup.test.ts src/lib/agent/vacancy-analysis.test.ts` |
+| **Primary browser proof** | `npm run test:e2e -- tests/e2e/long-vacancy-generation.spec.ts --project=chromium` |
+| **Expanded regression suite** | `npm run test:e2e -- tests/e2e/core-funnel.spec.ts tests/e2e/long-vacancy-generation.spec.ts --project=chromium` plus any new release-gate scripts added in `package.json` |
+| **Estimated runtime** | ~300 seconds for typecheck and unit suites, plus browser startup time for targeted Chromium E2E |
+
+---
+
+## Sampling Rate
+
+- **After every task commit:** Run `npm run typecheck`
+- **After every plan wave:** Run the targeted workspace and browser suites for the touched stability seam
+- **Before phase verification:** Re-run `npm run typecheck` plus the phase-wide unit and browser suites
+- **Max feedback latency:** 300 seconds for repo-local checks, excluding browser startup
+
+---
+
+## Per-Task Verification Map
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Stable Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| 31-01-01 | 01 | 1 | REL-01 / REL-02 | T-31-01 / T-31-02 | Repeated long-vacancy generation keeps workspace, preview, and generated-output state ready after reload, and broken encoding artifacts are removed from active strings | unit + browser | `npm run typecheck && npm test -- src/components/dashboard/resume-workspace.test.tsx src/components/dashboard/preview-panel.test.tsx src/components/dashboard/chat-interface.test.tsx src/lib/agent/pre-loop-setup.test.ts src/lib/agent/vacancy-analysis.test.ts && npm run test:e2e -- tests/e2e/long-vacancy-generation.spec.ts --project=chromium` | no - 31-01 | pending |
+| 31-02-01 | 02 | 2 | REL-03 | T-31-03 | CI blocks merges when release-critical workspace, preview, or generation-state regressions reappear | unit + browser | `npm run typecheck && npm run test:e2e -- tests/e2e/core-funnel.spec.ts tests/e2e/long-vacancy-generation.spec.ts --project=chromium` | no - 31-02 | pending |
+
+*Status: pending, green, red, or flaky.*
+
+---
+
+## Wave 0 Requirements
+
+Existing infrastructure covers all phase requirements.
+
+---
+
+## Manual-Only Verifications
+
+| Behavior | Requirement | Why Manual | Test Instructions |
+|----------|-------------|------------|-------------------|
+| Repeated base generation from a long vacancy keeps preview and downloads stable in the real dashboard | REL-01 | Browser automation proves the seam, but a human pass confirms the user-facing feel and loading states | Start a long vacancy flow, generate repeatedly, reload after each cycle, and confirm preview plus documents remain ready. |
+| Broken encoding artifacts are gone from visible dashboard shell and chat copy | REL-02 | Rendering correctness is quickest to spot-check visually after source cleanup | Open the dashboard and verify that greetings, sidebar labels, and workspace notices render with correct Portuguese accents or normalized ASCII copy. |
+
+---
+
+## Validation Sign-Off
+
+- [x] All tasks have automated verify commands or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all missing references
+- [x] No watch-mode flags
+- [x] Feedback latency < 300s for repo-local checks
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** approved 2026-04-15
