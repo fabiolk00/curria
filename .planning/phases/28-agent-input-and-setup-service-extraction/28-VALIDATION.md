@@ -1,0 +1,74 @@
+---
+phase: 28
+slug: agent-input-and-setup-service-extraction
+status: draft
+nyquist_compliant: true
+wave_0_complete: false
+created: 2026-04-15
+---
+
+# Phase 28 - Validation Strategy
+
+> Per-phase validation contract for feedback sampling during execution.
+
+---
+
+## Test Infrastructure
+
+| Property | Value |
+|----------|-------|
+| **Framework** | Existing Vitest route and agent-loop suites plus TypeScript checks |
+| **Config files** | `vitest.config.ts`, `tsconfig.json`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md` |
+| **Quick run command** | `npm run typecheck` |
+| **Primary targeted suite** | `npm test -- src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts src/lib/agent/streaming-loop.test.ts` |
+| **Focused utility suite** | `npm test -- src/lib/agent/streaming-loop.test.ts` plus any new utility test introduced in this phase |
+| **Estimated runtime** | ~180 seconds for typecheck plus targeted Vitest |
+
+---
+
+## Sampling Rate
+
+- **After every task commit:** Run `npm run typecheck`
+- **After every plan wave:** Run the targeted route and loop suite for the touched files
+- **Before phase verification:** Re-run `npm run typecheck` plus the full targeted phase suite
+- **Max feedback latency:** 240 seconds
+
+---
+
+## Per-Task Verification Map
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| 28-01-01 | 01 | 1 | AGENT-01 | T-28-01 / — | Route-level message preparation and vacancy detection move to shared services without changing request semantics | unit | `npm run typecheck && npm test -- src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts` | no - 28-01 | pending |
+| 28-02-01 | 02 | 1 | AGENT-01 | T-28-02 / — | Pre-loop setup is delegated through an explicit service while session bootstrap and early streaming contracts remain intact | unit | `npm run typecheck && npm test -- src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts` | no - 28-02 | pending |
+| 28-03-01 | 03 | 2 | AGENT-01 | T-28-03 / — | Regression tests prove route-to-loop handoff, sanitized input handling, and target-job detection behavior remain stable after extraction | unit | `npm run typecheck && npm test -- src/app/api/agent/route.test.ts src/app/api/agent/route.sse.test.ts src/lib/agent/streaming-loop.test.ts` | no - 28-03 | pending |
+
+*Status: pending, green, red, or flaky.*
+
+---
+
+## Wave 0 Requirements
+
+Existing infrastructure covers all phase requirements.
+
+---
+
+## Manual-Only Verifications
+
+| Behavior | Requirement | Why Manual | Test Instructions |
+|----------|-------------|------------|-------------------|
+| New-session requests still emit `sessionCreated` before slow setup work and continue streaming normally | AGENT-01 | Best verified through one real SSE request rather than test doubles alone | Start one new chat session, confirm the frontend persists the returned `sessionId` early, and verify the stream continues after setup. |
+| Pasted vacancy and resume-only requests still resolve the expected workflow path after extraction | AGENT-01 | Route heuristics are user-visible and should be spot-checked with realistic input text | Send one vacancy-shaped message and one normal follow-up, then confirm the route behavior matches current targeting and dialog expectations. |
+
+---
+
+## Validation Sign-Off
+
+- [x] All tasks have automated verify commands or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all missing references
+- [x] No watch-mode flags
+- [x] Feedback latency < 300s for repo-local checks
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** approved 2026-04-15
