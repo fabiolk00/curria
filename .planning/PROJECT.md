@@ -20,11 +20,20 @@ A job seeker can reliably turn their real profile and a target role into an hone
 - OpenAI and PDF ingestion paths have stronger resilience and clearer failure modes
 - security, billing, file-access, and JSON persistence boundaries are more explicit and test-backed
 
+## Current Milestone: v1.2 Code Hygiene and Dead Code Reduction
+
+**Goal:** Reduce dead code, dependency drift, and maintenance noise without breaking runtime-critical brownfield behavior.
+
+**Target features:**
+- dead-code tooling baseline for imports, unused exports, orphan files, and unused dependencies
+- staged cleanup flow for imports, locals, exports, files, and packages
+- safer long-term enforcement in lint, TypeScript, editor workflow, and CI without tripping on Next.js or dynamic-runtime false positives
+
 ## Next Milestone Goals
 
-- define the next milestone with fresh requirements instead of carrying forward stale v1.1 planning context
-- decide whether the next priority is user-facing depth, operational hardening follow-ups, or new workflow breadth
-- start from a clean requirement set via `/gsd-new-milestone`
+- make dead code and dependency drift visible through repo-native tooling
+- remove low-risk unused code in stages instead of one broad churn-heavy sweep
+- decide which enforcement rules are safe to turn into ongoing gates after cleanup
 
 <details>
 <summary>Archived milestone focus: v1.1 Agent Reliability and Response Continuity</summary>
@@ -72,12 +81,17 @@ A job seeker can reliably turn their real profile and a target role into an hone
 
 ### Active
 
-- None. The next milestone has not been defined yet.
+- [ ] The repo exposes a safe dead-code detection toolchain for imports, exports, orphan files, and dependencies.
+- [ ] Unused imports and low-risk unused locals can be removed automatically or near-automatically in agreed scopes.
+- [ ] Unused exports, orphan files, and packages can be inventoried and reduced with manual verification for dynamic runtime seams.
+- [ ] Sustained code-hygiene enforcement is documented and wired into lint, TypeScript, editor, or CI flows only after the repo is clean enough to support it.
 
 ### Out of Scope
 
 - Broad new feature breadth before the next milestone is defined
 - Carrying forward archived v1.1 requirement scope without a fresh planning pass
+- Bulk deletion of suspected dead runtime seams without manual validation
+- Forcing global `noUnusedLocals` and `noUnusedParameters` immediately before cleanup reduces current brownfield noise
 
 ## Context
 
@@ -85,6 +99,8 @@ A job seeker can reliably turn their real profile and a target role into an hone
 - v1.0 hardened launch-critical configuration, browser verification, billing settlement validation, and structured observability around the existing funnel.
 - v1.1 extended that baseline into deterministic ATS and target-job resume pipelines, smart dashboard generation entrypoints, stronger resilience, and explicit persistence contracts.
 - The system now depends on documented versioning and repository boundaries to keep `cvState` canonical while operational JSON remains explicit and test-backed.
+- The repo already has ESLint, Prettier, TypeScript, Vitest, and Playwright, so this milestone should extend the current quality baseline instead of introducing a parallel toolchain.
+- Next.js routes, dynamic imports, string-driven handlers, and background-job seams can produce false positives in dead-code tools, so cleanup must stay staged and review-driven.
 
 ## Constraints
 
@@ -92,6 +108,8 @@ A job seeker can reliably turn their real profile and a target role into an hone
 - **Reliability**: Preserve canonical `cvState`, billing safety, and trusted artifact delivery when evolving resume flows.
 - **Verification**: New milestone work should continue to land with explicit route-level, pipeline-level, or browser-level proof.
 - **Scope discipline**: Start the next milestone from explicit priorities instead of letting the archived v1.1 scope leak forward.
+- **Cleanup safety**: Never delete code automatically just because a static tool flags it; validate runtime seams first.
+- **Brownfield churn**: Prefer staged hygiene improvements over one global formatting or enforcement cliff.
 
 ## Key Decisions
 
@@ -103,6 +121,7 @@ A job seeker can reliably turn their real profile and a target role into an hone
 | Move critical resume transformation logic out of optional chat decisions and into deterministic backend pipelines | Reliability and export correctness matter more than conversational flexibility for ATS and target-job generation | Good |
 | Keep canonical resume truth in `cvState` and use `agentState` only as operational context | Preserves durable product truth while allowing orchestration metadata to evolve faster | Good |
 | Favor route-level security and billing proof plus explicit non-claims over implicit confidence in external RLS or provider behavior | Brownfield safety improved more from concrete proof boundaries than from hand-wavy guarantees | Good |
+| Treat dead-code cleanup as staged repository hygiene instead of one-shot mass deletion | This repo has enough dynamic and framework-specific seams that automated cleanup needs guardrails | Pending |
 
 ## Evolution
 
@@ -115,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Archive prior roadmap and requirements before expanding scope again
 
 ---
-*Last updated: 2026-04-15 after completing the v1.1 milestone*
+*Last updated: 2026-04-15 after starting milestone v1.2*

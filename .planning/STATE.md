@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Agent Reliability and Response Continuity
-current_phase: null
-current_phase_name: none
-current_plan: none
-status: ready_for_next_milestone
-stopped_at: v1.1 archived; ready to define next milestone
-last_updated: "2026-04-15T21:24:00.0000000-03:00"
-last_activity: 2026-04-15 -- Archived v1.1 milestone and cleared active planning state
+milestone: v1.2
+milestone_name: Code Hygiene and Dead Code Reduction
+current_phase: 20
+current_phase_name: Dead-Code Tooling and Safety Baseline
+current_plan: Not started
+status: ready_to_plan_phase
+stopped_at: Milestone v1.2 initialized; Phase 20 ready for planning
+last_updated: "2026-04-15T21:35:00.0000000-03:00"
+last_activity: 2026-04-15 -- Started milestone v1.2 Code Hygiene and Dead Code Reduction
 progress:
   total_phases: 15
   completed_phases: 15
@@ -24,22 +24,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Define the next milestone from a fresh requirement set.
+**Current focus:** Start Phase 20 planning for dead-code tooling, cleanup safety, and staged enforcement.
 
 ## Current Position
 
-Current Phase: None
-Current Phase Name: None
-Current Plan: None
-Total Plans in Phase: 0
-Status: Ready for next milestone
-Last activity: 2026-04-15 -- Archived v1.1 milestone
-Last Activity Description: Archived roadmap and requirements, updated project context, and reset the planning surface for the next milestone.
+Current Phase: 20
+Current Phase Name: Dead-Code Tooling and Safety Baseline
+Current Plan: Not started
+Total Plans in Phase: 3
+Status: Ready to plan phase
+Last activity: 2026-04-15 -- Started milestone v1.2 Code Hygiene and Dead Code Reduction
+Last Activity Description: Archived v1.1 phase directories, defined v1.2 requirements, and created the new roadmap starting at Phase 20.
 
-Phase: None
-Plan: 0 of 0
-Status: Ready for next milestone
-Last activity: 2026-04-15 -- Awaiting `/gsd-new-milestone`
+Phase: 20 (Dead-Code Tooling and Safety Baseline)
+Plan: 0 of 3
+Status: Ready to plan phase
+Last activity: 2026-04-15 -- Awaiting `/gsd-plan-phase 20`
 
 Progress: [##########] 100%
 
@@ -56,6 +56,7 @@ Baseline carried forward from the completed v1.0 milestone:
 
 - v1.0 archived: Launch Hardening for the Core Funnel
 - v1.1 archived: Agent Reliability and Response Continuity
+- v1.2 started: Code Hygiene and Dead Code Reduction
 
 ### Decisions
 
@@ -77,11 +78,12 @@ None yet.
 - Async PDF import work still relies on in-process execution plus reclaim-on-poll rather than a dedicated queue worker.
 - Canonical LGPD deletion remains an operator-supported workflow, not a self-serve product flow.
 - No standalone `v1.1` milestone audit artifact was produced before archive; run `/gsd-audit-milestone` later if retrospective verification is needed.
+- Static dead-code tools may produce false positives around Next.js routes, dynamic imports, string-driven handlers, and background jobs.
 
 ## Session Continuity
 
-Last session: 2026-04-15T21:24:00.0000000-03:00
-Stopped at: v1.1 archived; ready to define next milestone
+Last session: 2026-04-15T21:35:00.0000000-03:00
+Stopped at: Milestone v1.2 initialized; Phase 20 ready for planning
 Resume file: None
 
 ## Quick Tasks Completed
