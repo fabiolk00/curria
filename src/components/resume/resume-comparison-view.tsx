@@ -6,8 +6,60 @@ import { ArrowLeft, Download, Loader2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
+import { scoreATS } from "@/lib/ats/score"
 import { cn } from "@/lib/utils"
 import type { CVState } from "@/types/cv"
+
+function cvStateToText(cv: CVState): string {
+  const parts: string[] = []
+  
+  if (cv.fullName) parts.push(cv.fullName)
+  if (cv.email) parts.push(cv.email)
+  if (cv.phone) parts.push(cv.phone)
+  if (cv.linkedin) parts.push(cv.linkedin)
+  if (cv.location) parts.push(cv.location)
+  
+  if (cv.summary) {
+    parts.push("\nSummary")
+    parts.push(cv.summary)
+  }
+  
+  if (cv.experience.length > 0) {
+    parts.push("\nExperience")
+    cv.experience.forEach(exp => {
+      parts.push(`${exp.title} - ${exp.company}`)
+      parts.push(`${exp.startDate} - ${exp.endDate}`)
+      exp.bullets.forEach(b => parts.push(`- ${b}`))
+    })
+  }
+  
+  if (cv.skills.length > 0) {
+    parts.push("\nSkills")
+    parts.push(cv.skills.join(", "))
+  }
+  
+  if (cv.education.length > 0) {
+    parts.push("\nEducation")
+    cv.education.forEach(edu => {
+      parts.push(`${edu.degree} - ${edu.institution} (${edu.year})`)
+    })
+  }
+  
+  if (cv.certifications && cv.certifications.length > 0) {
+    parts.push("\nCertifications")
+    cv.certifications.forEach(cert => {
+      parts.push(`${cert.name} - ${cert.issuer}`)
+    })
+  }
+  
+  return parts.join("\n")
+}
+
+function calculateAtsScore(cv: CVState): number {
+  const text = cvStateToText(cv)
+  const result = scoreATS(text)
+  return result.total
+}
 
 type ResumeComparisonViewProps = {
   originalCvState: CVState
@@ -397,22 +449,38 @@ export function ResumeComparisonView({
         >
           {/* Original */}
           <div>
-            <div className="mb-2 flex items-center gap-2 sm:mb-3">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
-              <span className="text-xs font-medium text-red-600 dark:text-red-400 sm:text-sm">
-                Original
-              </span>
+            <div className="mb-2 flex items-center justify-between sm:mb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="text-xs font-medium text-red-600 dark:text-red-400 sm:text-sm">
+                  Original
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">ATS Score:</span>
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400 sm:text-xs">
+                  {calculateAtsScore(originalCvState)}%
+                </span>
+              </div>
             </div>
             <ResumeDocument cvState={originalCvState} variant="original" />
           </div>
 
           {/* Optimized */}
           <div>
-            <div className="mb-2 flex items-center gap-2 sm:mb-3">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
-                Otimizado
-              </span>
+            <div className="mb-2 flex items-center justify-between sm:mb-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
+                  Otimizado
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">ATS Score:</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 sm:text-xs">
+                  {calculateAtsScore(currentOptimizedCvState)}%
+                </span>
+              </div>
             </div>
             <ResumeDocument
               cvState={currentOptimizedCvState}
