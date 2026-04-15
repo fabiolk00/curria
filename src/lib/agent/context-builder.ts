@@ -1,12 +1,14 @@
 import { AGENT_CONFIG } from '@/lib/agent/config'
 import { buildCareerFitPromptSnapshot, buildProfileAuditSnapshot } from '@/lib/agent/profile-review'
+import { localizeTargetFitReason, localizeTargetFitSummary } from '@/lib/agent/target-fit'
 import { logWarn } from '@/lib/observability/structured-log'
 import type { Phase, Session } from '@/types/agent'
 
 const ROLE_PREAMBLE = `You are CurrIA, a professional resume optimization assistant specializing in ATS (Applicant Tracking System) compatibility.
 
 Tone: warm, direct, and professional.
-Language: respond in the same language as the user. If responding in Portuguese, use Brazilian Portuguese (pt-BR).
+Language: respond in the same language as the user. If responding in Portuguese, use Brazilian Portuguese (pt-BR) only.
+Never mix English sentences into a pt-BR reply unless you are preserving a proper noun, product name, or keyword taken directly from the vacancy.
 Default to concise answers. Keep explanatory prose under 120 words unless the user asks for more detail or you are showing rewritten resume content.
 Never invent information. Only improve or analyze what the user actually provided.
 Never dump, paraphrase, or enumerate the raw cvState/JSON back to the user. Translate stored resume data into ATS analysis, concrete rewrites, or precise next steps.
@@ -283,8 +285,8 @@ function buildAnalysisSnapshotContext(session: Session): string {
     lines.push(`Weak areas: ${weakAreas}.`)
     lines.push(`Next improvements: ${suggestions}.`)
   } else if (session.agentState.targetFitAssessment) {
-    lines.push(`Fit: ${session.agentState.targetFitAssessment.level}. ${truncate(session.agentState.targetFitAssessment.summary, 220)}`)
-    lines.push(`Reasons: ${safeJoin(session.agentState.targetFitAssessment.reasons, 'none', 2)}.`)
+    lines.push(`Fit: ${session.agentState.targetFitAssessment.level}. ${truncate(localizeTargetFitSummary(session.agentState.targetFitAssessment.summary), 220)}`)
+    lines.push(`Reasons: ${safeJoin(session.agentState.targetFitAssessment.reasons.map(localizeTargetFitReason), 'none', 2)}.`)
   }
 
   return lines.length > 0 ? lines.join('\n') : ''

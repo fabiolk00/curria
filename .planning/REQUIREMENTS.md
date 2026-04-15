@@ -20,6 +20,11 @@
 - [x] **PERF-04**: The remaining non-E2E runtime outliers are profiled with committed evidence that identifies which suites dominate the post-`v1.4` budget.
 - [x] **PERF-05**: The repo either reduces the dominant residual non-E2E bottlenecks further or records an explicit accepted runtime budget and gate so future drift is visible and intentional.
 
+### Rewrite State Coherence
+
+- [x] **COH-01**: When deterministic ATS enhancement or job targeting has already produced `optimizedCvState`, later chat rewrite requests and deterministic helper flows use that effective optimized source instead of stale base `cvState`.
+- [x] **COH-02**: Target resume derivation paths, including tool-driven target resume creation after ATS enhancement, remain consistent with the latest optimized resume state and are protected by committed regression coverage.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -46,10 +51,12 @@
 | DOC-02 | Phase 33 | Complete |
 | PERF-04 | Phase 34 | Complete |
 | PERF-05 | Phase 34 | Complete |
+| COH-01 | Phase 35 | Complete |
+| COH-02 | Phase 35 | Complete |
 
 **Coverage:**
-- v1.5 requirements: 6 total
-- Mapped to phases: 6
+- v1.5 requirements: 8 total
+- Mapped to phases: 8
 - Unmapped: 0
 
 ---

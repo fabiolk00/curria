@@ -1,5 +1,6 @@
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 import type { Session, TargetFitAssessment } from '@/types/agent'
+import { localizeTargetFitSummary } from '@/lib/agent/target-fit'
 
 type RoleFamily =
   | 'frontend'
@@ -284,7 +285,8 @@ export function buildCareerFitWarningText(session: Pick<Session, 'agentState' | 
   }
 
   const fitSummary = targetFit?.summary
-    ?? (gapAnalysis
+    ? localizeTargetFitSummary(targetFit.summary)
+    : (gapAnalysis
       ? `A aderência estimada para esta vaga está em ${gapAnalysis.matchScore}/100.`
       : 'Mesmo sem uma análise completa, já existe um desalinhamento estrutural relevante para essa vaga.')
 
@@ -315,7 +317,7 @@ export function buildCareerFitPromptSnapshot(targetFitAssessment?: TargetFitAsse
   ]
 
   if (targetFitAssessment) {
-    lines.push(`Current fit level: ${targetFitAssessment.level}. ${targetFitAssessment.summary}`)
+    lines.push(`Current fit level: ${targetFitAssessment.level}. ${localizeTargetFitSummary(targetFitAssessment.summary)}`)
   }
 
   if (gapAnalysis) {

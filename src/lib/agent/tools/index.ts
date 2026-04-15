@@ -378,7 +378,7 @@ export async function executeTool(
       const result = await createTargetResumeVariant({
         sessionId: session.id,
         userId: session.userId,
-        baseCvState: session.cvState,
+        baseCvState: getEffectiveBaseCvState(session),
         targetJobDescription: target_job_description,
         externalSignal,
       })

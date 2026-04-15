@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-current_phase: 34
-current_phase_name: Non-E2E Runtime Residual Budgeting
+current_phase: 35
+current_phase_name: Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation
 current_plan: None
 status: ready
-stopped_at: Phase 34 completed; milestone v1.5 ready for audit
-last_updated: "2026-04-16T01:20:00.000Z"
-last_activity: 2026-04-15 -- Phase 34 execution complete
+stopped_at: Phase 35 completed; milestone v1.5 ready for audit
+last_updated: "2026-04-15T18:20:00.000Z"
+last_activity: 2026-04-15 -- Phase 35 execution complete
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Current Phase: 34
-Current Phase Name: Non-E2E Runtime Residual Budgeting
+Current Phase: 35
+Current Phase Name: Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation
 Current Plan: None
 Total Plans in Phase: 2
 Status: Ready for audit
-Last activity: 2026-04-15 -- Phase 34 execution complete
-Last Activity Description: Phase 34 completed - residual runtime proof and resume-builder budget gate are now committed
+Last activity: 2026-04-15 -- Phase 35 execution complete
+Last Activity Description: Phase 35 completed - chat rewrites and target resume derivation now prefer the effective optimized resume state with regression proof
 
 Progress: [##########] 100%
 
@@ -42,7 +42,7 @@ Progress: [##########] 100%
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 65
+- Total plans completed: 67
 - Milestones archived: 4
 
 ## Accumulated Context
@@ -66,6 +66,8 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 32 completed: the `v1.4` archive now includes committed `VERIFICATION.md` artifacts and the archived milestone audit no longer fails on missing-proof fallback
 - Phase 33 completed: milestone summaries, decimal-phase counts, and next-cycle planning state now have a repo-native metadata checker and aligned archive narrative
 - Phase 34 completed: the dominant residual suite was reduced materially and the repo now gates it through an explicit resume-builder runtime budget check
+- Phase 35 added: rewrite follow-up and target-resume derivation coherence will now be audited against the earlier ATS and job-targeting optimized-state contract
+- Phase 35 completed: effective optimized-state selection now keeps follow-up rewrites and target resume derivation aligned with the deterministic ATS and job-targeting contract
 
 ### Decisions
 
@@ -101,7 +103,7 @@ Recent decisions affecting the next cycle:
 ## Session Continuity
 
 Last session: 2026-04-15T23:30:00.0000000-03:00
-Stopped at: Phase 34 completed; milestone v1.5 ready for audit
+Stopped at: Phase 35 completed; milestone v1.5 ready for audit
 Resume file: None
 
 ## Quick Tasks Completed

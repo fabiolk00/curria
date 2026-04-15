@@ -21,6 +21,7 @@ import {
   hasConfirmedCareerFitOverride,
   requiresCareerFitWarning,
 } from '@/lib/agent/profile-review'
+import { localizeTargetFitSummary } from '@/lib/agent/target-fit'
 import {
   AGENT_CONFIG,
   resolveAgentModelForPhase,
@@ -68,6 +69,7 @@ const MISSING_PROFILE_TEXT = 'Preciso do seu currículo salvo em "Meu Perfil" pa
 const RECOVERY_SYSTEM_PROMPT = [
   'You are CurrIA, a resume optimization assistant for Brazilian users.',
   'Respond in the same language as the user, in plain text, with a short and useful answer.',
+  'If the user writes in Portuguese, answer only in Brazilian Portuguese (pt-BR) and do not mix English sentences into the reply.',
   'Do not call tools.',
   'Do not leave the content empty.',
   'If the user pasted a job description but resume context is missing, acknowledge the vacancy and ask them to complete their saved profile before continuing.',
@@ -292,16 +294,18 @@ function buildRewriteCurrentContent(
   session: Session,
   focus: RewriteFocus,
 ): string | null {
+  const effectiveCvState = getEffectiveCvState(session)
+
   switch (focus) {
     case 'summary':
-      return session.cvState.summary.trim() || buildResumeTextForScoring(session)
+      return effectiveCvState.summary.trim() || buildResumeTextForScoring(session)
     case 'experience':
-      return session.cvState.experience.length > 0
-        ? JSON.stringify(session.cvState.experience, null, 2)
+      return effectiveCvState.experience.length > 0
+        ? JSON.stringify(effectiveCvState.experience, null, 2)
         : null
     case 'skills':
-      return session.cvState.skills.length > 0
-        ? session.cvState.skills.join(', ')
+      return effectiveCvState.skills.length > 0
+        ? effectiveCvState.skills.join(', ')
         : null
   }
 }
@@ -343,7 +347,7 @@ function buildRewriteInstructions(
 
 function buildRewriteTargetKeywords(session: Session): string[] | undefined {
   const missingSkills = session.agentState.gapAnalysis?.result.missingSkills ?? []
-  const existingSkills = session.cvState.skills ?? []
+  const existingSkills = getEffectiveCvState(session).skills ?? []
   const targetKeywords = Array.from(
     new Set(
       [...missingSkills, ...existingSkills]
@@ -410,8 +414,12 @@ function buildResumeTextFromCvState(cvState: Session['cvState']): string {
   return lines.join('\n').trim()
 }
 
+function getEffectiveCvState(session: Session): Session['cvState'] {
+  return session.agentState.optimizedCvState ?? session.cvState
+}
+
 function buildResumeTextForScoring(session: Session): string {
-  const canonicalResumeText = buildResumeTextFromCvState(session.cvState)
+  const canonicalResumeText = buildResumeTextFromCvState(getEffectiveCvState(session))
 
   if (canonicalResumeText.trim()) {
     return canonicalResumeText
@@ -676,7 +684,7 @@ function buildDeterministicAssistantFallback(session: Session, userMessage: stri
 
     if (session.agentState.targetFitAssessment) {
       parts.push(
-        `Aderência inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${session.agentState.targetFitAssessment.summary}`,
+        `Aderência inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${localizeTargetFitSummary(session.agentState.targetFitAssessment.summary)}`,
       )
     } else if (session.agentState.gapAnalysis) {
       parts.push(`Aderência estimada à vaga: ${session.agentState.gapAnalysis.result.matchScore}/100.`)
@@ -747,7 +755,7 @@ function buildDeterministicVacancyBootstrap(
 
   if (session.agentState.targetFitAssessment) {
     parts.push(
-      `Aderência inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${session.agentState.targetFitAssessment.summary}`,
+      `Aderência inicial: ${formatFitLevel(session.agentState.targetFitAssessment.level)}. ${localizeTargetFitSummary(session.agentState.targetFitAssessment.summary)}`,
     )
   } else if (session.agentState.gapAnalysis) {
     parts.push(`Aderência estimada à vaga: ${session.agentState.gapAnalysis.result.matchScore}/100.`)
@@ -1140,7 +1148,7 @@ async function* maybePrepareTargetResumeForDeterministicFlow(params: {
   const derivationResult = await deriveTargetResumeCvState({
     sessionId: params.session.id,
     userId: params.session.userId,
-    baseCvState: params.session.cvState,
+    baseCvState: getEffectiveCvState(params.session),
     targetJobDescription,
     externalSignal: params.signal,
   })

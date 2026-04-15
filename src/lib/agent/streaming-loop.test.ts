@@ -1062,7 +1062,7 @@ describe('runAgentLoop streaming', () => {
       .join('')
 
     expect(finalText).toContain('Pontuacao ATS atual: 78/100.')
-    expect(finalText).toContain('Aderencia inicial: parcial.')
+    expect(finalText).toContain('Aderência inicial: parcial.')
     expect(finalText).toContain('Principais gaps: ETL, DAX, impacto mensuravel.')
     expect(finalText).not.toContain('Tente novamente com um pedido curto')
   })
@@ -1190,6 +1190,146 @@ describe('runAgentLoop streaming', () => {
       'sess_123',
       'assistant',
       expect.stringContaining('Aqui está uma versão reescrita do seu resumo profissional:'),
+    )
+  })
+
+  it('uses optimizedCvState as the rewrite source during chat follow-up rewrites', async () => {
+    const baseSession = buildSession()
+    const session = {
+      ...baseSession,
+      phase: 'dialog' as const,
+      cvState: {
+        ...baseSession.cvState,
+        summary: 'Resumo base antigo.',
+      },
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {} as Record<string, never>,
+        sourceResumeText: 'Fabio Silva\nResumo\nExperiencia com Power BI, SQL e ETL.',
+        targetJobDescription: 'Analista de BI Senior com foco em Power BI, SQL e ETL.',
+        optimizedCvState: {
+          ...baseSession.cvState,
+          summary: 'Resumo otimizado mais recente.',
+        },
+      },
+    }
+
+    mockDispatchToolWithContext.mockResolvedValueOnce({
+      output: {
+        success: true,
+        rewritten_content: 'Resumo final reescrito a partir da versao otimizada.',
+        section_data: 'Resumo final reescrito a partir da versao otimizada.',
+        keywords_added: ['Power BI'],
+        changes_made: ['Resumo atualizado'],
+      },
+      outputJson: JSON.stringify({
+        success: true,
+        rewritten_content: 'Resumo final reescrito a partir da versao otimizada.',
+        section_data: 'Resumo final reescrito a partir da versao otimizada.',
+        keywords_added: ['Power BI'],
+        changes_made: ['Resumo atualizado'],
+      }),
+      persistedPatch: {
+        cvState: {
+          summary: 'Resumo final reescrito a partir da versao otimizada.',
+        },
+      },
+    })
+
+    for await (const _event of runAgentLoop({
+      session,
+      userMessage: 'reescreva meu resumo',
+      appUserId: 'usr_123',
+      requestId: 'req_dialog_rewrite_uses_optimized_state',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      // consume stream
+    }
+
+    expect(mockDispatchToolWithContext).toHaveBeenCalledWith(
+      'rewrite_section',
+      expect.objectContaining({
+        current_content: 'Resumo otimizado mais recente.',
+      }),
+      expect.any(Object),
+      undefined,
+    )
+  })
+
+  it('uses optimizedCvState experience as the rewrite source during chat follow-up rewrites', async () => {
+    const baseSession = buildSession()
+    const optimizedExperience = [
+      {
+        ...baseSession.cvState.experience[0],
+        bullets: ['Otimizei pipelines ETL no Databricks e reduzi o tempo de processamento em 40%.'],
+      },
+    ]
+
+    const session = {
+      ...baseSession,
+      phase: 'dialog' as const,
+      cvState: {
+        ...baseSession.cvState,
+        experience: [
+          {
+            ...baseSession.cvState.experience[0],
+            bullets: ['Experiencia base antiga.'],
+          },
+        ],
+      },
+      agentState: {
+        parseStatus: 'parsed' as const,
+        rewriteHistory: {} as Record<string, never>,
+        sourceResumeText: 'Fabio Silva\nExperiencia antiga.',
+        targetJobDescription: 'Engenheiro de Dados com foco em Databricks, ETL e Power BI.',
+        optimizedCvState: {
+          ...baseSession.cvState,
+          experience: optimizedExperience,
+        },
+      },
+    }
+
+    mockDispatchToolWithContext.mockResolvedValueOnce({
+      output: {
+        success: true,
+        rewritten_content: 'Experiencia reescrita a partir da versao otimizada.',
+        section_data: optimizedExperience,
+        keywords_added: ['Databricks'],
+        changes_made: ['Experiencia atualizada'],
+      },
+      outputJson: JSON.stringify({
+        success: true,
+        rewritten_content: 'Experiencia reescrita a partir da versao otimizada.',
+        section_data: optimizedExperience,
+        keywords_added: ['Databricks'],
+        changes_made: ['Experiencia atualizada'],
+      }),
+      persistedPatch: {
+        cvState: {
+          experience: optimizedExperience,
+        },
+      },
+    })
+
+    for await (const _event of runAgentLoop({
+      session,
+      userMessage: 'reescreva minha experiencia',
+      appUserId: 'usr_123',
+      requestId: 'req_dialog_rewrite_uses_optimized_experience',
+      isNewSession: false,
+      requestStartedAt: Date.now(),
+    })) {
+      // consume stream
+    }
+
+    expect(mockDispatchToolWithContext).toHaveBeenCalledWith(
+      'rewrite_section',
+      expect.objectContaining({
+        current_content: JSON.stringify(optimizedExperience, null, 2),
+      }),
+      expect.any(Object),
+      undefined,
     )
   })
 
@@ -1726,8 +1866,8 @@ describe('runAgentLoop streaming', () => {
         targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
         targetFitAssessment: {
           level: 'weak' as const,
-          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
-          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento, com lacunas relevantes que uma reescrita de currículo sozinha não resolve.',
+          reasons: ['Skill ausente ou pouco evidenciada: Kubernetes'],
           assessedAt: '2026-04-12T12:00:00.000Z',
         },
         gapAnalysis: {
@@ -1794,8 +1934,8 @@ describe('runAgentLoop streaming', () => {
         targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
         targetFitAssessment: {
           level: 'weak' as const,
-          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
-          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento, com lacunas relevantes que uma reescrita de currículo sozinha não resolve.',
+          reasons: ['Skill ausente ou pouco evidenciada: Kubernetes'],
           assessedAt: '2026-04-12T12:00:00.000Z',
         },
         gapAnalysis: {
@@ -1937,8 +2077,8 @@ describe('runAgentLoop streaming', () => {
         targetJobDescription: 'Senior Platform Engineer com foco em Kubernetes, Go, Terraform e arquitetura distribuida.',
         targetFitAssessment: {
           level: 'weak' as const,
-          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
-          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento, com lacunas relevantes que uma reescrita de currículo sozinha não resolve.',
+          reasons: ['Skill ausente ou pouco evidenciada: Kubernetes'],
           assessedAt: '2026-04-12T12:00:00.000Z',
         },
         gapAnalysis: {
@@ -2271,7 +2411,7 @@ describe('runAgentLoop streaming', () => {
       .map((event) => event.content)
       .join('')
 
-    expect(finalText).toContain('ja esta em andamento')
+    expect(finalText).toContain('já está em andamento')
     expect(finalText).toContain('sem consumir outro crédito')
     expect(events).not.toContainEqual(expect.objectContaining({ type: 'error' }))
   })

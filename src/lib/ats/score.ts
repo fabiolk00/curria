@@ -62,10 +62,10 @@ export function scoreATS(resumeText: string, jobDescription?: string): ATSScoreR
   const phoneMatch = resumeText.match(/(\+?55\s?)?(\(?\d{2}\)?\s?)?\d{4,5}[-\s]?\d{4}/)
 
   if (emailMatch) contact += 5
-  else issues.push({ severity: 'warning', section: 'contact', message: 'No email address found in plain text.' })
+  else issues.push({ severity: 'warning', section: 'contact', message: 'Nenhum e-mail encontrado em texto simples.' })
 
   if (phoneMatch) contact += 3
-  else issues.push({ severity: 'warning', section: 'contact', message: 'No phone number found in plain text.' })
+  else issues.push({ severity: 'warning', section: 'contact', message: 'Nenhum telefone encontrado em texto simples.' })
 
   if (text.includes('linkedin')) contact += 2
 

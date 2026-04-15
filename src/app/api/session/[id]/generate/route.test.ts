@@ -184,8 +184,8 @@ describe('generate route', () => {
         targetJobDescription: 'Senior DevOps Engineer with Kubernetes, Terraform and AWS.',
         targetFitAssessment: {
           level: 'weak' as const,
-          summary: 'The current profile appears weakly aligned with the target role today, with major gaps that resume rewriting alone will not fully solve.',
-          reasons: ['Missing or underrepresented skill: Kubernetes'],
+          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento, com lacunas relevantes que uma reescrita de currículo sozinha não resolve.',
+          reasons: ['Skill ausente ou pouco evidenciada: Kubernetes'],
           assessedAt: '2026-04-12T12:00:00.000Z',
         },
         gapAnalysis: {

@@ -63,6 +63,21 @@ Plans:
 - [x] 34-01: Re-profile the residual non-E2E outliers and publish the current budget evidence
 - [x] 34-02: Reduce or explicitly gate the dominant remaining runtime bottleneck
 
+### Phase 35: Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation
+
+**Goal:** Keep deterministic ATS and job-targeting rewrites coherent after optimization so follow-up chat rewrites and target resume derivation use the latest effective optimized resume state instead of falling back to stale base `cvState`.
+**Requirements**: [COH-01, COH-02]
+**Depends on:** Phase 34
+**Success Criteria** (what must be TRUE):
+  1. Once `optimizedCvState` exists, chat rewrite follow-ups and deterministic helpers prefer that effective resume source over stale base `cvState`.
+  2. Target resume derivation paths reuse the latest effective optimized resume so ATS enhancement and later job targeting stay coherent.
+  3. Regression proof catches stale-source drift for follow-up rewrites, including resume sections such as experience, and for target resume creation after a prior ATS rewrite.
+**Plans:** 2 plans
+
+Plans:
+- [x] 35-01: Route chat rewrite sourcing and deterministic target derivation through the effective optimized resume state
+- [x] 35-02: Lock rewrite-state coherence with targeted regressions, validation, and operator-facing proof
+
 ## Autonomous Execution Instruction
 
 The intended operating mode for this milestone is:
@@ -82,13 +97,14 @@ Recommended entrypoint:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 32 -> 33 -> 34
+Phases execute in numeric order: 32 -> 33 -> 34 -> 35
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Phase Verification Backfill and Audit Contract | 3/3 | Complete | 2026-04-15 |
 | 33. Milestone Archive and Traceability Integrity | 2/2 | Complete | 2026-04-15 |
 | 34. Non-E2E Runtime Residual Budgeting | 2/2 | Complete | 2026-04-15 |
+| 35. Harden rewrite state coherence between ATS optimized state, chat follow-up rewrites, and target resume derivation | 2/2 | Complete | 2026-04-15 |
 
 ## Archived Milestones
 

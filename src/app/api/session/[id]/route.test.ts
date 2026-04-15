@@ -99,8 +99,8 @@ describe('session workspace route', () => {
         targetJobDescription: 'AWS role',
         targetFitAssessment: {
           level: 'partial',
-          summary: 'The current profile appears partially aligned with the target role, with relevant overlap but meaningful gaps still present.',
-          reasons: ['Missing or underrepresented skill: AWS'],
+          summary: 'O perfil atual parece parcialmente alinhado com a vaga-alvo, com sobreposição relevante, mas ainda com lacunas importantes.',
+          reasons: ['Skill ausente ou pouco evidenciada: AWS'],
           assessedAt: '2026-03-27T12:00:00.000Z',
         },
         gapAnalysis: {
@@ -227,8 +227,8 @@ describe('session workspace route', () => {
           targetJobDescription: 'AWS role',
           targetFitAssessment: {
             level: 'partial',
-            summary: 'The current profile appears partially aligned with the target role, with relevant overlap but meaningful gaps still present.',
-            reasons: ['Missing or underrepresented skill: AWS'],
+            summary: 'O perfil atual parece parcialmente alinhado com a vaga-alvo, com sobreposição relevante, mas ainda com lacunas importantes.',
+            reasons: ['Skill ausente ou pouco evidenciada: AWS'],
             assessedAt: '2026-03-27T12:00:00.000Z',
           },
           gapAnalysis: {

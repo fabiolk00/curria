@@ -931,8 +931,8 @@ describe('agent tool dispatch', () => {
         targetJobDescription: 'AWS backend role',
         targetFitAssessment: {
           level: 'partial',
-          summary: expect.stringContaining('partially aligned'),
-          reasons: expect.arrayContaining(['Missing or underrepresented skill: AWS']),
+          summary: expect.stringContaining('parcialmente alinhado'),
+          reasons: expect.arrayContaining(['Skill ausente ou pouco evidenciada: AWS']),
           assessedAt: expect.any(String),
         },
         gapAnalysis: {
@@ -1023,13 +1023,60 @@ describe('agent tool dispatch', () => {
           targetJobDescription: 'AWS backend role',
           targetFitAssessment: {
             level: 'partial',
-            summary: expect.stringContaining('partially aligned'),
-            reasons: expect.arrayContaining(['Missing or underrepresented skill: AWS']),
+            summary: expect.stringContaining('parcialmente alinhado'),
+            reasons: expect.arrayContaining(['Skill ausente ou pouco evidenciada: AWS']),
             assessedAt: expect.any(String),
           },
         },
       },
       undefined,
     )
+  })
+
+  it('creates target resumes from optimizedCvState when a prior ATS rewrite already exists', async () => {
+    const session = buildSession()
+    session.agentState.optimizedCvState = {
+      ...session.cvState,
+      summary: 'Resumo ATS otimizado.',
+      skills: ['TypeScript', 'AWS'],
+    }
+
+    vi.mocked(createTargetResumeVariant).mockResolvedValue({
+      success: true,
+      target: {
+        id: 'target_optimized_123',
+        sessionId: session.id,
+        targetJobDescription: 'AWS backend role',
+        derivedCvState: {
+          ...session.agentState.optimizedCvState,
+          summary: 'Resumo alvo derivado do ATS otimizado.',
+        },
+        gapAnalysis: {
+          matchScore: 72,
+          missingSkills: ['AWS'],
+          weakAreas: ['summary'],
+          improvementSuggestions: ['Highlight AWS experience'],
+        },
+        createdAt: new Date('2026-03-27T12:00:00.000Z'),
+        updatedAt: new Date('2026-03-27T12:00:00.000Z'),
+      },
+      gapAnalysis: {
+        matchScore: 72,
+        missingSkills: ['AWS'],
+        weakAreas: ['summary'],
+        improvementSuggestions: ['Highlight AWS experience'],
+      },
+    })
+
+    await dispatchTool('create_target_resume', {
+      target_job_description: 'AWS backend role',
+    }, session)
+
+    expect(createTargetResumeVariant).toHaveBeenCalledWith(expect.objectContaining({
+      baseCvState: expect.objectContaining({
+        summary: 'Resumo ATS otimizado.',
+        skills: ['TypeScript', 'AWS'],
+      }),
+    }))
   })
 })
