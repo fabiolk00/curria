@@ -676,7 +676,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_recoverable" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Reescreva meu currÃ­culo para essa vaga")
+    await userEvent.type(textarea, "Reescreva meu currículo para essa vaga")
     await userEvent.keyboard("{Enter}")
 
     await waitFor(() => {
@@ -881,7 +881,7 @@ describe("ChatInterface", () => {
       if (typeof url === "string" && url.includes("/api/agent")) {
         return new Response(
           JSON.stringify({
-            error: "Esta sessÃ£o atingiu o limite de 30 mensagens.",
+            error: "Esta sessão atingiu o limite de 30 mensagens.",
             action: "new_session",
             messageCount: 30,
             maxMessages: 30,
@@ -893,7 +893,7 @@ describe("ChatInterface", () => {
       return new Response(JSON.stringify({ messages: [] }), { status: 200 })
     })
 
-    await userEvent.type(textarea, "ForÃ§ar reset")
+    await userEvent.type(textarea, "Forçar reset")
     await userEvent.keyboard("{Enter}")
 
     await waitFor(() => {
@@ -1181,7 +1181,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface sessionId="sess_patch" userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Aplique a mudanÃ§a")
+    await userEvent.type(textarea, "Aplique a mudança")
     await userEvent.keyboard("{Enter}")
 
     await waitFor(() => {
@@ -1252,7 +1252,7 @@ describe("ChatInterface", () => {
     render(<ChatInterface userName="Fabio" />)
 
     const textarea = screen.getByPlaceholderText(/Cole a descri.*vaga aqui/i)
-    await userEvent.type(textarea, "Sincronize a sessÃ£o")
+    await userEvent.type(textarea, "Sincronize a sessão")
     await userEvent.keyboard("{Enter}")
 
     await waitFor(() => {

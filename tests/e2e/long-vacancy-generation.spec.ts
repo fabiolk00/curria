@@ -81,6 +81,10 @@ test.describe('long vacancy generation stress', () => {
     ).toHaveCount(1)
     await expect(page.getByText(/Gere um arquivo\./i)).toBeVisible()
 
+    const revisitWorkspace = async () => {
+      await page.goto(`/dashboard?session=${sessionId}`, { waitUntil: 'domcontentloaded' })
+    }
+
     for (let iteration = 1; iteration <= 3; iteration += 1) {
       const generationResult = await page.evaluate(async ({ targetSessionId }) => {
         const response = await fetch(`/api/session/${targetSessionId}/generate`, {
@@ -105,7 +109,7 @@ test.describe('long vacancy generation stress', () => {
         scope: 'base',
       })
 
-      await page.reload()
+      await revisitWorkspace()
 
       await expect(
         page.getByTestId('resume-workspace'),

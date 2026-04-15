@@ -49,7 +49,7 @@ Python, APIs e Microsoft Fabric.`
     const scrapedPayload = [
       '[Link da vaga: https://example.com/jobs/analytics-engineer]',
       '',
-      '[ConteÃƒÂºdo extraÃƒÂ­do automaticamente]',
+      '[Conteúdo extraído automaticamente]',
       '',
       'Senior Analytics Engineer com foco em dbt, SQL e BigQuery.',
     ].join('\n')

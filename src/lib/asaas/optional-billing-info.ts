@@ -13,6 +13,13 @@ export async function loadOptionalBillingInfo(
   billingInfo: Awaited<ReturnType<typeof getUserBillingInfo>>
   billingNotice: string | null
 }> {
+  if (process.env.E2E_SKIP_OPTIONAL_BILLING_INFO === 'true') {
+    return {
+      billingInfo: null,
+      billingNotice: null,
+    }
+  }
+
   try {
     return {
       billingInfo: await getUserBillingInfo(appUserId),
