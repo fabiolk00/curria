@@ -1,21 +1,21 @@
 # Milestones
 
-## v1.4 Agent Core Modularization, Security Hardening, and Release Stability (Active)
+## v1.4 Agent Core Modularization, Security Hardening, and Release Stability (Shipped: 2026-04-15)
 
-**Planned phases:** 4 phases, 10 plans
+**Phases completed:** 5 phases, 13 plans, 13 tasks
 
-**Main focus:**
+**Key accomplishments:**
 
-- refactor the core agent runtime into smaller testable layers
-- close authenticated-route and billing trust gaps that still rely on weak origin assumptions
-- stabilize generation, workspace, preview, and release hygiene before widening scope again
+- Extracted the front half of the brownfield agent path into explicit services for message preparation, vacancy detection, and pre-loop setup with direct regression coverage.
+- Extracted recovery, streaming, and persistence out of the oversized agent loop so the runtime now has narrower handoff seams and direct seam-level tests.
+- Hardened checkout and high-value authenticated mutations around canonical-host and shared browser-trust validation while preserving the intended Asaas webhook contract.
+- Stabilized the repeated long-vacancy browser flow, removed remaining release-facing encoding regressions, and promoted core-funnel plus long-vacancy checks into an explicit release-critical E2E gate.
+- Reduced structural non-E2E test waste by scoping `jsdom`, removing production retry sleeps from tests, and exposing one canonical runtime profiling command in CI.
 
-**Planned accomplishments:**
+**Known gaps:**
 
-- extract message preparation, vacancy detection, pre-loop setup, retry or recovery, streaming, and persistence into clearer agent services
-- lock checkout and sensitive mutation flows to canonical host and explicit origin or CSRF enforcement
-- eliminate the known long vacancy generation regression and broken text-encoding artifacts
-- strengthen CI and release gates around state, preview, and generation stability
+- `v1.4` was archived with accepted audit debt because phases `28`, `29`, `30`, `31`, and `31.1` do not yet have formal `VERIFICATION.md` artifacts.
+- The full non-E2E suite still exceeded a strict local 2-minute ceiling after the `31.1` optimizations, even though the largest artificial costs were removed.
 
 ---
 

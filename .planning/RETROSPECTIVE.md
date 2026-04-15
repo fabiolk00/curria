@@ -1,5 +1,47 @@
 # Retrospective
 
+## Milestone: v1.4 - Agent Core Modularization, Security Hardening, and Release Stability
+
+**Shipped:** 2026-04-15  
+**Phases:** 5 | **Plans:** 13
+
+### What Was Built
+
+- service extraction for agent message preparation, vacancy detection, pre-loop setup, recovery, streaming, and persistence
+- canonical-host checkout and shared browser-trust hardening across sensitive authenticated mutations
+- repaired long-vacancy browser stability plus a release-critical E2E gate
+- non-E2E runtime cleanup with node-first defaults, removed artificial retry delays, and CI-visible profiling proof
+
+### What Worked
+
+- keeping the agent refactor sliced by seam made a risky brownfield path feel incremental instead of rewrite-heavy
+- route-level and seam-level tests gave enough confidence to tighten trust boundaries without pausing the milestone
+- inserting `31.1` as an urgent decimal phase let us address the runtime bottleneck without derailing the rest of the milestone
+
+### What Was Inefficient
+
+- phase closeout still happened without the formal `VERIFICATION.md` layer, so milestone audit failed even though the implementation and targeted tests existed
+- some generated archive metadata assumed only the integer phases and had to be corrected manually after `31.1`
+- broad runtime proof still required several profiling passes because one local budget target was stricter than the suite could meet after the first round of fixes
+
+### Patterns Established
+
+- the brownfield agent path can be modularized safely when route contracts, canonical state boundaries, and seam-level tests stay explicit
+- trust-boundary work is clearer when canonical-host logic and browser-trust validation live in reusable helpers instead of scattered route code
+- test-runtime work benefits from named proof commands and CI reuse rather than one-off local shell experiments
+
+### Key Lessons
+
+- milestone archive quality now depends on treating verification artifacts as first-class deliverables, not optional cleanup
+- inserted decimal phases are useful for urgent corrections, but archive tooling should not assume only the original integer scope
+- removing structural test waste is often faster than micro-optimizing assertions, but residual polling-heavy suites still need explicit decisions
+
+### Cost Observations
+
+- Model mix: not summarized centrally for this milestone
+- Sessions: not summarized centrally for this milestone
+- Notable: the final urgent runtime phase delivered real wins, but still left a clearly bounded residual bottleneck instead of a full budget pass
+
 ## Milestone: v1.2 - Code Hygiene and Dead Code Reduction
 
 **Shipped:** 2026-04-14  
@@ -93,3 +135,4 @@
 | v1.0 | Launch hardening | Most value came from stabilizing the core funnel and proving billing and browser flows |
 | v1.1 | Reliability and determinism | The work shifted from chat-quality fixes into deterministic pipelines, resilience, and explicit boundary proof |
 | v1.2 | Hygiene and maintainability | Cleanup delivered more value through better inventory, guardrails, and enforcement clarity than through large deletion volume |
+| v1.4 | Modularization and release hardening | Incremental service extraction plus explicit trust and runtime proof worked well, but archive quality still lagged when verification artifacts were treated as optional |

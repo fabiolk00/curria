@@ -2,7 +2,7 @@
 
 ## What This Is
 
-CurrIA is an AI-powered resume optimization platform for Brazilian job seekers. It ships the core funnel for profile seeding, conversational analysis, deterministic ATS enhancement, deterministic target-job rewriting, artifact generation, and paid usage, and the next milestone is focused on making those critical flows easier to maintain, safer to trust, and more stable to release.
+CurrIA is an AI-powered resume optimization platform for Brazilian job seekers. It ships the core funnel for profile seeding, conversational analysis, deterministic ATS enhancement, deterministic target-job rewriting, artifact generation, and paid usage. The current brownfield baseline now includes smaller agent-runtime seams, stricter authenticated-route and billing trust boundaries, release-critical browser gates, and explicit non-E2E runtime profiling proof.
 
 ## Core Value
 
@@ -10,7 +10,7 @@ A job seeker can reliably turn their real profile and a target role into an hone
 
 ## Current State
 
-**Shipped version:** `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` started on 2026-04-15.
+**Latest shipped version:** `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` shipped on 2026-04-15.
 
 **What is now true:**
 - live `/api/agent` traffic exposes provenance and follows a documented parity contract
@@ -24,10 +24,24 @@ A job seeker can reliably turn their real profile and a target role into an hone
 - dependency hygiene and sustained enforcement are now documented, configured, and reflected in CI and contributor workflow
 - the main agent route now exposes first-response timing evidence, earlier existing-session progress, reduced ATS chat blocking, deterministic continuation fast paths, and phase-specific runtime budgets
 - adjacent generation, download, and import-status routes now emit clearer latency and degradation logs for operator debugging
+- the agent runtime is split across dedicated seams for message preparation, vacancy detection, pre-loop setup, recovery, streaming, and persistence
+- sensitive browser mutations and checkout now rely on canonical host and shared browser-trust validation rather than raw request origin
+- long-vacancy generation is covered by a release-critical browser gate, and non-E2E runtime profiling is now exposed through one canonical local or CI command
 
 ## Current Milestone
 
-Current milestone: `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` started on 2026-04-15.
+No active milestone is defined yet.
+
+**Status:** `v1.4` is archived. The next milestone should start from fresh requirements rather than extending the archived roadmap.
+
+## Next Milestone Goals
+
+- backfill or replace the missing verification layer that made `v1.4` audit-incomplete, especially if future archive quality matters
+- decide whether the residual non-E2E runtime over the strict local 2-minute ceiling is acceptable debt or should become planned work
+- define the next highest-leverage brownfield milestone from fresh requirements instead of carrying forward stale roadmap state
+
+<details>
+<summary>Archived milestone focus: v1.4 Agent Core Modularization, Security Hardening, and Release Stability</summary>
 
 **Goal:** Make the agent core easier to change safely, tighten trust boundaries on authenticated and billing-sensitive routes, and raise generation and release stability before new feature breadth.
 
@@ -35,12 +49,9 @@ Current milestone: `v1.4 Agent Core Modularization, Security Hardening, and Rele
 - extract the core agent route and loop into smaller, testable services for message preparation, vacancy detection, pre-loop setup, retry and recovery, streaming, and persistence
 - stop trusting raw request origin for checkout and external returns, and add explicit origin or CSRF enforcement for sensitive authenticated mutations
 - fix the long vacancy generation regression, remove broken text encoding artifacts, and strengthen CI gates around workspace, preview, and release stability
+- reduce structural non-E2E test runtime waste and expose repeatable runtime proof in CI
 
-## Next Milestone Goals
-
-- modularize the brownfield agent runtime without breaking the canonical `cvState` and deterministic resume flows already in production
-- close remaining high-value security and billing trust gaps in authenticated flows before they become launch regressions
-- treat generation reliability, preview integrity, and release hygiene as operator-facing product quality, not just cleanup
+</details>
 
 <details>
 <summary>Archived milestone focus: v1.3 Agent Response Time and Runtime Performance</summary>
@@ -119,17 +130,15 @@ Current milestone: `v1.4 Agent Core Modularization, Security Hardening, and Rele
 - [x] Phase 25: Chat interactions respond faster in practice through reduced blocking work before visible output.
 - [x] Phase 26: ATS enhancement flows complete faster by removing or deferring non-essential synchronous work without compromising canonical state or billing safety.
 - [x] Phase 27: The milestone ended with before or after latency proof, focused regression verification, and autonomous execution guidance that keeps future work aligned to response-time priorities.
+- [x] Phase 28: The agent route front half now delegates message preparation, vacancy detection, and pre-loop setup through smaller services with targeted regression proof.
+- [x] Phase 29: Recovery, streaming, and persistence now live behind narrower runtime seams with direct handoff tests.
+- [x] Phase 30: Checkout and sensitive authenticated mutations now enforce canonical-host or trusted-browser boundaries with committed regression proof.
+- [x] Phase 31: Long-vacancy generation and release-critical browser stability are protected by committed regression and CI gates.
+- [x] Phase 31.1: Non-E2E runtime defaults, artificial delay removal, and CI-visible profiling proof now exist, with residual runtime debt explicitly documented.
 
 ### Active
 
-- [ ] The core agent runtime is decomposed into smaller service boundaries for message preparation, vacancy detection, pre-loop setup, retry or recovery, streaming, and persistence.
-- [ ] The extracted agent services preserve existing `cvState` and `agentState` contracts and are protected by targeted automated tests.
-- [ ] Checkout and external return flows derive trusted URLs from canonical configuration instead of raw request origin and reject unsafe return targets.
-- [ ] Sensitive authenticated mutations explicitly validate origin or CSRF expectations and fail closed with structured evidence.
-- [ ] Billing and other external callback or return paths document and enforce the intended trust boundary through headers, validation, and regression proof.
-- [ ] The long vacancy generation flow is stable end to end, including workspace and preview rendering behavior.
-- [ ] Broken user-facing encoding artifacts are removed and protected from reintroduction where practical.
-- [ ] CI blocks merges when critical workspace, state, preview, or release-stability regressions are detected.
+- [ ] Define the next milestone from fresh requirements after reviewing the residual `v1.4` audit and runtime debt.
 
 ### Out of Scope
 
@@ -165,6 +174,8 @@ Current milestone: `v1.4 Agent Core Modularization, Security Hardening, and Rele
 | Treat the v1.3 runtime refactor as a starting seam, not a finished architecture | The agent path is still too large to test and evolve confidently in place | Good |
 | Replace raw-origin trust with canonical host configuration and explicit origin or CSRF checks | Sensitive mutations and billing flows should not depend on untrusted request metadata | Good |
 | Raise CI and regression gates around workspace, preview, and long vacancy generation before expanding scope | Operational confidence depends on catching user-visible release regressions before deployment | Good |
+| Default non-E2E tests to `node` and use named profiling proof in CI | The suite should expose runtime waste early without paying browser cost where DOM is unnecessary | Good |
+| Archive `v1.4` with explicit audit debt instead of implying a clean audit pass | The implementation shipped, but the missing verification layer should stay visible in project history | Good |
 
 ## Evolution
 
@@ -184,4 +195,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Archive prior roadmap and requirements before expanding scope again.
 
 ---
-*Last updated: 2026-04-15 after starting milestone v1.4*
+*Last updated: 2026-04-15 after completing milestone v1.4*

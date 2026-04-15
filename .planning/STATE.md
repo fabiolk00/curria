@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: milestone
-current_phase: 31.1
-current_phase_name: Reduce Test Suite Runtime and Add CI-Friendly Performance Proof
-current_plan: 3
-status: completed
-stopped_at: Phase 31.1 execution complete; milestone ready for audit or closure
-last_updated: "2026-04-15T17:05:00.000Z"
-last_activity: 2026-04-15 -- Phase 31.1 completed
+milestone: none
+milestone_name: none
+current_phase: none
+current_phase_name: none
+current_plan: none
+status: ready_for_next_milestone
+stopped_at: v1.4 archived; ready to define the next milestone
+last_updated: "2026-04-15T21:35:00.000Z"
+last_activity: 2026-04-15 -- v1.4 archived with accepted audit debt
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,31 +24,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Milestone implementation complete pending audit or closure
+**Current focus:** Planning the next milestone from fresh requirements
 
 ## Current Position
 
-Current Phase: 31.1
-Current Phase Name: Reduce Test Suite Runtime and Add CI-Friendly Performance Proof
-Current Plan: 3
-Total Plans in Phase: 3
-Status: Phase 31.1 completed
-Last activity: 2026-04-15 -- Phase 31.1 completed
-Last Activity Description: Phase 31.1 completed with node-first Vitest runtime, reduced UI suite overhead, canonical runtime profiling command, and CI-visible non-E2E timing proof
+Current Phase: None
+Current Phase Name: None
+Current Plan: None
+Total Plans in Phase: 0
+Status: Milestone archive complete
+Last activity: 2026-04-15 -- v1.4 archived
+Last Activity Description: v1.4 milestone archived, roadmap and requirements reset for next-cycle planning, and audit debt preserved in milestone history
 
-Phase: 31.1 (Reduce Test Suite Runtime and Add CI-Friendly Performance Proof) - COMPLETED
-Plan: 3 of 3
-Status: Execution complete
-Last activity: 2026-04-15 -- Phase 31.1 completed
-
-Progress: [##########] 100%
+Progress: [----------] 0%
 
 ## Performance Metrics
 
 Baseline carried forward from earlier shipped milestones:
 
 - Total plans completed: 58
-- Milestones archived: 3
+- Milestones archived: 4
 
 ## Accumulated Context
 
@@ -66,6 +61,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 31.1 inserted after Phase 31: Reduce test suite runtime and add CI-friendly performance proof (URGENT)
 - Phase 31.1 planned: 3 execution plans added for runtime baseline, suite optimization, and CI-friendly proof
 - Phase 31.1 completed: runtime baseline fixes shipped, hot UI suites reduced, and non-E2E profiling is now exposed in CI with explicit residual timing evidence
+- v1.4 archived: milestone history moved to `.planning/milestones/` and the audit debt was accepted explicitly instead of being hidden
 
 ### Decisions
 
@@ -83,20 +79,22 @@ Recent decisions affecting the next cycle:
 - Shared authenticated-mutation trust validation now gates canonical profile edits, session edits, resume generation, and checkout, while webhook billing callbacks remain explicitly token-authenticated server-to-server flows.
 - Repeated long-vacancy generation now has committed browser proof, the remaining mojibake expectations were cleaned, and CI exposes the repaired workspace flow as an explicit release-critical gate.
 - Non-E2E tests now default to `node` unless they explicitly need `jsdom`, recovery tests can bypass production backoff safely, and CI uses the same named profiling command as local runtime proof.
+- Archive quality now matters enough that missing phase verification artifacts should be treated as milestone debt, not silently ignored.
 
 ### Pending Todos
 
-- None yet.
+- Define the next milestone with fresh requirements.
 
 ### Blockers or Concerns
 
-- No product implementation blocker is currently known for v1.4.
+- No active implementation blocker is currently known.
+- `v1.4` was archived with accepted audit debt because phases 28, 29, 30, 31, and 31.1 still lack `VERIFICATION.md` artifacts.
 - The full non-E2E suite still exceeded a local 2-minute ceiling in final profiling, but the residual cost is now narrowed and documented rather than hidden behind structural waste.
 
 ## Session Continuity
 
 Last session: 2026-04-15T23:30:00.0000000-03:00
-Stopped at: Phase 31.1 execution complete; milestone ready for audit or closure
+Stopped at: v1.4 archived; ready to define the next milestone
 Resume file: None
 
 ## Quick Tasks Completed
