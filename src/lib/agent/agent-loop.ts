@@ -69,7 +69,7 @@ type AgentLoopEvent =
   | AgentDoneChunk
   | AgentErrorChunk
 
-type AgentLoopParams = {
+export type AgentLoopParams = {
   session: Session
   userMessage: string
   appUserId: string

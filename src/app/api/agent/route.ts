@@ -1,28 +1,29 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 
-import { runAgentLoop } from '@/lib/agent/agent-loop'
-import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
-import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
+import { runAgentLoop, type AgentLoopParams } from '@/lib/agent/agent-loop'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import {
   getSession,
   createSession,
-  incrementMessageCount,
   updateSession,
 } from '@/lib/db/sessions'
-import { dispatchTool } from '@/lib/agent/tools'
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { TOOL_ERROR_CODES, type ToolErrorCode } from '@/lib/agent/tool-errors'
 import { deriveTargetFitAssessment } from '@/lib/agent/target-fit'
 import { prepareUserMessage } from '@/lib/agent/message-preparation'
+import {
+  hasResumeContextForAutoGap,
+  runPreLoopSetup,
+  shouldEmitExistingSessionPreparationProgress,
+} from '@/lib/agent/pre-loop-setup'
 import { agentLimiter } from '@/lib/rate-limit'
 import { AGENT_CONFIG } from '@/lib/agent/config'
 import { detectTargetJobDescription, type TargetJobDetection } from '@/lib/agent/vacancy-analysis'
 import { createRequestTimingTracker } from '@/lib/observability/request-timing'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import { getAgentReleaseMetadata, type AgentReleaseMetadata } from '@/lib/runtime/release-metadata'
-import type { AgentSessionCreatedChunk, Session, WorkflowMode } from '@/types/agent'
+import type { AgentSessionCreatedChunk, Session } from '@/types/agent'
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -101,55 +102,6 @@ function createAgentJsonResponse(
   )
 }
 
-function hasResumeContextForAutoGap(session: Pick<Session, 'cvState' | 'agentState'>): boolean {
-  return Boolean(
-    session.agentState.sourceResumeText?.trim()
-    || session.cvState.summary.trim()
-    || session.cvState.skills.length > 0
-    || session.cvState.experience.length > 0
-    || session.cvState.education.length > 0
-    || (session.cvState.certifications?.length ?? 0) > 0
-  )
-}
-
-function resolveWorkflowMode(
-  session: Pick<Session, 'cvState' | 'agentState'>,
-): WorkflowMode {
-  const hasResumeContext = hasResumeContextForAutoGap(session)
-  const hasTargetJobDescription = Boolean(session.agentState.targetJobDescription?.trim())
-
-  if (hasResumeContext && hasTargetJobDescription) {
-    return 'job_targeting'
-  }
-
-  if (hasResumeContext) {
-    return 'ats_enhancement'
-  }
-
-  return 'resume_review'
-}
-
-async function persistWorkflowMode(
-  session: Pick<Session, 'id' | 'cvState' | 'agentState'> & { agentState: Session['agentState'] },
-): Promise<void> {
-  const workflowMode = resolveWorkflowMode(session)
-
-  if (session.agentState.workflowMode === workflowMode) {
-    return
-  }
-
-  const nextAgentState: Session['agentState'] = {
-    ...session.agentState,
-    workflowMode,
-  }
-
-  await updateSession(session.id, {
-    agentState: nextAgentState,
-  })
-
-  session.agentState = nextAgentState
-}
-
 function shouldAdvanceDetectedTargetToAnalysis(
   session: Pick<Session, 'phase' | 'cvState' | 'agentState'>,
   detection: TargetJobDetection | undefined,
@@ -181,50 +133,6 @@ function buildDetectedTargetJobAgentState(
       ? undefined
       : session.agentState.lastRewriteMode,
   }
-}
-
-function shouldRunJobTargetingPipeline(session: Session): boolean {
-  return Boolean(
-    session.agentState.workflowMode === 'job_targeting'
-    && hasResumeContextForAutoGap(session)
-    && session.agentState.targetJobDescription?.trim()
-    && (
-      !session.agentState.optimizedCvState
-      || session.agentState.rewriteStatus !== 'completed'
-      || session.agentState.lastRewriteMode !== 'job_targeting'
-    )
-  )
-}
-
-function normalizeForInlineAtsDecision(message: string): string {
-  return message
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-}
-
-function shouldRunAtsEnhancementPipelineInline(session: Session, userMessage: string): boolean {
-  if (
-    session.agentState.workflowMode !== 'ats_enhancement'
-    || !hasResumeContextForAutoGap(session)
-    || (session.agentState.optimizedCvState && session.agentState.rewriteStatus === 'completed')
-  ) {
-    return false
-  }
-
-  if (session.phase === 'confirm' || session.phase === 'generation') {
-    return true
-  }
-
-  const normalizedMessage = normalizeForInlineAtsDecision(userMessage)
-  return (
-    normalizedMessage === 'aceito'
-    || normalizedMessage.includes('gerar curriculo')
-    || normalizedMessage.includes('gere o curriculo')
-    || normalizedMessage.includes('gerar arquivo')
-    || normalizedMessage.includes('gere o arquivo')
-  )
 }
 
 async function persistTargetJobAgentState(
@@ -415,31 +323,10 @@ function scheduleAutoGenerateGapAnalysisForDetectedTarget(
   })
 }
 
-function parseJsonObject(value: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(value) as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return null
-    }
-    return parsed as Record<string, unknown>
-  } catch {
-    return null
-  }
-}
-
-/**
- * Handles file attachment by dispatching parse_file and returning
- * an augmented user message.
- */
-async function handleFileAttachment(
-  message: string,
-  file: string,
-  fileMime: string,
-  session: { id: string; phase: string; stateVersion: number },
-  appUserId: string,
-  requestId: string,
-  externalSignal?: AbortSignal,
-): Promise<string> {
+/*
+ * Extracted to src/lib/agent/pre-loop-setup.ts.
+ * Keeping this block commented until the route cleanup lands cleanly.
+ *
   const parseResult = parseJsonObject(
     await dispatchTool(
       'parse_file',
@@ -578,6 +465,7 @@ async function runPreLoopSetup(params: {
   await timing.runStage(`increment_message_${stageSuffix}`, () => incrementMessageCount(session.id))
   return nextMessage
 }
+*/
 
 // ---------------------------------------------------------------------------
 // Route handler — thin HTTP/SSE adapter
@@ -887,7 +775,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const loop = runAgentLoop({
+      const loopParams: AgentLoopParams = {
         session: session!,
         userMessage: message,
         appUserId,
@@ -895,7 +783,8 @@ export async function POST(req: NextRequest) {
         isNewSession,
         requestStartedAt,
         signal: req.signal,
-      })
+      }
+      const loop = runAgentLoop(loopParams)
 
       try {
         for await (const event of loop) {
