@@ -2,7 +2,7 @@
 
 ## What This Is
 
-CurrIA is an AI-powered resume optimization platform for Brazilian job seekers. It now ships the core funnel for profile seeding, conversational analysis, deterministic ATS enhancement, deterministic target-job rewriting, artifact generation, and paid usage, with the latest milestone focused on making that flow reliable, observable, and safer to operate.
+CurrIA is an AI-powered resume optimization platform for Brazilian job seekers. It ships the core funnel for profile seeding, conversational analysis, deterministic ATS enhancement, deterministic target-job rewriting, artifact generation, and paid usage, and the next milestone is focused on making those critical flows easier to maintain, safer to trust, and more stable to release.
 
 ## Core Value
 
@@ -10,7 +10,7 @@ A job seeker can reliably turn their real profile and a target role into an hone
 
 ## Current State
 
-**Shipped version:** `v1.3 Agent Response Time and Runtime Performance` on 2026-04-15.
+**Shipped version:** `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` started on 2026-04-15.
 
 **What is now true:**
 - live `/api/agent` traffic exposes provenance and follows a documented parity contract
@@ -27,17 +27,20 @@ A job seeker can reliably turn their real profile and a target role into an hone
 
 ## Current Milestone
 
-Current milestone: `v1.3 Agent Response Time and Runtime Performance` completed on 2026-04-15.
+Current milestone: `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` started on 2026-04-15.
 
-**Main focus:** Completed. The latest milestone improved agent response time first, especially in ATS enhancement and chat.
+**Goal:** Make the agent core easier to change safely, tighten trust boundaries on authenticated and billing-sensitive routes, and raise generation and release stability before new feature breadth.
 
-This milestone optimized both perceived speed and real request latency. Future milestones should treat this as the new baseline rather than reopening the same work implicitly.
+**Target features:**
+- extract the core agent route and loop into smaller, testable services for message preparation, vacancy detection, pre-loop setup, retry and recovery, streaming, and persistence
+- stop trusting raw request origin for checkout and external returns, and add explicit origin or CSRF enforcement for sensitive authenticated mutations
+- fix the long vacancy generation regression, remove broken text encoding artifacts, and strengthen CI gates around workspace, preview, and release stability
 
 ## Next Milestone Goals
 
-- define the next milestone from fresh priorities now that the latency hardening cycle is complete
-- preserve the response-time baseline unless a future feature can prove it does not reintroduce blocking request-path work
-- keep billing safety, auth guarantees, canonical `cvState`, and artifact integrity as fixed constraints
+- modularize the brownfield agent runtime without breaking the canonical `cvState` and deterministic resume flows already in production
+- close remaining high-value security and billing trust gaps in authenticated flows before they become launch regressions
+- treat generation reliability, preview integrity, and release hygiene as operator-facing product quality, not just cleanup
 
 <details>
 <summary>Archived milestone focus: v1.3 Agent Response Time and Runtime Performance</summary>
@@ -49,7 +52,7 @@ This milestone optimized both perceived speed and real request latency. Future m
 - faster first response in chat and ATS enhancement flows
 - reduced synchronous request-path work
 - runtime refactor that makes further latency optimization safer
-- before/after performance proof and autonomous execution guidance
+- before or after performance proof and autonomous execution guidance
 
 </details>
 
@@ -59,7 +62,7 @@ This milestone optimized both perceived speed and real request latency. Future m
 **Goal:** Reduce dead code, dependency drift, and maintenance noise without breaking runtime-critical brownfield behavior.
 
 **Target features:**
-- dead-code tooling baseline for imports, unused exports, orphan files, and unused dependencies
+- dead-code tooling baseline for imports, exports, orphan files, and unused dependencies
 - staged cleanup flow for imports, locals, exports, files, and packages
 - safer long-term enforcement in lint, TypeScript, editor workflow, and CI without tripping on Next.js or dynamic-runtime false positives
 
@@ -71,10 +74,10 @@ This milestone optimized both perceived speed and real request latency. Future m
 **Goal:** Prove what code and model configuration the live `/api/agent` route is serving, eliminate truncation-driven repetition, and verify that the final user-visible transcript stays trustworthy end to end.
 
 **Target features:**
-- Deployment and runtime evidence that identifies the live agent route version, selected model, and recovery path for a real request.
-- Dialog-turn hardening so requests like `reescreva` produce an actual rewrite or a non-repetitive continuation instead of reusing the vacancy bootstrap.
-- End-to-end transcript and SSE verification that proves the user-visible chat output matches the backend recovery behavior.
-- Operator replay tooling that captures release headers, SSE events, and final assistant text for the representative vacancy -> `reescreva` incident flow.
+- deployment and runtime evidence that identifies the live agent route version, selected model, and recovery path for a real request
+- dialog-turn hardening so requests like `reescreva` produce an actual rewrite or a non-repetitive continuation instead of reusing the vacancy bootstrap
+- end-to-end transcript and SSE verification that proves the user-visible chat output matches the backend recovery behavior
+- operator replay tooling that captures release headers, SSE events, and final assistant text for the representative vacancy to `reescreva` incident flow
 
 </details>
 
@@ -91,7 +94,7 @@ This milestone optimized both perceived speed and real request latency. Future m
 - [x] Paid users can track job applications inside the dashboard.
 - [x] Phase 1: Runtime, CI, and operator docs share the same provider contract and fail fast on missing critical configuration.
 - [x] Phase 2: Browser verification covers auth, manual profile setup, session creation, target outcome, preview readiness, artifact delivery, and CI gating for the core funnel.
-- [x] Phase 3: Billing settlement, replay safety, and dashboard credit totals are validated end-to-end with live evidence.
+- [x] Phase 3: Billing settlement, replay safety, and dashboard credit totals are validated end to end with live evidence.
 - [x] Phase 4: Production debugging is fast enough to diagnose agent, billing, session, file, webhook, and profile import failures, and the core funnel now surfaces safer actionable error states.
 - [x] Phase 5: `/api/agent` now exposes release provenance, a safe parity CLI and runbook exist, and automated coverage protects the runtime evidence contract.
 - [x] Phase 6: Dialog follow-ups now preserve rewrite intent, degraded recovery avoids stale vacancy-bootstrap repetition, and `dialog` plus `confirm` share one explicit model-routing contract.
@@ -108,60 +111,77 @@ This milestone optimized both perceived speed and real request latency. Future m
 - [x] Phase 17: Billing settlement, replay, and webhook invariants now have focused regression proof.
 - [x] Phase 18: File-access ownership and storage or RLS boundary claims are now explicitly separated and documented.
 - [x] Phase 19: High-value JSON persistence seams now have an explicit contract matrix and narrower typed repository boundaries.
+- [x] Phase 20: The repo exposes a safe dead-code detection toolchain for imports, exports, orphan files, and dependencies.
+- [x] Phase 21: Unused imports and low-risk unused locals can be removed automatically or near-automatically in agreed scopes.
+- [x] Phase 22: Unused exports, orphan files, and packages can be inventoried and reduced with manual verification for dynamic runtime seams.
+- [x] Phase 23: Sustained code-hygiene enforcement is documented and wired into lint, TypeScript, editor, or CI flows only after the repo is clean enough to support it.
+- [x] Phase 24: The repo can measure request-stage latency for user-visible agent flows, including first SSE emission and first useful assistant response timing.
+- [x] Phase 25: Chat interactions respond faster in practice through reduced blocking work before visible output.
+- [x] Phase 26: ATS enhancement flows complete faster by removing or deferring non-essential synchronous work without compromising canonical state or billing safety.
+- [x] Phase 27: The milestone ended with before or after latency proof, focused regression verification, and autonomous execution guidance that keeps future work aligned to response-time priorities.
 
 ### Active
 
-- [x] The repo exposes a safe dead-code detection toolchain for imports, exports, orphan files, and dependencies.
-- [x] Unused imports and low-risk unused locals can be removed automatically or near-automatically in agreed scopes.
-- [x] Unused exports, orphan files, and packages can be inventoried and reduced with manual verification for dynamic runtime seams.
-- [x] Sustained code-hygiene enforcement is documented and wired into lint, TypeScript, editor, or CI flows only after the repo is clean enough to support it.
+- [ ] The core agent runtime is decomposed into smaller service boundaries for message preparation, vacancy detection, pre-loop setup, retry or recovery, streaming, and persistence.
+- [ ] The extracted agent services preserve existing `cvState` and `agentState` contracts and are protected by targeted automated tests.
+- [ ] Checkout and external return flows derive trusted URLs from canonical configuration instead of raw request origin and reject unsafe return targets.
+- [ ] Sensitive authenticated mutations explicitly validate origin or CSRF expectations and fail closed with structured evidence.
+- [ ] Billing and other external callback or return paths document and enforce the intended trust boundary through headers, validation, and regression proof.
+- [ ] The long vacancy generation flow is stable end to end, including workspace and preview rendering behavior.
+- [ ] Broken user-facing encoding artifacts are removed and protected from reintroduction where practical.
+- [ ] CI blocks merges when critical workspace, state, preview, or release-stability regressions are detected.
 
 ### Out of Scope
 
-- Broad new feature breadth before the next milestone is defined
-- Carrying forward archived v1.1 requirement scope without a fresh planning pass
-- Bulk deletion of suspected dead runtime seams without manual validation
-- Forcing global `noUnusedLocals` and `noUnusedParameters` immediately before cleanup reduces current brownfield noise
+- broad onboarding expansion such as PDF profile upload unless it becomes required to unblock the current hardening work
+- a full product-surface redesign while the milestone is focused on architecture, safety, and release reliability
+- provider swaps or billing-model redesigns instead of hardening the existing brownfield integrations
+- speculative cleanup unrelated to agent maintainability, trust boundaries, or generation stability
 
 ## Context
 
 - The codebase is a Next.js 14 App Router monolith with Clerk auth, Supabase/Postgres persistence, Prisma migrations, OpenAI agent orchestration, Asaas billing, and LinkdAPI profile import.
 - v1.0 hardened launch-critical configuration, browser verification, billing settlement validation, and structured observability around the existing funnel.
 - v1.1 extended that baseline into deterministic ATS and target-job resume pipelines, smart dashboard generation entrypoints, stronger resilience, and explicit persistence contracts.
-- The system now depends on documented versioning and repository boundaries to keep `cvState` canonical while operational JSON remains explicit and test-backed.
-- The repo already has ESLint, Prettier, TypeScript, Vitest, and Playwright, so this milestone should extend the current quality baseline instead of introducing a parallel toolchain.
-- Next.js routes, dynamic imports, string-driven handlers, and background-job seams can produce false positives in dead-code tools, so cleanup must stay staged and review-driven.
+- v1.2 established a staged code-hygiene baseline with explicit brownfield guardrails.
+- v1.3 established latency evidence, reduced visible blocking work, tightened runtime budgets, and hardened adjacent performance-sensitive routes.
+- The next cycle should build on the new runtime slices from v1.3 instead of reopening broad feature scope.
+- The repo already has ESLint, Prettier, TypeScript, Vitest, and Playwright, so the milestone should deepen focused proof rather than introduce a separate toolchain.
 
 ## Constraints
 
-- **Tech stack**: Stay within Next.js 14, React 18, TypeScript, Clerk, Supabase/Postgres, Prisma, OpenAI, Asaas, and the existing docs/testing toolchain.
-- **Reliability**: Preserve canonical `cvState`, billing safety, and trusted artifact delivery when evolving resume flows.
-- **Verification**: New milestone work should continue to land with explicit route-level, pipeline-level, or browser-level proof.
-- **Scope discipline**: Start the next milestone from explicit priorities instead of letting the archived v1.1 scope leak forward.
-- **Cleanup safety**: Never delete code automatically just because a static tool flags it; validate runtime seams first.
-- **Brownfield churn**: Prefer staged hygiene improvements over one global formatting or enforcement cliff.
+- **Tech stack**: Stay within Next.js 14, React 18, TypeScript, Clerk, Supabase/Postgres, Prisma, OpenAI, Asaas, and the existing docs and testing toolchain.
+- **Canonical state**: Preserve `cvState` as product truth and keep `agentState` operational only, even while extracting agent services.
+- **Security**: Fail closed on authenticated and billing-sensitive route mutations, external return handling, and trust-boundary validation.
+- **Release safety**: Prefer targeted regressions and CI gates over ad hoc manual confidence for generation and preview flows.
+- **Brownfield discipline**: Favor small, test-backed extractions and hardening slices rather than broad rewrites.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Focus v1.1 on agent reliability and response continuity before new product breadth | The most visible live issue was user trust erosion from repeated or truncated agent replies | Good |
-| Continue phase numbering from 5 | Preserves continuity with the shipped v1.0 roadmap and keeps milestone history easy to follow | Good |
-| Require end-to-end transcript proof, not only loop-level tests | The user-facing bug was about what appeared in chat, so backend correctness alone was not enough | Good |
-| Move critical resume transformation logic out of optional chat decisions and into deterministic backend pipelines | Reliability and export correctness matter more than conversational flexibility for ATS and target-job generation | Good |
-| Keep canonical resume truth in `cvState` and use `agentState` only as operational context | Preserves durable product truth while allowing orchestration metadata to evolve faster | Good |
-| Favor route-level security and billing proof plus explicit non-claims over implicit confidence in external RLS or provider behavior | Brownfield safety improved more from concrete proof boundaries than from hand-wavy guarantees | Good |
-| Treat dead-code cleanup as staged repository hygiene instead of one-shot mass deletion | This repo has enough dynamic and framework-specific seams that automated cleanup needs guardrails | Good |
+| Focus v1.4 on agent modularization, trust-boundary hardening, and release stability before new feature breadth | The current highest leverage is making critical brownfield flows safer to evolve and safer to trust | Good |
+| Continue phase numbering from 27 | Preserves continuity across milestones and keeps roadmap history readable | Good |
+| Treat the v1.3 runtime refactor as a starting seam, not a finished architecture | The agent path is still too large to test and evolve confidently in place | Good |
+| Replace raw-origin trust with canonical host configuration and explicit origin or CSRF checks | Sensitive mutations and billing flows should not depend on untrusted request metadata | Good |
+| Raise CI and regression gates around workspace, preview, and long vacancy generation before expanding scope | Operational confidence depends on catching user-visible release regressions before deployment | Good |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
+**After each phase transition**:
+1. Requirements invalidated? Move to Out of Scope with reason.
+2. Requirements validated? Move to Validated with phase reference.
+3. New requirements emerged? Add to Active.
+4. Decisions to log? Add to Key Decisions.
+5. "What This Is" still accurate? Update if it drifted.
+
 **After each milestone**:
-1. Review current shipped state
-2. Validate whether Core Value still holds
-3. Start the next milestone from fresh requirements
-4. Archive prior roadmap and requirements before expanding scope again
+1. Review current shipped state.
+2. Validate whether Core Value still holds.
+3. Start the next milestone from fresh requirements.
+4. Archive prior roadmap and requirements before expanding scope again.
 
 ---
-*Last updated: 2026-04-15 after closing milestone v1.3*
+*Last updated: 2026-04-15 after starting milestone v1.4*

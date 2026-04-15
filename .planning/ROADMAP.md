@@ -2,112 +2,110 @@
 
 ## Overview
 
-This roadmap starts milestone `v1.3 Agent Response Time and Runtime Performance` after `v1.2` shipped the hygiene baseline and after earlier milestones hardened deterministic resume pipelines, billing safety, and boundary proof. The new work is intentionally focused and operational: make the agent feel faster everywhere the user notices it, especially in chat and ATS enhancement flows.
+This roadmap starts milestone `v1.4 Agent Core Modularization, Security Hardening, and Release Stability` after `v1.3` shipped latency evidence, earlier visible responses, runtime budgeting, and adjacent route performance proof. The new work stays tightly brownfield: make the critical agent path easier to evolve, close trust gaps in authenticated and billing-sensitive routes, and raise generation and release confidence before scope expansion.
 
-The main focus of this milestone is agent response time improvement first.
+The main focus of this milestone is safe modularization and operational hardening first.
 
 Highest-priority targets are:
 
-- ATS enhancement response time
-- chat response time
-- time to first SSE output
-- time to first useful assistant response
-- total completion time for agent-assisted turns
+- smaller and testable agent-service boundaries
+- canonical-host and origin-trust hardening on sensitive routes
+- stable long vacancy generation and preview behavior
+- stronger CI protection for release-critical regressions
 
-Any optional improvement that does not directly improve ATS enhancement latency, chat latency, first-response latency, or runtime efficiency should be treated as secondary and deferred unless it is required for correctness or safety.
+Any optional improvement that does not directly improve agent maintainability, authenticated-route safety, billing trust, or release stability should be treated as secondary and deferred unless it is required for correctness.
 
 ## Phases
 
 **Phase Numbering:**
 - Integer phases continue across milestones unless explicitly reset.
-- This milestone continues from the previous roadmap, so the first phase here is **Phase 24**.
+- This milestone continues from the previous roadmap, so the first phase here is **Phase 28**.
 
-### Phase 24: Agent Response Baseline and Chat/ATS Latency Instrumentation
-**Goal**: Establish latency evidence and stage-level observability for the user-visible agent flows before deeper performance changes begin.
-**Depends on**: Nothing (first phase of milestone v1.3)
-**Requirements**: [PERF-01, PERF-02]
+### Phase 28: Agent Input and Setup Service Extraction
+**Goal**: Pull the front half of the agent runtime into smaller services so message preparation, vacancy detection, and pre-loop setup are easier to reason about and test.
+**Depends on**: Nothing (first phase of milestone v1.4)
+**Requirements**: [AGENT-01]
 **Success Criteria** (what must be TRUE):
-  1. The repo records request-stage latency for the main agent path with explicit visibility into first SSE and first useful response timing.
-  2. Chat and ATS enhancement paths have enough structured evidence to identify the biggest contributors to perceived and total latency.
-  3. The milestone contains an explicit autonomous execution contract that keeps later work focused on response-time improvements first.
-**Plans**: 1 plan
-
-Plans:
-- [x] 24-01: Create the performance baseline, autonomous execution contract, and first-response optimization plan
-
-### Phase 25: Chat and ATS Enhancement Request-Path Reduction
-**Goal**: Remove or defer non-essential synchronous work that delays visible chat and ATS enhancement responses.
-**Depends on**: Phase 24
-**Requirements**: [PERF-02, PERF-03]
-**Success Criteria** (what must be TRUE):
-  1. The agent emits visible progress or useful assistant output earlier in the chat path.
-  2. ATS enhancement no longer blocks on avoidable inline work before user-facing value is shown.
-  3. Deferred or async-safe work preserves canonical state, billing safety, and route-level guarantees.
+  1. The main agent route no longer owns the full message-preparation, vacancy-detection, and pre-loop setup flow inline.
+  2. The new services have explicit contracts that preserve current behavior and the canonical `cvState` boundary.
+  3. Focused automated proof exists for the extracted setup flow so future runtime changes are safer.
 **Plans**: 3 plans
 
 Plans:
-- [x] 25-01: Reduce blocking work before first chat response
-- [x] 25-02: Decouple or defer non-essential ATS enhancement work
-- [x] 25-03: Verify latency gains and state-safety invariants for the reduced request path
+- [ ] 28-01: Extract message preparation into a dedicated service with route-level contract preservation
+- [ ] 28-02: Isolate vacancy detection and pre-loop setup behind explicit runtime boundaries
+- [ ] 28-03: Add targeted regression tests for extracted agent input and setup flow
 
-### Phase 26: Agent Runtime Simplification and Budget Optimization
-**Goal**: Make the core runtime cheaper and easier to optimize by reducing oversized orchestration boundaries, prompt weight, and unnecessary tool churn.
-**Depends on**: Phase 25
-**Requirements**: [PERF-03, PERF-04]
+### Phase 29: Agent Recovery, Streaming, and Persistence Decomposition
+**Goal**: Split the back half of the runtime into clearer retry, recovery, streaming, and persistence services with durable tests around handoff behavior.
+**Depends on**: Phase 28
+**Requirements**: [AGENT-02, AGENT-03]
 **Success Criteria** (what must be TRUE):
-  1. The central agent runtime is broken into clearer responsibilities that are easier to optimize and test.
-  2. Prompt, history, and tool budgets are tighter without unacceptable quality regressions.
-  3. Common requests use deterministic fast paths where a model round-trip or extra tool loop is unnecessary.
+  1. Retry and degraded-recovery policy live outside the central oversized loop file.
+  2. Streaming and persistence responsibilities have narrower boundaries with predictable handoffs and logs.
+  3. Automated tests protect the extracted flow against regressions in `cvState`, `agentState`, and deterministic generation persistence.
 **Plans**: 3 plans
 
 Plans:
-- [x] 26-01: Break down the core agent runtime into latency-oriented responsibility slices
-- [x] 26-02: Reduce prompt, history, and tool-loop cost by phase
-- [x] 26-03: Add regression proof for behavior-preserving runtime optimization
+- [ ] 29-01: Extract retry and recovery policy into dedicated runtime services
+- [ ] 29-02: Separate streaming and persistence responsibilities from the central loop orchestration
+- [ ] 29-03: Add regression proof for recovery, streaming, and persistence handoffs
 
-### Phase 27: Performance Proof and Critical Route Hardening
-**Goal**: Lock in the speed improvements with route-level proof, operational documentation, and focused hardening of adjacent routes that influence perceived agent performance.
-**Depends on**: Phase 24, Phase 25, Phase 26
-**Requirements**: [PERF-05]
+### Phase 30: Authenticated Route and Billing Boundary Hardening
+**Goal**: Remove weak trust assumptions from checkout, redirect, callback, and mutation flows so sensitive routes fail closed and leave useful evidence.
+**Depends on**: Phase 28
+**Requirements**: [SEC-01, SEC-02, SEC-03]
 **Success Criteria** (what must be TRUE):
-  1. The repo can show before/after evidence for chat and ATS enhancement response-time improvements.
-  2. Critical adjacent routes with user-visible performance impact have explicit latency and degradation proof.
-  3. The milestone ends with autonomous execution instructions, verification expectations, and operator handoff committed.
-**Plans**: 3 plans
+  1. Sensitive redirects and checkout flows derive trusted URLs from canonical configuration rather than raw request metadata.
+  2. Authenticated mutations that matter for security or billing enforce explicit origin or CSRF validation and reject invalid callers.
+  3. Billing and external callback flows have committed regression proof and structured logs around the intended trust boundary.
+**Plans**: 2 plans
 
 Plans:
-- [x] 27-01: Harden performance-sensitive adjacent routes and external-call degradation behavior
-- [x] 27-02: Publish before/after latency proof and operator guidance
-- [x] 27-03: Close the milestone with autonomous verification and handoff artifacts
+- [ ] 30-01: Harden canonical-host and return-path validation across checkout and external redirect flows
+- [ ] 30-02: Add explicit origin or CSRF enforcement and regression proof for sensitive authenticated mutations and billing callbacks
+
+### Phase 31: Long Vacancy Stability and Release Hygiene Gates
+**Goal**: Eliminate the known generation instability and encoding defects, then raise CI gates around workspace, preview, and release-critical regressions.
+**Depends on**: Phase 29, Phase 30
+**Requirements**: [REL-01, REL-02, REL-03]
+**Success Criteria** (what must be TRUE):
+  1. The long vacancy generation path completes reliably through workspace and preview-critical behavior under committed regression coverage.
+  2. Broken text-encoding artifacts are removed from user-visible surfaces and protected from easy regression.
+  3. CI or release automation now blocks merges when high-value state, preview, or generation regressions reappear.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 31-01: Fix long vacancy generation and encoding regressions with focused browser or route-level proof
+- [ ] 31-02: Strengthen CI and release gates for workspace, preview, and generation-state stability
 
 ## Autonomous Execution Instruction
 
 The intended operating mode for this milestone is:
 
 - discuss -> plan -> execute -> verify -> advance to next phase
-- run autonomously from Phase 24 forward until all remaining roadmap phases are completed
-- do not pause after a single phase
-- do not wait for manual approval between phases
-- stop only for a true blocker involving missing credentials, missing infrastructure, unresolved repo conflicts, or a high-risk decision that cannot be made safely
+- prioritize the milestone in order from Phase 28 forward unless a true blocker appears
+- stop only for missing credentials, missing infrastructure, unresolved repo conflicts, or a high-risk trust-boundary decision that cannot be made safely
 
 Recommended entrypoint:
 
-`/gsd-autonomous --from 24`
+`/gsd-plan-phase 28`
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 24 -> 25 -> 26 -> 27
+Phases execute in numeric order: 28 -> 29 -> 30 -> 31
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 24. Agent Response Baseline and Chat/ATS Latency Instrumentation | 1/1 | Complete | 2026-04-14 |
-| 25. Chat and ATS Enhancement Request-Path Reduction | 3/3 | Complete | 2026-04-15 |
-| 26. Agent Runtime Simplification and Budget Optimization | 3/3 | Complete | 2026-04-15 |
-| 27. Performance Proof and Critical Route Hardening | 3/3 | Complete | 2026-04-15 |
+| 28. Agent Input and Setup Service Extraction | 0/3 | Not started | - |
+| 29. Agent Recovery, Streaming, and Persistence Decomposition | 0/3 | Not started | - |
+| 30. Authenticated Route and Billing Boundary Hardening | 0/2 | Not started | - |
+| 31. Long Vacancy Stability and Release Hygiene Gates | 0/2 | Not started | - |
 
 ## Archived Milestones
 
+- [v1.3 Agent Response Time and Runtime Performance](./milestones/v1.3-ROADMAP.md)
 - [v1.2 Code Hygiene and Dead Code Reduction](./milestones/v1.2-ROADMAP.md)
 - [v1.1 Agent Reliability and Response Continuity](./milestones/v1.1-ROADMAP.md)
 - [v1.0 Launch Hardening for the Core Funnel](./milestones/v1.0-ROADMAP.md)

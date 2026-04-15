@@ -1,21 +1,40 @@
 # Milestones
 
-## v1.3 Agent Response Time and Runtime Performance (Active)
+## v1.4 Agent Core Modularization, Security Hardening, and Release Stability (Active)
 
 **Planned phases:** 4 phases, 10 plans
 
 **Main focus:**
 
-- improve agent response time first
-- prioritize ATS enhancement and chat latency above secondary cleanup
-- reduce time to first useful SSE output and first useful assistant response
+- refactor the core agent runtime into smaller testable layers
+- close authenticated-route and billing trust gaps that still rely on weak origin assumptions
+- stabilize generation, workspace, preview, and release hygiene before widening scope again
 
 **Planned accomplishments:**
 
-- establish stage-level latency visibility for the main agent path
-- remove or defer non-essential synchronous work that blocks visible chat and ATS enhancement responses
-- simplify the oversized runtime so latency work is easier to sustain
-- close the milestone with before/after proof and autonomous operator guidance
+- extract message preparation, vacancy detection, pre-loop setup, retry or recovery, streaming, and persistence into clearer agent services
+- lock checkout and sensitive mutation flows to canonical host and explicit origin or CSRF enforcement
+- eliminate the known long vacancy generation regression and broken text-encoding artifacts
+- strengthen CI and release gates around state, preview, and generation stability
+
+---
+
+## v1.3 Agent Response Time and Runtime Performance (Shipped: 2026-04-15)
+
+**Phases completed:** 4 phases, 10 plans, 10 tasks
+
+**Key accomplishments:**
+
+- Established request-stage latency visibility for the main agent route, including first-response and first-useful-output timing evidence.
+- Reduced blocking work before visible user value in chat and ATS enhancement flows without weakening canonical state or billing guarantees.
+- Broke the runtime into earlier intent and budget seams so deterministic fast paths and lower-cost continuation behavior are now possible.
+- Added route-level latency and degradation logging to adjacent generation, download, and import-status paths, then closed the milestone with operator guidance and performance proof artifacts.
+
+**Known gaps:**
+
+- The core agent runtime is still too large in a few central files to be comfortably unit tested or evolved without additional extraction work.
+- Some authenticated and billing-related route boundaries still need stronger trust-source validation and regression proof.
+- Workspace and long-vacancy generation reliability still need focused release gating beyond the latency milestone.
 
 ---
 
