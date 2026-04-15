@@ -19,6 +19,7 @@
     "orphans": "madge --orphans --extensions ts,tsx --ts-config ./tsconfig.json src",
     "audit:db-conventions": "tsx scripts/audit-database-conventions.ts",
     "audit:secrets": "node scripts/audit-secrets.mjs",
+    "audit:milestone-metadata": "node scripts/audit-milestone-metadata.mjs",
     "test": "vitest run",
     "test:profile:non-e2e": "vitest run --reporter=verbose",
     "test:e2e": "playwright test",

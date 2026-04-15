@@ -6,13 +6,13 @@
 
 **Main focus:**
 
-- backfill or automate the missing `VERIFICATION.md` layer so milestone audit can use committed requirement evidence
+- keep the newly backfilled `VERIFICATION.md` layer durable and milestone-audit-compatible
 - keep roadmap, archive, traceability, and state metadata aligned during closeout, including decimal phases
 - decide or fix the remaining non-E2E runtime residual through explicit profiling and budget proof
 
 **Planned accomplishments:**
 
-- make recent shipped phases produce milestone-audit-compatible verification artifacts
+- lock the recently backfilled milestone-audit-compatible verification artifacts into the archive contract
 - remove manual archive repair for milestone closeout metadata and next-cycle reset
 - narrow the residual non-E2E runtime bottlenecks into either a smaller budget or an explicit accepted gate
 
@@ -32,8 +32,8 @@
 
 **Known gaps:**
 
-- `v1.4` was archived with accepted audit debt because phases `28`, `29`, `30`, `31`, and `31.1` do not yet have formal `VERIFICATION.md` artifacts.
-- The full non-E2E suite still exceeded a strict local 2-minute ceiling after the `31.1` optimizations, even though the largest artificial costs were removed.
+- `v1.4` now has archived `VERIFICATION.md` artifacts, but it still carries accepted runtime debt from the residual non-E2E ceiling documented in Phase `31.1`.
+- milestone closeout metadata previously required manual repair after decimal phase `31.1`, and Phase `33` is the follow-up contract hardening for that path.
 
 ---
 
