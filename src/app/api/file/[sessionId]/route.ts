@@ -4,12 +4,13 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getResumeTargetForSession } from '@/lib/db/resume-targets'
 import { getSession } from '@/lib/db/sessions'
 import { createSignedResumeArtifactUrls } from '@/lib/agent/tools/generate-file'
-import { logError, logWarn, serializeError } from '@/lib/observability/structured-log'
+import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { sessionId: string } },
 ): Promise<NextResponse> {
+  const requestStartedAt = Date.now()
   const targetId = req.nextUrl.searchParams.get('targetId')
   const requestPath = req.nextUrl.pathname
   const appUser = await getCurrentAppUser()
@@ -20,6 +21,7 @@ export async function GET(
       requestedSessionId: params.sessionId,
       targetId,
       success: false,
+      latencyMs: Date.now() - requestStartedAt,
     })
 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -34,6 +36,7 @@ export async function GET(
       targetId,
       appUserId: appUser.id,
       success: false,
+      latencyMs: Date.now() - requestStartedAt,
     })
 
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -51,6 +54,7 @@ export async function GET(
       targetId,
       appUserId: appUser.id,
       success: false,
+      latencyMs: Date.now() - requestStartedAt,
     })
 
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -60,6 +64,16 @@ export async function GET(
   const { pdfPath, status } = artifactMetadata
 
   if (status !== 'ready' || !pdfPath) {
+    logInfo('api.file.download_urls_unavailable', {
+      requestMethod: req.method,
+      requestPath,
+      sessionId: session.id,
+      targetId,
+      appUserId: appUser.id,
+      generationStatus: status,
+      success: true,
+      latencyMs: Date.now() - requestStartedAt,
+    })
     return NextResponse.json(
       {
         docxUrl: null,
@@ -73,6 +87,17 @@ export async function GET(
   try {
     const signedUrls = await createSignedResumeArtifactUrls(undefined, pdfPath)
 
+    logInfo('api.file.download_urls_ready', {
+      requestMethod: req.method,
+      requestPath,
+      sessionId: session.id,
+      targetId,
+      appUserId: appUser.id,
+      generationStatus: status,
+      success: true,
+      latencyMs: Date.now() - requestStartedAt,
+    })
+
     return NextResponse.json({
       docxUrl: null,
       pdfUrl: signedUrls.pdfUrl,
@@ -85,6 +110,7 @@ export async function GET(
       targetId,
       appUserId: appUser.id,
       success: false,
+      latencyMs: Date.now() - requestStartedAt,
       ...serializeError(error),
     })
 

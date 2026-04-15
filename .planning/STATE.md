@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Agent Response Time and Runtime Performance
-current_phase: 26
+current_phase: 27
 current_phase_name: Performance Proof and Critical Route Hardening
-current_plan: 27-01
-status: ready_for_planning
-stopped_at: Phase 26 complete; ready to plan Phase 27
-last_updated: "2026-04-15T23:07:00.0000000-03:00"
-last_activity: 2026-04-15 -- Completed Phase 26 with runtime intent extraction, deterministic dialog fast paths, and phase-specific runtime budgets
+current_plan: 27-03
+status: milestone_complete
+stopped_at: Milestone v1.3 complete; roadmap exhausted
+last_updated: "2026-04-15T23:14:00.0000000-03:00"
+last_activity: 2026-04-15 -- Completed Phase 27 with route-level latency proof, operator guidance, and milestone closure artifacts
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 7
-  percent: 75
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -30,18 +30,18 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 Current Phase: 27
 Current Phase Name: Performance Proof and Critical Route Hardening
-Current Plan: 27-01
+Current Plan: 27-03
 Total Plans in Phase: 3
-Status: Ready for planning
-Last activity: 2026-04-15 -- Completed Phase 26 with runtime intent extraction, deterministic dialog fast paths, and phase-specific runtime budgets
-Last Activity Description: Phase 26 is fully closed with committed regression proof. The runtime now shortcuts simple dialog continuation turns, uses tighter phase-specific budgets, and leaves Phase 27 to consolidate route hardening plus before/after performance proof.
+Status: Milestone complete
+Last activity: 2026-04-15 -- Completed Phase 27 with route-level latency proof, operator guidance, and milestone closure artifacts
+Last Activity Description: Milestone v1.3 is fully closed. The agent path now has staged timing, earlier visible chat responses, ATS request-path reduction, deterministic continuation fast paths, tighter runtime budgets, and adjacent-route latency/degradation logs.
 
 Phase: 27 (Performance Proof and Critical Route Hardening)
-Plan: 0 of 3
-Status: Ready for planning
-Last activity: 2026-04-15 -- Phase 26 completed and Phase 27 is next
+Plan: 3 of 3
+Status: Complete
+Last activity: 2026-04-15 -- Phase 27 completed and milestone v1.3 is complete
 
-Progress: [########--] 75%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 24 completed: baseline request timing and first-response SSE observability
 - Phase 25 completed: earlier visible chat progress and ATS request-path reduction
 - Phase 26 completed: runtime intent extraction, deterministic dialog fast paths, and phase-specific runtime budgets
+- Phase 27 completed: adjacent-route latency logs, before/after proof, and milestone closure artifacts
 
 ### Decisions
 
@@ -84,6 +85,8 @@ Recent decisions affecting the next cycle:
 - Phase 25-02 now defers ordinary ATS enhancement rewrite work out of the general chat path and only keeps it inline for confirmation or generation-sensitive turns.
 - Phase 26-01 extracted runtime intent detection into `src/lib/agent/agent-intents.ts` and added a deterministic fast path for simple dialog continuation turns.
 - Phase 26-02 now resolves history, tool-loop, and output-token budgets per phase instead of using one broad runtime budget for every turn.
+- Phase 27-01 added route-level latency and degradation logging to generation, download, and import-status routes that shape perceived responsiveness outside the chat stream.
+- Milestone v1.3 closes with qualitative-plus-structural performance proof, not a benchmark report with hard production percentiles.
 - The approved Phase 21 cleanup slices currently produce no import or low-risk local cleanup diff under the staged lint baseline.
 - Raw `ts-prune` and `madge` output must be classified before deletion because App Router pages, tests, and middleware appear as expected false positives.
 - The reviewed inventory proves only a small subset of current dead-code findings are safe deletion candidates; most remaining output is framework or test noise.
@@ -96,14 +99,14 @@ Recent decisions affecting the next cycle:
 
 ### Blockers/Concerns
 
-- No active implementation blocker is currently known for v1.3 setup.
-- Phase 27 still needs route-level proof and adjacent-route hardening so the milestone can close with operator-facing latency evidence.
-- Final performance proof must avoid overstating measured wins beyond the focused runtime and route coverage already committed.
+- No active implementation blocker is currently known for v1.3.
+- The milestone is complete; future work should start from a fresh milestone rather than carrying latency scope forward implicitly.
+- External performance claims should still be tied to production telemetry rather than repo-local tests alone.
 
 ## Session Continuity
 
-Last session: 2026-04-15T23:07:00.0000000-03:00
-Stopped at: Phase 26 complete; ready to plan Phase 27
+Last session: 2026-04-15T23:14:00.0000000-03:00
+Stopped at: Milestone v1.3 complete; roadmap exhausted
 Resume file: None
 
 ## Quick Tasks Completed

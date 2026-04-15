@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { claimAndProcessJob, getImportJob } from '@/lib/linkedin/import-jobs'
-import { logError, logInfo, serializeError } from '@/lib/observability/structured-log'
+import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 
 const TRACK_IMPORT_FAILURE_MESSAGE =
   'Nao foi possivel acompanhar a importacao do LinkedIn agora. Tente novamente em instantes.'
@@ -25,8 +25,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { jobId: string } },
 ) {
+  const requestStartedAt = Date.now()
+  const requestPath = req.nextUrl.pathname
   const appUser = await getCurrentAppUser()
   if (!appUser) {
+    logWarn('api.profile.status.unauthorized', {
+      requestMethod: req.method,
+      requestPath,
+      requestedJobId: params.jobId,
+      success: false,
+      latencyMs: Date.now() - requestStartedAt,
+    })
     return NextResponse.json({ error: 'Voce precisa estar autenticado para acompanhar a importacao.' }, { status: 401 })
   }
 
@@ -36,6 +45,14 @@ export async function GET(
     const job = await getImportJob(jobId, appUser.id)
 
     if (!job) {
+      logWarn('api.profile.status.not_found', {
+        requestMethod: req.method,
+        requestPath,
+        jobId,
+        appUserId: appUser.id,
+        success: false,
+        latencyMs: Date.now() - requestStartedAt,
+      })
       return NextResponse.json({ error: 'Importacao nao encontrada.' }, { status: 404 })
     }
 
@@ -48,6 +65,9 @@ export async function GET(
         jobId,
         status: result.status,
         appUserId: appUser.id,
+        requestMethod: req.method,
+        requestPath,
+        latencyMs: Date.now() - requestStartedAt,
       })
 
       return NextResponse.json({
@@ -56,6 +76,16 @@ export async function GET(
         errorMessage: result.status === 'failed' ? getSafeImportFailureMessage(result.error_message) : undefined,
       })
     }
+
+    logInfo('api.profile.status.completed', {
+      requestMethod: req.method,
+      requestPath,
+      jobId,
+      appUserId: appUser.id,
+      status: job.status,
+      success: true,
+      latencyMs: Date.now() - requestStartedAt,
+    })
 
     return NextResponse.json({
       jobId,
@@ -66,6 +96,9 @@ export async function GET(
     logError('[api/profile/status] Failed to get job status', {
       jobId,
       appUserId: appUser.id,
+      requestMethod: req.method,
+      requestPath,
+      latencyMs: Date.now() - requestStartedAt,
       ...serializeError(error),
     })
 

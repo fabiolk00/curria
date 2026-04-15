@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { dispatchTool } from '@/lib/agent/tools'
 import { getSession } from '@/lib/db/sessions'
+import { logInfo, logWarn } from '@/lib/observability/structured-log'
 
 import { POST } from './route'
 
@@ -17,6 +18,15 @@ vi.mock('@/lib/db/sessions', () => ({
 
 vi.mock('@/lib/agent/tools', () => ({
   dispatchTool: vi.fn(),
+}))
+
+vi.mock('@/lib/observability/structured-log', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  serializeError: (error: unknown) => ({
+    errorMessage: error instanceof Error ? error.message : String(error),
+  }),
 }))
 
 function buildAppUser(id: string) {
@@ -109,6 +119,14 @@ describe('generate route', () => {
       target_id: undefined,
       idempotency_key: undefined,
     }, expect.objectContaining({ id: 'sess_123' }))
+    expect(logInfo).toHaveBeenCalledWith(
+      'api.session.generate.completed',
+      expect.objectContaining({
+        sessionId: 'sess_123',
+        scope: 'base',
+        success: true,
+      }),
+    )
   })
 
   it('dispatches target generation', async () => {
@@ -192,6 +210,14 @@ describe('generate route', () => {
       code: 'CAREER_FIT_CONFIRMATION_REQUIRED',
     })
     expect(dispatchTool).not.toHaveBeenCalled()
+    expect(logWarn).toHaveBeenCalledWith(
+      'api.session.generate.career_fit_confirmation_required',
+      expect.objectContaining({
+        sessionId: 'sess_123',
+        scope: 'target',
+        targetId: 'target_123',
+      }),
+    )
   })
 
   it('returns creditsUsed: 0 for an idempotent replay', async () => {

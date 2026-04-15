@@ -21,6 +21,7 @@ vi.mock('@/lib/linkedin/import-jobs', () => ({
 vi.mock('@/lib/observability/structured-log', () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
+  logWarn: vi.fn(),
   serializeError: (error: unknown) => ({
     errorMessage: error instanceof Error ? error.message : String(error),
   }),

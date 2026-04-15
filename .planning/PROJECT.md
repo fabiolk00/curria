@@ -10,7 +10,7 @@ A job seeker can reliably turn their real profile and a target role into an hone
 
 ## Current State
 
-**Shipped version:** `v1.2 Code Hygiene and Dead Code Reduction` on 2026-04-14.
+**Shipped version:** `v1.3 Agent Response Time and Runtime Performance` on 2026-04-15.
 
 **What is now true:**
 - live `/api/agent` traffic exposes provenance and follows a documented parity contract
@@ -22,24 +22,25 @@ A job seeker can reliably turn their real profile and a target role into an hone
 - the repo now has a staged hygiene baseline for unused imports, dead exports, orphan files, and dependency review
 - dead-code false positives are explicitly classified before deletion work, keeping framework and test entrypoints safe
 - dependency hygiene and sustained enforcement are now documented, configured, and reflected in CI and contributor workflow
+- the main agent route now exposes first-response timing evidence, earlier existing-session progress, reduced ATS chat blocking, deterministic continuation fast paths, and phase-specific runtime budgets
+- adjacent generation, download, and import-status routes now emit clearer latency and degradation logs for operator debugging
 
 ## Current Milestone
 
-Current milestone: `v1.3 Agent Response Time and Runtime Performance`.
+Current milestone: `v1.3 Agent Response Time and Runtime Performance` completed on 2026-04-15.
 
-**Main focus:** Improve agent response time first, especially in ATS enhancement and chat.
+**Main focus:** Completed. The latest milestone improved agent response time first, especially in ATS enhancement and chat.
 
-This milestone should optimize both perceived speed and real request latency. Optional cleanup, refactor, or secondary hardening work should only happen when it directly improves response time or is required to safely enable latency work.
+This milestone optimized both perceived speed and real request latency. Future milestones should treat this as the new baseline rather than reopening the same work implicitly.
 
 ## Next Milestone Goals
 
-- reduce time to first useful SSE output and first useful assistant response
-- make ATS enhancement and chat feel faster without regressing correctness
-- preserve billing safety, auth guarantees, canonical `cvState`, and artifact integrity while optimizing the runtime
-- leave the roadmap ready for fully autonomous phase-by-phase execution
+- define the next milestone from fresh priorities now that the latency hardening cycle is complete
+- preserve the response-time baseline unless a future feature can prove it does not reintroduce blocking request-path work
+- keep billing safety, auth guarantees, canonical `cvState`, and artifact integrity as fixed constraints
 
 <details>
-<summary>Active milestone focus: v1.3 Agent Response Time and Runtime Performance</summary>
+<summary>Archived milestone focus: v1.3 Agent Response Time and Runtime Performance</summary>
 
 **Goal:** Make the agent feel faster everywhere the user notices it, with explicit priority on ATS enhancement and chat responsiveness.
 
@@ -163,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Archive prior roadmap and requirements before expanding scope again
 
 ---
-*Last updated: 2026-04-14 after opening milestone v1.3*
+*Last updated: 2026-04-15 after closing milestone v1.3*

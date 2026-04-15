@@ -76,9 +76,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 27-01: Harden performance-sensitive adjacent routes and external-call degradation behavior
-- [ ] 27-02: Publish before/after latency proof and operator guidance
-- [ ] 27-03: Close the milestone with autonomous verification and handoff artifacts
+- [x] 27-01: Harden performance-sensitive adjacent routes and external-call degradation behavior
+- [x] 27-02: Publish before/after latency proof and operator guidance
+- [x] 27-03: Close the milestone with autonomous verification and handoff artifacts
 
 ## Autonomous Execution Instruction
 
@@ -104,7 +104,7 @@ Phases execute in numeric order: 24 -> 25 -> 26 -> 27
 | 24. Agent Response Baseline and Chat/ATS Latency Instrumentation | 1/1 | Complete | 2026-04-14 |
 | 25. Chat and ATS Enhancement Request-Path Reduction | 3/3 | Complete | 2026-04-15 |
 | 26. Agent Runtime Simplification and Budget Optimization | 3/3 | Complete | 2026-04-15 |
-| 27. Performance Proof and Critical Route Hardening | 0/3 | Not Started | |
+| 27. Performance Proof and Critical Route Hardening | 3/3 | Complete | 2026-04-15 |
 
 ## Archived Milestones
 

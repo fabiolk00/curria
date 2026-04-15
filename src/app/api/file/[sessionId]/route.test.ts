@@ -7,7 +7,7 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { createSignedResumeArtifactUrls } from '@/lib/agent/tools/generate-file'
 import { getResumeTargetForSession } from '@/lib/db/resume-targets'
 import { getSession, updateSession } from '@/lib/db/sessions'
-import { logError } from '@/lib/observability/structured-log'
+import { logError, logInfo } from '@/lib/observability/structured-log'
 
 import { GET } from './route'
 
@@ -30,6 +30,7 @@ vi.mock('@/lib/agent/tools/generate-file', () => ({
 
 vi.mock('@/lib/observability/structured-log', () => ({
   logError: vi.fn(),
+  logInfo: vi.fn(),
   logWarn: vi.fn(),
   serializeError: (error: unknown) => ({
     errorMessage: error instanceof Error ? error.message : String(error),
@@ -136,6 +137,13 @@ describe('GET /api/file/[sessionId]', () => {
       'usr_123/sess_123/resume.pdf',
     )
     expect(updateSession).not.toHaveBeenCalled()
+    expect(logInfo).toHaveBeenCalledWith(
+      'api.file.download_urls_ready',
+      expect.objectContaining({
+        sessionId: 'sess_123',
+        success: true,
+      }),
+    )
   })
 
   it('keeps serving the last valid base artifact when a newer ATS rewrite attempt failed validation', async () => {
