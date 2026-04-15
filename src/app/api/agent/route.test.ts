@@ -172,8 +172,8 @@ describe('agent route billing guard', () => {
       updatedAt: new Date(),
     })
     vi.mocked(analyzeGap).mockReset()
-    vi.mocked(runAtsEnhancementPipeline).mockResolvedValue(undefined)
-    vi.mocked(runJobTargetingPipeline).mockResolvedValue(undefined)
+    vi.mocked(runAtsEnhancementPipeline).mockResolvedValue({ success: true })
+    vi.mocked(runJobTargetingPipeline).mockResolvedValue({ success: true })
   })
 
   it('returns provenance headers on the safe unauthenticated parity request without creating a session', async () => {
