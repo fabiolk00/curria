@@ -7,8 +7,8 @@ current_phase_name: Make target job analysis robust to freeform vacancy text and
 current_plan: None
 status: ready
 stopped_at: Phase 36 complete
-last_updated: "2026-04-16T02:57:15.000Z"
-last_activity: 2026-04-16 -- Completed quick task 260415-x7b: harden resume rewrite guardrails around the golden rule and anti-compression behavior
+last_updated: "2026-04-16T03:03:45.000Z"
+last_activity: 2026-04-16 -- Completed quick task 260416-025: fix the signed-url logger typing issue and clear the remaining TypeScript compile blockers
 progress:
   total_phases: 5
   completed_phases: 5
@@ -33,8 +33,8 @@ Current Phase Name: Make target job analysis robust to freeform vacancy text and
 Current Plan: None
 Total Plans in Phase: 1
 Status: Ready for audit
-Last activity: 2026-04-16 -- Completed quick task 260415-x7b: harden resume rewrite guardrails around the golden rule and anti-compression behavior
-Last Activity Description: Resume rewrite prompts now prioritize "never make the resume worse" more explicitly, with stronger anti-compression and anti-generalization rules across the ATS rewrite flow
+Last activity: 2026-04-16 -- Completed quick task 260416-025: fix the signed-url logger typing issue and clear the remaining TypeScript compile blockers
+Last Activity Description: The signed-url fallback now logs serialized error fields with the correct structured-log shape, and stale hook test calls were aligned so `npx tsc --noEmit` passes again
 
 Progress: [##########] 100%
 
@@ -131,3 +131,5 @@ Resume file: None
 | 2026-04-16 | 260415-wvk | Prevent signed URL failures from breaking smart generation after file persistence | Complete |
 | 2026-04-16 | 260415-x06 | Strengthen ATS rewrite guidance to preserve technical depth, metrics, and critical judgment | Complete |
 | 2026-04-16 | 260415-x7b | Harden resume rewrite guardrails around the golden rule and anti-compression behavior | Complete |
+| 2026-04-16 | 260415-xbf | Reorganize rewrite-section prompt hierarchy and tighten short rewrite metadata | Complete |
+| 2026-04-16 | 260416-025 | Fix the signed-url logger typing issue and clear the remaining TypeScript compile blockers | Complete |

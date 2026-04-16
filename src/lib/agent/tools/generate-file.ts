@@ -429,7 +429,7 @@ export async function createSignedResumeArtifactUrlsBestEffort(
       targetId: fallbackContext.targetId,
       pdfPath: fallbackContext.pdfPath,
       source: fallbackContext.source,
-      error: serializeError(error),
+      ...serializeError(error),
     })
 
     return {

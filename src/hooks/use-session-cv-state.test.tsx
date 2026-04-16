@@ -84,7 +84,7 @@ describe('useSessionCvState', () => {
       ],
     })
 
-    const { result } = renderHook(() => useSessionCvState('sess_123', 'target_123'))
+    const { result } = renderHook(() => useSessionCvState('sess_123', { targetId: 'target_123', scope: 'target' }))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -113,7 +113,7 @@ describe('useSessionCvState', () => {
       targets: [],
     })
 
-    const { result } = renderHook(() => useSessionCvState('sess_123', 'target_missing'))
+    const { result } = renderHook(() => useSessionCvState('sess_123', { targetId: 'target_missing', scope: 'target' }))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
