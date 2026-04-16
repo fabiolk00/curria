@@ -57,6 +57,7 @@ model Session {
   messages       Message[]
   cvVersions     CVVersion[]
   resumeTargets  ResumeTarget[]
+  jobs           Job[]
   resumeGenerations ResumeGeneration[]
 
   @@index([userId])
@@ -95,6 +96,7 @@ model ResumeTarget {
 
   session              Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   cvVersions           CVVersion[]
+  jobs                 Job[]
   resumeGenerations    ResumeGeneration[]
 
   @@index([sessionId, createdAt])
@@ -136,6 +138,40 @@ model Message {
 
   @@index([sessionId, createdAt])
   @@map("messages")
+}
+
+model Job {
+  id                String      @id @default(dbgenerated("gen_random_uuid()::text"))
+  userId            String      @map("user_id")
+  sessionId         String?     @map("session_id")
+  resumeTargetId    String?     @map("resume_target_id")
+  idempotencyKey    String      @map("idempotency_key")
+  type              String
+  status            String      @default("queued")
+  stage             String?
+  progress          Json?
+  dispatchInputRef  Json        @map("dispatch_input_ref")
+  terminalResultRef Json?       @map("terminal_result_ref")
+  terminalErrorRef  Json?       @map("terminal_error_ref")
+  metadata          Json?
+  claimedAt         DateTime?   @map("claimed_at")
+  startedAt         DateTime?   @map("started_at")
+  completedAt       DateTime?   @map("completed_at")
+  cancelledAt       DateTime?   @map("cancelled_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session           Session?    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  resumeTarget      ResumeTarget? @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, type, idempotencyKey])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([type, status])
+  @@index([sessionId, createdAt(sort: Desc)])
+  @@index([resumeTargetId, createdAt(sort: Desc)])
+  @@map("jobs")
 }
 
 model UserQuota {
@@ -231,6 +267,7 @@ model User {
   jobApplications JobApplication[]
   billingInfo    CustomerBillingInfo?
   profile        UserProfile?
+  jobs           Job[]
   pdfImportJobs  PdfImportJob[]
   linkedInImportJobs LinkedInImportJob[]
   resumeGenerations ResumeGeneration[]
@@ -243,7 +280,7 @@ model UserProfile {
   id          String   @id @default(cuid())
   userId      String   @unique @map("user_id")
   // Canonical product contract: imported or manually edited profile CVState.
-  cvState     Json
+  cvState     Json     @map("cv_state")
   source      String   // 'linkedin' | 'pdf'
   linkedinUrl String?  @map("linkedin_url")
   profilePhotoUrl String? @map("profile_photo_url")
