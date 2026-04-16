@@ -32,7 +32,7 @@ Any optional work that changes business rules, billing semantics, or the public 
 **Plans**: 1 plan
 
 Plans:
-- [ ] 37-01: Freeze async execution contracts and implement durable job persistence foundations
+- [x] 37-01: Freeze async execution contracts and implement durable job persistence foundations
 
 ### Phase 38: Refactor `/api/agent` into a lightweight orchestrator
 **Goal**: Keep `/api/agent` as the public entry point while extracting request-boundary responsibilities, preserving sync lightweight chat, and dispatching heavy actions asynchronously.
@@ -97,8 +97,8 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 37. Freeze async execution contracts and durable job foundations | 0/1 | Ready | — |
-| 38. Refactor `/api/agent` into a lightweight orchestrator | 0/1 | Pending | — |
+| 37. Freeze async execution contracts and durable job foundations | 1/1 | Completed | 2026-04-16 |
+| 38. Refactor `/api/agent` into a lightweight orchestrator | 0/1 | Ready | — |
 | 39. Move ATS, targeting, and artifact work into async processors | 0/1 | Pending | — |
 | 40. Integrate status flow, observability, and stabilization | 0/1 | Pending | — |
 

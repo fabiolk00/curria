@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 37
-current_phase_name: Freeze async execution contracts and durable job foundations
+current_phase: 38
+current_phase_name: Refactor `/api/agent` into a lightweight orchestrator
 current_plan: None
 status: executing
-stopped_at: Phase 37 context gathered
-last_updated: "2026-04-16T21:49:09.740Z"
-last_activity: 2026-04-16 -- Phase 37 planning complete
+stopped_at: Phase 38 planning complete
+last_updated: "2026-04-16T22:49:17.440Z"
+last_activity: 2026-04-16 -- Phase 38 planning complete
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -28,15 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Current Phase: 37
-Current Phase Name: Freeze async execution contracts and durable job foundations
+Current Phase: 38
+Current Phase Name: Refactor `/api/agent` into a lightweight orchestrator
 Current Plan: None
 Total Plans in Phase: 1
 Status: Ready to execute
-Last activity: 2026-04-16 -- Phase 37 planning complete
-Last Activity Description: Phase 37 planning complete — 1 plans ready
+Last activity: 2026-04-16 -- Phase 38 planning complete
+Last Activity Description: Phase 38 planning complete — 1 plans ready
 
-Progress: [----------] 0%
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -84,16 +84,16 @@ Recent decisions affecting the next cycle:
 
 ### Pending Todos
 
-- Start Phase 37 discussion and planning.
+- Execute Phase 38 plan 01.
 
 ### Blockers or Concerns
 
 - No active implementation blocker is currently known.
-- Phase 37 must freeze the shared contracts before Phase 38 and Phase 39 proceed in parallel.
+- Phase 38 must preserve sync chat UX and session continuity while it removes heavy request-path execution.
 - Async failures must not clobber a previously valid `optimizedCvState` or break preview versus artifact consistency.
 
 ## Session Continuity
 
 Last session: 2026-04-16T21:21:02.113Z
-Stopped at: Phase 37 context gathered
-Resume file: .planning/phases/37-freeze-async-execution-contracts-and-durable-job-foundations/37-CONTEXT.md
+Stopped at: Phase 38 planning complete
+Resume file: .planning/phases/38-refactor-api-agent-into-a-lightweight-orchestrator/38-01-PLAN.md
