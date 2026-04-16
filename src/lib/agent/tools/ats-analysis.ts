@@ -1,4 +1,5 @@
 import { scoreATS } from '@/lib/ats/score'
+import { buildResumeTextFromCvState } from '@/lib/profile/ats-enhancement'
 import type { AtsAnalysisIssue, AtsAnalysisResult } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
@@ -134,20 +135,7 @@ export async function analyzeAtsGeneral(
   error?: string
 }> {
   try {
-    const resumeText = [
-      cvState.fullName,
-      cvState.summary,
-      cvState.skills.join(', '),
-      ...cvState.experience.flatMap((entry) => [
-        `${entry.title} ${entry.company} ${entry.startDate} ${entry.endDate}`,
-        ...entry.bullets,
-      ]),
-      ...cvState.education.map((entry) => `${entry.degree} ${entry.institution} ${entry.year}`),
-      ...(cvState.certifications ?? []).map((entry) => `${entry.name} ${entry.issuer} ${entry.year ?? ''}`),
-    ]
-      .filter(Boolean)
-      .join('\n')
-
+    const resumeText = buildResumeTextFromCvState(cvState)
     const baseScore = scoreATS(resumeText)
     const derivedIssues = buildDerivedIssues(cvState)
     const issues = dedupeIssues([

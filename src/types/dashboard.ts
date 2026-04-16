@@ -181,6 +181,28 @@ export type GenerateResumeResponse = {
   resumeGenerationId?: string
 }
 
+export type ResumeComparisonResponse = {
+  sessionId: string
+  workflowMode?: WorkflowMode
+  generationType: ResumeGenerationType
+  targetJobDescription?: string
+  originalCvState: CVState
+  optimizedCvState: CVState
+  optimizationSummary?: {
+    changedSections: Array<'summary' | 'experience' | 'skills' | 'education' | 'certifications'>
+    notes: string[]
+    keywordCoverageImprovement?: string[]
+  }
+  originalScore: {
+    total: number
+    label: string
+  }
+  optimizedScore: {
+    total: number
+    label: string
+  }
+}
+
 type CompareSnapshotRef =
   | { kind: 'base' }
   | { kind: 'version'; id: string }

@@ -38,10 +38,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { assessAtsEnhancementReadiness, getAtsEnhancementBlockingItems } from "@/lib/profile/ats-enhancement"
 import { cvStateToTemplateData } from "@/lib/templates/cv-state-to-template-data"
 import { cn } from "@/lib/utils"
-import type { ResumeGenerationType } from "@/types/agent"
 import type { CVState } from "@/types/cv"
 
-import { ResumeComparisonView } from "./resume-comparison-view"
+import { GenerationLoading } from "./generation-loading"
 import { ImportResumeModal, type ResumeData } from "./resume-builder"
 import { VisualResumeEditor, normalizeResumeData } from "./visual-resume-editor"
 
@@ -88,9 +87,6 @@ type SetupGenerationCopy = {
 type SmartGenerationResponse = {
   success?: boolean
   sessionId?: string
-  generationType?: ResumeGenerationType
-  originalCvState?: CVState
-  optimizedCvState?: CVState
   workflowMode?: SetupGenerationMode
   rewriteValidation?: {
     valid: boolean
@@ -105,14 +101,6 @@ type SmartGenerationResponse = {
   error?: string
   reasons?: string[]
   missingItems?: string[]
-}
-
-type ComparisonData = {
-  sessionId: string
-  generationType: ResumeGenerationType
-  originalCvState: CVState
-  optimizedCvState: CVState
-  targetJobDescription?: string
 }
 
 type RewriteValidationFailure = {
@@ -350,7 +338,6 @@ export default function UserDataPage({
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false)
   const [isAtsRequirementsOpen, setIsAtsRequirementsOpen] = useState(false)
   const [atsMissingItems, setAtsMissingItems] = useState<string[]>([])
-  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
   const [rewriteValidationFailure, setRewriteValidationFailure] = useState<RewriteValidationFailure | null>(null)
 
   useEffect(() => {
@@ -504,23 +491,12 @@ export default function UserDataPage({
       }
 
       toast.success(
-        data.generationType === "JOB_TARGETING"
+        generationMode === "job_targeting"
           ? "Versão adaptada para a vaga criada com sucesso."
           : "Versão ATS criada com sucesso.",
       )
 
-      if (data.originalCvState && data.optimizedCvState) {
-        setComparisonData({
-          sessionId: data.sessionId,
-          generationType: data.generationType ?? "ATS_ENHANCEMENT",
-          originalCvState: data.originalCvState,
-          optimizedCvState: data.optimizedCvState,
-          targetJobDescription: trimOptional(targetJobDescription),
-        })
-        return
-      }
-
-      router.push(`/dashboard?session=${encodeURIComponent(data.sessionId)}`)
+      router.push(`/dashboard/resume/compare/${encodeURIComponent(data.sessionId)}`)
     } catch (error) {
       toast.error(extractErrorMessage(error, generationCopy.failure))
     } finally {
@@ -608,19 +584,6 @@ export default function UserDataPage({
       rewriteValidationFailure.targetRoleConfidence === "low"
       || isSuspiciousTargetRole(rewriteValidationFailure.targetRole)
     )
-
-  if (comparisonData) {
-    return (
-      <ResumeComparisonView
-        originalCvState={comparisonData.originalCvState}
-        optimizedCvState={comparisonData.optimizedCvState}
-        generationType={comparisonData.generationType}
-        sessionId={comparisonData.sessionId}
-        targetJobDescription={comparisonData.targetJobDescription}
-        onContinue={() => router.push(`/dashboard?session=${encodeURIComponent(comparisonData.sessionId)}`)}
-      />
-    )
-  }
 
   return (
     <div
@@ -1144,6 +1107,11 @@ export default function UserDataPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <GenerationLoading
+        isLoading={isRunningAtsEnhancement}
+        generationType={generationMode === "job_targeting" ? "JOB_TARGETING" : "ATS_ENHANCEMENT"}
+      />
     </div>
   )
 }

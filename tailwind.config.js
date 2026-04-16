@@ -73,6 +73,26 @@ module.exports = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        wave: {
+          '0%': { transform: 'translateX(-20px)' },
+          '100%': { transform: 'translateX(20px)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(200%)' },
+        },
+        bubble: {
+          '0%': { transform: 'translateY(0) scale(0.8)', opacity: '0' },
+          '20%': { opacity: '1' },
+          '100%': { transform: 'translateY(-14px) scale(1)', opacity: '0' },
+        },
+      },
+      animation: {
+        wave: 'wave 1.8s linear infinite',
+        shimmer: 'shimmer 1.8s ease-in-out infinite',
+        bubble: 'bubble 1.6s ease-in infinite',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

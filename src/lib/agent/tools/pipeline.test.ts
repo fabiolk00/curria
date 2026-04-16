@@ -275,13 +275,66 @@ describe('ATS enhancement reliability hardening', () => {
 
     expect(result.success).toBe(true)
     expect(result.diagnostics).toMatchObject({
-      retriedSections: ['experience'],
+      retriedSections: expect.arrayContaining(['experience']),
       compactedSections: ['experience'],
       sectionAttempts: expect.objectContaining({
-        summary: 1,
+        summary: 2,
         experience: 2,
+        skills: 2,
       }),
     })
+  })
+
+  it('forces an assertive second pass when the summary rewrite stays too close to the original text', async () => {
+    const cvState = buildCvState()
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => {
+      if (section === 'summary') {
+        const summaryCalls = mockRewriteSection.mock.calls.filter(([input]: [{ section: string }]) => input.section === 'summary').length
+
+        return {
+          output: {
+            success: true,
+            rewritten_content: summaryCalls === 1
+              ? cvState.summary
+              : 'Especialista em BI e dados com foco em SQL, Power BI e melhoria continua para analytics.',
+            section_data: summaryCalls === 1
+              ? cvState.summary
+              : 'Especialista em BI e dados com foco em SQL, Power BI e melhoria continua para analytics.',
+            keywords_added: ['SQL'],
+            changes_made: ['Resumo reforcado'],
+          },
+        }
+      }
+
+      return {
+        output: buildSuccessfulRewriteOutput(cvState, section),
+      }
+    })
+
+    const result = await rewriteResumeFull({
+      mode: 'ats_enhancement',
+      cvState,
+      atsAnalysis: {
+        overallScore: 78,
+        structureScore: 80,
+        clarityScore: 77,
+        impactScore: 74,
+        keywordCoverageScore: 79,
+        atsReadabilityScore: 82,
+        issues: [],
+        recommendations: ['Clareza', 'Power BI', 'SQL'],
+      },
+      userId: 'usr_123',
+      sessionId: 'sess_ats_123',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.optimizedCvState?.summary).toBe(
+      'Especialista em BI e dados com foco em SQL, Power BI e melhoria continua para analytics.',
+    )
+    expect(result.diagnostics?.sectionAttempts.summary).toBe(2)
+    expect(result.diagnostics?.retriedSections).toContain('summary')
   })
 
   it('persists stage-aware ATS workflow metadata and logs completion', async () => {

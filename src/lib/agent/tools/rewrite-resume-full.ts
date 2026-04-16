@@ -240,6 +240,93 @@ function applySectionData(
   }
 }
 
+function normalizeForVisibilityCheck(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function calculateTokenSimilarity(left: string, right: string): number {
+  const leftTokens = normalizeForVisibilityCheck(left).split(' ').filter(Boolean)
+  const rightTokens = normalizeForVisibilityCheck(right).split(' ').filter(Boolean)
+
+  if (leftTokens.length === 0 || rightTokens.length === 0) {
+    return 0
+  }
+
+  const rightCounts = new Map<string, number>()
+  rightTokens.forEach((token) => {
+    rightCounts.set(token, (rightCounts.get(token) ?? 0) + 1)
+  })
+
+  let overlap = 0
+  leftTokens.forEach((token) => {
+    const count = rightCounts.get(token) ?? 0
+    if (count > 0) {
+      overlap += 1
+      rightCounts.set(token, count - 1)
+    }
+  })
+
+  return (2 * overlap) / (leftTokens.length + rightTokens.length)
+}
+
+function isVisibleRewriteTooClose(
+  section: RewriteSectionName,
+  currentCvState: CVState,
+  nextSectionData: unknown,
+): boolean {
+  switch (section) {
+    case 'summary': {
+      const currentSummary = normalizeForVisibilityCheck(currentCvState.summary)
+      const nextSummary = normalizeForVisibilityCheck(nextSectionData as string)
+      return Boolean(
+        currentSummary
+        && nextSummary
+        && (
+          currentSummary === nextSummary
+          || calculateTokenSimilarity(currentSummary, nextSummary) >= 0.88
+        ),
+      )
+    }
+    case 'skills': {
+      return JSON.stringify(currentCvState.skills) === JSON.stringify(nextSectionData as CVState['skills'])
+    }
+    case 'experience': {
+      const currentBullets = currentCvState.experience.flatMap((entry) => entry.bullets.map(normalizeForVisibilityCheck))
+      const nextBullets = (nextSectionData as CVState['experience']).flatMap((entry) => entry.bullets.map(normalizeForVisibilityCheck))
+      const unchangedBullets = nextBullets.filter((bullet, index) => currentBullets[index] === bullet).length
+      const averageSimilarity = nextBullets.length > 0
+        ? nextBullets.reduce((total, bullet, index) => total + calculateTokenSimilarity(currentBullets[index] ?? '', bullet), 0) / nextBullets.length
+        : 0
+
+      return nextBullets.length > 0 && (
+        unchangedBullets / nextBullets.length >= 0.7
+        || averageSimilarity >= 0.9
+      )
+    }
+    default:
+      return false
+  }
+}
+
+function buildAssertiveRewriteInstructions(section: RewriteSectionName): string {
+  switch (section) {
+    case 'summary':
+      return 'The previous rewrite stayed too close to the original wording. Rewrite the summary again with clearly different sentence structure, stronger positioning, and tighter language while preserving the exact facts.'
+    case 'experience':
+      return 'The previous rewrite stayed too close to the original wording. Rewrite every bullet more assertively with stronger action verbs and clearer business context while preserving the exact facts and dates.'
+    case 'skills':
+      return 'The previous rewrite kept the original ordering. Reorder and consolidate the skills more intentionally for ATS emphasis, but keep only grounded skills.'
+    default:
+      return 'The previous rewrite stayed too close to the original. Rewrite again with more visible improvement while preserving the exact facts.'
+  }
+}
+
 type AtsRewriteParams = {
   mode: 'ats_enhancement'
   cvState: CVState
@@ -306,6 +393,18 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
         compactedSections.push(section)
       }
 
+      const baseInstructions = params.mode === 'job_targeting'
+        ? buildTargetJobSectionInstructions(
+            section,
+            params.gapAnalysis,
+            targetingPlan!,
+            params.targetJobDescription,
+          )
+        : buildSectionInstructions(section, params.atsAnalysis, rewritePlan!)
+      const targetKeywords = params.mode === 'job_targeting'
+        ? targetingPlan!.mustEmphasize
+        : rewritePlan!.keywordFocus
+
       let result: Awaited<ReturnType<typeof rewriteSection>>
       let attempts = 0
 
@@ -315,17 +414,8 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
             const rewriteResult = await rewriteSection({
               section,
               current_content: currentContent,
-              instructions: params.mode === 'job_targeting'
-                ? buildTargetJobSectionInstructions(
-                    section,
-                    params.gapAnalysis,
-                    targetingPlan!,
-                    params.targetJobDescription,
-                  )
-                : buildSectionInstructions(section, params.atsAnalysis, rewritePlan!),
-              target_keywords: params.mode === 'job_targeting'
-                ? targetingPlan!.mustEmphasize
-                : rewritePlan!.keywordFocus,
+              instructions: baseInstructions,
+              target_keywords: targetKeywords,
             }, params.userId, params.sessionId)
 
             if (!rewriteResult.output.success) {
@@ -358,8 +448,6 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
         }
       }
 
-      sectionAttempts[section] = attempts
-
       if (!result.output.success) {
         return {
           success: false,
@@ -372,19 +460,77 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
         }
       }
 
+      let sectionData = params.mode === 'job_targeting' && section === 'skills'
+        ? sanitizeJobTargetedSkills(
+            params.cvState.skills,
+            result.output.section_data as CVState['skills'],
+            targetingPlan!,
+          )
+        : result.output.section_data
+
+      if (
+        ['summary', 'experience', 'skills'].includes(section)
+        && isVisibleRewriteTooClose(section, optimizedCvState, sectionData)
+      ) {
+        if (!retriedSections.includes(section)) {
+          retriedSections.push(section)
+        }
+
+        try {
+          const assertiveExecution = await (params.mode === 'job_targeting' ? executeJobTargetingWithRetry : executeWithStageRetry)(
+            async () => {
+              const rewriteResult = await rewriteSection({
+                section,
+                current_content: currentContent,
+                instructions: `${baseInstructions}\n\n${buildAssertiveRewriteInstructions(section)}`,
+                target_keywords: targetKeywords,
+              }, params.userId, params.sessionId)
+
+              if (!rewriteResult.output.success) {
+                throw new Error(rewriteResult.output.error)
+              }
+
+              return rewriteResult
+            },
+            {
+              onRetry: () => {
+                if (!retriedSections.includes(section)) {
+                  retriedSections.push(section)
+                }
+              },
+            },
+          )
+
+          attempts += assertiveExecution.attempts
+
+          if (assertiveExecution.result.output.success) {
+            const assertiveSectionData = params.mode === 'job_targeting' && section === 'skills'
+              ? sanitizeJobTargetedSkills(
+                  params.cvState.skills,
+                  assertiveExecution.result.output.section_data as CVState['skills'],
+                  targetingPlan!,
+                )
+              : assertiveExecution.result.output.section_data
+
+            result = assertiveExecution.result
+            sectionData = assertiveSectionData
+          }
+        } catch {
+          attempts += 1
+        }
+      }
+
+      sectionAttempts[section] = attempts
+
       optimizedCvState = applySectionData(
         optimizedCvState,
         section,
-        params.mode === 'job_targeting' && section === 'skills'
-          ? sanitizeJobTargetedSkills(
-              params.cvState.skills,
-              result.output.section_data as CVState['skills'],
-              targetingPlan!,
-            )
-          : result.output.section_data,
+        sectionData,
       )
       changedSections.push(section)
-      notes.push(...result.output.changes_made)
+      if (result.output.success) {
+        notes.push(...result.output.changes_made)
+      }
     }
 
     return {

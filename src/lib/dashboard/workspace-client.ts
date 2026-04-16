@@ -4,7 +4,7 @@ import type {
   ResumeEditorSaveInput,
   ResumeEditorSaveOutput,
 } from '@/types/agent'
-import type { GenerateResumeResponse, SessionWorkspace } from '@/types/dashboard'
+import type { GenerateResumeResponse, ResumeComparisonResponse, SessionWorkspace } from '@/types/dashboard'
 
 class DashboardApiError extends Error {
   status: number
@@ -32,6 +32,10 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit): Promise<T
 
 export async function getSessionWorkspace(sessionId: string): Promise<SessionWorkspace> {
   return requestJson<SessionWorkspace>(`/api/session/${sessionId}`)
+}
+
+export async function getResumeComparison(sessionId: string): Promise<ResumeComparisonResponse> {
+  return requestJson<ResumeComparisonResponse>(`/api/session/${sessionId}/comparison`)
 }
 
 export async function manualEditBaseSection(

@@ -34,6 +34,24 @@ Was part of a team. Helped with development tasks.
 `
 
 const MINIMAL_RESUME = `ok`
+const GOOD_PTBR_RESUME = `
+Fábio Kröker
+fabio@email.com | +55 41 99999-9999 | linkedin.com/in/fabio-kroker | Curitiba, PR
+
+RESUMO
+Engenheiro de Dados e Especialista em BI com mais de 5 anos de experiência em ETL, modelagem e dashboards.
+
+EXPERIÊNCIA
+Senior Business Intelligence - CNH (2025-atual)
+- Desenvolvi pipelines ETL no Azure Databricks com PySpark para processar grandes volumes de dados
+- Otimizei pipelines críticos e reduzi em 40% o tempo de processamento
+
+SKILLS
+SQL, PySpark, Azure Databricks, Power BI, ETL, Modelagem de Dados
+
+EDUCAÇÃO
+Análise e Desenvolvimento de Sistemas - UniCesumar - 2026
+`
 
 describe('scoreATS', () => {
   describe('format scoring', () => {
@@ -69,6 +87,12 @@ describe('scoreATS', () => {
       const resume = 'EXPERIENCE\nSenior Dev at Company 2020-2023'
       const result = scoreATS(resume)
       expect(result.breakdown.structure).toBeGreaterThan(0)
+    })
+
+    it('detects Portuguese headings and scores a PT-BR resume structure correctly', () => {
+      const result = scoreATS(GOOD_PTBR_RESUME)
+      expect(result.breakdown.structure).toBe(20)
+      expect(result.breakdown.contact).toBeGreaterThanOrEqual(8)
     })
   })
 
@@ -109,6 +133,12 @@ describe('scoreATS', () => {
     it('gives high impact score for resume with many metrics', () => {
       const result = scoreATS(GOOD_RESUME)
       expect(result.breakdown.impact).toBeGreaterThan(10)
+    })
+
+    it('recognizes Portuguese action verbs and quantified impact', () => {
+      const result = scoreATS(GOOD_PTBR_RESUME)
+      expect(result.breakdown.keywords).toBeGreaterThan(0)
+      expect(result.breakdown.impact).toBeGreaterThan(0)
     })
 
     it('gives low impact score for resume with only duty descriptions', () => {

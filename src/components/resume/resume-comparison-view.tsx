@@ -7,7 +7,6 @@ import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { getDownloadUrls } from "@/lib/dashboard/workspace-client"
-import { scoreATS } from "@/lib/ats/score"
 import { cn } from "@/lib/utils"
 import type { ResumeGenerationType } from "@/types/agent"
 import type { CVState } from "@/types/cv"
@@ -18,58 +17,14 @@ type ResumeComparisonViewProps = {
   generationType: ResumeGenerationType
   sessionId: string
   targetJobDescription?: string
+  originalScore?: number
+  optimizedScore?: number
+  scoreLabel?: string
+  optimizationNotes?: string[]
+  backHref?: string
   onContinue: () => void
   onCvStateUpdate?: (cvState: CVState) => void
   className?: string
-}
-
-function cvStateToText(cvState: CVState): string {
-  const sections: string[] = []
-
-  if (cvState.fullName) sections.push(cvState.fullName)
-  if (cvState.email) sections.push(cvState.email)
-  if (cvState.phone) sections.push(cvState.phone)
-  if (cvState.linkedin) sections.push(cvState.linkedin)
-  if (cvState.location) sections.push(cvState.location)
-
-  if (cvState.summary) {
-    sections.push("\nResumo")
-    sections.push(cvState.summary)
-  }
-
-  if (cvState.experience.length > 0) {
-    sections.push("\nExperiência")
-    cvState.experience.forEach((experience) => {
-      sections.push(`${experience.title} - ${experience.company}`)
-      sections.push(`${experience.startDate} - ${experience.endDate}`)
-      experience.bullets.forEach((bullet) => sections.push(`- ${bullet}`))
-    })
-  }
-
-  if (cvState.skills.length > 0) {
-    sections.push("\nSkills")
-    sections.push(cvState.skills.join(", "))
-  }
-
-  if (cvState.education.length > 0) {
-    sections.push("\nEducação")
-    cvState.education.forEach((education) => {
-      sections.push(`${education.degree} - ${education.institution} (${education.year})`)
-    })
-  }
-
-  if ((cvState.certifications ?? []).length > 0) {
-    sections.push("\nCertificações")
-    cvState.certifications?.forEach((certification) => {
-      sections.push(`${certification.name} - ${certification.issuer}`)
-    })
-  }
-
-  return sections.join("\n")
-}
-
-function calculateAtsScore(cvState: CVState, targetJobDescription?: string): number {
-  return scoreATS(cvStateToText(cvState), targetJobDescription).total
 }
 
 function hasTextChanged(original: string, optimized: string): boolean {
@@ -182,7 +137,7 @@ function ResumeDocument({
             ) : null}
           </h3>
           <div className="space-y-3 sm:space-y-4">
-            {cvState.experience.slice(0, 3).map((experience, index) => {
+            {cvState.experience.map((experience, index) => {
               const originalExperience = compare.experience[index]
               const experienceChanged = isOptimized
                 && originalExperience
@@ -206,7 +161,7 @@ function ResumeDocument({
                   </div>
                   {experience.bullets.length > 0 ? (
                     <ul className="mt-1.5 space-y-0.5 sm:mt-2 sm:space-y-1">
-                      {experience.bullets.slice(0, 2).map((bullet, bulletIndex) => {
+                      {experience.bullets.map((bullet, bulletIndex) => {
                         const originalBullet = originalExperience?.bullets?.[bulletIndex]
                         const bulletChanged = isOptimized && originalBullet !== bullet
 
@@ -223,7 +178,7 @@ function ResumeDocument({
                                   : "bg-zinc-400 dark:bg-zinc-600",
                               )}
                             />
-                            <span className="line-clamp-2">{bullet}</span>
+                            <span>{bullet}</span>
                           </li>
                         )
                       })}
@@ -245,7 +200,7 @@ function ResumeDocument({
             ) : null}
           </h3>
           <div className="flex flex-wrap gap-1 sm:gap-1.5">
-            {cvState.skills.slice(0, 8).map((skill, index) => {
+            {cvState.skills.map((skill, index) => {
               const isNew = isOptimized && !compare.skills.includes(skill)
 
               return (
@@ -263,11 +218,6 @@ function ResumeDocument({
                 </span>
               )
             })}
-            {cvState.skills.length > 8 ? (
-              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 sm:px-2.5 sm:text-xs">
-                +{cvState.skills.length - 8}
-              </span>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -281,7 +231,7 @@ function ResumeDocument({
             ) : null}
           </h3>
           <div className="space-y-1.5 sm:space-y-2">
-            {cvState.education.slice(0, 2).map((education, index) => (
+            {cvState.education.map((education, index) => (
               <div key={`${education.degree}-${index}`}>
                 <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 sm:text-sm">
                   {education.degree}
@@ -306,7 +256,7 @@ function ResumeDocument({
             ) : null}
           </h3>
           <div className="space-y-0.5 sm:space-y-1">
-            {cvState.certifications.slice(0, 2).map((certification, index) => (
+            {cvState.certifications.map((certification, index) => (
               <p key={index} className="text-xs text-zinc-600 dark:text-zinc-400 sm:text-sm">
                 {certification.name} {certification.issuer ? `- ${certification.issuer}` : ""}
               </p>
@@ -324,6 +274,11 @@ export function ResumeComparisonView({
   generationType,
   sessionId,
   targetJobDescription,
+  originalScore,
+  optimizedScore,
+  scoreLabel = "Score ATS",
+  optimizationNotes = [],
+  backHref = "/dashboard/resume/new",
   onContinue,
   onCvStateUpdate,
   className,
@@ -341,15 +296,6 @@ export function ResumeComparisonView({
   const title = useMemo(
     () => generationType === "JOB_TARGETING" ? "Currículo adaptado para a vaga" : "Currículo otimizado para ATS",
     [generationType],
-  )
-
-  const originalScore = useMemo(
-    () => calculateAtsScore(originalCvState, targetJobDescription),
-    [originalCvState, targetJobDescription],
-  )
-  const optimizedScore = useMemo(
-    () => calculateAtsScore(currentOptimizedCvState, targetJobDescription),
-    [currentOptimizedCvState, targetJobDescription],
   )
 
   const handleDownload = async () => {
@@ -402,7 +348,7 @@ export function ResumeComparisonView({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <div className="shrink-0">
-              <Logo linkTo="#" size="default" />
+              <Logo linkTo={backHref} size="default" />
             </div>
             <div className="hidden h-6 w-px bg-zinc-200 dark:bg-zinc-700 sm:block" />
             <div className="hidden min-w-0 sm:block">
@@ -436,6 +382,16 @@ export function ResumeComparisonView({
         </div>
       </header>
 
+      {optimizationNotes.length > 0 ? (
+        <div className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 sm:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-100 sm:text-sm">
+              {optimizationNotes[0]}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
         <div
           className={cn(
@@ -452,9 +408,9 @@ export function ResumeComparisonView({
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">ATS Score:</span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">{scoreLabel}:</span>
                 <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400 sm:text-xs">
-                  {originalScore}%
+                  {(originalScore ?? 0)}%
                 </span>
               </div>
             </div>
@@ -470,9 +426,9 @@ export function ResumeComparisonView({
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">ATS Score:</span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">{scoreLabel}:</span>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 sm:text-xs">
-                  {optimizedScore}%
+                  {(optimizedScore ?? 0)}%
                 </span>
               </div>
             </div>

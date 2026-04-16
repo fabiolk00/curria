@@ -7,8 +7,8 @@ current_phase_name: Make target job analysis robust to freeform vacancy text and
 current_plan: None
 status: ready
 stopped_at: Phase 36 complete
-last_updated: "2026-04-15T20:37:00.000Z"
-last_activity: 2026-04-15 -- Completed Phase 36: job targeting now treats arbitrary vacancy text semantically and degrades safely under weak role-title extraction
+last_updated: "2026-04-15T22:17:00.000Z"
+last_activity: 2026-04-15 -- Completed quick task 260415-gld: setup generation now shows a dedicated loading overlay while ATS optimization is running
 progress:
   total_phases: 5
   completed_phases: 5
@@ -33,8 +33,8 @@ Current Phase Name: Make target job analysis robust to freeform vacancy text and
 Current Plan: None
 Total Plans in Phase: 1
 Status: Ready for audit
-Last activity: 2026-04-15 -- Completed quick task 260415-tld: restore compare-generated-resumes layout and preserve ATS rewritten content
-Last Activity Description: The resume comparison screen now mirrors the reference branch layout, including mobile behavior, and ATS smart recovery preserves rewritten content before using aggressive fallback
+Last activity: 2026-04-15 -- Completed quick task 260415-gld: add loading overlay during setup generation
+Last Activity Description: The resume setup page now shows a dedicated animated loading overlay while smart generation is running, giving clear ATS generation feedback before redirecting to the comparison flow
 
 Progress: [##########] 100%
 
@@ -121,3 +121,5 @@ Resume file: None
 | 2026-04-15 | 260414-u9d | Make package scripts package-manager agnostic so lint works when CI invokes npm scripts without pnpm on PATH | Complete |
 | 2026-04-15 | 260415-r14 | Improve job-targeting validation observability, harden targetRole extraction, and cover the validation failure path with tests | Complete |
 | 2026-04-15 | 260415-tld | Restore compare-generated-resumes layout and preserve ATS rewritten content with smart fallback | Complete |
+| 2026-04-15 | 260415-u2g | Make resume comparison use a dedicated route, meaningful PT-BR ATS scoring, full rendering, and visible rewrite retries | Complete |
+| 2026-04-15 | 260415-gld | Add an animated loading overlay during setup generation while ATS optimization is running | Complete |
