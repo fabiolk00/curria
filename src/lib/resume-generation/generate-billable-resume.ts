@@ -104,6 +104,7 @@ export async function generateBillableResume(input: {
   targetId?: string
   idempotencyKey?: string
   templateTargetSource?: Parameters<typeof generateFile>[4]
+  resumePendingGeneration?: boolean
 }): Promise<BillableGenerationResult> {
   const validation = validateGenerationCvState(input.sourceCvState)
   if (!validation.success) {
@@ -123,6 +124,7 @@ export async function generateBillableResume(input: {
     ? { type: 'target', targetId: input.targetId }
     : { type: 'session' }
   const generationType = resolveGenerationType(scope)
+  let resumeGeneration: ResumeGeneration | undefined
   const latestCompletedGeneration = await getLatestCompletedResumeGenerationForScope({
     userId: input.userId,
     sessionId: input.sessionId,
@@ -204,7 +206,10 @@ export async function generateBillableResume(input: {
       }
 
       if (existing.status === 'pending') {
-        return buildPendingGenerationInProgressResult(existing)
+        if (!input.resumePendingGeneration) {
+          return buildPendingGenerationInProgressResult(existing)
+        }
+        resumeGeneration = existing
       }
     }
   }
@@ -229,18 +234,20 @@ export async function generateBillableResume(input: {
     }
   }
 
-  const pendingGeneration = await createPendingResumeGeneration({
-    userId: input.userId,
-    sessionId: input.sessionId,
-    resumeTargetId: input.targetId,
-    type: generationType,
-    idempotencyKey: input.idempotencyKey,
-    sourceCvSnapshot: input.sourceCvState,
-  })
-  const resumeGeneration = pendingGeneration.generation
+  if (!resumeGeneration) {
+    const pendingGeneration = await createPendingResumeGeneration({
+      userId: input.userId,
+      sessionId: input.sessionId,
+      resumeTargetId: input.targetId,
+      type: generationType,
+      idempotencyKey: input.idempotencyKey,
+      sourceCvSnapshot: input.sourceCvState,
+    })
+    resumeGeneration = pendingGeneration.generation
 
-  if (!pendingGeneration.wasCreated) {
-    return buildPendingGenerationInProgressResult(resumeGeneration)
+    if (!pendingGeneration.wasCreated && !input.resumePendingGeneration) {
+      return buildPendingGenerationInProgressResult(resumeGeneration)
+    }
   }
 
   const generationResult: GenerateFileExecutionResult = await generateFile(

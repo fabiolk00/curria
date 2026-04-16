@@ -2,8 +2,16 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { dispatchTool } from '@/lib/agent/tools'
-import { getSession } from '@/lib/db/sessions'
+import {
+  applyGeneratedOutputPatch,
+  getSession,
+} from '@/lib/db/sessions'
+import {
+  getResumeTargetForSession,
+  updateResumeTargetGeneratedOutput,
+} from '@/lib/db/resume-targets'
+import { createJob } from '@/lib/jobs/repository'
+import { startDurableJobProcessing } from '@/lib/jobs/runtime'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
 
 import { POST } from './route'
@@ -13,11 +21,21 @@ vi.mock('@/lib/auth/app-user', () => ({
 }))
 
 vi.mock('@/lib/db/sessions', () => ({
+  applyGeneratedOutputPatch: vi.fn(),
   getSession: vi.fn(),
 }))
 
-vi.mock('@/lib/agent/tools', () => ({
-  dispatchTool: vi.fn(),
+vi.mock('@/lib/db/resume-targets', () => ({
+  getResumeTargetForSession: vi.fn(),
+  updateResumeTargetGeneratedOutput: vi.fn(),
+}))
+
+vi.mock('@/lib/jobs/repository', () => ({
+  createJob: vi.fn(),
+}))
+
+vi.mock('@/lib/jobs/runtime', () => ({
+  startDurableJobProcessing: vi.fn(),
 }))
 
 vi.mock('@/lib/observability/structured-log', () => ({
@@ -81,6 +99,41 @@ function buildSession() {
   }
 }
 
+function buildTarget() {
+  return {
+    id: 'target_123',
+    sessionId: 'sess_123',
+    targetJobDescription: 'Senior Backend Engineer',
+    derivedCvState: {
+      ...buildSession().cvState,
+      summary: 'Targeted backend engineer',
+    },
+    generatedOutput: undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
+function buildJobSnapshot(overrides: Record<string, unknown> = {}) {
+  return {
+    jobId: 'job_123',
+    userId: 'usr_123',
+    sessionId: 'sess_123',
+    idempotencyKey: 'session-generate:sess_123:base:abc',
+    type: 'artifact_generation' as const,
+    status: 'queued' as const,
+    stage: 'queued',
+    dispatchInputRef: {
+      kind: 'session_cv_state' as const,
+      sessionId: 'sess_123',
+      snapshotSource: 'base' as const,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
 function buildTrustedHeaders() {
   return {
     'content-type': 'application/json',
@@ -91,18 +144,24 @@ function buildTrustedHeaders() {
 describe('generate route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(buildSession() as never)
+    vi.mocked(getResumeTargetForSession).mockResolvedValue(buildTarget() as never)
+    vi.mocked(applyGeneratedOutputPatch).mockResolvedValue(undefined)
+    vi.mocked(updateResumeTargetGeneratedOutput).mockResolvedValue(undefined)
   })
 
-  it('dispatches base generation', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: true,
-      docxUrl: 'https://example.com/docx',
-      pdfUrl: 'https://example.com/pdf',
-      creditsUsed: 1,
-      resumeGenerationId: 'gen_123',
-    }))
+  it('dispatches base generation durably and returns 202', async () => {
+    vi.mocked(createJob).mockResolvedValue({
+      wasCreated: true,
+      job: buildJobSnapshot(),
+    } as never)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(buildJobSnapshot({
+      status: 'running',
+      stage: 'processing',
+      claimedAt: '2026-04-16T10:00:30.000Z',
+      startedAt: '2026-04-16T10:00:30.000Z',
+    }) as never)
 
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
@@ -113,22 +172,36 @@ describe('generate route', () => {
       { params: { id: 'sess_123' } },
     )
 
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(202)
     expect(await response.json()).toEqual({
       success: true,
+      inProgress: true,
       scope: 'base',
       targetId: undefined,
-      creditsUsed: 1,
+      creditsUsed: 0,
       generationType: 'ATS_ENHANCEMENT',
-      resumeGenerationId: 'gen_123',
+      jobId: 'job_123',
     })
-    expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
-      cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
-      target_id: undefined,
-      idempotency_key: undefined,
-    }, expect.objectContaining({ id: 'sess_123' }))
+    expect(createJob).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'sess_123',
+      resumeTargetId: undefined,
+      type: 'artifact_generation',
+      dispatchInputRef: {
+        kind: 'session_cv_state',
+        sessionId: 'sess_123',
+        snapshotSource: 'base',
+      },
+    }))
+    expect(startDurableJobProcessing).toHaveBeenCalledWith({
+      jobId: 'job_123',
+      userId: 'usr_123',
+    })
+    expect(applyGeneratedOutputPatch).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sess_123' }),
+      { status: 'generating', error: undefined },
+    )
     expect(logInfo).toHaveBeenCalledWith(
-      'api.session.generate.completed',
+      'api.session.generate.in_progress',
       expect.objectContaining({
         sessionId: 'sess_123',
         scope: 'base',
@@ -137,16 +210,32 @@ describe('generate route', () => {
     )
   })
 
-  it('dispatches target generation', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: true,
-      docxUrl: 'https://example.com/docx',
-      pdfUrl: 'https://example.com/pdf',
-      creditsUsed: 1,
-      resumeGenerationId: 'gen_target_123',
-    }))
+  it('dispatches target generation durably and keeps target generated output scoped to the target', async () => {
+    vi.mocked(createJob).mockResolvedValue({
+      wasCreated: true,
+      job: buildJobSnapshot({
+        resumeTargetId: 'target_123',
+        dispatchInputRef: {
+          kind: 'resume_target_cv_state',
+          sessionId: 'sess_123',
+          resumeTargetId: 'target_123',
+          snapshotSource: 'target_derived',
+        },
+      }),
+    } as never)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(buildJobSnapshot({
+      status: 'running',
+      resumeTargetId: 'target_123',
+      stage: 'processing',
+      dispatchInputRef: {
+        kind: 'resume_target_cv_state',
+        sessionId: 'sess_123',
+        resumeTargetId: 'target_123',
+        snapshotSource: 'target_derived',
+      },
+      claimedAt: '2026-04-16T10:00:30.000Z',
+      startedAt: '2026-04-16T10:00:30.000Z',
+    }) as never)
 
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
@@ -157,24 +246,34 @@ describe('generate route', () => {
       { params: { id: 'sess_123' } },
     )
 
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(202)
     expect(await response.json()).toEqual({
       success: true,
+      inProgress: true,
       scope: 'target',
       targetId: 'target_123',
-      creditsUsed: 1,
+      creditsUsed: 0,
       generationType: 'JOB_TARGETING',
-      resumeGenerationId: 'gen_target_123',
+      jobId: 'job_123',
     })
-    expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
-      cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
-      target_id: 'target_123',
-      idempotency_key: undefined,
-    }, expect.objectContaining({ id: 'sess_123' }))
+    expect(createJob).toHaveBeenCalledWith(expect.objectContaining({
+      resumeTargetId: 'target_123',
+      dispatchInputRef: {
+        kind: 'resume_target_cv_state',
+        sessionId: 'sess_123',
+        resumeTargetId: 'target_123',
+        snapshotSource: 'target_derived',
+      },
+    }))
+    expect(updateResumeTargetGeneratedOutput).toHaveBeenCalledWith(
+      'sess_123',
+      'target_123',
+      { status: 'generating', error: undefined },
+    )
+    expect(applyGeneratedOutputPatch).not.toHaveBeenCalled()
   })
 
   it('blocks target generation until the realism override was explicitly confirmed', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue({
       ...buildSession(),
       agentState: {
@@ -184,7 +283,7 @@ describe('generate route', () => {
         targetJobDescription: 'Senior DevOps Engineer with Kubernetes, Terraform and AWS.',
         targetFitAssessment: {
           level: 'weak' as const,
-          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento, com lacunas relevantes que uma reescrita de currículo sozinha não resolve.',
+          summary: 'O perfil atual parece pouco alinhado com a vaga-alvo neste momento.',
           reasons: ['Skill ausente ou pouco evidenciada: Kubernetes'],
           assessedAt: '2026-04-12T12:00:00.000Z',
         },
@@ -219,27 +318,26 @@ describe('generate route', () => {
       error: 'A vaga parece um encaixe fraco para o perfil atual. Confirme explicitamente no chat que deseja continuar antes de gerar esta versão.',
       code: 'CAREER_FIT_CONFIRMATION_REQUIRED',
     })
-    expect(dispatchTool).not.toHaveBeenCalled()
-    expect(logWarn).toHaveBeenCalledWith(
-      'api.session.generate.career_fit_confirmation_required',
-      expect.objectContaining({
-        sessionId: 'sess_123',
-        scope: 'target',
-        targetId: 'target_123',
-      }),
-    )
+    expect(createJob).not.toHaveBeenCalled()
   })
 
-  it('returns creditsUsed: 0 for an idempotent replay', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: true,
-      docxUrl: null,
-      pdfUrl: 'https://example.com/pdf',
-      creditsUsed: 0,
-      resumeGenerationId: 'gen_existing_123',
-    }))
+  it('reuses a completed durable generation and returns the durable result metadata immediately', async () => {
+    const completedJob = buildJobSnapshot({
+      status: 'completed',
+      terminalResultRef: {
+        kind: 'resume_generation',
+        resumeGenerationId: 'gen_existing_123',
+        sessionId: 'sess_123',
+        versionNumber: 3,
+        snapshotSource: 'generated',
+      },
+      completedAt: '2026-04-16T10:05:00.000Z',
+    })
+    vi.mocked(createJob).mockResolvedValue({
+      wasCreated: false,
+      job: completedJob,
+    } as never)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(completedJob as never)
 
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
@@ -257,26 +355,24 @@ describe('generate route', () => {
       targetId: undefined,
       creditsUsed: 0,
       generationType: 'ATS_ENHANCEMENT',
+      jobId: 'job_123',
       resumeGenerationId: 'gen_existing_123',
     })
-    expect(dispatchTool).toHaveBeenCalledWith('generate_file', {
-      cv_state: expect.objectContaining({ summary: 'Backend engineer' }),
-      target_id: undefined,
-      idempotency_key: 'req_existing',
-    }, expect.objectContaining({ id: 'sess_123' }))
+    expect(applyGeneratedOutputPatch).not.toHaveBeenCalled()
   })
 
-  it('returns 202 when the same generation request is already in progress', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: true,
-      pdfUrl: null,
-      docxUrl: null,
-      creditsUsed: 0,
-      resumeGenerationId: 'gen_inflight_123',
-      inProgress: true,
-    }))
+  it('returns 202 when the same durable generation request is already in progress', async () => {
+    const runningJob = buildJobSnapshot({
+      status: 'running',
+      stage: 'processing',
+      claimedAt: '2026-04-16T10:00:30.000Z',
+      startedAt: '2026-04-16T10:00:30.000Z',
+    })
+    vi.mocked(createJob).mockResolvedValue({
+      wasCreated: false,
+      job: runningJob,
+    } as never)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(runningJob as never)
 
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
@@ -295,59 +391,31 @@ describe('generate route', () => {
       targetId: undefined,
       creditsUsed: 0,
       generationType: 'ATS_ENHANCEMENT',
-      resumeGenerationId: 'gen_inflight_123',
+      jobId: 'job_123',
     })
   })
 
-  it('returns creditsUsed: 0 for a target replay without changing the generation type', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: true,
-      docxUrl: null,
-      pdfUrl: 'https://example.com/pdf',
-      creditsUsed: 0,
-      resumeGenerationId: 'gen_target_existing_123',
-    }))
+  it('surfaces durable generation failures as structured responses', async () => {
+    const failedJob = buildJobSnapshot({
+      status: 'failed',
+      terminalErrorRef: {
+        kind: 'resume_generation_failure',
+        resumeGenerationId: 'gen_failed_123',
+        failureReason: 'File generation failed.',
+      },
+      completedAt: '2026-04-16T10:05:00.000Z',
+    })
+    vi.mocked(createJob).mockResolvedValue({
+      wasCreated: false,
+      job: failedJob,
+    } as never)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(failedJob as never)
 
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
         method: 'POST',
         headers: buildTrustedHeaders(),
-        body: JSON.stringify({
-          scope: 'target',
-          targetId: 'target_123',
-          clientRequestId: 'req_target_existing',
-        }),
-      }),
-      { params: { id: 'sess_123' } },
-    )
-
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({
-      success: true,
-      scope: 'target',
-      targetId: 'target_123',
-      creditsUsed: 0,
-      generationType: 'JOB_TARGETING',
-      resumeGenerationId: 'gen_target_existing_123',
-    })
-  })
-
-  it('propagates structured generation failures', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: false,
-      code: 'GENERATION_ERROR',
-      error: 'File generation failed.',
-    }))
-
-    const response = await POST(
-      new NextRequest('https://example.com/api/session/sess_123/generate', {
-        method: 'POST',
-        headers: buildTrustedHeaders(),
-        body: JSON.stringify({ scope: 'base' }),
+        body: JSON.stringify({ scope: 'base', clientRequestId: 'req_failed' }),
       }),
       { params: { id: 'sess_123' } },
     )
@@ -357,39 +425,18 @@ describe('generate route', () => {
       success: false,
       code: 'GENERATION_ERROR',
       error: 'File generation failed.',
+      resumeGenerationId: 'gen_failed_123',
     })
-  })
-
-  it('propagates structured validation failures', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-    vi.mocked(dispatchTool).mockResolvedValue(JSON.stringify({
-      success: false,
-      code: 'VALIDATION_ERROR',
-      error: 'summary is required.',
-    }))
-
-    const response = await POST(
-      new NextRequest('https://example.com/api/session/sess_123/generate', {
-        method: 'POST',
-        headers: buildTrustedHeaders(),
-        body: JSON.stringify({ scope: 'base' }),
+    expect(logWarn).toHaveBeenCalledWith(
+      'api.session.generate.job_failed',
+      expect.objectContaining({
+        sessionId: 'sess_123',
+        scope: 'base',
       }),
-      { params: { id: 'sess_123' } },
     )
-
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({
-      success: false,
-      code: 'VALIDATION_ERROR',
-      error: 'summary is required.',
-    })
   })
 
   it('rejects cross-origin generation requests and logs the trust failure', async () => {
-    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
-    vi.mocked(getSession).mockResolvedValue(buildSession())
-
     const response = await POST(
       new NextRequest('https://example.com/api/session/sess_123/generate', {
         method: 'POST',
@@ -404,7 +451,7 @@ describe('generate route', () => {
 
     expect(response.status).toBe(403)
     expect(await response.json()).toEqual({ error: 'Forbidden' })
-    expect(dispatchTool).not.toHaveBeenCalled()
+    expect(createJob).not.toHaveBeenCalled()
     expect(logWarn).toHaveBeenCalledWith(
       'api.session.generate.untrusted_request',
       expect.objectContaining({

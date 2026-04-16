@@ -175,6 +175,15 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   validation?: Session['agentState']['rewriteValidation']
   error?: string
 }> {
+  const previousOptimizedCvState = session.agentState.optimizedCvState
+    ? structuredClone(session.agentState.optimizedCvState)
+    : undefined
+  const previousOptimizedAt = session.agentState.optimizedAt
+  const previousOptimizationSummary = session.agentState.optimizationSummary
+    ? structuredClone(session.agentState.optimizationSummary)
+    : undefined
+  const previousLastRewriteMode = session.agentState.lastRewriteMode
+
   await persistAgentState(session, {
     ...session.agentState,
     rewriteStatus: 'running',
@@ -413,10 +422,10 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     workflowMode: 'ats_enhancement',
     atsAnalysis,
     rewriteStatus: finalValidation.valid ? 'completed' : 'failed',
-    optimizedCvState: finalValidation.valid ? finalOptimizedCvState : undefined,
-    optimizedAt: finalValidation.valid ? optimizedAt : undefined,
-    optimizationSummary: finalValidation.valid ? finalOptimizationSummary : undefined,
-    lastRewriteMode: finalValidation.valid ? 'ats_enhancement' : session.agentState.lastRewriteMode,
+    optimizedCvState: finalValidation.valid ? finalOptimizedCvState : previousOptimizedCvState,
+    optimizedAt: finalValidation.valid ? optimizedAt : previousOptimizedAt,
+    optimizationSummary: finalValidation.valid ? finalOptimizationSummary : previousOptimizationSummary,
+    lastRewriteMode: finalValidation.valid ? 'ats_enhancement' : previousLastRewriteMode,
     rewriteValidation: finalValidation,
     atsWorkflowRun: buildWorkflowRun(session, {
       status: finalValidation.valid ? 'completed' : 'failed',
@@ -497,10 +506,10 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     const failedAgentState: Session['agentState'] = {
       ...session.agentState,
       rewriteStatus: 'failed',
-      optimizedCvState: undefined,
-      optimizedAt: undefined,
-      optimizationSummary: undefined,
-      lastRewriteMode: session.agentState.lastRewriteMode,
+      optimizedCvState: previousOptimizedCvState,
+      optimizedAt: previousOptimizedAt,
+      optimizationSummary: previousOptimizationSummary,
+      lastRewriteMode: previousLastRewriteMode,
       atsWorkflowRun: buildWorkflowRun(session, {
         status: 'failed',
         currentStage: 'persist_version',

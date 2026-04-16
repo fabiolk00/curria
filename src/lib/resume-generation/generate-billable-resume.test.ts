@@ -260,6 +260,85 @@ describe('generateBillableResume', () => {
     expect(mockGenerateFile).not.toHaveBeenCalled()
   })
 
+  it('resumes a pending generation when a durable worker is retrying the same idempotency key', async () => {
+    const cvState = buildCvState()
+    const createdAt = new Date('2026-04-12T12:00:00.000Z')
+    const completedAt = new Date('2026-04-12T12:01:00.000Z')
+
+    mockGetResumeGenerationByIdempotencyKey.mockResolvedValue({
+      id: 'gen_pending_existing',
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      type: 'ATS_ENHANCEMENT',
+      status: 'pending',
+      idempotencyKey: 'dup_key',
+      sourceCvSnapshot: cvState,
+      versionNumber: 1,
+      createdAt,
+      updatedAt: createdAt,
+    })
+    mockGetLatestCvVersionForScope.mockResolvedValue({
+      id: 'ver_rewrite',
+      sessionId: 'sess_123',
+      snapshot: cvState,
+      source: 'rewrite',
+      createdAt,
+    })
+    mockCheckUserQuota.mockResolvedValue(true)
+    mockGenerateFile.mockResolvedValue({
+      output: {
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        docxUrl: null,
+      },
+      generatedOutput: {
+        status: 'ready',
+        pdfPath: 'usr_123/sess_123/resume.pdf',
+        docxPath: null,
+        generatedAt: completedAt.toISOString(),
+      },
+    })
+    mockConsumeCreditForGeneration.mockResolvedValue(true)
+    mockUpdateResumeGeneration.mockResolvedValue({
+      id: 'gen_pending_existing',
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      type: 'ATS_ENHANCEMENT',
+      status: 'completed',
+      idempotencyKey: 'dup_key',
+      sourceCvSnapshot: cvState,
+      generatedCvState: cvState,
+      outputPdfPath: 'usr_123/sess_123/resume.pdf',
+      outputDocxPath: null,
+      versionNumber: 1,
+      createdAt,
+      updatedAt: completedAt,
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+      idempotencyKey: 'dup_key',
+      resumePendingGeneration: true,
+    })
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: 'https://example.com/resume.pdf',
+      docxUrl: null,
+      creditsUsed: 1,
+      resumeGenerationId: 'gen_pending_existing',
+    })
+    expect(mockCreatePendingResumeGeneration).not.toHaveBeenCalled()
+    expect(mockGenerateFile).toHaveBeenCalledTimes(1)
+    expect(mockConsumeCreditForGeneration).toHaveBeenCalledWith(
+      'usr_123',
+      'gen_pending_existing',
+      'ATS_ENHANCEMENT',
+    )
+  })
+
   it('returns the previous failure for the same idempotency key without retrying or charging again', async () => {
     const cvState = buildCvState()
     mockGetResumeGenerationByIdempotencyKey.mockResolvedValue({

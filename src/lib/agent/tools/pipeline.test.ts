@@ -496,6 +496,72 @@ describe('ATS enhancement reliability hardening', () => {
     }))
   })
 
+  it('preserves the previous valid optimizedCvState when ATS validation still fails after recovery attempts', async () => {
+    const session = buildSession()
+    const previousOptimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado anterior e estavel.',
+      skills: ['SQL', 'Power BI', 'ETL'],
+    }
+
+    session.agentState.optimizedCvState = previousOptimizedCvState
+    session.agentState.optimizedAt = '2026-04-10T12:00:00.000Z'
+    session.agentState.optimizationSummary = {
+      changedSections: ['summary'],
+      notes: ['Versao anterior validada'],
+      keywordCoverageImprovement: ['SQL'],
+    }
+    session.agentState.lastRewriteMode = 'ats_enhancement'
+
+    mockAnalyzeAtsGeneral.mockResolvedValue({
+      success: true,
+      result: {
+        overallScore: 80,
+        structureScore: 82,
+        clarityScore: 78,
+        impactScore: 76,
+        keywordCoverageScore: 81,
+        atsReadabilityScore: 84,
+        issues: [],
+        recommendations: ['SQL', 'Power BI'],
+      },
+    })
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Novo resumo ATS com claims inconsistentes.',
+      }, section),
+    }))
+
+    mockValidateRewrite.mockReturnValue({
+      valid: false,
+      issues: [{
+        severity: 'medium',
+        message: 'O resumo permanece inconsistente com a experiencia comprovada.',
+        section: 'summary',
+      }],
+    })
+
+    const result = await runAtsEnhancementPipeline(session)
+
+    expect(result.success).toBe(false)
+    expect(session.agentState.optimizedCvState).toEqual(previousOptimizedCvState)
+    expect(session.agentState.optimizedAt).toBe('2026-04-10T12:00:00.000Z')
+    expect(session.agentState.optimizationSummary).toEqual({
+      changedSections: ['summary'],
+      notes: ['Versao anterior validada'],
+      keywordCoverageImprovement: ['SQL'],
+    })
+    expect(session.agentState.lastRewriteMode).toBe('ats_enhancement')
+    expect(session.agentState.atsWorkflowRun).toMatchObject({
+      status: 'failed',
+      currentStage: 'validation',
+      lastFailureStage: 'validation',
+    })
+    expect(mockCreateCvVersion).not.toHaveBeenCalled()
+  })
+
   it('builds a full job_targeting rewrite with plan-driven keyword emphasis', async () => {
     mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
       output: buildSuccessfulRewriteOutput({
@@ -626,6 +692,56 @@ describe('ATS enhancement reliability hardening', () => {
       issueMessages: expect.stringContaining('O resumo targetizado passou a se apresentar diretamente como o cargo alvo'),
       targetRole: 'Analista De BI',
     }))
+  })
+
+  it('preserves the previous valid optimizedCvState when job_targeting persist_version fails', async () => {
+    const session = buildSession()
+    const previousOptimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo targetizado anterior e estavel.',
+      skills: ['SQL', 'Power BI'],
+    }
+
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Analytics Engineer',
+      'Responsabilidades: construir dashboards e automacoes.',
+      'Requisitos: SQL, Power BI, BigQuery.',
+    ].join('\n')
+    session.agentState.optimizedCvState = previousOptimizedCvState
+    session.agentState.optimizedAt = '2026-04-09T12:00:00.000Z'
+    session.agentState.optimizationSummary = {
+      changedSections: ['summary'],
+      notes: ['Versao alvo anterior validada'],
+      keywordCoverageImprovement: ['SQL'],
+    }
+    session.agentState.lastRewriteMode = 'job_targeting'
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Analytics engineer com foco em SQL, Power BI e automacao.',
+      }, section),
+    }))
+    mockCreateCvVersion.mockRejectedValue(new Error('persist version failed'))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(false)
+    expect(session.agentState.optimizedCvState).toEqual(previousOptimizedCvState)
+    expect(session.agentState.optimizedAt).toBe('2026-04-09T12:00:00.000Z')
+    expect(session.agentState.optimizationSummary).toEqual({
+      changedSections: ['summary'],
+      notes: ['Versao alvo anterior validada'],
+      keywordCoverageImprovement: ['SQL'],
+    })
+    expect(session.agentState.lastRewriteMode).toBe('job_targeting')
+    expect(session.agentState.atsWorkflowRun).toMatchObject({
+      status: 'failed',
+      currentStage: 'persist_version',
+      lastFailureStage: 'persist_version',
+      lastFailureReason: 'persist version failed',
+    })
   })
 
   it('builds a low-confidence target role plan from freeform vacancy text while keeping the flow usable', async () => {

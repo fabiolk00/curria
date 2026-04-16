@@ -12,6 +12,7 @@ import {
   updateSession,
 } from '@/lib/db/sessions'
 import { createJob } from '@/lib/jobs/repository'
+import { startDurableJobProcessing } from '@/lib/jobs/runtime'
 
 const { mockReleaseMetadata } = vi.hoisted(() => ({
   mockReleaseMetadata: {
@@ -89,6 +90,10 @@ vi.mock('@/lib/agent/pre-loop-setup', () => ({
 
 vi.mock('@/lib/jobs/repository', () => ({
   createJob: vi.fn(),
+}))
+
+vi.mock('@/lib/jobs/runtime', () => ({
+  startDurableJobProcessing: vi.fn(),
 }))
 
 vi.mock('@/lib/runtime/release-metadata', () => ({
@@ -190,6 +195,7 @@ describe('handleAgentPost', () => {
         updatedAt: new Date().toISOString(),
       },
     } as any)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(null)
   })
 
   it('returns 401 with provenance headers when the user is not authenticated', async () => {
@@ -230,6 +236,10 @@ describe('handleAgentPost', () => {
       phase: 'analysis',
     })
     const events = parseSseDataEvents(await response.text())
+    expect(startDurableJobProcessing).toHaveBeenCalledWith({
+      jobId: 'job_123',
+      userId: 'usr_123',
+    })
     expect(events.map((event) => event.type)).toEqual([
       'sessionCreated',
       'text',

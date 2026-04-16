@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 
 import { createJob } from '@/lib/jobs/repository'
+import { startDurableJobProcessing } from '@/lib/jobs/runtime'
 import { resolveEffectiveResumeSource } from '@/lib/jobs/source-of-truth'
 import type { Session } from '@/types/agent'
 import type { JobStatusSnapshot, JobType } from '@/types/jobs'
@@ -84,12 +85,16 @@ export async function dispatchAsyncAction(params: {
       targetJobDescription: params.session.agentState.targetJobDescription?.trim() ?? null,
     },
   })
+  const startedJob = await startDurableJobProcessing({
+    jobId: job.jobId,
+    userId: params.userId,
+  })
 
   return {
     acknowledgementText: wasCreated
       ? buildCreatedAcknowledgementText(params.actionType)
       : buildReusedAcknowledgementText(job),
-    job,
+    job: startedJob ?? job,
     wasCreated,
   }
 }

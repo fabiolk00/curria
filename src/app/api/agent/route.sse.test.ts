@@ -12,6 +12,7 @@ import {
   updateSession,
 } from '@/lib/db/sessions'
 import { createJob } from '@/lib/jobs/repository'
+import { startDurableJobProcessing } from '@/lib/jobs/runtime'
 import { agentLimiter } from '@/lib/rate-limit'
 
 vi.mock('@/lib/auth/app-user', () => ({
@@ -54,6 +55,10 @@ vi.mock('@/lib/agent/agent-loop', () => ({
 
 vi.mock('@/lib/jobs/repository', () => ({
   createJob: vi.fn(),
+}))
+
+vi.mock('@/lib/jobs/runtime', () => ({
+  startDurableJobProcessing: vi.fn(),
 }))
 
 vi.mock('@/lib/runtime/release-metadata', () => ({
@@ -140,6 +145,7 @@ describe('/api/agent SSE contract', () => {
     vi.mocked(incrementMessageCount).mockResolvedValue(true)
     vi.mocked(updateSession).mockResolvedValue(undefined)
     vi.mocked(appendMessage).mockResolvedValue(undefined)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(null)
   })
 
   it('acknowledges heavy generation requests and dispatches through durable jobs instead of the sync loop', async () => {
@@ -175,6 +181,10 @@ describe('/api/agent SSE contract', () => {
     expect(typeof appendAssistantTurn).toBe('function')
 
     const events = parseSseDataEvents(await response.text())
+    expect(startDurableJobProcessing).toHaveBeenCalledWith({
+      jobId: 'job_generation',
+      userId: 'usr_123',
+    })
     expect(events.map((event) => event.type)).toEqual(['text', 'done'])
     expect(events[0]).toEqual({
       type: 'text',

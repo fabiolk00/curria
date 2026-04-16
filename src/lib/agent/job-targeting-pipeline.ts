@@ -42,6 +42,14 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   validation?: Session['agentState']['rewriteValidation']
   error?: string
 }> {
+  const previousOptimizedCvState = session.agentState.optimizedCvState
+    ? structuredClone(session.agentState.optimizedCvState)
+    : undefined
+  const previousOptimizedAt = session.agentState.optimizedAt
+  const previousOptimizationSummary = session.agentState.optimizationSummary
+    ? structuredClone(session.agentState.optimizationSummary)
+    : undefined
+  const previousLastRewriteMode = session.agentState.lastRewriteMode
   const targetJobDescription = session.agentState.targetJobDescription?.trim()
   if (!targetJobDescription) {
     return {
@@ -239,10 +247,10 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     targetFitAssessment,
     targetingPlan,
     rewriteStatus: validation.valid ? 'completed' : 'failed',
-    optimizedCvState: validation.valid ? rewriteResult.optimizedCvState : undefined,
-    optimizedAt: validation.valid ? optimizedAt : undefined,
-    optimizationSummary: validation.valid ? rewriteResult.summary : undefined,
-    lastRewriteMode: validation.valid ? 'job_targeting' : session.agentState.lastRewriteMode,
+    optimizedCvState: validation.valid ? rewriteResult.optimizedCvState : previousOptimizedCvState,
+    optimizedAt: validation.valid ? optimizedAt : previousOptimizedAt,
+    optimizationSummary: validation.valid ? rewriteResult.summary : previousOptimizationSummary,
+    lastRewriteMode: validation.valid ? 'job_targeting' : previousLastRewriteMode,
     rewriteValidation: validation,
     atsWorkflowRun: buildWorkflowRun(session, {
       status: validation.valid ? 'completed' : 'failed',
@@ -314,9 +322,10 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     const failedAgentState: Session['agentState'] = {
       ...session.agentState,
       rewriteStatus: 'failed',
-      optimizedCvState: undefined,
-      optimizedAt: undefined,
-      optimizationSummary: undefined,
+      optimizedCvState: previousOptimizedCvState,
+      optimizedAt: previousOptimizedAt,
+      optimizationSummary: previousOptimizationSummary,
+      lastRewriteMode: previousLastRewriteMode,
       atsWorkflowRun: buildWorkflowRun(session, {
         status: 'failed',
         currentStage: 'persist_version',
