@@ -447,6 +447,13 @@ describe('ATS enhancement reliability hardening', () => {
       workflowMode: 'ats_enhancement',
       recoveryKind: 'smart_repair',
     }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.ats_enhancement.completed', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      success: true,
+      issueCount: 0,
+      recoveredIssueCount: 2,
+      recoveredIssueSections: 'skills, summary',
+    }))
   })
 
   it('builds a full job_targeting rewrite with plan-driven keyword emphasis', async () => {

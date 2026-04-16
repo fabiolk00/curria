@@ -460,6 +460,12 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   }
 
   const validatedOptimizedCvState = finalOptimizedCvState
+  const recoveredIssueCount = !validation.valid && finalValidation.valid
+    ? validation.issues.length
+    : undefined
+  const recoveredIssueSections = !validation.valid && finalValidation.valid
+    ? validationIssueSections.join(', ') || undefined
+    : undefined
 
   try {
     await executeWithStageRetry(
@@ -535,7 +541,9 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     userId: session.userId,
     stage: 'persist_version',
     success: true,
-    issueCount: validation.issues.length,
+    issueCount: finalValidation.issues.length,
+    recoveredIssueCount,
+    recoveredIssueSections,
     sectionAttempts: Object.values(rewriteResult.diagnostics?.sectionAttempts ?? {}).reduce((total, value) => total + (value ?? 0), 0),
     retriedSections: rewriteResult.diagnostics?.retriedSections.length ?? 0,
     compactedSections: rewriteResult.diagnostics?.compactedSections.length ?? 0,

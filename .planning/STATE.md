@@ -123,3 +123,4 @@ Resume file: None
 | 2026-04-15 | 260415-tld | Restore compare-generated-resumes layout and preserve ATS rewritten content with smart fallback | Complete |
 | 2026-04-15 | 260415-u2g | Make resume comparison use a dedicated route, meaningful PT-BR ATS scoring, full rendering, and visible rewrite retries | Complete |
 | 2026-04-15 | 260415-gld | Add an animated loading overlay during setup generation while ATS optimization is running | Complete |
+| 2026-04-16 | 260415-v7b | Align ATS enhancement completion logs with final validation state after recovery | Complete |
