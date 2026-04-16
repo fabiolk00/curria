@@ -10,6 +10,19 @@ import type {
 import type { ToolErrorCode, ToolFailure } from '@/lib/agent/tool-errors'
 
 export type { Phase }
+export type {
+  AgentActionType,
+  DurableJobDispatchPayload,
+  ExecutionMode,
+  JobErrorRef,
+  JobInputRef,
+  JobProgress,
+  JobResultRef,
+  JobStatus,
+  JobStatusSnapshot,
+  JobType,
+  SyncActionType,
+} from './jobs'
 
 export type WorkflowMode =
   | 'resume_review'

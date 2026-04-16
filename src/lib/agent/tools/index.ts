@@ -6,6 +6,7 @@ import {
   getResumeTargetForSession,
   updateResumeTargetGeneratedOutput,
 } from '@/lib/db/resume-targets'
+import { resolveEffectiveResumeSource } from '@/lib/jobs/source-of-truth'
 import {
   applyToolPatchWithVersion,
   mergeToolPatch,
@@ -236,10 +237,6 @@ function resolveCvVersionSource(
   return undefined
 }
 
-function getEffectiveBaseCvState(session: Session): Session['cvState'] {
-  return session.agentState.optimizedCvState ?? session.cvState
-}
-
 export async function executeTool(
   toolName: string,
   toolInput: Record<string, unknown>,
@@ -378,7 +375,7 @@ export async function executeTool(
       const result = await createTargetResumeVariant({
         sessionId: session.id,
         userId: session.userId,
-        baseCvState: getEffectiveBaseCvState(session),
+        baseCvState: resolveEffectiveResumeSource(session).cvState,
         targetJobDescription: target_job_description,
         externalSignal,
       })
@@ -429,11 +426,12 @@ export async function executeTool(
           output: toolFailure(TOOL_ERROR_CODES.NOT_FOUND, 'Target resume not found.'),
         }
       }
+      const effectiveSource = resolveEffectiveResumeSource(session, target)
 
       const result = await generateBillableResume({
         userId: session.userId,
         sessionId: session.id,
-        sourceCvState: target?.derivedCvState ?? getEffectiveBaseCvState(session),
+        sourceCvState: effectiveSource.cvState,
         targetId,
         idempotencyKey,
         templateTargetSource: target?.targetJobDescription ?? session.agentState,
