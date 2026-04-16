@@ -124,3 +124,4 @@ Resume file: None
 | 2026-04-15 | 260415-u2g | Make resume comparison use a dedicated route, meaningful PT-BR ATS scoring, full rendering, and visible rewrite retries | Complete |
 | 2026-04-15 | 260415-gld | Add an animated loading overlay during setup generation while ATS optimization is running | Complete |
 | 2026-04-16 | 260415-v7b | Align ATS enhancement completion logs with final validation state after recovery | Complete |
+| 2026-04-16 | 260415-vuc | Fix smart generation session state clobber after successful pipeline generation | Complete |

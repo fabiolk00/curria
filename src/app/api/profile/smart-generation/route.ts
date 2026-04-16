@@ -176,7 +176,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     : await runAtsEnhancementPipeline(patchedSession)
 
   if (!pipeline.success || !pipeline.optimizedCvState) {
-    const validationFailureResponse = buildValidationFailureResponse(session, {
+    const validationFailureResponse = buildValidationFailureResponse(patchedSession, {
       workflowMode,
       pipeline,
       fallbackError: copy.pipelineError,
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const generationResult = await dispatchToolWithContext('generate_file', {
     cv_state: pipeline.optimizedCvState,
     idempotency_key: `${copy.idempotencyKeyPrefix}:${session.id}`,
-  }, session)
+  }, patchedSession)
 
   if (generationResult.outputFailure) {
     return NextResponse.json({

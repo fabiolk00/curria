@@ -130,10 +130,19 @@ describe('POST /api/profile/smart-generation', () => {
   })
 
   it('uses ATS enhancement when no target job description is provided', async () => {
-    vi.mocked(runAtsEnhancementPipeline).mockResolvedValue({
-      success: true,
-      optimizedCvState: buildCvState(),
-    } as never)
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado para ATS com foco em BI e SQL.',
+    }
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
 
     const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
       method: 'POST',
@@ -149,7 +158,7 @@ describe('POST /api/profile/smart-generation', () => {
       resumeGenerationId: 'gen_123',
       generationType: 'ATS_ENHANCEMENT',
       originalCvState: buildCvState(),
-      optimizedCvState: buildCvState(),
+      optimizedCvState,
     })
     expect(runAtsEnhancementPipeline).toHaveBeenCalledWith(expect.objectContaining({
       id: 'sess_generation_123',
@@ -172,6 +181,20 @@ describe('POST /api/profile/smart-generation', () => {
         }),
       }),
       'manual',
+    )
+    expect(dispatchToolWithContext).toHaveBeenCalledWith(
+      'generate_file',
+      expect.objectContaining({
+        cv_state: optimizedCvState,
+        idempotency_key: 'profile-ats:sess_generation_123',
+      }),
+      expect.objectContaining({
+        id: 'sess_generation_123',
+        agentState: expect.objectContaining({
+          optimizedCvState,
+          rewriteStatus: 'completed',
+        }),
+      }),
     )
   })
 
@@ -342,6 +365,129 @@ describe('POST /api/profile/smart-generation', () => {
       targetRoleConfidence: 'low',
     })
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
+  })
+
+  it('reuses the pipeline-updated session when dispatching generation and validation responses', async () => {
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo final otimizado para ATS com contexto atualizado.',
+    }
+
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+
+    const successResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(successResponse.status).toBe(200)
+    expect(dispatchToolWithContext).toHaveBeenCalledWith(
+      'generate_file',
+      expect.objectContaining({
+        cv_state: optimizedCvState,
+        idempotency_key: 'profile-ats:sess_generation_123',
+      }),
+      expect.objectContaining({
+        id: 'sess_generation_123',
+        agentState: expect.objectContaining({
+          optimizedCvState,
+          rewriteStatus: 'completed',
+        }),
+      }),
+    )
+
+    vi.clearAllMocks()
+    vi.mocked(getCurrentAppUser).mockResolvedValue({
+      id: 'usr_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      authIdentity: {
+        id: 'identity_123',
+        userId: 'usr_123',
+        provider: 'clerk',
+        providerSubject: 'clerk_123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      creditAccount: {
+        id: 'cred_123',
+        userId: 'usr_123',
+        creditsRemaining: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    } as never)
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(createSession).mockResolvedValue(buildSession() as never)
+    vi.mocked(dispatchToolWithContext).mockResolvedValue({
+      output: {
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        creditsUsed: 1,
+        resumeGenerationId: 'gen_123',
+      },
+      outputJson: JSON.stringify({
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        creditsUsed: 1,
+        resumeGenerationId: 'gen_123',
+      }),
+    } as never)
+    vi.mocked(runJobTargetingPipeline).mockImplementation(async (session) => {
+      session.agentState.targetingPlan = {
+        targetRole: 'Vaga Alvo',
+        targetRoleConfidence: 'low',
+        focusKeywords: [],
+        mustEmphasize: [],
+        shouldDeemphasize: [],
+        missingButCannotInvent: [],
+        sectionStrategy: {
+          summary: [],
+          experience: [],
+          skills: [],
+          education: [],
+          certifications: [],
+        },
+      }
+
+      return {
+        success: false,
+        validation: {
+          valid: false,
+          issues: [{
+            severity: 'high',
+            section: 'summary',
+            message: 'O resumo otimizado menciona skills sem alinhamento com a experiÃªncia reescrita.',
+          }],
+        },
+        error: 'Job targeting rewrite validation failed.',
+      } as never
+    })
+
+    const validationResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify({
+        ...buildCvState(),
+        targetJobDescription: 'Vaga para analista de dados senior com foco em produto e SQL.',
+      }),
+    }))
+
+    expect(validationResponse.status).toBe(422)
+    expect(await validationResponse.json()).toEqual(expect.objectContaining({
+      targetRole: 'Vaga Alvo',
+      targetRoleConfidence: 'low',
+    }))
   })
 
   it('rejects cross-origin smart generation requests', async () => {
