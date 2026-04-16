@@ -13,6 +13,7 @@ import { z } from 'zod'
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import { CVStateSchema } from '@/lib/cv/schema'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { logWarn, serializeError } from '@/lib/observability/structured-log'
 import { ATS_SECTION_HEADINGS, cvStateToTemplateData, type TemplateData } from '@/lib/templates/cv-state-to-template-data'
 import type { AgentState, GenerateFileInput, GenerateFileOutput, GeneratedOutput, ToolPatch } from '@/types/agent'
 import type { CVState } from '@/types/cv'
@@ -25,8 +26,16 @@ export type GenerateFileExecutionResult = {
 
 type SupabaseStorageClient = ReturnType<SupabaseClient['storage']['from']>
 type SignedResumeArtifactUrls = {
-  pdfUrl: string
+  pdfUrl: string | null
   docxUrl?: string | null
+}
+
+type SignedUrlFallbackContext = {
+  userId: string
+  sessionId: string
+  targetId?: string
+  pdfPath: string
+  source: 'fresh_generation' | 'existing_generation' | 'idempotent_generation'
 }
 
 type ResumeTemplateSource = CVState | TemplateData
@@ -405,6 +414,31 @@ export async function createSignedResumeArtifactUrls(
   }
 }
 
+export async function createSignedResumeArtifactUrlsBestEffort(
+  docxPath: string | undefined,
+  pdfPath: string,
+  fallbackContext: SignedUrlFallbackContext,
+  supabase: SupabaseClient = generateFileDeps.getSupabase(),
+): Promise<SignedResumeArtifactUrls> {
+  try {
+    return await createSignedResumeArtifactUrls(docxPath, pdfPath, supabase)
+  } catch (error) {
+    logWarn('resume.generation.signed_url_unavailable', {
+      userId: fallbackContext.userId,
+      sessionId: fallbackContext.sessionId,
+      targetId: fallbackContext.targetId,
+      pdfPath: fallbackContext.pdfPath,
+      source: fallbackContext.source,
+      error: serializeError(error),
+    })
+
+    return {
+      docxUrl: null,
+      pdfUrl: null,
+    }
+  }
+}
+
 export async function generateFile(
   input: GenerateFileInput,
   userId: string,
@@ -442,7 +476,18 @@ export async function generateFile(
       'application/pdf',
     )
 
-    const signedUrls = await createSignedResumeArtifactUrls(docxPath, pdfPath, supabase)
+    const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
+      docxPath,
+      pdfPath,
+      {
+        userId,
+        sessionId,
+        targetId: scope.type === 'target' ? scope.targetId : undefined,
+        pdfPath,
+        source: 'fresh_generation',
+      },
+      supabase,
+    )
 
     return {
       output: {

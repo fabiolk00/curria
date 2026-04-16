@@ -29,6 +29,7 @@ const {
 vi.mock('@/lib/agent/tools/generate-file', () => ({
   generateFile: mockGenerateFile,
   createSignedResumeArtifactUrls: mockCreateSignedResumeArtifactUrls,
+  createSignedResumeArtifactUrlsBestEffort: mockCreateSignedResumeArtifactUrls,
   validateGenerationCvState: mockValidateGenerationCvState,
 }))
 
@@ -128,6 +129,45 @@ describe('generateBillableResume', () => {
     expect(result.output).toEqual({
       success: true,
       pdfUrl: 'https://example.com/resume.pdf',
+      docxUrl: null,
+      creditsUsed: 0,
+      resumeGenerationId: 'gen_existing',
+    })
+    expect(mockCheckUserQuota).not.toHaveBeenCalled()
+    expect(mockCreatePendingResumeGeneration).not.toHaveBeenCalled()
+    expect(mockGenerateFile).not.toHaveBeenCalled()
+  })
+
+  it('keeps replaying an existing completed generation when signed url creation fails', async () => {
+    const cvState = buildCvState()
+    mockGetLatestCompletedResumeGenerationForScope.mockResolvedValue({
+      id: 'gen_existing',
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      type: 'ATS_ENHANCEMENT',
+      status: 'completed',
+      sourceCvSnapshot: cvState,
+      generatedCvState: cvState,
+      outputPdfPath: 'usr_123/sess_123/resume.pdf',
+      outputDocxPath: null,
+      versionNumber: 1,
+      createdAt: new Date('2026-04-12T12:00:00.000Z'),
+      updatedAt: new Date('2026-04-12T12:01:00.000Z'),
+    })
+    mockCreateSignedResumeArtifactUrls.mockResolvedValue({
+      pdfUrl: null,
+      docxUrl: null,
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+    })
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: null,
       docxUrl: null,
       creditsUsed: 0,
       resumeGenerationId: 'gen_existing',

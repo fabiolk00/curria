@@ -1,6 +1,6 @@
 import { TOOL_ERROR_CODES, toolFailure } from '@/lib/agent/tool-errors'
 import {
-  createSignedResumeArtifactUrls,
+  createSignedResumeArtifactUrlsBestEffort,
   generateFile,
   validateGenerationCvState,
   type GenerateFileExecutionResult,
@@ -134,11 +134,18 @@ export async function generateBillableResume(input: {
     latestCompletedGeneration
     && areCvStatesEqual(input.sourceCvState, latestCompletedGeneration.generatedCvState ?? latestCompletedGeneration.sourceCvSnapshot)
   ) {
-    const existingSuccess = buildExistingGenerationSuccessResult(latestCompletedGeneration)
+      const existingSuccess = buildExistingGenerationSuccessResult(latestCompletedGeneration)
     if (existingSuccess) {
-      const signedUrls = await createSignedResumeArtifactUrls(
+      const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
         latestCompletedGeneration.outputDocxPath,
         latestCompletedGeneration.outputPdfPath!,
+        {
+          userId: input.userId,
+          sessionId: input.sessionId,
+          targetId: input.targetId,
+          pdfPath: latestCompletedGeneration.outputPdfPath!,
+          source: 'existing_generation',
+        },
       )
 
       return {
@@ -159,7 +166,17 @@ export async function generateBillableResume(input: {
     if (existing) {
       const existingSuccess = buildExistingGenerationSuccessResult(existing)
       if (existingSuccess) {
-        const signedUrls = await createSignedResumeArtifactUrls(existing.outputDocxPath, existing.outputPdfPath!)
+        const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
+          existing.outputDocxPath,
+          existing.outputPdfPath!,
+          {
+            userId: input.userId,
+            sessionId: input.sessionId,
+            targetId: input.targetId,
+            pdfPath: existing.outputPdfPath!,
+            source: 'idempotent_generation',
+          },
+        )
         return {
           ...existingSuccess,
           output: {

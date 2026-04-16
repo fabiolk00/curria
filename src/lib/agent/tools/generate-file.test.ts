@@ -7,6 +7,7 @@ vi.mock('server-only', () => ({}))
 
 import {
   createSignedResumeArtifactUrls,
+  createSignedResumeArtifactUrlsBestEffort,
   generateFile,
   generateFileDeps,
   validateGenerationCvState,
@@ -218,6 +219,71 @@ describe('generateFile', () => {
         supabase as never,
       ),
     ).rejects.toThrowError('Failed to create signed download URLs.')
+  })
+
+  it('falls back to a completed generation when signed urls are temporarily unavailable', async () => {
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({
+          upload: vi.fn(() => Promise.resolve({ error: null })),
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'policy denied' },
+          }),
+        })),
+      },
+    }
+
+    vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
+      supabase as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
+    )
+
+    const result = await generateFile({
+      cv_state: buildCvState(),
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: null,
+      docxUrl: null,
+      warnings: undefined,
+    })
+    expect(result.patch).toMatchObject({
+      generatedOutput: {
+        status: 'ready',
+        pdfPath: 'usr_123/sess_123/resume.pdf',
+      },
+    })
+  })
+
+  it('returns null urls from the best-effort signer when signing fails', async () => {
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'policy denied' },
+          }),
+        })),
+      },
+    }
+
+    const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
+      undefined,
+      'usr_123/sess_123/resume.pdf',
+      {
+        userId: 'usr_123',
+        sessionId: 'sess_123',
+        pdfPath: 'usr_123/sess_123/resume.pdf',
+        source: 'fresh_generation',
+      },
+      supabase as never,
+    )
+
+    expect(signedUrls).toEqual({
+      docxUrl: null,
+      pdfUrl: null,
+    })
   })
 
   it('persists failed status and explicit error on failure', async () => {
