@@ -328,7 +328,7 @@ describe('ATS enhancement reliability hardening', () => {
     }))
   })
 
-  it('keeps the last valid optimized source unset when validation fails', async () => {
+  it('falls back to a safe ATS version instead of aborting when summary or skills coherence fails', async () => {
     const session = buildSession()
 
     mockAnalyzeAtsGeneral.mockResolvedValue({
@@ -349,36 +349,50 @@ describe('ATS enhancement reliability hardening', () => {
       output: section === 'summary'
         ? {
             success: true,
-            rewritten_content: 'Resumo com claim sem suporte.',
-            section_data: 'Resumo com claim sem suporte.',
+            rewritten_content: 'Resumo com Power Query e Looker Studio sem suporte.',
+            section_data: 'Resumo com Power Query e Looker Studio sem suporte.',
             keywords_added: [],
             changes_made: ['Resumo ajustado'],
           }
+        : section === 'skills'
+          ? {
+              success: true,
+              rewritten_content: 'SQL, Power BI, ETL, Looker Studio',
+              section_data: ['SQL', 'Power BI', 'ETL', 'Looker Studio'],
+              keywords_added: [],
+              changes_made: ['Skills agrupadas'],
+            }
         : buildSuccessfulRewriteOutput(buildCvState(), section),
     }))
 
-    mockValidateRewrite.mockReturnValue({
-      valid: false,
-      issues: [{ severity: 'medium', message: 'Resumo sem suporte factual.', section: 'summary' }],
-    })
+    mockValidateRewrite
+      .mockReturnValueOnce({
+        valid: false,
+        issues: [
+          { severity: 'medium', message: 'A lista de skills otimizada introduziu habilidade ou ferramenta sem base no currículo original.', section: 'skills' },
+          { severity: 'medium', message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.', section: 'summary' },
+        ],
+      })
+      .mockReturnValueOnce({
+        valid: true,
+        issues: [],
+      })
 
     const result = await runAtsEnhancementPipeline(session)
 
-    expect(result.success).toBe(false)
-    expect(session.agentState.optimizedCvState).toBeUndefined()
-    expect(session.agentState.rewriteStatus).toBe('failed')
+    expect(result.success).toBe(true)
+    expect(session.agentState.optimizedCvState).toBeDefined()
+    expect(session.agentState.optimizedCvState?.summary).toBe(buildCvState().summary)
+    expect(session.agentState.optimizedCvState?.skills).toEqual(buildCvState().skills)
+    expect(session.agentState.rewriteStatus).toBe('completed')
     expect(session.agentState.atsWorkflowRun).toMatchObject({
-      status: 'failed',
-      currentStage: 'validation',
-      lastFailureStage: 'validation',
-      lastFailureReason: expect.stringContaining('Resumo sem suporte factual.'),
+      status: 'completed',
+      currentStage: 'persist_version',
     })
-    expect(mockCreateCvVersion).not.toHaveBeenCalled()
-    expect(mockLogWarn).toHaveBeenCalledWith('agent.ats_enhancement.validation_failed', expect.objectContaining({
+    expect(mockCreateCvVersion).toHaveBeenCalledTimes(1)
+    expect(mockLogWarn).toHaveBeenCalledWith('agent.ats_enhancement.validation_recovered', expect.objectContaining({
       workflowMode: 'ats_enhancement',
-      issueCount: 1,
-      issueSections: 'summary',
-      issueMessages: expect.stringContaining('Resumo sem suporte factual.'),
+      recoveryKind: 'conservative_fallback',
     }))
   })
 

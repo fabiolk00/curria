@@ -6,6 +6,7 @@ import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { validateRewrite } from '@/lib/agent/tools/validate-rewrite'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import type { Session } from '@/types/agent'
+import type { CVState } from '@/types/cv'
 
 function buildWorkflowRun(
   session: Session,
@@ -30,6 +31,59 @@ async function persistAgentState(session: Session, agentState: Session['agentSta
     agentState,
   })
   session.agentState = agentState
+}
+
+function uniqueSections(
+  issues: NonNullable<Session['agentState']['rewriteValidation']>['issues'],
+): string[] {
+  return Array.from(new Set(
+    issues
+      .map((issue) => issue.section)
+      .filter((section): section is string => Boolean(section)),
+  ))
+}
+
+function buildConservativeAtsFallbackCvState(
+  originalCvState: CVState,
+  optimizedCvState: CVState,
+  issues: NonNullable<Session['agentState']['rewriteValidation']>['issues'],
+): {
+  cvState: CVState
+  notes: string[]
+} {
+  const fallbackCvState: CVState = structuredClone(optimizedCvState)
+  const notes: string[] = []
+  const issueSections = new Set(uniqueSections(issues))
+
+  if (issueSections.has('summary')) {
+    fallbackCvState.summary = originalCvState.summary
+    notes.push('Resumo revertido para a versão original após validação conservadora.')
+  }
+
+  if (issueSections.has('skills')) {
+    fallbackCvState.skills = [...originalCvState.skills]
+    notes.push('Skills revertidas para a versão original após validação conservadora.')
+  }
+
+  if (issueSections.has('experience')) {
+    fallbackCvState.experience = structuredClone(originalCvState.experience)
+    notes.push('Experiência revertida para a versão original após validação conservadora.')
+  }
+
+  if (issueSections.has('education')) {
+    fallbackCvState.education = structuredClone(originalCvState.education)
+    notes.push('Educação revertida para a versão original após validação conservadora.')
+  }
+
+  if (issueSections.has('certifications')) {
+    fallbackCvState.certifications = structuredClone(originalCvState.certifications)
+    notes.push('Certificações revertidas para a versão original após validação conservadora.')
+  }
+
+  return {
+    cvState: fallbackCvState,
+    notes,
+  }
 }
 
 export async function runAtsEnhancementPipeline(session: Session): Promise<{
@@ -183,19 +237,77 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   const optimizedAt = new Date().toISOString()
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
+  let finalOptimizedCvState = rewriteResult.optimizedCvState
+  let finalValidation = validation
+  let finalOptimizationSummary = rewriteResult.summary
+
+  if (!validation.valid) {
+    const conservativeFallback = buildConservativeAtsFallbackCvState(
+      session.cvState,
+      rewriteResult.optimizedCvState,
+      validation.issues,
+    )
+    const conservativeValidation = validateRewrite(session.cvState, conservativeFallback.cvState)
+
+    if (conservativeValidation.valid) {
+      finalOptimizedCvState = conservativeFallback.cvState
+      finalValidation = conservativeValidation
+      finalOptimizationSummary = {
+        changedSections: rewriteResult.summary?.changedSections ?? [],
+        notes: Array.from(new Set([
+          ...(rewriteResult.summary?.notes ?? []),
+          ...conservativeFallback.notes,
+          'Fallback conservador aplicado para garantir uma versão ATS válida.',
+        ])),
+        keywordCoverageImprovement: rewriteResult.summary?.keywordCoverageImprovement,
+      }
+
+      logWarn('agent.ats_enhancement.validation_recovered', {
+        workflowMode: 'ats_enhancement',
+        sessionId: session.id,
+        userId: session.userId,
+        stage: 'validation',
+        recoveryKind: 'conservative_fallback',
+        originalIssueCount: validation.issues.length,
+        originalIssueSections: validationIssueSections.join(', ') || undefined,
+      })
+    } else {
+      finalOptimizedCvState = structuredClone(session.cvState)
+      finalValidation = validateRewrite(session.cvState, finalOptimizedCvState)
+      finalOptimizationSummary = {
+        changedSections: [],
+        notes: Array.from(new Set([
+          ...(rewriteResult.summary?.notes ?? []),
+          'Falha na validação ATS; a plataforma entregou a base original para evitar bloqueio da geração.',
+        ])),
+        keywordCoverageImprovement: rewriteResult.summary?.keywordCoverageImprovement,
+      }
+
+      logWarn('agent.ats_enhancement.validation_recovered', {
+        workflowMode: 'ats_enhancement',
+        sessionId: session.id,
+        userId: session.userId,
+        stage: 'validation',
+        recoveryKind: 'original_cv_fallback',
+        originalIssueCount: validation.issues.length,
+        originalIssueSections: validationIssueSections.join(', ') || undefined,
+      })
+    }
+  }
+
   const nextAgentState: Session['agentState'] = {
     ...session.agentState,
     workflowMode: 'ats_enhancement',
     atsAnalysis,
-    rewriteStatus: validation.valid ? 'completed' : 'failed',
-    optimizedCvState: validation.valid ? rewriteResult.optimizedCvState : undefined,
-    optimizedAt: validation.valid ? optimizedAt : undefined,
-    optimizationSummary: validation.valid ? rewriteResult.summary : undefined,
-    lastRewriteMode: validation.valid ? 'ats_enhancement' : session.agentState.lastRewriteMode,
-    rewriteValidation: validation,
+    rewriteStatus: finalValidation.valid ? 'completed' : 'failed',
+    optimizedCvState: finalValidation.valid ? finalOptimizedCvState : undefined,
+    optimizedAt: finalValidation.valid ? optimizedAt : undefined,
+    optimizationSummary: finalValidation.valid ? finalOptimizationSummary : undefined,
+    lastRewriteMode: finalValidation.valid ? 'ats_enhancement' : session.agentState.lastRewriteMode,
+    rewriteValidation: finalValidation,
     atsWorkflowRun: buildWorkflowRun(session, {
-      status: validation.valid ? 'completed' : 'failed',
-      currentStage: validation.valid ? 'persist_version' : 'validation',
+      status: finalValidation.valid ? 'completed' : 'failed',
+      currentStage: finalValidation.valid ? 'persist_version' : 'validation',
       sectionAttempts: rewriteResult.diagnostics?.sectionAttempts ?? {},
       retriedSections: rewriteResult.diagnostics?.retriedSections ?? [],
       compactedSections: rewriteResult.diagnostics?.compactedSections ?? [],
@@ -204,8 +316,8 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
         retriedSections: rewriteResult.diagnostics?.retriedSections.length ?? 0,
         compactedSections: rewriteResult.diagnostics?.compactedSections.length ?? 0,
       },
-      lastFailureStage: validation.valid ? undefined : 'validation',
-      lastFailureReason: validation.valid
+      lastFailureStage: finalValidation.valid ? undefined : 'validation',
+      lastFailureReason: finalValidation.valid
         ? undefined
         : validationIssueMessages[0]
           ? `ATS rewrite validation failed: ${validationIssueMessages[0]}`
@@ -215,7 +327,7 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
 
   await persistAgentState(session, nextAgentState)
 
-  if (!validation.valid) {
+  if (!finalValidation.valid) {
     logWarn('agent.ats_enhancement.validation_failed', {
       workflowMode: 'ats_enhancement',
       sessionId: session.id,
@@ -229,12 +341,12 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     return {
       success: false,
       atsAnalysis,
-      validation,
+      validation: finalValidation,
       error: 'ATS rewrite validation failed.',
     }
   }
 
-  const validatedOptimizedCvState = rewriteResult.optimizedCvState
+  const validatedOptimizedCvState = finalOptimizedCvState
 
   try {
     await executeWithStageRetry(
@@ -319,8 +431,8 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   return {
     success: true,
     atsAnalysis,
-    optimizedCvState: rewriteResult.optimizedCvState,
-    optimizationSummary: rewriteResult.summary,
-    validation,
+    optimizedCvState: finalOptimizedCvState,
+    optimizationSummary: finalOptimizationSummary,
+    validation: finalValidation,
   }
 }

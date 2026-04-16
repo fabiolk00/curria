@@ -253,6 +253,33 @@ describe('POST /api/profile/smart-generation', () => {
     expect(runJobTargetingPipeline).not.toHaveBeenCalled()
   })
 
+  it('still blocks ATS enhancement before generation when summary or experience is missing', async () => {
+    const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify({
+        ...buildCvState(),
+        summary: '',
+        experience: [],
+      }),
+    }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Complete seu currículo para gerar uma versão ATS.',
+      reasons: expect.arrayContaining([
+        expect.stringContaining('Resumo profissional'),
+        expect.stringContaining('Experiência'),
+      ]),
+      missingItems: expect.arrayContaining([
+        expect.stringContaining('Resumo profissional'),
+        expect.stringContaining('Experiência'),
+      ]),
+    })
+    expect(createSession).not.toHaveBeenCalled()
+    expect(runAtsEnhancementPipeline).not.toHaveBeenCalled()
+  })
+
   it('returns structured rewrite validation details when job targeting fails validation', async () => {
     vi.mocked(runJobTargetingPipeline).mockResolvedValue({
       success: false,
