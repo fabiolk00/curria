@@ -5,6 +5,7 @@ import {
   appendUserTurn,
   buildDoneChunk,
   createPatchChunk,
+  persistAsyncAcknowledgement,
   persistPatch,
 } from './agent-persistence'
 
@@ -70,6 +71,22 @@ describe('agent persistence helpers', () => {
 
     expect(mockAppendMessage).toHaveBeenNthCalledWith(1, 'sess_123', 'user', 'Mensagem do usuario')
     expect(mockAppendMessage).toHaveBeenNthCalledWith(2, 'sess_123', 'assistant', 'Mensagem do assistente')
+  })
+
+  it('persists async acknowledgement turns in transcript order', async () => {
+    await persistAsyncAcknowledgement({
+      sessionId: 'sess_123',
+      userMessage: 'Aceito',
+      assistantText: 'Recebi seu aceite e comecei o processamento em segundo plano.',
+    })
+
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(1, 'sess_123', 'user', 'Aceito')
+    expect(mockAppendMessage).toHaveBeenNthCalledWith(
+      2,
+      'sess_123',
+      'assistant',
+      'Recebi seu aceite e comecei o processamento em segundo plano.',
+    )
   })
 
   it('persists patches before packaging the emitted patch chunk', async () => {

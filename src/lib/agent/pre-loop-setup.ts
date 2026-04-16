@@ -1,5 +1,3 @@
-import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
-import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchTool } from '@/lib/agent/tools'
 import { incrementMessageCount, updateSession } from '@/lib/db/sessions'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
@@ -11,7 +9,7 @@ type TimingTracker = {
 
 type FileAttachmentSession = Pick<Session, 'id' | 'phase' | 'stateVersion'>
 
-function resolveWorkflowMode(
+export function resolveWorkflowMode(
   session: Pick<Session, 'cvState' | 'agentState'>,
 ): WorkflowMode {
   const hasResumeContext = hasResumeContextForAutoGap(session)
@@ -47,51 +45,6 @@ async function persistWorkflowMode(
   })
 
   session.agentState = nextAgentState
-}
-
-function shouldRunJobTargetingPipeline(session: Session): boolean {
-  return Boolean(
-    session.agentState.workflowMode === 'job_targeting'
-    && hasResumeContextForAutoGap(session)
-    && session.agentState.targetJobDescription?.trim()
-    && (
-      !session.agentState.optimizedCvState
-      || session.agentState.rewriteStatus !== 'completed'
-      || session.agentState.lastRewriteMode !== 'job_targeting'
-    ),
-  )
-}
-
-function normalizeForInlineAtsDecision(message: string): string {
-  return message
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-}
-
-function shouldRunAtsEnhancementPipelineInline(session: Session, userMessage: string): boolean {
-  if (
-    session.agentState.workflowMode !== 'ats_enhancement'
-    || !hasResumeContextForAutoGap(session)
-    || (session.agentState.optimizedCvState && session.agentState.rewriteStatus === 'completed')
-  ) {
-    return false
-  }
-
-  if (session.phase === 'confirm' || session.phase === 'generation') {
-    return true
-  }
-
-  const normalizedMessage = normalizeForInlineAtsDecision(userMessage)
-
-  return (
-    normalizedMessage === 'aceito'
-    || normalizedMessage.includes('gerar curriculo')
-    || normalizedMessage.includes('gere o curriculo')
-    || normalizedMessage.includes('gerar arquivo')
-    || normalizedMessage.includes('gere o arquivo')
-  )
 }
 
 function parseJsonObject(value: string): Record<string, unknown> | null {
@@ -178,31 +131,9 @@ export function shouldEmitExistingSessionPreparationProgress(
   userMessage: string,
   hasFileAttachment: boolean,
 ): boolean {
-  if (hasFileAttachment) {
-    return true
-  }
-
-  const predictedWorkflowMode = resolveWorkflowMode(session)
-  if (
-    predictedWorkflowMode === 'ats_enhancement'
-    && shouldRunAtsEnhancementPipelineInline({
-      ...session,
-      agentState: {
-        ...session.agentState,
-        workflowMode: predictedWorkflowMode,
-      },
-    }, userMessage)
-  ) {
-    return true
-  }
-
-  return shouldRunJobTargetingPipeline({
-    ...session,
-    agentState: {
-      ...session.agentState,
-      workflowMode: predictedWorkflowMode,
-    },
-  })
+  void session
+  void userMessage
+  return hasFileAttachment
 }
 
 export async function runPreLoopSetup(params: {
@@ -238,27 +169,15 @@ export async function runPreLoopSetup(params: {
   }
 
   await timing.runStage(`workflow_mode_${stageSuffix}`, () => persistWorkflowMode(session))
-  if (shouldRunAtsEnhancementPipelineInline(session, nextMessage)) {
-    await timing.runStage(`ats_pipeline_${stageSuffix}`, () => runAtsEnhancementPipeline(session))
-  } else if (
-    session.agentState.workflowMode === 'ats_enhancement'
-    && hasResumeContextForAutoGap(session)
-    && (!session.agentState.optimizedCvState || session.agentState.rewriteStatus !== 'completed')
-  ) {
-    logInfo('agent.ats_enhancement.deferred', {
-      requestId,
-      appUserId,
-      sessionId: session.id,
-      phase: session.phase,
-      isNewSession,
-      workflowMode: session.agentState.workflowMode,
-      success: true,
-    })
-  }
-
-  if (shouldRunJobTargetingPipeline(session)) {
-    await timing.runStage(`job_targeting_pipeline_${stageSuffix}`, () => runJobTargetingPipeline(session))
-  }
+  logInfo('agent.pre_loop.prepared', {
+    requestId,
+    appUserId,
+    sessionId: session.id,
+    phase: session.phase,
+    isNewSession,
+    workflowMode: session.agentState.workflowMode,
+    success: true,
+  })
 
   await timing.runStage(`increment_message_${stageSuffix}`, () => incrementMessageCount(session.id))
   return nextMessage

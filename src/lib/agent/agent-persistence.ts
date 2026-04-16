@@ -12,6 +12,15 @@ export async function appendAssistantTurn(sessionId: string, assistantText: stri
   await appendMessage(sessionId, 'assistant', assistantText)
 }
 
+export async function persistAsyncAcknowledgement(params: {
+  sessionId: string
+  userMessage: string
+  assistantText: string
+}): Promise<void> {
+  await appendUserTurn(params.sessionId, params.userMessage)
+  await appendAssistantTurn(params.sessionId, params.assistantText)
+}
+
 export async function persistPatch(
   session: Session,
   patch: SessionPatch,

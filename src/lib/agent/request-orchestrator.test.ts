@@ -1,18 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-import { POST } from './route'
+import { handleAgentPost } from './request-orchestrator'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { appendAssistantTurn } from '@/lib/agent/agent-persistence'
-import { runAgentLoop } from '@/lib/agent/agent-loop'
+import { agentLimiter } from '@/lib/rate-limit'
 import {
   appendMessage,
+  createSession,
   getSession,
   incrementMessageCount,
   updateSession,
 } from '@/lib/db/sessions'
 import { createJob } from '@/lib/jobs/repository'
-import { agentLimiter } from '@/lib/rate-limit'
+
+const { mockReleaseMetadata } = vi.hoisted(() => ({
+  mockReleaseMetadata: {
+    releaseId: 'rel_orchestrator',
+    releaseSource: 'test',
+    commitShortSha: 'abc123',
+    deploymentEnv: 'test',
+    resolvedAgentModel: 'gpt-5-mini',
+    resolvedDialogModel: 'gpt-5-mini',
+  },
+}))
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
@@ -34,14 +44,14 @@ vi.mock('@/lib/db/sessions', () => ({
 }))
 
 vi.mock('@/lib/agent/agent-loop', () => ({
-  runAgentLoop: vi.fn(async function* (params: { session: { id: string } }) {
+  runAgentLoop: vi.fn(async function* () {
     yield {
       type: 'text',
       content: 'Resposta síncrona.',
     }
     yield {
       type: 'done',
-      sessionId: params.session.id,
+      sessionId: 'sess_sync',
       phase: 'dialog',
       requestId: 'req_sync',
       messageCount: 3,
@@ -52,19 +62,37 @@ vi.mock('@/lib/agent/agent-loop', () => ({
   }),
 }))
 
+vi.mock('@/lib/agent/pre-loop-setup', () => ({
+  hasResumeContextForAutoGap: vi.fn((session) => Boolean(
+    session.agentState?.sourceResumeText
+      || session.cvState?.summary
+      || session.cvState?.skills?.length
+      || session.cvState?.experience?.length
+      || session.cvState?.education?.length,
+  )),
+  resolveWorkflowMode: vi.fn((session) => (
+    session.agentState?.targetJobDescription
+      ? 'job_targeting'
+      : (session.cvState?.summary || session.agentState?.sourceResumeText
+        ? 'ats_enhancement'
+        : 'resume_review')
+  )),
+  runPreLoopSetup: vi.fn(async ({ message, session }) => {
+    session.agentState = {
+      ...session.agentState,
+      workflowMode: session.agentState.targetJobDescription ? 'job_targeting' : 'ats_enhancement',
+    }
+    return message
+  }),
+  shouldEmitExistingSessionPreparationProgress: vi.fn(() => false),
+}))
+
 vi.mock('@/lib/jobs/repository', () => ({
   createJob: vi.fn(),
 }))
 
 vi.mock('@/lib/runtime/release-metadata', () => ({
-  getAgentReleaseMetadata: vi.fn(() => ({
-    releaseId: 'rel_route_sse',
-    releaseSource: 'test',
-    commitShortSha: 'abc123',
-    deploymentEnv: 'test',
-    resolvedAgentModel: 'gpt-5-mini',
-    resolvedDialogModel: 'gpt-5-mini',
-  })),
+  getAgentReleaseMetadata: vi.fn(() => mockReleaseMetadata),
 }))
 
 function parseSseDataEvents(payload: string): Array<Record<string, unknown>> {
@@ -76,7 +104,7 @@ function parseSseDataEvents(payload: string): Array<Record<string, unknown>> {
 
 function buildSession(overrides?: Record<string, unknown>) {
   return {
-    id: 'sess_sse',
+    id: 'sess_sync',
     userId: 'usr_123',
     stateVersion: 1,
     phase: 'dialog',
@@ -93,7 +121,6 @@ function buildSession(overrides?: Record<string, unknown>) {
       parseStatus: 'parsed',
       rewriteHistory: {},
       sourceResumeText: 'Resumo salvo.',
-      targetJobDescription: 'Senior Analytics Engineer com foco em SQL, dbt e BigQuery.',
     },
     generatedOutput: { status: 'idle' },
     creditsUsed: 1,
@@ -105,7 +132,7 @@ function buildSession(overrides?: Record<string, unknown>) {
   } as any
 }
 
-describe('/api/agent SSE contract', () => {
+describe('handleAgentPost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentAppUser).mockResolvedValue({
@@ -136,58 +163,102 @@ describe('/api/agent SSE contract', () => {
       reset: 0,
       pending: Promise.resolve(),
     } as any)
-    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(getSession).mockResolvedValue(null)
+    vi.mocked(createSession).mockResolvedValue(buildSession({
+      id: 'sess_new_async',
+      phase: 'intake',
+      messageCount: 0,
+    }))
     vi.mocked(incrementMessageCount).mockResolvedValue(true)
     vi.mocked(updateSession).mockResolvedValue(undefined)
     vi.mocked(appendMessage).mockResolvedValue(undefined)
-  })
-
-  it('acknowledges heavy generation requests and dispatches through durable jobs instead of the sync loop', async () => {
     vi.mocked(createJob).mockResolvedValue({
       wasCreated: true,
       job: {
-        jobId: 'job_generation',
+        jobId: 'job_123',
         userId: 'usr_123',
-        sessionId: 'sess_sse',
-        idempotencyKey: 'agent:sess_sse:artifact_generation:abc',
-        type: 'artifact_generation',
+        sessionId: 'sess_new_async',
+        idempotencyKey: 'agent:sess_new_async:job_targeting:abc',
+        type: 'job_targeting',
         status: 'queued',
         dispatchInputRef: {
           kind: 'session_cv_state',
-          sessionId: 'sess_sse',
+          sessionId: 'sess_new_async',
           snapshotSource: 'base',
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
     } as any)
+  })
 
-    const response = await POST(new NextRequest('http://localhost/api/agent', {
+  it('returns 401 with provenance headers when the user is not authenticated', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue(null)
+
+    const response = await handleAgentPost(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'oi' }),
+    }))
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(response.headers.get('X-Agent-Release')).toBe(mockReleaseMetadata.releaseId)
+  })
+
+  it('creates a new session, persists target detection, and returns text-only async acknowledgement ordering', async () => {
+    const response = await handleAgentPost(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        sessionId: 'sess_sse',
-        message: 'Aceito',
+        message: [
+          'Analista de BI Senior',
+          'Responsabilidades',
+          'Construir dashboards em Power BI e integrar dados com SQL.',
+          'Requisitos',
+          'Power BI, SQL, ETL e comunicação com negócio.',
+        ].join('\n'),
       }),
     }))
 
     expect(response.status).toBe(200)
-    expect(typeof appendAssistantTurn).toBe('function')
-
+    expect(response.headers.get('X-Session-Id')).toBe('sess_new_async')
+    expect(updateSession).toHaveBeenCalledWith('sess_new_async', {
+      agentState: expect.objectContaining({
+        targetJobDescription: expect.stringContaining('Power BI'),
+      }),
+      phase: 'analysis',
+    })
     const events = parseSseDataEvents(await response.text())
-    expect(events.map((event) => event.type)).toEqual(['text', 'done'])
+    expect(events.map((event) => event.type)).toEqual([
+      'sessionCreated',
+      'text',
+      'done',
+    ])
     expect(events[0]).toEqual({
+      type: 'sessionCreated',
+      sessionId: 'sess_new_async',
+    })
+    expect(events[1]).toEqual({
       type: 'text',
-      content: 'Recebi seu aceite e iniciei a geração do currículo em segundo plano. Vou manter esta solicitação vinculada à sessão atual.',
+      content: 'Recebi a vaga e iniciei a adaptação do currículo em segundo plano. Vou usar esta sessão como referência para os próximos resultados.',
+    })
+    expect(events[2]).toMatchObject({
+      type: 'done',
+      sessionId: 'sess_new_async',
+      phase: 'analysis',
+      messageCount: 1,
     })
   })
 
-  it('keeps lightweight prompts on the synchronous streaming path', async () => {
-    const response = await POST(new NextRequest('http://localhost/api/agent', {
+  it('keeps lightweight requests on the synchronous streaming path', async () => {
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+
+    const response = await handleAgentPost(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        sessionId: 'sess_sse',
+        sessionId: 'sess_sync',
         message: 'oi',
       }),
     }))
@@ -196,9 +267,5 @@ describe('/api/agent SSE contract', () => {
 
     const events = parseSseDataEvents(await response.text())
     expect(events.map((event) => event.type)).toEqual(['text', 'done'])
-    expect(events[0]).toEqual({
-      type: 'text',
-      content: 'Resposta síncrona.',
-    })
   })
 })

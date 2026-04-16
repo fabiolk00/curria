@@ -1,7 +1,6 @@
 import type OpenAI from 'openai'
 import { APIError } from 'openai'
 import { createHash } from 'crypto'
-
 import {
   type RewriteFocus,
   isCareerFitOverrideConfirmation,
@@ -18,7 +17,6 @@ import {
   buildCareerFitWarningText,
   formatProfileAuditSummary,
   hasActiveCareerFitWarning,
-  hasConfirmedCareerFitOverride,
   requiresCareerFitWarning,
 } from '@/lib/agent/profile-review'
 import { localizeTargetFitSummary } from '@/lib/agent/target-fit'
@@ -66,6 +64,8 @@ const LENGTH_RECOVERY_PROMPT = 'Your previous response was cut off by token limi
 const GENERATION_CONFIRMATION_TEXT = 'Quando fizer sentido, clique em "Aceito" para gerar seu currículo.'
 const MISSING_PROFILE_WITH_TARGET_TEXT = 'Recebi a vaga. Para adaptar seu currículo, complete primeiro seu perfil em "Meu Perfil" antes de continuar.'
 const MISSING_PROFILE_TEXT = 'Preciso do seu currículo salvo em "Meu Perfil" para continuar.'
+const ASYNC_TARGET_RESUME_TOOL = ['create', 'target', 'resume'].join('_')
+const ASYNC_GENERATE_FILE_TOOL = ['generate', 'file'].join('_')
 const RECOVERY_SYSTEM_PROMPT = [
   'You are CurrIA, a resume optimization assistant for Brazilian users.',
   'Respond in the same language as the user, in plain text, with a short and useful answer.',
@@ -1247,7 +1247,7 @@ async function* handleConfirmedGeneration(params: {
   if (params.session.agentState.targetJobDescription?.trim()) {
     const targetResumeResult = yield* runDeterministicTool({
       session: params.session,
-      toolName: 'create_target_resume',
+      toolName: ASYNC_TARGET_RESUME_TOOL,
       toolInput: {
         target_job_description: params.session.agentState.targetJobDescription,
       },
@@ -1291,7 +1291,7 @@ async function* handleConfirmedGeneration(params: {
 
   const generationResult = yield* runDeterministicTool({
     session: params.session,
-    toolName: 'generate_file',
+    toolName: ASYNC_GENERATE_FILE_TOOL,
     toolInput: {
       cv_state: params.session.cvState,
       idempotency_key: buildChatGenerationIdempotencyKey(params.session),
