@@ -1,70 +1,64 @@
 # Requirements: CurrIA
 
-**Defined:** 2026-04-15
+**Defined:** 2026-04-16
 **Core Value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
 
-## v1.5 Requirements
+## v1.6 Requirements
 
-### Verification Closure
+### Agent Orchestrator Boundary
 
-- [x] **VER-01**: Completed phases can produce committed `VERIFICATION.md` artifacts that map shipped requirements, evidence, residual gaps, and verification status in the format expected by `gsd-audit-milestone`.
-- [x] **VER-02**: Milestone audit can determine recent shipped requirement coverage from committed verification artifacts instead of relying on summary-only inference or missing-proof fallbacks.
+- [ ] **ORCH-01**: User can keep using `/api/agent` as the main entry point, with lightweight chat responses still streaming synchronously while heavy actions are acknowledged and dispatched asynchronously.
+- [ ] **ORCH-02**: Session load or create, message persistence, action classification, and execution-mode routing remain behaviorally consistent after `/api/agent` is reduced to a lightweight orchestrator.
 
-### Planning and Archive Integrity
+### Durable Async Job Runtime
 
-- [x] **DOC-01**: Roadmap, traceability, archive, and state metadata stay consistent through milestone closeout, including inserted decimal phases and shipped plan counts.
-- [x] **DOC-02**: Completing a milestone leaves a clean planning surface for the next cycle, including accurate shipped stats, archived proof files, cleared phase directories, and a fresh active requirements file.
+- [ ] **JOB-01**: ATS enhancement, target-job rewriting, and artifact generation have durable persisted job records with explicit type, status, stage, progress, timestamps, and terminal result or error references.
+- [ ] **JOB-02**: ATS enhancement and target-job rewriting run outside the request path without changing their current business logic, validation semantics, or output persistence behavior.
 
-### Runtime Residual Budget
+### Artifact and State Coherence
 
-- [x] **PERF-04**: The remaining non-E2E runtime outliers are profiled with committed evidence that identifies which suites dominate the post-`v1.4` budget.
-- [x] **PERF-05**: The repo either reduces the dominant residual non-E2E bottlenecks further or records an explicit accepted runtime budget and gate so future drift is visible and intentional.
+- [ ] **ART-01**: Artifact generation runs outside the request path and records which resume snapshot or version produced each generated file.
+- [ ] **STATE-01**: Async failures preserve the previous valid `optimizedCvState`, and preview plus generated outputs keep using the correct effective source between `optimizedCvState` and canonical `cvState`.
 
-### Rewrite State Coherence
+### Observability and Stabilization
 
-- [x] **COH-01**: When deterministic ATS enhancement or job targeting has already produced `optimizedCvState`, later chat rewrite requests and deterministic helper flows use that effective optimized source instead of stale base `cvState`.
-- [x] **COH-02**: Target resume derivation paths, including tool-driven target resume creation after ATS enhancement, remain consistent with the latest optimized resume state and are protected by committed regression coverage.
-
-### Freeform Vacancy Robustness
-
-- [x] **VAC-01**: Job targeting derives useful targeting context from arbitrary pasted vacancy text by prioritizing skills, responsibilities, and other semantic signals even when no clean role title is present.
-- [x] **VAC-02**: Under freeform vacancy input, job-targeting rewrites remain factually grounded and reduce preventable validation failures caused by unsupported skill injection or weak `targetRole` parsing.
+- [ ] **OBS-01**: UI and operators can query or stream job status, stage, progress, and terminal completion or failure state for ATS, targeting, and artifact work.
+- [ ] **TEST-01**: Regression coverage proves sync chat behavior, async dispatch, worker success and failure paths, snapshot consistency, and safe async integration under the new execution model.
 
 ## Future Requirements
 
 | Requirement | Why Deferred |
 |-------------|--------------|
-| Broader CI sharding or distributed test execution redesign | First prove whether the remaining runtime pain is suite-specific or needs infrastructure work |
-| Major redesign of all GSD archive tooling beyond the current closeout path | The immediate need is reliable milestone proof and metadata integrity, not a platform rewrite |
-| New product-surface feature breadth unrelated to proof, archive hygiene, or runtime residuals | The highest leverage right now is closing the operational debt left by `v1.4` |
+| User-facing cancel or retry controls for background jobs | First land the durable async contract and prove correctness before adding more UX surface |
+| Richer per-stage progress messaging beyond the required status lifecycle | Keep the first version focused on safety, observability, and parity with the current product flow |
+| Queue-infrastructure swaps or multi-service runtime decomposition | The immediate need is to move heavy work off the request path, not to redesign deployment topology |
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| New resume-product breadth unrelated to verification or runtime proof | This milestone is for delivery confidence, not feature expansion |
-| Broad frontend redesign of workspace or dashboard screens | UI changes do not address the current archive and runtime debt |
-| Replatforming test runners, auth, billing, or storage providers | Brownfield hardening is safer than provider churn here |
+| Changing credits, billing, or entitlement semantics | The refactor must preserve billing correctness |
+| Redesigning ATS rewrite rules, target-job rules, or artifact output rules | The milestone changes execution model, not business behavior |
+| Reworking the chat-led UX shape or replacing `/api/agent` as the public surface | The current product entry point should remain stable |
+| New onboarding breadth unrelated to async execution hardening | Launch hardening still has higher leverage than new feature breadth |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VER-01 | Phase 32 | Complete |
-| VER-02 | Phase 32 | Complete |
-| DOC-01 | Phase 33 | Complete |
-| DOC-02 | Phase 33 | Complete |
-| PERF-04 | Phase 34 | Complete |
-| PERF-05 | Phase 34 | Complete |
-| COH-01 | Phase 35 | Complete |
-| COH-02 | Phase 35 | Complete |
-| VAC-01 | Phase 36 | Complete |
-| VAC-02 | Phase 36 | Complete |
+| ORCH-01 | Phase 38 | Planned |
+| ORCH-02 | Phase 38 | Planned |
+| JOB-01 | Phase 37 | Planned |
+| JOB-02 | Phase 39 | Planned |
+| ART-01 | Phase 39 | Planned |
+| STATE-01 | Phase 39 | Planned |
+| OBS-01 | Phase 40 | Planned |
+| TEST-01 | Phase 40 | Planned |
 
 **Coverage:**
-- v1.5 requirements: 10 total
-- Mapped to phases: 10
+- v1.6 requirements: 8 total
+- Mapped to phases: 8
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-04-15*
+*Requirements defined: 2026-04-16*
