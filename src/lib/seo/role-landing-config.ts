@@ -1183,12 +1183,281 @@ export const customerSuccessConfig: RoleLandingConfig = {
   ],
 }
 
+export const productManagerConfig: RoleLandingConfig = {
+  slug: "curriculo-product-manager-ats",
+  role: "Product Manager",
+  roleShort: "Product Manager",
+  meta: {
+    title: "Currículo para Product Manager que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    description: "Crie um currículo de Product Manager otimizado para ATS. Veja exemplos com discovery, roadmap, priorização, métricas de produto e impacto em negócio para conquistar mais entrevistas.",
+    canonical: "/curriculo-product-manager-ats",
+  },
+  hero: {
+    h1: "Currículo para Product Manager que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Você toma decisões de produto com base em dados, mas seu currículo pode estar sendo filtrado antes mesmo de ser lido. Sistemas ATS procuram métricas, discovery, roadmap e impacto real no negócio. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
+  },
+  problem: {
+    title: "Por que currículos de Product Manager são rejeitados pelo ATS?",
+    description: "Product Managers precisam mostrar impacto em produto e negócio. Currículos genéricos, focados apenas em cerimônias ou backlog, tendem a perder força nos filtros automáticos.",
+    points: [
+      "Descrever tarefas sem mostrar impacto em métricas de produto ou negócio",
+      "Não mencionar discovery, priorização, roadmap ou experimentação",
+      "Focar em backlog e cerimônias sem evidenciar decisões estratégicas",
+      "Omitir KPIs como retenção, conversão, churn ou receita incremental",
+      "Não deixar claro o trabalho com times cross-functional e stakeholders",
+    ],
+  },
+  atsExplanation: {
+    title: "Como o ATS filtra currículos de Product Manager",
+    description: "Recrutadores de produto configuram filtros para buscar experiência com discovery, priorização, roadmap, métricas, experimentação e impacto em negócio. Quanto mais próximo da linguagem da vaga estiver o seu currículo, maior a chance de passar pelo ATS.",
+    whatRecruitersScan: [
+      "Métricas de produto (conversão, retenção, churn, adoção, receita)",
+      "Experiência com discovery, entrevistas e validação de hipóteses",
+      "Roadmap, priorização e definição de estratégia de produto",
+      "Experimentação com A/B tests e análise de resultados",
+      "Trabalho com times cross-functional (engenharia, design, dados, negócios)",
+      "Ferramentas como Jira, Notion, Amplitude, Mixpanel, GA4 e Figma",
+    ],
+  },
+  keywords: [
+    { term: "Product Discovery", description: "Etapa de entendimento do problema, usuário e oportunidade" },
+    { term: "Roadmap", description: "Planejamento estratégico de iniciativas e evolução do produto" },
+    { term: "Priorização", description: "Capacidade de tomar decisões com base em impacto e esforço" },
+    { term: "KPIs de Produto", description: "Métricas como conversão, retenção, churn, adoção e receita" },
+    { term: "A/B Testing", description: "Experimentação para validar hipóteses e melhorar resultados" },
+    { term: "User Research", description: "Pesquisa com usuários para apoiar decisões de produto" },
+    { term: "Retention/Churn", description: "Indicadores essenciais para mostrar impacto do produto" },
+    { term: "Amplitude/Mixpanel", description: "Ferramentas de product analytics bastante valorizadas" },
+    { term: "Jira/Notion/Figma", description: "Ferramentas comuns de gestão, alinhamento e colaboração" },
+    { term: "Stakeholder Management", description: "Capacidade de alinhar negócio, tecnologia e design" },
+  ],
+  commonMistakes: [
+    {
+      mistake: "Descrever apenas backlog, planning e cerimônias ágeis",
+      fix: "Explique o problema atacado, a decisão tomada e o impacto gerado em métricas",
+    },
+    {
+      mistake: "Não citar métricas de produto ou negócio",
+      fix: "Inclua conversão, retenção, churn, adoção, NPS ou receita incremental quando possível",
+    },
+    {
+      mistake: "Falar de roadmap sem mostrar priorização ou trade-offs",
+      fix: "Contextualize como você priorizou iniciativas e quais resultados isso gerou",
+    },
+    {
+      mistake: "Omitir discovery e validação com usuários",
+      fix: "Mencione entrevistas, pesquisas, testes ou análise de comportamento que influenciaram decisões",
+    },
+    {
+      mistake: "Soar operacional demais e pouco estratégico",
+      fix: "Mostre visão de negócio, alinhamento com stakeholders e impacto real do produto",
+    },
+  ],
+  resumeSections: {
+    summary: {
+      title: "Resumo Profissional",
+      bad: "Product Manager com experiência em gestão de produto e backlog.",
+      good: "Product Manager com 4 anos de experiência em discovery, roadmap e priorização para produtos SaaS B2B. Liderei iniciativas que aumentaram retenção em 18%, elevaram conversão em 24% e geraram R$1,8M em receita incremental. Forte atuação com times cross-functional e decisões baseadas em dados.",
+    },
+    skills: {
+      title: "Seção de Habilidades",
+      bad: "Produto, Agile, backlog, comunicação, métricas",
+      good: "Produto: Discovery, Roadmap, Priorização, Strategy | Data: SQL, Amplitude, Mixpanel, GA4 | Métodos: A/B Testing, User Research, Jobs to be Done | Ferramentas: Jira, Notion, Figma, Miro | Negócio: Stakeholder Management, Go-to-Market, Experimentação",
+    },
+    experience: {
+      title: "Experiência Profissional",
+      bad: "Gerenciei backlog, participei de cerimônias e trabalhei com o time de desenvolvimento.",
+      good: "Liderei roadmap de produto SaaS B2B com foco em retenção e expansão, elevando adoção de feature crítica em 32% e reduzindo churn em 14%. Conduzi discovery com clientes, priorizei iniciativas com base em impacto e implementei experimentos que aumentaram conversão em 21%.",
+    },
+  },
+  specializations: [
+    {
+      title: "Growth Product",
+      description: "Foco em crescimento, experimentação, funis e otimização de conversão e retenção.",
+      keywords: ["Growth", "A/B Testing", "Conversão", "Retention", "Churn", "Activation", "AARRR", "Experimentação", "Funil", "Revenue Impact"],
+    },
+    {
+      title: "Product Discovery",
+      description: "Atuação forte em entendimento do usuário, pesquisa, validação e definição de oportunidade.",
+      keywords: ["Discovery", "User Research", "Entrevistas", "Jobs to be Done", "Problema do Usuário", "Hipóteses", "Validação", "Product Sense", "Insights", "Priorização"],
+    },
+    {
+      title: "Platform / Product Ops",
+      description: "Foco em eficiência interna, escalabilidade, plataformas e melhoria da operação de produto.",
+      keywords: ["Platform", "Product Ops", "Escalabilidade", "Eficiência", "Processos", "B2B SaaS", "Integrações", "Infraestrutura", "Roadmap Técnico", "Stakeholders Internos"],
+    },
+  ],
+  seniorityLevels: [
+    {
+      level: "Product Manager Júnior",
+      focus: "Demonstre capacidade analítica, entendimento de produto e participação em iniciativas com impacto claro",
+      tips: [
+        "Mostre projetos, estágios ou experiências em que você trabalhou com produto, discovery ou análise de métricas",
+        "Inclua ferramentas e frameworks usados no dia a dia (Jira, Notion, Figma, analytics)",
+        "Destaque capacidade de aprender rápido e colaborar com engenharia, design e negócio",
+        "Use linguagem de produto e resultado, não apenas execução operacional",
+      ],
+    },
+    {
+      level: "Product Manager Pleno",
+      focus: "Mostre autonomia em discovery, priorização, roadmap e impacto mensurável em KPIs",
+      tips: [
+        "Quantifique ganhos em conversão, retenção, churn, receita ou adoção de features",
+        "Mencione iniciativas end-to-end, do discovery ao lançamento e acompanhamento",
+        "Destaque sua capacidade de tomar decisões com base em dados e trade-offs",
+        "Inclua relacionamento com stakeholders e liderança cross-functional",
+      ],
+    },
+    {
+      level: "Product Manager Sênior / Lead",
+      focus: "Demonstre visão estratégica, liderança de produto e influência no negócio",
+      tips: [
+        "Mostre impacto em roadmap estratégico, receita, expansão ou posicionamento do produto",
+        "Mencione times, produtos ou squads liderados diretamente",
+        "Inclua decisões complexas, priorização de portfólio e visão de longo prazo",
+        "Mostre como você conecta produto, negócio, tecnologia e experiência do usuário",
+      ],
+    },
+  ],
+  cvExample: {
+    before: {
+      title: "Experiência em Produto",
+      bullets: [
+        "Gerenciei backlog do produto",
+        "Trabalhei com a equipe de desenvolvimento",
+        "Participei de cerimônias ágeis",
+        "Ajudei a definir funcionalidades",
+      ],
+    },
+    after: {
+      title: "Product Manager | Discovery, Roadmap, Growth",
+      bullets: [
+        "Liderei roadmap de produto SaaS com foco em retenção, aumentando adoção de feature-chave em 32% e reduzindo churn em 14%",
+        "Conduzi discovery com usuários e stakeholders, validando hipóteses que resultaram em aumento de conversão de 21%",
+        "Implementei experimentos A/B e análises em Amplitude/Mixpanel, gerando R$1,2M em receita incremental",
+        "Coordenei squad cross-functional com engenharia, design e dados para entregar iniciativas estratégicas em roadmap trimestral",
+      ],
+    },
+  },
+  fullResumeExample: {
+    name: "Lucas Andrade",
+    title: "Product Manager | Growth, Discovery, Roadmap",
+    contact: "lucas.andrade@email.com | (11) 97777-1111 | São Paulo, SP | linkedin.com/in/lucasandrade",
+    summary: "Product Manager com 5 anos de experiência em SaaS B2B, liderando discovery, roadmap e experimentação para produtos digitais. Atuação orientada a métricas de retenção, conversão e receita, com histórico de iniciativas que geraram R$2M+ em impacto incremental. Forte colaboração com engenharia, design e dados.",
+    skills: [
+      { category: "Produto", items: "Discovery, Roadmap, Priorização, Product Strategy, Go-to-Market" },
+      { category: "Dados", items: "SQL, Amplitude, Mixpanel, Google Analytics 4, Dashboards" },
+      { category: "Métodos", items: "A/B Testing, User Research, Jobs to be Done, Entrevistas, Hipóteses" },
+      { category: "Ferramentas", items: "Jira, Notion, Figma, Miro, Confluence" },
+      { category: "Negócio", items: "Stakeholder Management, Receita, Retenção, Churn, Conversão" },
+      { category: "Operação", items: "Agile, Scrum, Planning, Cross-functional Leadership" },
+    ],
+    experience: [
+      {
+        role: "Product Manager Pleno",
+        company: "SaaS Product Labs",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Liderei roadmap de produto B2B com foco em expansão e retenção, aumentando adoção de feature estratégica em 35%",
+          "Conduzi discovery com clientes enterprise e usuários finais, validando oportunidades que resultaram em redução de churn de 16%",
+          "Implementei experimentos A/B em fluxos críticos de onboarding, elevando conversão em 24%",
+          "Trabalhei com engenharia, design e dados em squad cross-functional, gerando R$1,9M em receita incremental em 12 meses",
+        ],
+      },
+      {
+        role: "Associate Product Manager",
+        company: "Growth Tech Brasil",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Apoiei discovery, priorização e acompanhamento de métricas em produto digital voltado para SMBs",
+          "Estruturei dashboards de produto e análises em GA4 e Amplitude para monitorar retenção e conversão",
+          "Coordenei lançamento de funcionalidades com engenharia e design, reduzindo time-to-market em 20%",
+          "Participei da definição de hipóteses e testes que elevaram ativação inicial de usuários em 18%",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Administração de Empresas",
+      institution: "Insper",
+      year: "2019",
+    },
+    certifications: [
+      "Product Management Certification – Product School (2023)",
+      "Amplitude Product Analytics Certification (2022)",
+      "Google Analytics 4 Certification (2022)",
+    ],
+  },
+  improvementSteps: [
+    { title: "Mostre impacto em métricas de produto", description: "Inclua conversão, retenção, churn, adoção ou receita para demonstrar impacto real das suas decisões." },
+    { title: "Explique contexto, decisão e resultado", description: "Evite listar apenas tarefas. Mostre qual problema você resolveu, como priorizou e qual foi o resultado." },
+    { title: "Destaque discovery e experimentação", description: "Mencione entrevistas, hipóteses, validações, testes A/B e análise de comportamento sempre que possível." },
+    { title: "Liste ferramentas e métodos de produto", description: "Jira, Notion, Figma, Amplitude, Mixpanel e frameworks de discovery ajudam o ATS a identificar aderência." },
+    { title: "Conecte produto a negócio", description: "Mostre impacto em receita, retenção, eficiência ou posicionamento estratégico do produto." },
+    { title: "Adapte o currículo ao tipo de PM da vaga", description: "Se a vaga é Growth, Platform ou Core Product, ajuste a linguagem e os exemplos do seu currículo para esse contexto." },
+  ],
+  internalLinks: [
+    { label: "Currículo para Customer Success", href: "/curriculo-customer-success-ats", description: "Guia específico para Customer Success", image: "/images/seo/ats-guide.jpg" },
+    { label: "Currículo para Marketing", href: "/curriculo-marketing-ats", description: "Otimização para marketing digital", image: "/images/seo/marketing-career.jpg" },
+    { label: "Currículo para Desenvolvedor", href: "/curriculo-desenvolvedor-ats", description: "Guia específico para desenvolvedores", image: "/images/seo/developer-career.jpg" },
+    { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/data-analyst-career.jpg" },
+  ],
+  positioningMistakes: [
+    "Parecer apenas um gestor de backlog sem mostrar impacto estratégico",
+    "Não conectar decisões de produto a métricas e resultados do negócio",
+    "Falar de Agile e cerimônias sem mostrar discovery, priorização ou visão de produto",
+    "Omitir ferramentas de analytics e validação de hipóteses",
+    "Não deixar claro como você trabalhou com engenharia, design e stakeholders",
+  ],
+  realExample: {
+    title: "Exemplo real de impacto em Product Management",
+    before: "Gerenciei backlog e trabalhei com a equipe para evoluir o produto",
+    after: "Liderei discovery e roadmap de produto SaaS, implementei experimentos que elevaram conversão em 21%, reduziram churn em 14% e geraram R$1,2M em receita incremental",
+  },
+  faqs: [
+    {
+      question: "Quais métricas devo incluir no currículo de Product Manager?",
+      answer: "As métricas mais valorizadas são conversão, retenção, churn, adoção de funcionalidades, receita incremental, NPS e eficiência operacional. O ideal é mostrar como sua atuação impactou esses indicadores. Exemplo: 'Aumentei retenção em 18% após priorizar melhorias no onboarding'.",
+    },
+    {
+      question: "Preciso mencionar discovery no currículo de Product Manager?",
+      answer: "Sim. Discovery é uma das competências mais buscadas em Product Management. Vale mencionar entrevistas com usuários, validação de hipóteses, análise de comportamento, pesquisa qualitativa e quantitativa, além de como essas informações influenciaram decisões de roadmap.",
+    },
+    {
+      question: "Backlog e cerimônias ágeis são suficientes para um currículo de PM?",
+      answer: "Não. Essas atividades fazem parte da rotina, mas sozinhas não diferenciam um Product Manager. O currículo precisa mostrar decisão, contexto, trade-offs, impacto em métricas e visão de negócio. Focar apenas em backlog e Scrum pode deixar seu perfil com cara operacional demais.",
+    },
+    {
+      question: "Quais ferramentas devo citar no currículo de Product Manager?",
+      answer: "Jira, Notion, Figma, Miro, Confluence, Amplitude, Mixpanel, Google Analytics e até SQL são bons exemplos. Não cite apenas como lista solta: sempre que possível, contextualize com o uso. Ferramentas de analytics e discovery costumam pesar bastante em vagas de PM.",
+    },
+    {
+      question: "Como mostrar impacto de negócio sendo Product Manager?",
+      answer: "Conecte a iniciativa ao resultado. Em vez de 'lancei nova feature', prefira 'priorizei e lancei nova funcionalidade que elevou adoção em 30% e gerou R$800K em receita incremental'. Essa estrutura mostra produto + negócio de forma muito mais forte.",
+    },
+    {
+      question: "Vale incluir experiência cross-functional no currículo?",
+      answer: "Sim, porque Product Managers trabalham justamente articulando engenharia, design, dados, marketing, vendas e liderança. Mostrar essa capacidade de alinhamento é importante para o ATS e para recrutadores. Use exemplos concretos, não apenas frases genéricas como 'trabalhei com várias áreas'.",
+    },
+    {
+      question: "Product Manager precisa saber SQL?",
+      answer: "Nem toda vaga exige SQL, mas saber usar SQL e ferramentas de analytics é um diferencial relevante. Isso mostra capacidade de tomar decisões com base em dados, analisar comportamento de usuários e acompanhar KPIs com mais autonomia. Se você usa SQL, vale mencionar com contexto.",
+    },
+    {
+      question: "Como adaptar o currículo para vagas de Growth PM ou Core PM?",
+      answer: "Ajuste a linguagem e os resultados destacados. Para Growth PM, foque em conversão, retenção, experimentação e receita. Para Core PM, dê mais ênfase a discovery, experiência do usuário, evolução do produto e alinhamento estratégico. O ATS costuma valorizar esse match de contexto.",
+    },
+  ],
+}
+
 export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
   const configs: Record<string, RoleLandingConfig> = {
     "curriculo-desenvolvedor-ats": desenvolvedorConfig,
     "curriculo-analista-dados-ats": analistaDadosConfig,
     "curriculo-marketing-ats": marketingConfig,
     "curriculo-customer-success-ats": customerSuccessConfig,
+    "curriculo-product-manager-ats": productManagerConfig,
   }
 
   return configs[slug]
@@ -1199,4 +1468,5 @@ export const allRoleLandingConfigs: RoleLandingConfig[] = [
   analistaDadosConfig,
   marketingConfig,
   customerSuccessConfig,
+  productManagerConfig,
 ]
