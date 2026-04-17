@@ -1719,6 +1719,274 @@ export const vendasConfig: RoleLandingConfig = {
   ],
 }
 
+export const financeiroConfig: RoleLandingConfig = {
+  slug: "curriculo-financeiro-ats",
+  role: "Analista Financeiro",
+  roleShort: "Financeiro",
+  meta: {
+    title: "Currículo para Analista Financeiro que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    description: "Crie um currículo de analista financeiro otimizado para ATS. Veja exemplos com DRE, fluxo de caixa, orçamento, KPIs e impacto financeiro para conquistar mais entrevistas.",
+    canonical: "/curriculo-financeiro-ats",
+  },
+  hero: {
+    h1: "Currículo para Analista Financeiro que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Você trabalha com números, custos e indicadores, mas seu currículo pode não mostrar impacto financeiro real. Sistemas ATS procuram redução de custos, orçamento, DRE e resultados claros. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
+  },
+  problem: {
+    title: "Por que currículos financeiros são rejeitados pelo ATS?",
+    description: "Muitos profissionais de finanças descrevem rotinas, mas não mostram o efeito do seu trabalho sobre margem, orçamento, eficiência ou resultado financeiro.",
+    points: [
+      "Não incluir redução de custos, ganhos de eficiência ou impacto no resultado",
+      "Descrever fechamento, conciliação e relatórios sem mostrar contexto financeiro",
+      "Não mencionar DRE, fluxo de caixa, orçamento ou indicadores financeiros",
+      "Omitir ferramentas como Excel Avançado, ERP, Power BI ou SAP",
+      "Falar de análises sem conectar a decisões de negócio",
+    ],
+  },
+  atsExplanation: {
+    title: "Como o ATS filtra currículos financeiros",
+    description: "Recrutadores de finanças procuram profissionais orientados a controle, previsibilidade e impacto em indicadores. ATS costuma priorizar currículos com DRE, fluxo de caixa, orçamento, KPIs, redução de custos e ferramentas financeiras claras.",
+    whatRecruitersScan: [
+      "Indicadores financeiros e KPIs (margem, EBITDA, fluxo de caixa, budget vs actual)",
+      "Experiência com DRE, orçamento, forecast e fechamento financeiro",
+      "Redução de custos, eficiência operacional e impacto em resultado",
+      "Ferramentas como Excel Avançado, Power BI, SAP, Oracle, TOTVS ou ERPs similares",
+      "Capacidade analítica com relatórios executivos e apoio à tomada de decisão",
+      "Relacionamento com controladoria, FP&A, contabilidade e liderança",
+    ],
+  },
+  keywords: [
+    { term: "DRE", description: "Demonstração do Resultado do Exercício é uma palavra-chave central em finanças" },
+    { term: "Fluxo de Caixa", description: "Gestão e análise de entrada e saída de recursos" },
+    { term: "Orçamento / Budget", description: "Planejamento e acompanhamento orçamentário" },
+    { term: "Forecast", description: "Previsão financeira e acompanhamento de cenário" },
+    { term: "KPIs Financeiros", description: "Indicadores como margem, EBITDA, ROI, budget vs actual" },
+    { term: "Excel Avançado", description: "Ferramenta essencial para análise, modelagem e controle financeiro" },
+    { term: "Power BI", description: "Visualização e acompanhamento de indicadores financeiros" },
+    { term: "ERP / SAP", description: "Sistemas de gestão financeira muito valorizados no ATS" },
+    { term: "Redução de Custos", description: "Impacto direto na eficiência e no resultado do negócio" },
+    { term: "FP&A / Controladoria", description: "Áreas e contextos muito buscados em posições financeiras" },
+  ],
+  commonMistakes: [
+    {
+      mistake: "Descrever rotinas sem mostrar impacto financeiro",
+      fix: "Mostre redução de custos, ganho de eficiência, melhoria de forecast ou impacto em margem",
+    },
+    {
+      mistake: "Não citar indicadores financeiros",
+      fix: "Inclua DRE, fluxo de caixa, EBITDA, margem, budget vs actual ou KPIs similares",
+    },
+    {
+      mistake: "Omitir ferramentas importantes",
+      fix: "Liste Excel Avançado, Power BI, SAP, Oracle, TOTVS ou ERPs usados no dia a dia",
+    },
+    {
+      mistake: "Parecer operacional demais",
+      fix: "Mostre apoio à tomada de decisão, análise crítica e impacto em negócio",
+    },
+    {
+      mistake: "Não quantificar ganhos financeiros",
+      fix: "Use números para demonstrar economia, recuperação de caixa, redução de erro ou melhoria de controle",
+    },
+  ],
+  resumeSections: {
+    summary: {
+      title: "Resumo Profissional",
+      bad: "Profissional com experiência em finanças, relatórios e controles.",
+      good: "Analista Financeiro com 5 anos de experiência em DRE, fluxo de caixa, orçamento e indicadores financeiros. Atuação focada em redução de custos, modelagem financeira e suporte à tomada de decisão, com impacto de R$1,2M em eficiência operacional.",
+    },
+    skills: {
+      title: "Seção de Habilidades",
+      bad: "Finanças, Excel, relatórios, controle, indicadores",
+      good: "Finanças: DRE, Fluxo de Caixa, Budget, Forecast, KPIs | Ferramentas: Excel Avançado, Power BI, SAP, Oracle | Análise: Modelagem Financeira, Budget vs Actual, Rentabilidade, Custos | Operação: Fechamento, Conciliação, Reporting Executivo",
+    },
+    experience: {
+      title: "Experiência Profissional",
+      bad: "Trabalhei com controles financeiros, relatórios e fechamento do mês.",
+      good: "Estruturei análises financeiras e relatórios executivos que reduziram custos em R$850K/ano, melhorei a precisão do forecast em 18% e apoiei decisões de orçamento com impacto direto em margem e eficiência operacional.",
+    },
+  },
+  specializations: [
+    {
+      title: "Controladoria",
+      description: "Foco em fechamento, compliance, análise de resultado e controle gerencial.",
+      keywords: ["DRE", "Fechamento", "Controladoria", "Conciliação", "Budget vs Actual", "Indicadores", "Compliance", "ERP", "Resultado", "Reporting"],
+    },
+    {
+      title: "FP&A / Planejamento Financeiro",
+      description: "Atuação com orçamento, forecast, cenários, modelagem e apoio estratégico à liderança.",
+      keywords: ["FP&A", "Orçamento", "Forecast", "Modelagem Financeira", "Cenários", "KPIs", "Planejamento", "EBITDA", "Margem", "Business Partner"],
+    },
+    {
+      title: "Tesouraria / Caixa",
+      description: "Gestão de fluxo de caixa, liquidez, projeções e eficiência de capital de giro.",
+      keywords: ["Fluxo de Caixa", "Tesouraria", "Liquidez", "Capital de Giro", "Projeção", "Contas a Pagar", "Contas a Receber", "Bancos", "Conciliação", "Eficiência"],
+    },
+  ],
+  seniorityLevels: [
+    {
+      level: "Financeiro Júnior",
+      focus: "Demonstre domínio de rotina financeira, organização e capacidade analítica inicial",
+      tips: [
+        "Mostre experiência com fechamento, conciliação, controles e relatórios",
+        "Inclua ferramentas como Excel, ERP e dashboards financeiros",
+        "Destaque atenção a detalhe, organização e consistência nos números",
+        "Mencione participação em rotinas mensais, acompanhamento orçamentário ou melhoria operacional",
+      ],
+    },
+    {
+      level: "Financeiro Pleno",
+      focus: "Mostre autonomia em análise, indicadores, budget e impacto financeiro real",
+      tips: [
+        "Quantifique redução de custos, ganho de eficiência, melhoria de forecast ou acurácia de relatórios",
+        "Mencione experiências com budget, DRE, fluxo de caixa e suporte à tomada de decisão",
+        "Destaque relacionamento com áreas de negócio, controladoria ou liderança",
+        "Inclua modelagem, análises críticas e reporting executivo",
+      ],
+    },
+    {
+      level: "Financeiro Sênior / Lead",
+      focus: "Demonstre visão estratégica, liderança e capacidade de influenciar resultados financeiros",
+      tips: [
+        "Mostre impacto em margem, EBITDA, eficiência, budget ou reestruturação de processo",
+        "Mencione times liderados, projetos estruturados ou governança financeira implementada",
+        "Inclua visão de negócio, cenários e apoio à liderança executiva",
+        "Destaque resultados financeiros com escala e previsibilidade",
+      ],
+    },
+  ],
+  cvExample: {
+    before: {
+      title: "Experiência em Finanças",
+      bullets: [
+        "Trabalhei com controles financeiros",
+        "Fiz relatórios mensais",
+        "Acompanhei orçamento da empresa",
+        "Participei do fechamento financeiro",
+      ],
+    },
+    after: {
+      title: "Analista Financeiro | DRE, Budget, Fluxo de Caixa",
+      bullets: [
+        "Reduzi custos operacionais em R$850K/ano com análise de contratos, orçamento e eficiência financeira",
+        "Melhorei a precisão do forecast em 18% com revisão de premissas e modelagem financeira",
+        "Estruturei dashboards em Power BI para acompanhamento de DRE, margem e budget vs actual",
+        "Apoiei decisões executivas com relatórios financeiros e análises que impactaram diretamente a rentabilidade",
+      ],
+    },
+  },
+  fullResumeExample: {
+    name: "Carlos Souza",
+    title: "Analista Financeiro | DRE, Orçamento, Fluxo de Caixa",
+    contact: "carlos.souza@email.com | (11) 94444-0000 | São Paulo, SP | linkedin.com/in/carlossouza",
+    summary: "Analista Financeiro com 6 anos de experiência em DRE, fluxo de caixa, orçamento, forecast e modelagem financeira. Forte atuação com Excel Avançado, Power BI e SAP, com histórico de redução de custos em R$1,3M e melhoria de previsibilidade financeira em ambientes corporativos.",
+    skills: [
+      { category: "Finanças", items: "DRE, Fluxo de Caixa, Orçamento, Forecast, KPIs Financeiros" },
+      { category: "Ferramentas", items: "Excel Avançado, Power BI, SAP, Oracle, ERP" },
+      { category: "Análise", items: "Budget vs Actual, Modelagem Financeira, Rentabilidade, Custos" },
+      { category: "Operação", items: "Fechamento Financeiro, Conciliação, Reporting Executivo" },
+      { category: "Negócio", items: "Margem, EBITDA, Planejamento Financeiro, Business Partner" },
+      { category: "Controle", items: "Compliance, Governança, Eficiência Operacional" },
+    ],
+    experience: [
+      {
+        role: "Analista Financeiro Pleno",
+        company: "Grupo Finance Corp",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Reduzi custos operacionais em R$900K/ano com revisão de contratos, centros de custo e análises de eficiência",
+          "Melhorei a precisão do forecast em 20% com revisão de premissas financeiras e modelagem em Excel",
+          "Estruturei dashboards de DRE, margem e budget vs actual em Power BI para acompanhamento executivo",
+          "Apoiei decisões estratégicas de orçamento e rentabilidade, contribuindo para aumento de margem em 3,2 p.p.",
+        ],
+      },
+      {
+        role: "Analista Financeiro Júnior",
+        company: "Empresa Brasil Holding",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Atuei em fechamento financeiro, conciliações e relatórios de fluxo de caixa mensal",
+          "Automatizei controles em Excel, reduzindo tempo de preparação de relatórios em 30%",
+          "Acompanhei orçamento e desvios orçamentários, apoiando times de controladoria e FP&A",
+          "Contribuí para melhoria da qualidade de dados financeiros em ERP SAP",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Administração de Empresas",
+      institution: "FGV",
+      year: "2019",
+    },
+    certifications: [
+      "Excel Avançado para Finanças (2023)",
+      "Power BI para Análise Financeira (2022)",
+      "Planejamento Financeiro e Orçamento Corporativo (2021)",
+    ],
+  },
+  improvementSteps: [
+    { title: "Inclua impacto financeiro real", description: "Mostre redução de custos, melhora de forecast, ganho de eficiência ou impacto em margem e rentabilidade." },
+    { title: "Liste indicadores e rotinas-chave", description: "DRE, fluxo de caixa, orçamento, budget vs actual, EBITDA e KPIs ajudam o ATS a identificar aderência à vaga." },
+    { title: "Destaque ferramentas financeiras", description: "Excel Avançado, Power BI, SAP, Oracle, TOTVS e ERPs similares são termos muito buscados." },
+    { title: "Troque rotina por decisão", description: "Mostre como suas análises ajudaram líderes a tomar decisões, não apenas que você gerou relatórios." },
+    { title: "Quantifique eficiência e controle", description: "Tempo economizado, custo reduzido, melhoria de acurácia ou visibilidade financeira fortalecem seu currículo." },
+    { title: "Adapte ao contexto da vaga", description: "Se a vaga é controladoria, FP&A, tesouraria ou custos, ajuste sua linguagem e experiências para esse contexto." },
+  ],
+  internalLinks: [
+    { label: "Currículo para Vendas", href: "/curriculo-vendas-ats", description: "Guia específico para profissionais de vendas", image: "/images/seo/ats-guide.jpg" },
+    { label: "Currículo para Product Manager", href: "/curriculo-product-manager-ats", description: "Otimização para Product Manager", image: "/images/seo/marketing-career.jpg" },
+    { label: "Currículo para Analista de Dados", href: "/curriculo-analista-dados-ats", description: "Guia específico para área de dados", image: "/images/seo/data-analyst-career.jpg" },
+    { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/developer-career.jpg" },
+  ],
+  positioningMistakes: [
+    "Descrever rotina financeira sem mostrar impacto no resultado da empresa",
+    "Não deixar claro se atua com controladoria, FP&A, tesouraria ou custos",
+    "Omitir indicadores financeiros e ganhos concretos de eficiência",
+    "Parecer operacional demais e pouco analítico ou estratégico",
+    "Não mostrar como seus relatórios ajudaram na tomada de decisão",
+  ],
+  realExample: {
+    title: "Exemplo real de resultado em Finanças",
+    before: "Atuei com relatórios, fechamento financeiro e apoio ao orçamento",
+    after: "Reduzi custos operacionais em R$850K/ano, melhorei a precisão do forecast em 18% e estruturei dashboards financeiros que apoiaram decisões executivas de orçamento e rentabilidade",
+  },
+  faqs: [
+    {
+      question: "O que colocar no currículo de analista financeiro?",
+      answer: "O mais importante é mostrar impacto financeiro. Inclua DRE, fluxo de caixa, orçamento, forecast, KPIs, ferramentas usadas e ganhos concretos como redução de custos, melhoria de acurácia ou eficiência operacional. Currículo financeiro sem indicadores tende a parecer apenas operacional.",
+    },
+    {
+      question: "Preciso mencionar DRE e fluxo de caixa no currículo?",
+      answer: "Sim. DRE, fluxo de caixa, budget, forecast e budget vs actual são termos muito buscados em ATS para vagas financeiras. Mesmo que você não atue com todos, deve deixar claro quais rotinas financeiras domina e em qual profundidade.",
+    },
+    {
+      question: "Excel Avançado ainda é importante para área financeira?",
+      answer: "Muito. Excel Avançado continua sendo uma das habilidades mais valorizadas em finanças. Vale mencionar modelagem financeira, tabelas dinâmicas, fórmulas avançadas, Power Query e automações quando fizer sentido. Isso fortalece bastante o currículo no ATS.",
+    },
+    {
+      question: "Como mostrar impacto sem expor dados confidenciais?",
+      answer: "Você pode usar percentuais, faixas ou valores aproximados. Em vez de detalhar números sensíveis, diga algo como 'reduzi custos em mais de R$500K por ano' ou 'melhorei a acurácia do forecast em 18%'. O importante é não deixar o impacto invisível.",
+    },
+    {
+      question: "Vale mencionar ERP no currículo financeiro?",
+      answer: "Sim. SAP, Oracle, TOTVS e outros ERPs são frequentemente buscados em vagas financeiras. ATS e recrutadores usam isso como sinal de aderência. O ideal é citar o sistema e o contexto: fechamento, conciliação, controles, reporting ou integração com áreas de negócio.",
+    },
+    {
+      question: "Como diferenciar currículo de controladoria e FP&A?",
+      answer: "Controladoria costuma ter mais foco em fechamento, compliance, análise de resultado e controle gerencial. FP&A tende a focar mais em orçamento, forecast, cenários, planejamento e suporte estratégico. Ajustar a linguagem para a vaga ajuda muito no match com ATS.",
+    },
+    {
+      question: "Power BI ajuda no currículo de finanças?",
+      answer: "Sim. Power BI é um diferencial forte porque mostra capacidade de transformar dados financeiros em visibilidade executiva. Se você criou dashboards de DRE, margem, fluxo de caixa ou budget vs actual, vale destacar isso claramente no currículo.",
+    },
+    {
+      question: "Como mostrar que minhas análises ajudaram na tomada de decisão?",
+      answer: "Explique o contexto e o resultado. Em vez de 'gerei relatórios', use algo como 'estruturei análises de custo e margem que apoiaram revisão orçamentária e contribuíram para redução de R$850K/ano'. Isso transforma rotina em impacto estratégico.",
+    },
+  ],
+}
+
 export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
   const configs: Record<string, RoleLandingConfig> = {
     "curriculo-desenvolvedor-ats": desenvolvedorConfig,
@@ -1727,6 +1995,7 @@ export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | un
     "curriculo-customer-success-ats": customerSuccessConfig,
     "curriculo-product-manager-ats": productManagerConfig,
     "curriculo-vendas-ats": vendasConfig,
+    "curriculo-financeiro-ats": financeiroConfig,
   }
 
   return configs[slug]
@@ -1739,4 +2008,5 @@ export const allRoleLandingConfigs: RoleLandingConfig[] = [
   customerSuccessConfig,
   productManagerConfig,
   vendasConfig,
+  financeiroConfig,
 ]
