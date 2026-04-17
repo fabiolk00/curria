@@ -64,7 +64,7 @@ const dropdownColumns: Array<{
       },
       {
         label: "Engenheiro de Dados",
-        href: "/curriculo-analista-dados-ats",
+        href: "/curriculo-engenheiro-de-dados-ats",
         icon: Database,
         description: "Pipelines, ETL, Data Warehouse",
       },
