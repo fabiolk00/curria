@@ -75,7 +75,12 @@ export type FullResumeExample = {
 export type RoleLandingVisualVariant =
   | "default"
   | "developer"
+  | "data_analyst"
   | "data_engineer"
+  | "marketing"
+  | "customer_success"
+  | "product_manager"
+  | "sales"
   | "finance"
 
 export type RoleLandingConfig = {
@@ -399,6 +404,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
   slug: "curriculo-analista-dados-ats",
   role: "Analista de Dados",
   roleShort: "Analista de Dados",
+  visualVariant: "data_analyst",
   meta: {
     title: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de analista de dados otimizado para ATS. Exemplos de SQL, Python, Power BI, resumo profissional e palavras-chave para passar nos filtros automáticos.",
@@ -655,6 +661,7 @@ export const marketingConfig: RoleLandingConfig = {
   slug: "curriculo-marketing-ats",
   role: "Profissional de Marketing",
   roleShort: "Marketing",
+  visualVariant: "marketing",
   meta: {
     title: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Otimize seu currículo de marketing digital para sistemas ATS. Exemplos de resumo profissional, métricas, palavras-chave de performance, SEO e growth para conquistar mais entrevistas.",
@@ -924,6 +931,7 @@ export const customerSuccessConfig: RoleLandingConfig = {
   slug: "curriculo-customer-success-ats",
   role: "Profissional de Customer Success",
   roleShort: "Customer Success",
+  visualVariant: "customer_success",
   meta: {
     title: "Currículo para Customer Success que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de Customer Success otimizado para ATS. Veja exemplos com onboarding, retenção, churn, NPS, expansão de receita, CRM e lifecycle para conquistar mais entrevistas.",
@@ -1192,6 +1200,7 @@ export const productManagerConfig: RoleLandingConfig = {
   slug: "curriculo-product-manager-ats",
   role: "Product Manager",
   roleShort: "Product Manager",
+  visualVariant: "product_manager",
   meta: {
     title: "Currículo para Product Manager que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de Product Manager otimizado para ATS. Veja exemplos com discovery, roadmap, priorização, métricas de produto e impacto em negócio para conquistar mais entrevistas.",
@@ -1460,6 +1469,7 @@ export const vendasConfig: RoleLandingConfig = {
   slug: "curriculo-vendas-ats",
   role: "Profissional de Vendas",
   roleShort: "Vendas",
+  visualVariant: "sales",
   meta: {
     title: "Currículo para Vendas que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de vendas otimizado para ATS. Veja exemplos com metas batidas, receita gerada, conversão, CRM e pipeline para conquistar mais entrevistas.",
