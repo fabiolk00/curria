@@ -1451,6 +1451,274 @@ export const productManagerConfig: RoleLandingConfig = {
   ],
 }
 
+export const vendasConfig: RoleLandingConfig = {
+  slug: "curriculo-vendas-ats",
+  role: "Profissional de Vendas",
+  roleShort: "Vendas",
+  meta: {
+    title: "Currículo para Vendas que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    description: "Crie um currículo de vendas otimizado para ATS. Veja exemplos com metas batidas, receita gerada, conversão, CRM e pipeline para conquistar mais entrevistas.",
+    canonical: "/curriculo-vendas-ats",
+  },
+  hero: {
+    h1: "Currículo para Vendas que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Você bate meta, mas seu currículo pode estar sendo ignorado antes mesmo de ser lido. Sistemas ATS procuram números, receita, conversão e ferramentas de vendas. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
+  },
+  problem: {
+    title: "Por que currículos de vendas são rejeitados pelo ATS?",
+    description: "Em vendas, não mostrar números é um dos erros mais graves. Currículos sem metas, receita, conversão ou contexto comercial real costumam parecer fracos para ATS e recrutadores.",
+    points: [
+      "Não incluir metas batidas, receita gerada ou percentual de performance",
+      "Descrever atividades comerciais sem impacto financeiro claro",
+      "Não mencionar CRM, pipeline ou ferramentas de prospecção",
+      "Usar linguagem genérica como 'atendi clientes' sem conversão ou fechamento",
+      "Não explicar sua atuação no funil de vendas (prospecção, qualificação, fechamento, pós-venda)",
+    ],
+  },
+  atsExplanation: {
+    title: "Como o ATS filtra currículos de vendas",
+    description: "Recrutadores de vendas procuram perfis orientados a resultado. ATS costuma priorizar currículos com metas, receita, conversão, ticket médio, volume de carteira e ferramentas como Salesforce, HubSpot ou Pipedrive.",
+    whatRecruitersScan: [
+      "Percentual de meta batida",
+      "Receita gerada ou carteira movimentada",
+      "Taxa de conversão no funil comercial",
+      "Ferramentas CRM e sales tech (Salesforce, HubSpot, Pipedrive, RD Station CRM)",
+      "Ticket médio e volume de clientes ou leads trabalhados",
+      "Experiência com inbound, outbound, inside sales ou field sales",
+    ],
+  },
+  keywords: [
+    { term: "Meta batida", description: "Percentual de meta atingida é um dos principais sinais de performance em vendas" },
+    { term: "Receita gerada", description: "Impacto direto em faturamento mostra resultado real" },
+    { term: "Conversão", description: "Taxa de conversão ao longo do funil comercial" },
+    { term: "CRM", description: "Ferramentas como Salesforce, HubSpot, Pipedrive e RD Station CRM" },
+    { term: "Pipeline/Funil", description: "Gestão de oportunidades e etapas comerciais" },
+    { term: "Ticket Médio", description: "Valor médio das vendas realizadas" },
+    { term: "Inside Sales", description: "Modelo de vendas remoto e consultivo muito buscado" },
+    { term: "Outbound/Inbound", description: "Estratégias de aquisição e prospecção comercial" },
+    { term: "Negociação", description: "Competência essencial para avanço e fechamento de oportunidades" },
+    { term: "Forecast", description: "Previsibilidade comercial e acompanhamento de pipeline" },
+  ],
+  commonMistakes: [
+    {
+      mistake: "Não incluir números ou metas",
+      fix: "Mostre percentual de meta batida, receita gerada, conversão ou ticket médio",
+    },
+    {
+      mistake: "Descrever tarefas em vez de resultados",
+      fix: "Troque 'atendi clientes' por impacto comercial concreto, como fechamentos, expansão ou crescimento de carteira",
+    },
+    {
+      mistake: "Não mencionar CRM ou ferramentas comerciais",
+      fix: "Inclua Salesforce, HubSpot, Pipedrive, RD Station CRM, Apollo, LinkedIn Sales Navigator ou outras plataformas relevantes",
+    },
+    {
+      mistake: "Falar de relacionamento sem impacto financeiro",
+      fix: "Conecte relacionamento a retenção, upsell, aumento de ticket ou avanço no pipeline",
+    },
+    {
+      mistake: "Não deixar claro seu modelo de venda",
+      fix: "Especifique se atuou com inside sales, field sales, inbound, outbound ou gestão de carteira",
+    },
+  ],
+  resumeSections: {
+    summary: {
+      title: "Resumo Profissional",
+      bad: "Profissional com experiência em vendas e atendimento ao cliente.",
+      good: "Executivo de Vendas com 5 anos de experiência em inside sales B2B, histórico de 128% da meta anual e R$4,2M em receita gerada. Forte atuação com CRM, pipeline, prospecção outbound e negociação consultiva.",
+    },
+    skills: {
+      title: "Seção de Habilidades",
+      bad: "Vendas, negociação, atendimento, metas, CRM",
+      good: "Vendas: Inside Sales, Outbound, Inbound, Fechamento | Métricas: Meta, Conversão, Receita, Ticket Médio, Forecast | Ferramentas: Salesforce, HubSpot, Pipedrive, LinkedIn Sales Navigator | Comercial: Prospecção, Qualificação, Negociação, Gestão de Pipeline",
+    },
+    experience: {
+      title: "Experiência Profissional",
+      bad: "Atuei com vendas da empresa e relacionamento com clientes.",
+      good: "Gerei R$2,7M em receita anual, bati 123% da meta por 3 anos consecutivos e aumentei conversão do pipeline em 19%. Trabalhei com Salesforce e HubSpot para gerir carteira, forecast e oportunidades enterprise.",
+    },
+  },
+  specializations: [
+    {
+      title: "Inside Sales",
+      description: "Vendas remotas, consultivas e baseadas em CRM, pipeline e previsibilidade comercial.",
+      keywords: ["Inside Sales", "CRM", "Pipeline", "Conversão", "Outbound", "Inbound", "Qualificação", "Follow-up", "Fechamento", "Forecast"],
+    },
+    {
+      title: "Field Sales",
+      description: "Vendas presenciais, relacionamento de longo prazo e negociação mais direta com contas e territórios.",
+      keywords: ["Field Sales", "Negociação", "Relacionamento", "Visitas", "Carteira", "Território", "Fechamento", "Expansão", "Key Accounts", "Proposta Comercial"],
+    },
+    {
+      title: "Sales Leadership",
+      description: "Gestão de times, metas, forecast e desenvolvimento de operação comercial de alta performance.",
+      keywords: ["Sales Manager", "Liderança", "Meta", "Forecast", "Playbook", "Coaching", "Pipeline Review", "Time Comercial", "Receita", "Escala"],
+    },
+  ],
+  seniorityLevels: [
+    {
+      level: "Vendas Júnior",
+      focus: "Demonstre disciplina comercial, capacidade de aprendizado e primeiros resultados em prospecção e fechamento",
+      tips: [
+        "Mostre volume de leads, reuniões agendadas, fechamentos ou metas iniciais batidas",
+        "Inclua ferramentas comerciais usadas no dia a dia",
+        "Destaque capacidade de seguir processo, funil e playbook",
+        "Mencione evolução de performance e aprendizado rápido",
+      ],
+    },
+    {
+      level: "Vendas Pleno",
+      focus: "Mostre consistência em receita, conversão, negociação e autonomia comercial",
+      tips: [
+        "Quantifique meta batida, receita gerada e taxa de conversão",
+        "Mencione carteira, ticket médio, ciclo de vendas e segmentos atendidos",
+        "Destaque previsibilidade no pipeline e qualidade de forecast",
+        "Inclua resultados recorrentes, não apenas um pico isolado",
+      ],
+    },
+    {
+      level: "Vendas Sênior / Liderança",
+      focus: "Demonstre capacidade de escalar receita, liderar pessoas e melhorar operação comercial",
+      tips: [
+        "Mostre impacto em metas do time, forecast, expansão de receita ou estrutura comercial",
+        "Mencione liderança de equipe, coaching e desenvolvimento de vendedores",
+        "Inclua visão de negócio, território, grandes contas ou estratégia comercial",
+        "Destaque resultados consistentes em escala, não apenas individuais",
+      ],
+    },
+  ],
+  cvExample: {
+    before: {
+      title: "Experiência em Vendas",
+      bullets: [
+        "Vendi produtos da empresa",
+        "Atendi clientes interessados",
+        "Trabalhei com metas comerciais",
+        "Usei sistema para acompanhar oportunidades",
+      ],
+    },
+    after: {
+      title: "Executivo de Vendas | Inside Sales, CRM, Receita",
+      bullets: [
+        "Gerei R$2,4M em receita anual e bati 125% da meta por 3 anos consecutivos",
+        "Aumentei conversão do pipeline em 18% com melhoria de qualificação e follow-up",
+        "Gerenciei carteira de 90 oportunidades ativas em Salesforce e HubSpot com forecast semanal",
+        "Atuei em vendas consultivas B2B com ticket médio de R$28K e ciclo médio de 45 dias",
+      ],
+    },
+  },
+  fullResumeExample: {
+    name: "Rafael Lima",
+    title: "Executivo de Vendas | B2B, CRM, Conversão",
+    contact: "rafael.lima@email.com | (11) 95555-0000 | São Paulo, SP | linkedin.com/in/rafaellima",
+    summary: "Executivo de Vendas com 6 anos de experiência em inside sales B2B e SaaS. Histórico consistente de 130% da meta anual e mais de R$5M em receita gerada. Forte atuação com Salesforce, HubSpot, prospecção outbound, gestão de pipeline e negociação consultiva para contas mid-market e enterprise.",
+    skills: [
+      { category: "Vendas", items: "Inside Sales, Outbound, Inbound, Fechamento, Expansão" },
+      { category: "Métricas", items: "Meta, Receita, Conversão, Ticket Médio, Forecast, Pipeline" },
+      { category: "Ferramentas", items: "Salesforce, HubSpot, Pipedrive, Apollo, LinkedIn Sales Navigator" },
+      { category: "Comercial", items: "Prospecção, Qualificação, Negociação, Follow-up, Gestão de Carteira" },
+      { category: "Negócio", items: "B2B SaaS, Mid-market, Enterprise, Consultative Selling" },
+      { category: "Operação", items: "Playbook, Cadência, Forecast Review, Pipeline Hygiene" },
+    ],
+    experience: [
+      {
+        role: "Executivo de Vendas Pleno",
+        company: "SaaS Revenue Tech",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Gerei R$2,8M em receita anual e bati 132% da meta em 2023",
+          "Aumentei conversão de SQL para fechamento em 21% com melhoria na qualificação e negociação",
+          "Gerenciei pipeline com 100+ oportunidades ativas em Salesforce, mantendo forecast semanal com alta previsibilidade",
+          "Atuei em negociações B2B com ticket médio de R$32K para contas mid-market e enterprise",
+        ],
+      },
+      {
+        role: "Sales Development / Account Executive",
+        company: "Growth Comercial Brasil",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Bati 118% da meta anual e contribui com R$1,6M em receita no período",
+          "Estruturei cadências outbound com HubSpot e LinkedIn Sales Navigator, elevando taxa de resposta em 27%",
+          "Realizei qualificação e fechamento de oportunidades em ciclo comercial consultivo",
+          "Contribuí para redução do tempo médio de fechamento em 15% com melhoria no processo comercial",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Administração de Empresas",
+      institution: "Universidade Anhembi Morumbi",
+      year: "2019",
+    },
+    certifications: [
+      "Sales Enablement Certification (2023)",
+      "HubSpot Sales Software Certification (2022)",
+      "LinkedIn Sales Navigator Certification (2022)",
+    ],
+  },
+  improvementSteps: [
+    { title: "Mostre números comerciais", description: "Inclua meta batida, receita gerada, conversão, ticket médio ou volume de carteira para provar resultado." },
+    { title: "Troque tarefas por impacto", description: "Em vez de dizer que vendeu ou atendeu clientes, mostre quanto vendeu, para quem e com qual resultado." },
+    { title: "Liste ferramentas de vendas", description: "Salesforce, HubSpot, Pipedrive, Apollo e LinkedIn Sales Navigator ajudam o ATS a identificar aderência à vaga." },
+    { title: "Deixe claro seu modelo comercial", description: "Explique se atuou com inside sales, outbound, inbound, field sales ou gestão de carteira." },
+    { title: "Mostre domínio do funil", description: "Descreva sua atuação em prospecção, qualificação, negociação, fechamento e forecast sempre que possível." },
+    { title: "Adapte o currículo ao segmento da vaga", description: "Se a vaga é B2B, SaaS, enterprise ou varejo, ajuste sua linguagem e exemplos para esse contexto." },
+  ],
+  internalLinks: [
+    { label: "Currículo para Product Manager", href: "/curriculo-product-manager-ats", description: "Guia específico para Product Manager", image: "/images/seo/ats-guide.jpg" },
+    { label: "Currículo para Customer Success", href: "/curriculo-customer-success-ats", description: "Otimização para Customer Success", image: "/images/seo/marketing-career.jpg" },
+    { label: "Currículo para Marketing", href: "/curriculo-marketing-ats", description: "Guia específico para marketing digital", image: "/images/seo/marketing-career.jpg" },
+    { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/developer-career.jpg" },
+  ],
+  positioningMistakes: [
+    "Não mostrar números mesmo trabalhando com metas e receita",
+    "Parecer apenas operacional, sem impacto comercial claro",
+    "Não deixar evidente o tipo de venda (B2B, inside sales, enterprise, outbound)",
+    "Omitir CRM, pipeline e previsibilidade comercial",
+    "Falar de relacionamento sem conectar isso a fechamento ou expansão de receita",
+  ],
+  realExample: {
+    title: "Exemplo real de resultado em Vendas",
+    before: "Atuei com vendas e relacionamento com clientes da carteira",
+    after: "Gerei R$2,4M em receita anual, bati 125% da meta e aumentei conversão do pipeline em 18% com negociação consultiva e gestão ativa em Salesforce",
+  },
+  faqs: [
+    {
+      question: "O que colocar no currículo de vendas?",
+      answer: "O mais importante é mostrar resultado. Inclua meta batida, receita gerada, conversão, ticket médio, carteira, segmento atendido e ferramentas de CRM. Em vendas, currículo sem número parece fraco, mesmo quando a experiência é boa.",
+    },
+    {
+      question: "Preciso colocar a porcentagem da meta batida?",
+      answer: "Sim. Percentual de meta é um dos sinais mais fortes de performance comercial. Se possível, mostre consistência ao longo do tempo, como 'bati 120% da meta por 3 anos consecutivos'. Isso tem muito mais peso do que dizer apenas que trabalhou com metas.",
+    },
+    {
+      question: "CRM é importante no currículo de vendas?",
+      answer: "Sim. Salesforce, HubSpot, Pipedrive, RD Station CRM e ferramentas similares são frequentemente buscadas em ATS. Além de citar a ferramenta, vale contextualizar como você a usava: pipeline, forecast, gestão de carteira, cadências ou acompanhamento de oportunidades.",
+    },
+    {
+      question: "Como mostrar resultado sem expor números confidenciais?",
+      answer: "Você pode usar percentuais ou faixas. Em vez de informar receita exata, diga 'gerei mais de R$1M no ano' ou 'bati 125% da meta'. O importante é não deixar o currículo sem indicadores de performance.",
+    },
+    {
+      question: "Devo deixar claro se trabalhei com inside sales ou field sales?",
+      answer: "Sim. Isso ajuda o ATS e o recrutador a entender seu contexto. Inside sales, outbound, inbound, field sales, B2B, B2C, enterprise ou SMB mudam bastante o perfil da vaga. Ajustar essa linguagem aumenta aderência e relevância.",
+    },
+    {
+      question: "Como mostrar habilidade de negociação no currículo?",
+      answer: "Em vez de listar 'negociação' como habilidade solta, mostre o efeito dela. Exemplo: 'negociei contratos com ticket médio de R$30K e aumentei taxa de fechamento em 18%'. Isso transforma habilidade em prova de resultado.",
+    },
+    {
+      question: "Vale incluir prospecção outbound no currículo?",
+      answer: "Sim, principalmente para vagas de SDR, BDR, inside sales ou sales executive. Vale mencionar volume de leads trabalhados, taxa de resposta, reuniões geradas, qualidade da qualificação e impacto em pipeline. Isso mostra capacidade comercial real.",
+    },
+    {
+      question: "Como diferenciar currículo de executivo de vendas e gerente comercial?",
+      answer: "Executivos de vendas devem focar em performance individual: meta, receita, pipeline, conversão, ticket médio e carteira. Gerentes comerciais devem destacar liderança, forecast, desenvolvimento do time, metas coletivas, processos e crescimento da operação. O ATS costuma valorizar esse contexto corretamente alinhado.",
+    },
+  ],
+}
+
 export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
   const configs: Record<string, RoleLandingConfig> = {
     "curriculo-desenvolvedor-ats": desenvolvedorConfig,
@@ -1458,6 +1726,7 @@ export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | un
     "curriculo-marketing-ats": marketingConfig,
     "curriculo-customer-success-ats": customerSuccessConfig,
     "curriculo-product-manager-ats": productManagerConfig,
+    "curriculo-vendas-ats": vendasConfig,
   }
 
   return configs[slug]
@@ -1469,4 +1738,5 @@ export const allRoleLandingConfigs: RoleLandingConfig[] = [
   marketingConfig,
   customerSuccessConfig,
   productManagerConfig,
+  vendasConfig,
 ]
