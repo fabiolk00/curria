@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { motion, type Variants } from "motion/react"
+import { useRef } from "react"
 import {
   ArrowRight,
   BarChart3,
@@ -556,6 +557,41 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
   const variant = config.visualVariant ?? "default"
   const theme = themeByVariant[variant]
   const accent = sectionAccentByVariant[variant]
+  const relatedScrollRef = useRef<HTMLDivElement>(null)
+  const isDraggingRelatedRef = useRef(false)
+  const relatedStartXRef = useRef(0)
+  const relatedScrollLeftRef = useRef(0)
+  const relatedMovedRef = useRef(false)
+
+  const onRelatedMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!relatedScrollRef.current) return
+    isDraggingRelatedRef.current = true
+    relatedMovedRef.current = false
+    relatedStartXRef.current = e.pageX - relatedScrollRef.current.offsetLeft
+    relatedScrollLeftRef.current = relatedScrollRef.current.scrollLeft
+  }
+
+  const onRelatedMouseLeave = () => {
+    isDraggingRelatedRef.current = false
+  }
+
+  const onRelatedMouseUp = () => {
+    isDraggingRelatedRef.current = false
+  }
+
+  const onRelatedMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRelatedRef.current || !relatedScrollRef.current) return
+    e.preventDefault()
+
+    const x = e.pageX - relatedScrollRef.current.offsetLeft
+    const walk = (x - relatedStartXRef.current) * 1.15
+
+    if (Math.abs(walk) > 4) {
+      relatedMovedRef.current = true
+    }
+
+    relatedScrollRef.current.scrollLeft = relatedScrollLeftRef.current - walk
+  }
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -587,10 +623,12 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
                     </Link>
                     <p className="text-sm text-slate-500">{config.hero.ctaSubtext}</p>
                   </div>
-                  <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Role</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.role}</p></div>
-                    <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Keywords</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.keywords.length} termos</p></div>
-                    <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Guidance</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.improvementSteps.length} passos</p></div>
+                  <div className="mt-8 overflow-hidden rounded-[28px] border border-white/80 bg-white/75 shadow-sm backdrop-blur-md">
+                    <div className="grid divide-y divide-slate-200/80 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                      <div className="px-5 py-4"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Role</p><p className="mt-2 text-base font-semibold text-slate-950">{config.role}</p></div>
+                      <div className="px-5 py-4"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Keywords</p><p className="mt-2 text-base font-semibold text-slate-950">{config.keywords.length} termos</p></div>
+                      <div className="px-5 py-4"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Guidance</p><p className="mt-2 text-base font-semibold text-slate-950">{config.improvementSteps.length} passos</p></div>
+                    </div>
                   </div>
                 </motion.div>
 
@@ -599,14 +637,14 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
                   <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                     <div className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-sm">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><ShieldCheck className="h-4 w-4 text-emerald-500" />O que o recrutador realmente procura</div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {config.atsExplanation.whatRecruitersScan.slice(0, 6).map((item) => <span key={item} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">{item}</span>)}
+                      <div className="mt-4 divide-y divide-slate-200/80">
+                        {config.atsExplanation.whatRecruitersScan.slice(0, 4).map((item) => <div key={item} className="py-3 text-sm leading-6 text-slate-600">{item}</div>)}
                       </div>
                     </div>
                     <div className="rounded-[28px] border border-white/70 bg-slate-950 p-6 text-white shadow-sm">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Mistakes</p>
                       <p className="mt-3 text-3xl font-semibold tracking-tight">{config.commonMistakes.length}</p>
-                      <p className="mt-2 text-sm leading-6 text-white/70">pontos de atrito mapeados para essa pagina</p>
+                      <p className="mt-2 text-sm leading-6 text-white/70">pontos de atrito mapeados para essa página</p>
                     </div>
                   </div>
                 </div>
@@ -616,43 +654,116 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </section>
 
         <Shell className="px-4 pt-10 md:pt-14">
-          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <Card>
-              <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><CircleAlert className="h-4 w-4 text-rose-500" />Onde o currículo quebra</div>
-              <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">{config.problem.title}</h2>
-              <p className="mt-4 text-base leading-8 text-slate-600">{config.problem.description}</p>
-              <div className="mt-8 grid gap-4">{config.problem.points.map((point, index) => <div key={point} className="grid gap-3 rounded-3xl border border-rose-100 bg-rose-50/70 p-5 md:grid-cols-[auto_1fr]"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-rose-500 shadow-sm">{String(index + 1).padStart(2, "0")}</div><p className="text-sm leading-7 text-slate-600">{point}</p></div>)}</div>
-            </Card>
-            <DarkCard>
-              <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-white/55"><LineChart className={`h-4 w-4 ${theme.darkIcon}`} />Como o ATS interpreta</div>
-              <h2 className="mt-5 text-3xl font-semibold tracking-tight">{config.atsExplanation.title}</h2>
-              <p className="mt-4 text-base leading-8 text-white/72">{config.atsExplanation.description}</p>
-              <div className="mt-8 grid gap-4">{config.atsExplanation.whatRecruitersScan.map((item) => <div key={item} className="rounded-3xl border border-white/10 bg-white/5 p-5"><div className="flex items-start gap-3"><CheckCircle2 className={`mt-0.5 h-5 w-5 shrink-0 ${theme.darkIcon}`} /><p className="text-sm leading-7 text-white/78">{item}</p></div></div>)}</div>
-            </DarkCard>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="grid xl:grid-cols-[1.02fr_0.98fr]">
+              <div className="border-b border-slate-200/80 p-8 md:p-10 xl:border-b-0 xl:border-r">
+                <div className="max-w-2xl">
+                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <CircleAlert className="h-4 w-4 text-rose-500" />
+                    Onde o curr�culo quebra
+                  </div>
+                  <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">{config.problem.title}</h2>
+                  <p className="mt-4 text-base leading-8 text-slate-600">{config.problem.description}</p>
+                </div>
+                <div className="mt-8 divide-y divide-slate-200/80">
+                  {config.problem.points.map((point, index) => (
+                    <div key={point} className="grid gap-4 py-5 md:grid-cols-[auto_1fr] md:items-start">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-sm font-semibold text-rose-600">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                      <p className="max-w-2xl text-sm leading-7 text-slate-600">{point}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-8 text-white md:p-10">
+                <div className="max-w-2xl">
+                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-white/55">
+                    <LineChart className={`h-4 w-4 ${theme.darkIcon}`} />
+                    Como o ATS interpreta
+                  </div>
+                  <h2 className="mt-5 text-3xl font-semibold tracking-tight">{config.atsExplanation.title}</h2>
+                  <p className="mt-4 text-base leading-8 text-white/72">{config.atsExplanation.description}</p>
+                </div>
+                <div className="mt-8 divide-y divide-white/10">
+                  {config.atsExplanation.whatRecruitersScan.map((item, index) => (
+                    <div key={item} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold ${theme.darkIcon}`}>
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-7 text-white/78">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-            <Card className={`bg-gradient-to-b ${accent.keywordPanel}`}>
-              <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><Lightbulb className="h-4 w-4 text-amber-500" />{accent.keywordLabel}</div>
-              <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">Palavras-chave importantes para {config.roleShort}</h2>
-              <div className="mt-8 grid gap-4 md:grid-cols-2">{config.keywords.map((keyword) => <div key={keyword.term} className={`rounded-3xl border p-5 ${accent.keywordCard}`}><p className="text-lg font-semibold text-slate-950">{keyword.term}</p><p className="mt-3 text-sm leading-7 text-slate-600">{keyword.description}</p></div>)}</div>
-            </Card>
-            <DarkCard>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Mistakes to avoid</p>
-              <div className="mt-6 space-y-4">{config.commonMistakes.map((item) => <div key={item.mistake} className="rounded-3xl border border-white/10 bg-white/5 p-5"><div className="flex items-start gap-3"><XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-300" /><div><p className="font-semibold text-white">{item.mistake}</p><p className="mt-2 text-sm leading-7 text-white/70">{item.fix}</p></div></div></div>)}</div>
-            </DarkCard>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="grid xl:grid-cols-[1.12fr_0.88fr]">
+              <div className={`border-b border-slate-200/80 bg-gradient-to-b p-8 md:p-10 xl:border-b-0 xl:border-r ${accent.keywordPanel}`}>
+                <div className="max-w-2xl">
+                  <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                    {accent.keywordLabel}
+                  </div>
+                  <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">Palavras-chave importantes para {config.roleShort}</h2>
+                </div>
+                <div className="mt-8 divide-y divide-slate-200/80">
+                  {config.keywords.map((keyword) => (
+                    <div key={keyword.term} className="grid gap-3 py-4 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-6">
+                      <p className="text-base font-semibold text-slate-950">{keyword.term}</p>
+                      <p className="text-sm leading-7 text-slate-600">{keyword.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-slate-950 p-8 text-white md:p-10">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Mistakes to avoid</p>
+                <div className="mt-6 divide-y divide-white/10">
+                  {config.commonMistakes.map((item, index) => (
+                    <div key={item.mistake} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-rose-300/20 bg-rose-400/10 text-sm font-semibold text-rose-200">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">{item.mistake}</p>
+                        <p className="mt-2 text-sm leading-7 text-white/72">{item.fix}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="mx-auto w-full max-w-[1440px]">
-            <Card>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="border-b border-slate-200/80 p-8 md:p-10">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Rewrite framework</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como reescrever as partes mais importantes</h2>
-              <div className="mt-8 grid gap-6 xl:grid-cols-3">{resumeSections.map((section) => <div key={section.title} className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-6"><h3 className="text-xl font-semibold text-slate-950">{section.title}</h3><div className="mt-6 rounded-3xl border border-rose-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Antes</p><p className="mt-3 text-sm leading-7 text-slate-600">{section.bad}</p></div><div className="mt-4 rounded-3xl border border-emerald-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Depois</p><p className="mt-3 text-sm leading-7 text-slate-600">{section.good}</p></div></div>)}</div>
-            </Card>
+            </div>
+            <div className="grid xl:grid-cols-3">
+              {resumeSections.map((section, index) => (
+                <div key={section.title} className={`p-8 md:p-10 ${index !== resumeSections.length - 1 ? "border-b border-slate-200/80 xl:border-b-0 xl:border-r" : ""}`}>
+                  <h3 className="text-xl font-semibold text-slate-950">{section.title}</h3>
+                  <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200/80 px-5 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Antes</p>
+                      <p className="mt-3 text-sm leading-7 text-slate-600">{section.bad}</p>
+                    </div>
+                    <div className="px-5 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Depois</p>
+                      <p className="mt-3 text-sm leading-7 text-slate-600">{section.good}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </Shell>
 
@@ -681,36 +792,183 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1fr_1fr]">
-            <Card>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Paths by specialization</p>
-              <div className="mt-6 space-y-4">{config.specializations.map((specialization) => <div key={specialization.title} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-6"><h3 className="text-xl font-semibold text-slate-950">{specialization.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{specialization.description}</p><div className="mt-4 flex flex-wrap gap-2">{specialization.keywords.map((keyword) => <span key={keyword} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">{keyword}</span>)}</div></div>)}</div>
-            </Card>
-            <div className="space-y-6">
-              <DarkCard>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="grid xl:grid-cols-[1.18fr_0.82fr]">
+              <div className="border-b border-slate-200/80 p-8 md:p-10 xl:border-b-0 xl:border-r">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Paths by specialization</p>
+                  <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Adapte o currículo ao recorte certo da área</h2>
+                  <p className="mt-4 text-sm leading-7 text-slate-600">
+                    Em vez de empilhar cartões altos com muito vazio, agrupamos as frentes de atuação em uma grade mais compacta e mais distribuída na largura da página.
+                  </p>
+                </div>
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {config.specializations.map((specialization) => (
+                    <div key={specialization.title} className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5">
+                      <h3 className="text-lg font-semibold text-slate-950">{specialization.title}</h3>
+                      <p className="mt-3 text-sm leading-7 text-slate-600">{specialization.description}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {specialization.keywords.map((keyword) => (
+                          <span key={keyword} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-8 text-white md:p-10">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">By seniority</p>
-                <div className="mt-6 space-y-4">{config.seniorityLevels.map((level) => <div key={level.level} className="rounded-3xl border border-white/10 bg-white/5 p-6"><div className="flex items-center gap-3"><BriefcaseBusiness className={`h-5 w-5 ${theme.darkIcon}`} /><h3 className="text-lg font-semibold">{level.level}</h3></div><p className="mt-3 text-sm leading-7 text-white/72">{level.focus}</p><ul className="mt-4 space-y-3">{level.tips.map((tip) => <li key={tip} className="flex items-start gap-3 text-sm leading-7 text-white/72"><CheckCircle2 className={`mt-1 h-4 w-4 shrink-0 ${theme.darkIcon}`} /><span>{tip}</span></li>)}</ul></div>)}</div>
-              </DarkCard>
-              {config.positioningMistakes?.length ? <Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Positioning mistakes</p><div className="mt-6 space-y-3">{config.positioningMistakes.map((mistake) => <div key={mistake} className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5"><div className="flex items-start gap-3"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" /><p className="text-sm leading-7 text-slate-600">{mistake}</p></div></div>)}</div></Card> : null}
+                <div className="mt-6 divide-y divide-white/10">
+                  {config.seniorityLevels.map((level) => (
+                    <div key={level.level} className="py-5">
+                      <div className="flex items-center gap-3">
+                        <BriefcaseBusiness className={`h-5 w-5 ${theme.darkIcon}`} />
+                        <h3 className="text-lg font-semibold text-white">{level.level}</h3>
+                      </div>
+                      <p className="mt-3 text-sm leading-7 text-white/72">{level.focus}</p>
+                      <ul className="mt-4 space-y-2">
+                        {level.tips.map((tip) => (
+                          <li key={tip} className="flex items-start gap-3 text-sm leading-7 text-white/72">
+                            <CheckCircle2 className={`mt-1 h-4 w-4 shrink-0 ${theme.darkIcon}`} />
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+
+                {config.positioningMistakes?.length ? (
+                  <div className="mt-8 border-t border-white/10 pt-8">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">Positioning mistakes</p>
+                    <div className="mt-4 space-y-3">
+                      {config.positioningMistakes.map((mistake) => (
+                        <div key={mistake} className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3">
+                          <div className="flex items-start gap-3">
+                            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                            <p className="text-sm leading-7 text-white/76">{mistake}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </Shell>
 
-        {config.realExample ? <Shell className="px-4 pt-10"><div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Concrete rewrite</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{config.realExample.title}</h2><div className="mt-8 grid gap-6 xl:grid-cols-2"><div className="rounded-[28px] border border-rose-100 bg-rose-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Antes</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.before}</p></div><div className="rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Depois</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.after}</p></div></div></Card></div></Shell> : null}
+        {config.realExample ? <Shell className="px-4 pt-10"><div className="mx-auto w-full max-w-[1440px]"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Concrete rewrite</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{config.realExample.title}</h2><div className="mt-8 grid gap-6 xl:grid-cols-2"><div className="rounded-[28px] border border-rose-100 bg-rose-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Antes</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.before}</p></div><div className="rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Depois</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.after}</p></div></div></Card></div></Shell> : null}
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{accent.checklistLabel}</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como melhorar seu currículo</h2><div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">{config.improvementSteps.map((step, index) => <div key={step.title} className={`rounded-[28px] border p-6 ${accent.checklistCard}`}><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Step {String(index + 1).padStart(2, "0")}</p><h3 className="mt-3 text-lg font-semibold text-slate-950">{step.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p></div>)}</div></Card></div>
-        </Shell>
-
-        <Shell className="px-4 pt-10">
-          <div className="container mx-auto grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-            <DarkCard><p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">FAQ</p><h2 className="mt-4 text-3xl font-semibold tracking-tight">Perguntas frequentes</h2><p className="mt-4 text-sm leading-7 text-white/70">Mantivemos todas as respostas da pagina em um bloco mais escaneavel para leitura longa.</p></DarkCard>
-            <Card><Accordion type="single" collapsible className="w-full">{config.faqs.map((faq, index) => <AccordionItem key={faq.question} value={`faq-${index}`} className="border-b border-slate-200 last:border-b-0"><AccordionTrigger className="py-6 text-left text-base font-semibold text-slate-950">{faq.question}</AccordionTrigger><AccordionContent className="pb-6 text-sm leading-8 text-slate-600">{faq.answer}</AccordionContent></AccordionItem>)}</Accordion></Card>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="grid xl:grid-cols-[0.72fr_1.28fr]">
+              <div className="border-b border-slate-200/80 p-8 md:p-10 xl:border-b-0 xl:border-r">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{accent.checklistLabel}</p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como melhorar seu curr�culo</h2>
+                <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">
+                  Em vez de v�rios cards iguais, organizamos os pr�ximos passos como uma sequ�ncia editorial mais enxuta e mais f�cil de escanear.
+                </p>
+              </div>
+              <div className="p-8 md:p-10">
+                <div className="divide-y divide-slate-200/80">
+                  {config.improvementSteps.map((step, index) => (
+                    <div key={step.title} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700">
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-950">{step.title}</h3>
+                        <p className="mt-2 text-sm leading-7 text-slate-600">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Related pages</p><div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">{config.internalLinks.map((link) => <Link key={link.href} href={link.href} className="group overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)]"><div className="relative aspect-[4/3] overflow-hidden"><Image src={link.image} alt={link.label} fill className="object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 to-transparent" /></div><div className="p-5"><p className="text-lg font-semibold text-slate-950">{link.label}</p><p className="mt-3 text-sm leading-7 text-slate-600">{link.description}</p><div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">Ver pagina<ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></div></div></Link>)}</div></Card></div>
+          <div className="mx-auto w-full max-w-[1440px] overflow-hidden rounded-[40px] border border-white/70 bg-white/88 shadow-[0_24px_90px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <div className="grid xl:grid-cols-[0.72fr_1.28fr]">
+              <div className="bg-slate-950 p-8 text-white md:p-10">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">FAQ</p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-tight">Perguntas frequentes</h2>
+                <p className="mt-4 max-w-md text-sm leading-7 text-white/70">
+                  Mantivemos todas as respostas da p�gina, mas em uma estrutura mais limpa e mais consistente com o restante da experi�ncia.
+                </p>
+              </div>
+              <div className="p-8 md:p-10">
+                <Accordion type="single" collapsible className="w-full">{config.faqs.map((faq, index) => <AccordionItem key={faq.question} value={`faq-${index}`} className="border-b border-slate-200 last:border-b-0"><AccordionTrigger className="py-6 text-left text-base font-semibold text-slate-950">{faq.question}</AccordionTrigger><AccordionContent className="pb-6 text-sm leading-8 text-slate-600">{faq.answer}</AccordionContent></AccordionItem>)}</Accordion>
+              </div>
+            </div>
+          </div>
+        </Shell>
+
+        <Shell className="px-4 pt-10">
+          <div className="container mx-auto">
+            <Card className="overflow-hidden">
+              <div className="mb-8 grid gap-4 md:grid-cols-[0.8fr_1.2fr] md:items-end">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Related pages</p>
+                  <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Explore outros guias de currículo ATS</h2>
+                </div>
+                <p className="max-w-2xl text-sm leading-7 text-slate-600 md:justify-self-end md:text-base">
+                  Esse é o carrossel das SEO pages. Aqui a navegação fica mais editorial, maior e com mais presença visual.
+                </p>
+              </div>
+
+              <div className="relative -mx-8 md:-mx-10">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-white to-transparent md:w-16" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent md:w-16" />
+
+                <div
+                  ref={relatedScrollRef}
+                  onMouseDown={onRelatedMouseDown}
+                  onMouseLeave={onRelatedMouseLeave}
+                  onMouseUp={onRelatedMouseUp}
+                  onMouseMove={onRelatedMouseMove}
+                  className="cursor-grab overflow-x-auto px-8 pb-2 select-none touch-pan-y active:cursor-grabbing md:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <div className="flex w-max gap-5 pr-8 md:gap-6 md:pr-10">
+                    {config.internalLinks.map((link, index) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={(e) => {
+                          if (relatedMovedRef.current) {
+                            e.preventDefault()
+                          }
+                        }}
+                        className={[
+                          "group relative shrink-0 overflow-hidden rounded-[30px] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.10)]",
+                          index === 0 ? "w-[332px] md:w-[400px]" : "w-[300px] md:w-[340px]",
+                        ].join(" ")}
+                      >
+                        <div className="relative min-h-[430px] md:min-h-[520px]">
+                          <Image src={link.image} alt={link.label} fill className="object-cover transition duration-500 group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
+
+                          <div className="absolute inset-x-0 bottom-0 p-6 md:p-7">
+                            <p className="text-2xl font-semibold text-white md:text-[2rem] md:leading-[1.02]">{link.label}</p>
+                            <p className="mt-3 max-w-[28ch] text-base leading-7 text-white/80">{link.description}</p>
+                            <div className="mt-5 inline-flex items-center gap-2 text-base font-medium text-white">
+                              Ver página
+                              <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
         </Shell>
 
         <Shell className="px-4 pt-10">
@@ -742,3 +1000,4 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
     </div>
   )
 }
+
