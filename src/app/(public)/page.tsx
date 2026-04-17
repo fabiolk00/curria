@@ -7,6 +7,7 @@ import FinalCta from "@/components/landing/final-cta"
 import Footer from "@/components/landing/footer"
 import FaqSection from "@/components/landing/faq-section"
 import SocialProof from "@/components/landing/social-proof"
+import ExploreResumesCarousel from "@/components/landing/explore-resumes-carousel"
 import { Schema } from "@/components/schema"
 
 export default function LandingPage() {
@@ -16,6 +17,7 @@ export default function LandingPage() {
       <Header />
       <main className="flex-1">
         <HeroSection />
+        <ExploreResumesCarousel />
         <AtsExplainer />
         <TrackerShowcase />
         <SocialProof />
