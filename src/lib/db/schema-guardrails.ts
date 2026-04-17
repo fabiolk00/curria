@@ -119,6 +119,10 @@ const TABLE_CONVENTIONS: Record<string, TableConvention> = {
     id: 'generic',
     timestamps: 'mutable',
   },
+  jobs: {
+    id: 'generic',
+    timestamps: 'mutable',
+  },
 }
 
 function normalizeIdentifier(value: string): string {

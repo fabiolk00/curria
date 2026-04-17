@@ -1,14 +1,33 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-
-import { ImportResumeModal } from "./resume-builder"
 
 const { toastSuccess, toastError, toastInfo, toastWarning } = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   toastInfo: vi.fn(),
   toastWarning: vi.fn(),
+}))
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: { open?: boolean; children: ReactNode }) => open ? <div data-testid="dialog-root">{children}</div> : null,
+  DialogContent: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  DialogDescription: ({ children, ...props }: HTMLAttributes<HTMLParagraphElement>) => <p {...props}>{children}</p>,
+  DialogFooter: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  DialogHeader: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  DialogTitle: ({ children, ...props }: HTMLAttributes<HTMLHeadingElement>) => <h2 {...props}>{children}</h2>,
+}))
+
+vi.mock("@/components/ui/alert-dialog", () => ({
+  AlertDialog: ({ open, children }: { open?: boolean; children: ReactNode }) => open ? <div data-testid="alert-dialog-root">{children}</div> : null,
+  AlertDialogAction: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
+  AlertDialogCancel: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
+  AlertDialogContent: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  AlertDialogDescription: ({ children, ...props }: HTMLAttributes<HTMLParagraphElement>) => <p {...props}>{children}</p>,
+  AlertDialogFooter: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  AlertDialogHeader: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  AlertDialogTitle: ({ children, ...props }: HTMLAttributes<HTMLHeadingElement>) => <h2 {...props}>{children}</h2>,
 }))
 
 vi.mock("sonner", () => ({
@@ -19,6 +38,8 @@ vi.mock("sonner", () => ({
     warning: toastWarning,
   },
 }))
+
+import { ImportResumeModal } from "./resume-builder"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void

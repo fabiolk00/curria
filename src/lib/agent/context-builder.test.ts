@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { AGENT_CONFIG } from '@/lib/agent/config'
 import type { Session } from '@/types/agent'
 
-import { buildPreloadedResumeContext, buildSystemPrompt } from './context-builder'
+import {
+  buildPreloadedResumeContext,
+  buildSystemPrompt,
+  buildSystemPromptContext,
+  describeContextComposition,
+} from './context-builder'
 import { CURRENT_SESSION_STATE_VERSION } from '@/lib/db/sessions'
 
 type SessionOverrides =
@@ -123,6 +128,69 @@ describe('buildPreloadedResumeContext', () => {
 })
 
 describe('buildSystemPrompt', () => {
+  it('exposes inspectable layered context metadata', () => {
+    const context = buildSystemPromptContext({
+      session: buildSession({
+        phase: 'dialog',
+        agentState: {
+          optimizedCvState: {
+            fullName: 'Ana Silva',
+            email: 'ana@example.com',
+            phone: '555-0100',
+            summary: 'Backend engineer focused on APIs.',
+            experience: [],
+            skills: ['TypeScript', 'PostgreSQL'],
+            education: [],
+          },
+          rewriteValidation: {
+            valid: true,
+            issues: [],
+          },
+        },
+      }),
+      userMessage: 'explique o que mudou no curriculo',
+    })
+
+    expect(context.debug.workflowMode).toBe('job_targeting')
+    expect(context.debug.actionType).toBe('explain_changes')
+    expect(context.debug.selectedSnapshotSource).toBe('optimized')
+    expect(context.debug.includedBlocks).toContain('optimized_resume')
+    expect(context.debug.includedBlocks).toContain('validation_snapshot')
+    expect(describeContextComposition(context.debug)).toContain('snapshot=optimized')
+  })
+
+  it('keeps lightweight chat context lighter than rewrite-focused prompts', () => {
+    const light = buildSystemPromptContext({
+      session: buildSession({
+        phase: 'analysis',
+        agentState: {
+          targetJobDescription: undefined,
+          gapAnalysis: undefined,
+          targetFitAssessment: undefined,
+        },
+      }),
+      workflowMode: 'chat_lightweight',
+      actionType: 'chat',
+      userMessage: 'como melhorar meu resumo?',
+    })
+
+    const rewrite = buildSystemPromptContext({
+      session: buildSession({
+        phase: 'dialog',
+        agentState: {
+          targetJobDescription: 'Backend engineer with TypeScript and PostgreSQL',
+        },
+      }),
+      workflowMode: 'job_targeting',
+      actionType: 'rewrite_resume_for_job_target',
+      userMessage: 'reescreva meu curriculo para esta vaga',
+    })
+
+    expect(light.debug.includesOutputSchema).toBe(false)
+    expect(rewrite.debug.includesOutputSchema).toBe(true)
+    expect(light.systemPrompt.length).toBeLessThan(rewrite.systemPrompt.length)
+  })
+
   it('keeps the prompt concise and phase-aware for analysis', () => {
     const prompt = buildSystemPrompt(buildSession())
 

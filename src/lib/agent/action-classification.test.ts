@@ -114,6 +114,32 @@ describe('classifyAgentAction', () => {
     })
   })
 
+  it('keeps a freshly pasted vacancy in dialog on the synchronous acknowledgement path', () => {
+    const vacancy = [
+      'Analista de BI Senior',
+      'Responsabilidades',
+      'Construir dashboards em Power BI e integrar dados com SQL.',
+      'Requisitos',
+      'Power BI, SQL, ETL e comunicação com negócio.',
+    ].join('\n')
+
+    const classification = classifyAgentAction(buildSession({
+      phase: 'dialog',
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+        sourceResumeText: 'Resumo salvo no perfil.',
+        targetJobDescription: vacancy,
+      },
+    }), vacancy)
+
+    expect(classification).toEqual({
+      actionType: 'chat',
+      executionMode: 'sync',
+      workflowMode: 'job_targeting',
+    })
+  })
+
   it('keeps deterministic rewrite requests synchronous', () => {
     const classification = classifyAgentAction(buildSession({
       agentState: {

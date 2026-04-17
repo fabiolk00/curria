@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: async agent orchestration and background job runtime
-current_phase: 40
-current_phase_name: integrate status flow, observability, and stabilization
+current_phase: 41
+current_phase_name: refactor agent context into layered workflow, action, and source builders
 current_plan: completed
 status: completed
-stopped_at: Phase 40 execution complete
-last_updated: "2026-04-17T00:38:00.000Z"
-last_activity: 2026-04-17 -- Phase 40 complete; milestone v1.6 ready for audit
+stopped_at: Phase 41 execution complete
+last_updated: "2026-04-17T03:00:00.000Z"
+last_activity: 2026-04-17 -- Phase 41 complete; milestone v1.6 ready for audit
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -28,15 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 40 (integrate status flow, observability, and stabilization) - COMPLETE
+Phase: 41 (refactor agent context into layered workflow, action, and source builders) - COMPLETE
 Plan: 01 complete
-Current Phase: 40
-Current Phase Name: integrate status flow, observability, and stabilization
+Current Phase: 41
+Current Phase Name: refactor agent context into layered workflow, action, and source builders
 Current Plan: Completed
 Total Plans in Phase: 1
 Status: Milestone complete
 Last activity: 2026-04-17
-Last Activity Description: Phase 40 complete; milestone v1.6 ready for audit
+Last Activity Description: Phase 41 complete; milestone v1.6 ready for audit
 
 Progress: [##########] 100%
 
@@ -75,6 +75,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 38 completed: `/api/agent` became a lightweight orchestrator with async durable dispatch handoff
 - Phase 39 completed: ATS, targeting, and artifact generation moved behind same-app durable processors with preserved last-good optimized state
 - Phase 40 completed: canonical job status reads, artifact lifecycle polling, and correlated async observability now make the durable execution model visible end to end
+- Phase 41 completed: the agent prompt stack now composes layered workflow, action, source, and output-contract context builders with inspectable debug metadata
 
 ### Decisions
 

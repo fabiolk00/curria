@@ -1522,7 +1522,7 @@ export async function* runAgentLoop(
 
   let toolIterations = 0
   let assistantResponded = false
-  let cachedSystemPrompt = buildSystemPrompt(session)
+  let cachedSystemPrompt = buildSystemPrompt(session, userMessage)
   let systemPromptDirty = false
   const pendingCareerFitOverride = Boolean(
     session.agentState.targetJobDescription?.trim()
@@ -1906,7 +1906,7 @@ export async function* runAgentLoop(
       }
 
       if (systemPromptDirty) {
-        cachedSystemPrompt = buildSystemPrompt(session)
+          cachedSystemPrompt = buildSystemPrompt(session, userMessage)
         systemPromptDirty = false
       }
 

@@ -12,6 +12,7 @@ Highest-priority targets are:
 - keep lightweight chat synchronous while heavy actions dispatch to background jobs
 - move ATS enhancement, target-job rewriting, and artifact generation off the synchronous request path
 - preserve `cvState`, `optimizedCvState`, preview behavior, and generated artifact traceability under async execution
+- refactor the remaining monolithic agent context builder into layered workflow, action, and source-of-truth contracts after the async foundation is stable
 
 Any optional work that changes business rules, billing semantics, or the public UX shape should be treated as secondary and deferred unless it is required for correctness.
 
@@ -73,6 +74,19 @@ Plans:
 Plans:
 - [x] 40-01: Wire async status flow, observability, and regression proof across the new execution model
 
+### Phase 41: Refactor agent context into layered workflow, action, and source builders
+**Goal**: Replace the remaining monolithic prompt/context assembly with explicit layered builders so chat, ATS enhancement, job targeting, and artifact-support flows each receive the right instructions, source data, and output contracts.
+**Depends on**: Phase 40
+**Requirements**: [CTX-01, CTX-02, TEST-02]
+**Success Criteria** (what must be TRUE):
+  1. Agent context is composed through explicit base, workflow, action, source, and output-contract layers rather than one phase-oriented prompt builder.
+  2. The selected source-of-truth for original resume, optimized resume, target-job context, validation state, and artifact metadata is explicit and inspectable for every supported workflow.
+  3. Lightweight chat stays minimal while ATS and job-targeting rewrite flows become easier to reason about, test, and evolve without changing the current business semantics.
+**Plans**: 1 plan
+
+Plans:
+- [x] 41-01: Refactor agent context into layered workflow-aware and source-aware builders
+
 ## Autonomous Execution Instruction
 
 The intended operating mode for this milestone is:
@@ -93,7 +107,7 @@ Recommended entrypoint:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 37 -> 38 -> 39 -> 40
+Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -101,6 +115,7 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40
 | 38. Refactor `/api/agent` into a lightweight orchestrator | 1/1 | Complete    | 2026-04-16 |
 | 39. Move ATS, targeting, and artifact work into async processors | 1/1 | Completed | 2026-04-16 |
 | 40. Integrate status flow, observability, and stabilization | 1/1 | Complete    | 2026-04-17 |
+| 41. Refactor agent context into layered workflow, action, and source builders | 1/1 | Completed | 2026-04-17 |
 
 ## Archived Milestones
 

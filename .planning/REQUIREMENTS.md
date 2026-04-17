@@ -25,6 +25,12 @@
 - [x] **OBS-01**: UI and operators can query or stream job status, stage, progress, and terminal completion or failure state for ATS, targeting, and artifact work.
 - [x] **TEST-01**: Regression coverage proves sync chat behavior, async dispatch, worker success and failure paths, snapshot consistency, and safe async integration under the new execution model.
 
+### Agent Context Architecture
+
+- [ ] **CTX-01**: Agent context is assembled through explicit layered builders for base rules, workflow rules, action contracts, source content, and output contracts instead of one monolithic phase-oriented prompt builder.
+- [ ] **CTX-02**: Resume source-of-truth selection is explicit, typed, and inspectable so workflows can deterministically explain whether they are using canonical `cvState`, `optimizedCvState`, target-job context, validation state, or generated artifact metadata.
+- [ ] **TEST-02**: Regression coverage proves lightweight chat stays minimal, ATS and job-targeting flows receive workflow-specific rewrite context, and context composition remains inspectable without changing current business semantics.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -54,10 +60,13 @@
 | STATE-01 | Phase 39 | Complete |
 | OBS-01 | Phase 40 | Complete |
 | TEST-01 | Phase 40 | Complete |
+| CTX-01 | Phase 41 | Planned |
+| CTX-02 | Phase 41 | Planned |
+| TEST-02 | Phase 41 | Planned |
 
 **Coverage:**
-- v1.6 requirements: 8 total
-- Mapped to phases: 8
+- v1.6 requirements: 11 total
+- Mapped to phases: 11
 - Unmapped: 0
 
 ---

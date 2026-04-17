@@ -75,7 +75,7 @@ function shouldDispatchJobTargeting(
     && hasResumeContextForAutoGap(session)
     && Boolean(session.agentState.targetJobDescription?.trim())
     && (
-      looksLikeJobDescription(userMessage)
+      (session.phase === 'analysis' && looksLikeJobDescription(userMessage))
       || isDialogContinuationApproval(userMessage)
     )
 }

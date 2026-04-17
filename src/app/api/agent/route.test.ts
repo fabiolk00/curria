@@ -12,6 +12,7 @@ import {
   updateSession,
 } from '@/lib/db/sessions'
 import { createJob } from '@/lib/jobs/repository'
+import { startDurableJobProcessing } from '@/lib/jobs/runtime'
 
 const { mockReleaseMetadata } = vi.hoisted(() => ({
   mockReleaseMetadata: {
@@ -64,6 +65,10 @@ vi.mock('@/lib/agent/agent-loop', () => ({
 
 vi.mock('@/lib/jobs/repository', () => ({
   createJob: vi.fn(),
+}))
+
+vi.mock('@/lib/jobs/runtime', () => ({
+  startDurableJobProcessing: vi.fn(),
 }))
 
 vi.mock('@/lib/runtime/release-metadata', () => ({
@@ -147,6 +152,7 @@ describe('/api/agent route', () => {
     vi.mocked(incrementMessageCount).mockResolvedValue(true)
     vi.mocked(updateSession).mockResolvedValue(undefined)
     vi.mocked(appendMessage).mockResolvedValue(undefined)
+    vi.mocked(startDurableJobProcessing).mockResolvedValue(null)
     vi.mocked(createJob).mockResolvedValue({
       wasCreated: true,
       job: {

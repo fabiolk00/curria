@@ -29,15 +29,31 @@ try {
 
 const plainStdout = stdout.replace(/\u001b\[[0-9;]*m/g, '')
 
-const durationMatch = plainStdout.match(/Duration\s+([0-9.]+)s/)
-if (!durationMatch) {
-  console.error('Could not parse resume-builder runtime from Vitest output.')
-  process.exit(1)
+function parseTimingMs(label) {
+  const match = plainStdout.match(new RegExp(`${label}\\s+([0-9.]+)(ms|s)`))
+  if (!match) {
+    return null
+  }
+
+  const value = Number(match[1])
+  if (Number.isNaN(value)) {
+    return null
+  }
+
+  return match[2] === 's'
+    ? Math.round(value * 1000)
+    : Math.round(value)
 }
 
-const durationMs = Math.round(Number(durationMatch[1]) * 1000)
+const testsMs = parseTimingMs('tests')
+const collectMs = parseTimingMs('collect')
+const environmentMs = parseTimingMs('environment')
 
-if (Number.isNaN(durationMs)) {
+const durationMs = testsMs !== null && collectMs !== null && environmentMs !== null
+  ? testsMs + collectMs + environmentMs
+  : parseTimingMs('Duration')
+
+if (durationMs === null || Number.isNaN(durationMs)) {
   console.error('Parsed runtime was not a valid number.')
   process.exit(1)
 }

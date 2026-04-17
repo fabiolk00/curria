@@ -4,6 +4,11 @@ import {
   shapeTargetJobDescription,
   shapeTargetingRewriteCurrentContent,
 } from '@/lib/agent/job-targeting-retry'
+import { buildActionContext } from '@/lib/agent/context/actions/build-action-context'
+import { buildBaseGuardrails } from '@/lib/agent/context/base/build-base-guardrails'
+import { buildBaseSystemContext } from '@/lib/agent/context/base/build-base-system-context'
+import { buildOutputContractContext } from '@/lib/agent/context/schemas/build-output-contract-context'
+import { buildWorkflowContext } from '@/lib/agent/context/workflows/build-workflow-context'
 import { buildRewritePlan } from '@/lib/agent/tools/build-rewrite-plan'
 import { formatResumeRewriteGuardrails } from '@/lib/agent/tools/resume-rewrite-guidelines'
 import { buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
@@ -80,9 +85,11 @@ function sanitizeJobTargetedSkills(
 
 function buildAtsResumeStyleGuide(): string {
   return [
-    'Act as a senior ATS resume strategist for Brazilian job seekers.',
-    'Write in Brazilian Portuguese (pt-BR) with professional, concise, recruiter-friendly language.',
-    'Never invent employers, tools, certifications, projects, metrics, or results.',
+    buildBaseSystemContext(),
+    buildWorkflowContext('ats_enhancement'),
+    buildActionContext('rewrite_resume_for_ats'),
+    buildOutputContractContext('rewrite_resume_for_ats'),
+    buildBaseGuardrails(),
     'Optimize for ATS parsing, semantic keyword matching, and human readability at the same time.',
     'Keep facts from the original resume intact while improving wording, structure, readability, and prioritization.',
     'Apply every resume rewrite guardrail rigorously before making any improvement.',
@@ -95,9 +102,11 @@ function buildJobTargetingStyleGuide(targetJobDescription: string): string {
   const shapedTargetJob = shapeTargetJobDescription(targetJobDescription)
 
   return [
-    'Act as a senior resume strategist adapting a real resume to a specific target role.',
-    'Write in Brazilian Portuguese (pt-BR) with professional, concise, recruiter-friendly language.',
-    'Never invent employers, titles, tools, certifications, metrics, projects, or dates.',
+    buildBaseSystemContext(),
+    buildWorkflowContext('job_targeting'),
+    buildActionContext('rewrite_resume_for_job_target'),
+    buildOutputContractContext('rewrite_resume_for_job_target'),
+    buildBaseGuardrails(),
     'Maximize alignment to the target vacancy only with facts already present in the original resume.',
     'Apply every resume rewrite guardrail rigorously before making any improvement.',
     'Resume rewrite contract:',

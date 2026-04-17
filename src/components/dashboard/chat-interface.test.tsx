@@ -288,7 +288,7 @@ describe("ChatInterface", () => {
 
     expect(screen.getByText("Primeira mensagem antes do perfil")).toBeInTheDocument()
     expect(
-      screen.getByText(/Quer que eu adapte o curriculo para uma vaga especifica/i),
+      screen.getByText(/Quer que eu adapte o curr[ií]culo para uma vaga espec[ií]fica/i),
     ).toBeInTheDocument()
 
     const assistantMessages = screen.getAllByTestId("message-assistant")
@@ -355,7 +355,7 @@ describe("ChatInterface", () => {
 
     expect(container.querySelector('input[type="file"]')).toBeNull()
     expect(
-      screen.getByText(/Quando fizer sentido, clique em Aceito para gerar seu curriculo\./i),
+      screen.getByText(/Quando fizer sentido, clique em "Aceito" para gerar seu curr[ií]culo\./i),
     ).toBeInTheDocument()
   })
 
@@ -679,10 +679,10 @@ describe("ChatInterface", () => {
       const assistantMessages = screen.getAllByTestId("message-assistant")
       const finalAssistantMessage = assistantMessages[assistantMessages.length - 1]
       expect(finalAssistantMessage).toHaveTextContent(
-        /Recebi a vaga e ela ja ficou salva como referencia para o seu curriculo/i,
+        /Recebi a vaga e ela j[aá] ficou salva como refer[eê]ncia para o seu curr[ií]culo/i,
       )
       expect(finalAssistantMessage).toHaveTextContent(
-        /Pontuacao ATS atual: 51\/100\. Posso seguir reescrevendo seu resumo ou experiencia com base nesses pontos\./i,
+        /Pontua[cç][aã]o ATS atual: 51\/100\. Posso seguir reescrevendo seu resumo ou experi[eê]ncia com base nesses pontos\./i,
       )
       expect(finalAssistantMessage).not.toHaveTextContent(/Aviso:\s*Invalid gap analysis payload\./i)
     })
