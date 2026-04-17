@@ -538,7 +538,7 @@ describe('ATS enhancement reliability hardening', () => {
       valid: false,
       issues: [{
         severity: 'medium',
-        message: 'O resumo permanece inconsistente com a experiencia comprovada.',
+      message: 'O resumo permanece inconsistente com a experiência comprovada.',
         section: 'summary',
       }],
     })

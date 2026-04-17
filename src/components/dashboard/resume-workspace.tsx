@@ -96,7 +96,7 @@ function resolveGenerationFailureMessage(job: JobStatusSnapshot | null): string 
     return "A geracao dos arquivos foi cancelada antes da conclusao."
   }
 
-  return "Nao foi possivel concluir a geracao dos arquivos."
+    return "Não foi possível concluir a geração dos arquivos."
 }
 
 function normalizeRoleForReview(value?: string): string {

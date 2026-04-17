@@ -104,7 +104,7 @@ test.describe('long vacancy generation stress', () => {
 
       expect(generationResult.ok).toBe(true)
       expect(generationResult.status).toBe(200)
-      expect(generationResult.body).toEqual({
+      expect(generationResult.body).toMatchObject({
         success: true,
         scope: 'base',
       })

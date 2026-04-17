@@ -148,7 +148,7 @@ describe('buildSystemPrompt', () => {
           },
         },
       }),
-      userMessage: 'explique o que mudou no curriculo',
+      userMessage: 'explique o que mudou no currículo',
     })
 
     expect(context.debug.workflowMode).toBe('job_targeting')
@@ -183,7 +183,7 @@ describe('buildSystemPrompt', () => {
       }),
       workflowMode: 'job_targeting',
       actionType: 'rewrite_resume_for_job_target',
-      userMessage: 'reescreva meu curriculo para esta vaga',
+      userMessage: 'reescreva meu currículo para esta vaga',
     })
 
     expect(light.debug.includesOutputSchema).toBe(false)

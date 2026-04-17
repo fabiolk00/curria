@@ -36,14 +36,14 @@ describe('SessionDocumentsPanel', () => {
       files: { docxUrl: null, pdfUrl: null },
       artifactStatus: { generationStatus: 'idle' },
       isLoading: false,
-      error: 'Nao foi possivel carregar seus arquivos agora. Tente novamente em instantes.',
+    error: 'Não foi possível carregar seus arquivos agora. Tente novamente em instantes.',
       refresh,
     })
 
     render(<SessionDocumentsPanel isSidebarOpen />)
 
     expect(screen.getByTestId('session-documents-panel')).toHaveAttribute('data-state', 'error')
-    expect(screen.getByText('Nao foi possivel carregar seus arquivos agora. Tente novamente em instantes.')).toBeInTheDocument()
+    expect(screen.getByText('Não foi possível carregar seus arquivos agora. Tente novamente em instantes.')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }))
 
