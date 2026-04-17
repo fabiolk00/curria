@@ -123,25 +123,27 @@ function DeveloperHero({ theme }: HeroVisualProps) {
 function DataEngineerHero({ config, theme }: HeroVisualProps) {
   return (
     <HeroShell theme={theme}>
-      <div className="absolute left-[18%] right-[18%] top-[52%] h-px bg-gradient-to-r from-cyan-200 via-cyan-400 to-sky-200" />
+      <div className="absolute left-[12%] right-[12%] top-[49%] h-px bg-gradient-to-r from-cyan-100 via-cyan-300 to-sky-100 opacity-80" />
       <motion.div
-        animate={{ x: ["-8%", "88%"] }}
-        transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-        className="absolute top-[calc(52%-6px)] h-3 w-16 rounded-full bg-gradient-to-r from-cyan-400 to-sky-400 blur-[1px]"
+        animate={{ x: ["-12%", "94%"] }}
+        transition={{ duration: 5.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+        className="absolute top-[calc(49%-5px)] h-2.5 w-14 rounded-full bg-gradient-to-r from-cyan-400 to-sky-400 shadow-[0_0_20px_rgba(34,211,238,0.45)]"
       />
-      <div className="relative grid min-h-[360px] gap-6 md:grid-cols-[0.95fr_0.82fr_0.95fr]">
-        <div className="flex flex-col justify-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Fonte</p>
-          <div className="mt-5 space-y-3">
-            {["Eventos", "Batch", "APIs", "CDC"].map((item) => (
-              <div key={item} className="rounded-full border border-slate-200/80 bg-white/92 px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-                {item}
-              </div>
-            ))}
+      <div className="relative grid min-h-[360px] gap-6 xl:grid-cols-[0.88fr_1.08fr_0.92fr]">
+        <div className="flex flex-col justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Source systems</p>
+            <div className="mt-5 space-y-3">
+              {["Eventos", "Batch", "APIs", "CDC"].map((item) => (
+                <div key={item} className="rounded-full border border-slate-200/80 bg-white/94 px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-5 rounded-[20px] border border-cyan-100 bg-cyan-50/80 p-3 shadow-[0_8px_18px_rgba(34,211,238,0.08)]">
+          <div className="rounded-[24px] border border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.98),rgba(255,255,255,0.92))] p-4 shadow-[0_12px_28px_rgba(34,211,238,0.10)]">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">Infra stack</div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2">
               {[
                 ["DB", "Databricks", "bg-rose-50 text-rose-700 border-rose-200"],
                 ["KF", "Kafka", "bg-emerald-50 text-emerald-700 border-emerald-200"],
@@ -157,14 +159,20 @@ function DataEngineerHero({ config, theme }: HeroVisualProps) {
             </div>
           </div>
         </div>
-        <div className="flex flex-col justify-center gap-4">
+
+        <div className="flex flex-col gap-4">
           <motion.div
-            animate={{ y: [0, -6, 0] }}
+            animate={{ y: [0, -5, 0] }}
             transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-            className="rounded-[30px] border border-cyan-200/90 bg-slate-950 px-6 py-6 text-white shadow-[0_28px_70px_rgba(2,6,23,0.28)]"
+            className="rounded-[32px] border border-cyan-200/90 bg-slate-950 px-6 py-6 text-white shadow-[0_28px_70px_rgba(2,6,23,0.28)]"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Transformação</p>
-            <p className="mt-3 text-2xl font-semibold">ETL / ELT</p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Transform layer</p>
+                <p className="mt-3 text-[2rem] font-semibold leading-none">ETL / ELT</p>
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">Streaming + batch</div>
+            </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {["Spark", "Airflow", "Databricks", "Kafka"].map((chip) => (
                 <span key={chip} className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-medium text-white/84">
@@ -172,35 +180,55 @@ function DataEngineerHero({ config, theme }: HeroVisualProps) {
                 </span>
               ))}
             </div>
-            <p className="mt-5 text-sm leading-6 text-white/72">Fontes, orquestração, modelagem e serving organizados como fluxo de infraestrutura.</p>
+            <p className="mt-5 max-w-sm text-sm leading-7 text-white/72">Fontes, orquestração, modelagem e serving organizados como fluxo de infraestrutura.</p>
           </motion.div>
-          <div className="rounded-[22px] border border-cyan-100 bg-white/92 p-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              <span>Processamento</span>
-              <span>Streaming + batch</span>
+
+          <div className="grid gap-4 md:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-[24px] border border-cyan-100 bg-white/94 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                <span>Processamento</span>
+                <span>Última janela</span>
+              </div>
+              <div className="flex h-28 items-end gap-2 rounded-[18px] bg-[linear-gradient(180deg,rgba(34,211,238,0.06),rgba(255,255,255,0.92))] px-3 pb-3 pt-8">
+                {[22, 38, 52, 68, 64, 82, 78].map((height, index) => (
+                  <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-cyan-500 to-sky-400" style={{ height: `${height}%` }} />
+                ))}
+              </div>
             </div>
-            <div className="flex h-24 items-end gap-2 rounded-[18px] bg-[linear-gradient(180deg,rgba(34,211,238,0.06),rgba(255,255,255,0.92))] px-3 pb-3 pt-6">
-              {[28, 44, 52, 70, 62, 84, 78].map((height, index) => (
-                <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-cyan-500 to-sky-400" style={{ height: `${height}%` }} />
-              ))}
+            <div className="rounded-[24px] border border-cyan-100 bg-white/94 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Signals</div>
+              <div className="space-y-3">
+                {[["Latency", "-18%"], ["Freshness", "+24%"], ["Jobs OK", "99.2%"]].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between rounded-full border border-cyan-100 bg-cyan-50/50 px-3 py-2 text-sm">
+                    <span className="font-medium text-slate-600">{label}</span>
+                    <span className="font-semibold text-cyan-700">{value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-col justify-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Destino</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {["Snowflake", "BigQuery", "Redshift", "Databricks"].map((item) => (
-              <div key={item} className="rounded-[22px] border border-slate-200/80 bg-white/92 px-4 py-4 text-center text-sm font-semibold text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-                {item}
-              </div>
-            ))}
+
+        <div className="flex flex-col justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Warehouse targets</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {["Snowflake", "BigQuery", "Redshift", "Databricks"].map((item) => (
+                <div key={item} className="rounded-[22px] border border-slate-200/80 bg-white/94 px-4 py-4 text-center text-sm font-semibold text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {config.keywords.slice(0, 4).map((keyword) => (
-              <span key={keyword.term} className="rounded-full border border-cyan-200/80 bg-cyan-50/90 px-3 py-1.5 text-xs font-medium text-cyan-700">
-                {keyword.term}
-              </span>
-            ))}
+          <div className="rounded-[24px] border border-cyan-100 bg-white/94 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Keywords em destaque</div>
+            <div className="flex flex-wrap gap-2">
+              {config.keywords.slice(0, 4).map((keyword) => (
+                <span key={keyword.term} className="rounded-full border border-cyan-200/80 bg-cyan-50/90 px-3 py-1.5 text-xs font-medium text-cyan-700">
+                  {keyword.term}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -339,14 +367,14 @@ function DataAnalystHero({ theme }: HeroVisualProps) {
         <div className="flex h-full flex-col rounded-[30px] border border-slate-200/80 bg-white/94 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dashboard anal?tico</p>
-              <p className="mt-2 max-w-[13ch] text-[1.95rem] font-semibold leading-[1.05] text-slate-950">KPIs, tend?ncias e leitura de neg?cio</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dashboard analítico</p>
+              <p className="mt-2 max-w-[14ch] text-[1.95rem] font-semibold leading-[1.05] text-slate-950">KPIs, tendências e leitura de negócio</p>
             </div>
             <BarChart3 className="mt-1 h-5 w-5 text-violet-600" />
           </div>
 
           <div className="mt-6 grid grid-cols-3 gap-3">
-            {[ ["Convers?o", "24%"], ["Reten??o", "87%"], ["Receita", "132"] ].map(([label, value]) => (
+            {[["Conversão", "24%"], ["Retenção", "87%"], ["Receita", "132"]].map(([label, value]) => (
               <div key={label} className="rounded-[20px] border border-violet-100 bg-violet-50/80 px-4 py-4 shadow-[0_8px_18px_rgba(139,92,246,0.08)]">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600">{label}</p>
                 <p className="mt-2 text-[1.9rem] font-semibold leading-none tracking-[-0.03em] text-slate-950">{value}</p>
@@ -356,8 +384,8 @@ function DataAnalystHero({ theme }: HeroVisualProps) {
 
           <div className="mt-6 rounded-[24px] bg-[linear-gradient(180deg,rgba(139,92,246,0.10),rgba(255,255,255,0.98))] p-5">
             <div className="mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              <span>Evolu??o de performance</span>
-              <span>?ltimos 90 dias</span>
+              <span>Evolução de performance</span>
+              <span>Últimos 90 dias</span>
             </div>
             <svg viewBox="0 0 360 126" className="h-[124px] w-full">
               <polyline fill="none" stroke="#8b5cf6" strokeWidth="4" points="10,92 60,84 110,88 160,56 210,60 260,46 310,28 350,22" />
@@ -381,14 +409,14 @@ function DataAnalystHero({ theme }: HeroVisualProps) {
         <div className="flex min-h-[360px] flex-col rounded-[30px] border border-white/10 bg-slate-950 p-5 text-white shadow-[0_28px_70px_rgba(2,6,23,0.28)]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Segmenta??o</p>
-              <p className="mt-2 text-[1.9rem] font-semibold leading-[1.05]">Mix anal?tico</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Segmentação</p>
+              <p className="mt-2 text-[1.9rem] font-semibold leading-[1.05]">Mix analítico</p>
             </div>
             <PieChart className="h-5 w-5 text-violet-300" />
           </div>
 
           <div className="mt-6 grid gap-3">
-            {[ ["BI", "42%"], ["Produto", "30%"], ["Growth", "28%"] ].map(([label, value]) => (
+            {[["BI", "42%"], ["Produto", "30%"], ["Growth", "28%"]].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between rounded-full border border-white/10 bg-white/6 px-4 py-3 text-sm">
                 <span className="text-white/72">{label}</span>
                 <span className="font-semibold text-white">{value}</span>
@@ -403,7 +431,7 @@ function DataAnalystHero({ theme }: HeroVisualProps) {
           </div>
 
           <div className="mt-8 grid gap-3">
-            {[ ["Dashboards", "20+"], ["Automa??es", "12"], ["Insights", "R$ 200k"] ].map(([label, value]) => (
+            {[["Dashboards", "20+"], ["Automações", "12"], ["Insights", "R$ 200k"]].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between rounded-[18px] border border-violet-400/15 bg-white/5 px-4 py-3">
                 <span className="text-sm text-white/68">{label}</span>
                 <span className="text-sm font-semibold text-violet-200">{value}</span>
