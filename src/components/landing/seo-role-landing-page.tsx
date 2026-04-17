@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleAlert,
+  Code2,
   Database,
   Lightbulb,
   LineChart,
@@ -236,20 +237,131 @@ function RoleVisual({ config }: { config: RoleLandingConfig }) {
       </div>
     ),
     developer: (
-      <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Architecture</p>
-          <p className="mt-2 text-xl font-semibold text-slate-950">Stack e produto</p>
-          <div className="mt-5 grid grid-cols-5 gap-3">{["TS", "React", "Node", "SQL", "AWS"].map((item) => <div key={item} className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-4 text-center text-sm font-semibold text-slate-700">{item}</div>)}</div>
+      <div className="grid gap-4 md:grid-cols-[0.92fr_1.08fr]">
+        <div className="space-y-4">
+          {[
+            {
+              step: "01",
+              title: "Selecione seu stack principal",
+              body: "Mostre linguagens, frameworks e infraestrutura com a mesma clareza que a vaga pede.",
+            },
+            {
+              step: "02",
+              title: "Conecte entrega e arquitetura",
+              body: "Relacione APIs, banco, cloud e impacto do produto para sair do currículo genérico.",
+            },
+            {
+              step: "03",
+              title: "Finalize com contexto real",
+              body: "Seu resumo precisa soar como sistema em produção, não como lista de tecnologias.",
+            },
+          ].map((item) => (
+            <div key={item.step} className="grid gap-3 border-l border-sky-200 pl-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">{item.step}</div>
+              <div>
+                <p className="text-lg font-semibold text-slate-950">{item.title}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{item.body}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white"><div className="space-y-2 font-mono text-xs text-sky-100/90"><div>build.resume.match(role)</div><div>score.ats.optimize()</div><div>deploy.production.ready()</div></div></div>
+        <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Stack board</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">Escolha o bloco técnico dominante</p>
+            </div>
+            <Code2 className="h-5 w-5 text-sky-600" />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              ["React", "Next.js"],
+              ["Node", "APIs"],
+              ["SQL", "AWS"],
+            ].map((items) => (
+              <div key={items[0]} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <div key={item} className="rounded-xl border border-sky-100 bg-white px-3 py-3 text-center text-sm font-semibold text-slate-700">{item}</div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-950 p-4 text-white">
+            <div className="space-y-2 font-mono text-xs text-sky-100/90">
+              <div>build.resume.match(role)</div>
+              <div>signal.stack.highlight()</div>
+              <div>impact.delivery.prove()</div>
+            </div>
+          </div>
+        </div>
       </div>
     ),
     data_engineer: (
-      <div className="rounded-[30px] border border-slate-200 bg-white/92 p-6">
-        <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Pipeline</p><p className="mt-2 text-xl font-semibold text-slate-950">Fluxo ETL</p></div><Database className="h-5 w-5 text-cyan-600" /></div>
-        <div className="mt-6 grid items-center gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
-          {["Sources", "Transform", "Serve"].map((label, index) => <div key={label} className="contents"><div className={`rounded-[24px] border p-5 ${index === 1 ? "border-slate-900 bg-slate-950 text-white" : "border-cyan-100 bg-cyan-50 text-cyan-900"}`}><p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{label}</p><div className="mt-4 space-y-2">{(index === 0 ? ["Raw events", "CRM", "ERP"] : index === 1 ? ["Spark", "Airflow", "dbt"] : ["Warehouse", "BI", "ML"]).map((item) => <div key={item} className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-medium">{item}</div>)}</div></div>{index < 2 ? <div className="hidden h-[2px] w-10 rounded-full bg-cyan-200 md:block" /> : null}</div>)}
+      <div className="grid gap-4 md:grid-cols-[0.92fr_1.08fr]">
+        <div className="space-y-4">
+          {[
+            {
+              step: "01",
+              title: "Defina a origem dos dados",
+              body: "Mostre domínio de evento, batch, integrações e governança já no topo do currículo.",
+            },
+            {
+              step: "02",
+              title: "Conecte pipeline e transformação",
+              body: "Explique stack, orquestração e modelagem como parte do fluxo, não como buzzword solta.",
+            },
+            {
+              step: "03",
+              title: "Entregue consumo real",
+              body: "Warehouse, BI e analytics precisam aparecer como destino de negócio e não só infraestrutura.",
+            },
+          ].map((item) => (
+            <div key={item.step} className="grid gap-3 border-l border-cyan-200 pl-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-100 text-sm font-semibold text-cyan-700">{item.step}</div>
+              <div>
+                <p className="text-lg font-semibold text-slate-950">{item.title}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{item.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-[30px] border border-slate-200 bg-white/92 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Pipeline workspace</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">Selecione seu destino de dados</p>
+            </div>
+            <Database className="h-5 w-5 text-cyan-600" />
+          </div>
+          <div className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                "Snowflake",
+                "Redshift",
+                "Databricks",
+                "Amazon S3",
+                "BigQuery",
+                "Azure",
+              ].map((item, index) => (
+                <div
+                  key={item}
+                  className={`rounded-2xl border px-4 py-5 text-center text-sm font-semibold transition ${
+                    index === 1
+                      ? "border-cyan-300 bg-cyan-50 text-slate-950 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+              <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500">Cancelar</button>
+              <button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Continuar</button>
+            </div>
+          </div>
         </div>
       </div>
     ),
@@ -297,20 +409,115 @@ function RoleVisual({ config }: { config: RoleLandingConfig }) {
     sales: (
       <div className="grid gap-4 md:grid-cols-[0.95fr_1.05fr]">
         <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5">
-          <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Pipeline</p><p className="mt-2 text-xl font-semibold text-slate-950">Funil comercial</p></div><TrendingUp className="h-5 w-5 text-rose-600" /></div>
-          <div className="mt-5 space-y-3">{["Lead", "Meeting", "Proposal", "Closed Won"].map((item, index) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-700">{index + 1}</div><span className="text-sm font-semibold text-slate-950">{item}</span></div>)}</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Pipeline</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">Funil comercial</p>
+            </div>
+            <TrendingUp className="h-5 w-5 text-rose-600" />
+          </div>
+          <div className="mt-5 space-y-3">
+            {["Lead", "Meeting", "Proposal", "Closed Won"].map((item, index) => (
+              <div key={item} className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-700">{index + 1}</div>
+                <span className="text-sm font-semibold text-slate-950">{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Revenue board</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">{["Quota", "Win rate", "ARR"].map((item, index) => <div key={item} className="rounded-2xl bg-white/5 p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{item}</p><p className="mt-2 text-2xl font-semibold">{["124%", "31%", "R$ 2.4M"][index]}</p></div>)}</div>
-          <div className="mt-4 flex h-20 items-end gap-2 rounded-[22px] bg-[linear-gradient(90deg,rgba(244,63,94,0.16),rgba(251,146,60,0.10))] p-4">{[28, 46, 52, 60, 74, 82, 94].map((height, index) => <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-rose-500 to-orange-400" style={{ height: `${height}%` }} />)}</div>
+        <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Revenue board</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">Conversão e receita previsível</p>
+            </div>
+            <TrendingUp className="h-5 w-5 text-rose-600" />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {["Quota", "Win rate", "ARR"].map((item, index) => (
+              <div key={item} className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">{item}</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">{["124%", "31%", "R$ 2.4M"][index]}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <span>Receita por etapa</span>
+              <span>9 de junho</span>
+            </div>
+            <div className="relative h-36 overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,rgba(244,63,94,0.06),rgba(255,255,255,0.96))]">
+              <svg viewBox="0 0 360 140" className="h-full w-full">
+                {[60, 120, 180, 240, 300].map((x) => <line key={x} x1={x} y1="16" x2={x} y2="126" stroke="rgba(148,163,184,0.18)" />)}
+                {[34, 68, 102].map((y) => <line key={y} x1="20" y1={y} x2="340" y2={y} stroke="rgba(148,163,184,0.18)" />)}
+                <polyline fill="none" stroke="#f43f5e" strokeWidth="3.5" points="20,104 70,98 120,82 170,86 220,72 270,58 320,42" />
+                <polyline fill="none" stroke="#fb923c" strokeWidth="2.5" points="20,114 70,108 120,102 170,94 220,90 270,80 320,74" />
+              </svg>
+              <div className="absolute right-4 top-4 w-[160px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Highlights</p>
+                <div className="mt-3 space-y-2 text-sm text-slate-600">
+                  <div className="flex items-center justify-between"><span>Meetings</span><span>82%</span></div>
+                  <div className="flex items-center justify-between"><span>Propostas</span><span>+10%</span></div>
+                  <div className="flex items-center justify-between"><span>Won</span><span>31%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     ),
     finance: (
       <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Financial board</p><p className="mt-2 text-xl font-semibold">Cash, margem e forecast</p></div><TrendingUp className="h-5 w-5 text-emerald-300" /></div><div className="mt-5 grid gap-3"><div className="rounded-2xl bg-white/5 p-4"><p className="text-xs uppercase tracking-[0.14em] text-white/45">EBITDA</p><p className="mt-2 text-2xl font-semibold">18.4%</p></div><div className="rounded-2xl bg-white/5 p-4"><p className="text-xs uppercase tracking-[0.14em] text-white/45">Cash flow</p><p className="mt-2 text-2xl font-semibold">R$ 4.2M</p></div></div></div>
-        <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Monetary charts</p><p className="mt-2 text-xl font-semibold text-slate-950">Indicadores financeiros</p></div><LineChart className="h-5 w-5 text-emerald-600" /></div><div className="mt-5 h-24 rounded-[24px] bg-[linear-gradient(180deg,rgba(16,185,129,0.10),rgba(255,255,255,0.9))] p-4"><svg viewBox="0 0 320 80" className="h-full w-full"><polyline fill="none" stroke="currentColor" className="text-emerald-500" strokeWidth="4" points="8,66 52,54 96,58 140,36 184,42 228,30 272,18 312,10" /></svg></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{["Budget", "Margin", "Forecast"].map((item, index) => <div key={item} className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">{item}</p><p className="mt-2 text-xl font-semibold text-slate-950">{["96%", "+3.2pp", "+18%"][index]}</p></div>)}</div></div>
+        <div className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Financial board</p>
+              <p className="mt-2 text-xl font-semibold">Cash, margem e forecast</p>
+            </div>
+            <TrendingUp className="h-5 w-5 text-emerald-300" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            <div className="rounded-2xl bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-white/45">EBITDA</p>
+              <p className="mt-2 text-2xl font-semibold">18.4%</p>
+            </div>
+            <div className="rounded-2xl bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-white/45">Cash flow</p>
+              <p className="mt-2 text-2xl font-semibold">R$ 4.2M</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-[28px] border border-slate-200 bg-white/92 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Monetary charts</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">Indicadores financeiros</p>
+            </div>
+            <LineChart className="h-5 w-5 text-emerald-600" />
+          </div>
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <span>Desempenho financeiro</span>
+              <span>2 a 9 de junho</span>
+            </div>
+            <div className="relative h-36 overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(255,255,255,0.96))]">
+              <svg viewBox="0 0 360 140" className="h-full w-full">
+                {[60, 120, 180, 240, 300].map((x) => <line key={x} x1={x} y1="16" x2={x} y2="126" stroke="rgba(148,163,184,0.18)" />)}
+                {[34, 68, 102].map((y) => <line key={y} x1="20" y1={y} x2="340" y2={y} stroke="rgba(148,163,184,0.18)" />)}
+                <polyline fill="none" stroke="#10b981" strokeWidth="3.5" points="20,104 70,90 120,94 170,70 220,76 270,60 320,48" />
+                <polyline fill="none" stroke="#60a5fa" strokeWidth="2.5" points="20,114 70,108 120,98 170,96 220,82 270,84 320,72" />
+              </svg>
+              <div className="absolute right-4 top-4 w-[170px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Leitura rápida</p>
+                <div className="mt-3 space-y-2 text-sm text-slate-600">
+                  <div className="flex items-center justify-between"><span>Budget</span><span>96%</span></div>
+                  <div className="flex items-center justify-between"><span>Margem</span><span>+3.2pp</span></div>
+                  <div className="flex items-center justify-between"><span>Forecast</span><span>+18%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     ),
   }
@@ -362,10 +569,10 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
 
       <main className="relative z-10 pb-24 pt-24 md:pt-28">
         <section className="px-4">
-          <div className="container mx-auto">
-            <div className="relative overflow-hidden rounded-[44px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] px-6 py-10 shadow-[0_40px_120px_rgba(15,23,42,0.10)] md:px-10 md:py-16">
+          <div className="mx-auto w-full max-w-[1440px]">
+            <div className="relative overflow-hidden rounded-[44px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] px-6 py-8 shadow-[0_40px_120px_rgba(15,23,42,0.10)] md:px-10 md:py-12">
               <div className={`absolute inset-0 bg-gradient-to-br ${theme.heroGlow}`} />
-              <div className="relative grid gap-10 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="relative grid gap-8 xl:grid-cols-[0.98fr_1.02fr] xl:items-start">
                 <motion.div initial="hidden" animate="visible" variants={reveal} className="max-w-3xl">
                   <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm ${theme.badge}`}>
                     <Sparkles className="h-3.5 w-3.5" />
@@ -380,14 +587,14 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
                     </Link>
                     <p className="text-sm text-slate-500">{config.hero.ctaSubtext}</p>
                   </div>
-                  <div className="mt-10 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-8 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Role</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.role}</p></div>
                     <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Keywords</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.keywords.length} termos</p></div>
                     <div className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Guidance</p><p className="mt-3 text-lg font-semibold text-slate-950">{config.improvementSteps.length} passos</p></div>
                   </div>
                 </motion.div>
 
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <RoleVisual config={config} />
                   <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                     <div className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-sm">
@@ -409,7 +616,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </section>
 
         <Shell className="px-4 pt-10 md:pt-14">
-          <div className="container mx-auto grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <Card>
               <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><CircleAlert className="h-4 w-4 text-rose-500" />Onde o currículo quebra</div>
               <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">{config.problem.title}</h2>
@@ -426,7 +633,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1.25fr_0.75fr]">
             <Card className={`bg-gradient-to-b ${accent.keywordPanel}`}>
               <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><Lightbulb className="h-4 w-4 text-amber-500" />{accent.keywordLabel}</div>
               <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">Palavras-chave importantes para {config.roleShort}</h2>
@@ -440,7 +647,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto">
+          <div className="mx-auto w-full max-w-[1440px]">
             <Card>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Rewrite framework</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como reescrever as partes mais importantes</h2>
@@ -450,7 +657,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[0.92fr_1.08fr]">
             <DarkCard className={`bg-gradient-to-br ${accent.beforeAfterPanel}`}>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/50">{accent.beforeAfterLabel}</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight">{config.cvExample.after.title}</h2>
@@ -474,7 +681,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         </Shell>
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <div className="mx-auto grid w-full max-w-[1440px] gap-6 xl:grid-cols-[1fr_1fr]">
             <Card>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Paths by specialization</p>
               <div className="mt-6 space-y-4">{config.specializations.map((specialization) => <div key={specialization.title} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-6"><h3 className="text-xl font-semibold text-slate-950">{specialization.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{specialization.description}</p><div className="mt-4 flex flex-wrap gap-2">{specialization.keywords.map((keyword) => <span key={keyword} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">{keyword}</span>)}</div></div>)}</div>
