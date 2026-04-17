@@ -411,7 +411,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         <Shell className="px-4 pt-10 md:pt-14">
           <div className="container mx-auto grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <Card>
-              <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><CircleAlert className="h-4 w-4 text-rose-500" />Onde o curriculo quebra</div>
+              <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"><CircleAlert className="h-4 w-4 text-rose-500" />Onde o currículo quebra</div>
               <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">{config.problem.title}</h2>
               <p className="mt-4 text-base leading-8 text-slate-600">{config.problem.description}</p>
               <div className="mt-8 grid gap-4">{config.problem.points.map((point, index) => <div key={point} className="grid gap-3 rounded-3xl border border-rose-100 bg-rose-50/70 p-5 md:grid-cols-[auto_1fr]"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-rose-500 shadow-sm">{String(index + 1).padStart(2, "0")}</div><p className="text-sm leading-7 text-slate-600">{point}</p></div>)}</div>
@@ -492,7 +492,7 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
         {config.realExample ? <Shell className="px-4 pt-10"><div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Concrete rewrite</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{config.realExample.title}</h2><div className="mt-8 grid gap-6 xl:grid-cols-2"><div className="rounded-[28px] border border-rose-100 bg-rose-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Antes</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.before}</p></div><div className="rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-6"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Depois</p><p className="mt-4 text-sm leading-8 text-slate-600">{config.realExample.after}</p></div></div></Card></div></Shell> : null}
 
         <Shell className="px-4 pt-10">
-          <div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{accent.checklistLabel}</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como melhorar seu curriculo</h2><div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">{config.improvementSteps.map((step, index) => <div key={step.title} className={`rounded-[28px] border p-6 ${accent.checklistCard}`}><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Step {String(index + 1).padStart(2, "0")}</p><h3 className="mt-3 text-lg font-semibold text-slate-950">{step.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p></div>)}</div></Card></div>
+          <div className="container mx-auto"><Card><p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{accent.checklistLabel}</p><h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Como melhorar seu currículo</h2><div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">{config.improvementSteps.map((step, index) => <div key={step.title} className={`rounded-[28px] border p-6 ${accent.checklistCard}`}><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Step {String(index + 1).padStart(2, "0")}</p><h3 className="mt-3 text-lg font-semibold text-slate-950">{step.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p></div>)}</div></Card></div>
         </Shell>
 
         <Shell className="px-4 pt-10">
@@ -514,16 +514,16 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/55">CurrIA</p>
                   <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
-                    <BrandText text="Reestruture seu curriculo com a CurrIA" />
+                    <BrandText text="Reestruture seu currículo com a CurrIA" />
                   </h2>
-                  <p className="mt-5 max-w-2xl text-base leading-8 text-white/72 md:text-lg">Receba uma leitura orientada para ATS e ajuste seu curriculo para a vaga certa sem perder clareza nem honestidade.</p>
+                  <p className="mt-5 max-w-2xl text-base leading-8 text-white/72 md:text-lg">Receba uma leitura orientada para ATS e ajuste seu currículo para a vaga certa sem perder clareza nem honestidade.</p>
                 </div>
                 <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-md">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-3xl border border-white/10 bg-black/10 p-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Instant view</p><p className="mt-3 text-lg font-semibold text-white">{config.hero.ctaText}</p></div>
                     <div className="rounded-3xl border border-white/10 bg-black/10 p-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Use case</p><p className="mt-3 text-lg font-semibold text-white">{config.roleShort}</p></div>
                   </div>
-                  <Link href="/signup" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">Analisar meu curriculo<ArrowRight className="h-4 w-4" /></Link>
+                  <Link href="/signup" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">Analisar meu currículo<ArrowRight className="h-4 w-4" /></Link>
                 </div>
               </div>
             </div>

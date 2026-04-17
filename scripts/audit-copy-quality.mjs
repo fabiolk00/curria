@@ -103,6 +103,12 @@ function collectAsciiCopyIssues(filePath, text) {
       || trimmedLine.includes('stopWords = new Set([')
       || trimmedLine.includes("'experience', 'experiencia'")
       || (trimmedLine.includes("'experience'") && trimmedLine.includes("'experiencia'"))
+      // SEO route slugs and canonicals must stay ASCII-safe in URLs.
+      || trimmedLine.includes('/curriculo-')
+      || trimmedLine.startsWith('slug:')
+      || trimmedLine.startsWith('canonical:')
+      || trimmedLine.startsWith('"curriculo-')
+      || trimmedLine.startsWith("'curriculo-")
     )
 
     if (isTechnicalMatchingLine) {
