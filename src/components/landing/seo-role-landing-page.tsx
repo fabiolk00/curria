@@ -72,6 +72,12 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
+              {/* Viral Hook Badge */}
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary">
+                <Sparkles className="h-4 w-4" />
+                Análise gratuita em 30 segundos
+              </div>
+              
               <h1 className="mb-6 text-balance text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
                 {config.hero.h1.split("ATS").map((part, i, arr) => (
                   <span key={i}>
@@ -87,18 +93,26 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
               <p className="mx-auto mb-10 max-w-3xl text-lg leading-relaxed text-muted-foreground md:text-xl">
                 {config.hero.subtitle}
               </p>
-              <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                <Button asChild size="lg" className="gap-2 text-base font-semibold">
-                  <Link href="/signup">
-                    {config.hero.ctaText}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="text-base font-semibold text-foreground">
-                  <a href="#keywords">Ver palavras-chave</a>
-                </Button>
+              
+              {/* Main CTA - Larger and more prominent */}
+              <div className="mb-6">
+                <Link
+                  href="/signup"
+                  className="group inline-flex items-center gap-3 rounded-full bg-primary px-8 py-5 text-lg font-semibold text-primary-foreground shadow-xl transition-all hover:-translate-y-1 hover:bg-primary/90 hover:shadow-primary/25"
+                >
+                  {config.hero.ctaText}
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">{config.hero.ctaSubtext}</p>
+              <p className="mb-8 text-sm text-muted-foreground">{config.hero.ctaSubtext}</p>
+              
+              {/* Secondary CTA */}
+              <Button asChild variant="ghost" size="lg" className="text-base font-medium text-muted-foreground hover:text-foreground">
+                <a href="#keywords" className="flex items-center gap-2">
+                  Ver palavras-chave essenciais
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
             </motion.div>
           </div>
         </section>
@@ -436,7 +450,7 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
           </div>
         </motion.section>
 
-        {/* Before/After CV Example */}
+        {/* Full Resume Example Section */}
         <motion.section
           className="py-16 md:py-24"
           variants={containerVariants}
@@ -444,16 +458,116 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
         >
-          <div className="container mx-auto max-w-5xl px-4">
+          <div className="container mx-auto max-w-4xl px-4">
             <motion.div variants={itemVariants} className="mb-12 text-center">
-              <div className="mb-6 inline-flex items-center justify-center rounded-2xl bg-primary/10 p-4 text-primary">
+              <div className="mb-6 inline-flex items-center justify-center rounded-2xl bg-green-500/10 p-4 text-green-500">
                 <FileText className="h-8 w-8" />
               </div>
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                Exemplo Completo: Antes e Depois
+                Currículo Completo ATS-Ready
               </h2>
               <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-                Veja como um currículo genérico se transforma em um currículo otimizado para ATS.
+                Modelo de currículo otimizado para ATS. Use como referência para estruturar o seu.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              variants={itemVariants} 
+              className="rounded-[2rem] border-2 border-green-500/30 bg-white p-8 shadow-lg md:p-12"
+            >
+              {/* Resume Header */}
+              <div className="mb-8 border-b border-border/50 pb-6 text-center">
+                <h3 className="mb-2 text-2xl font-bold text-foreground">{config.fullResumeExample.name}</h3>
+                <p className="mb-3 text-lg font-medium text-primary">{config.fullResumeExample.title}</p>
+                <p className="text-sm text-muted-foreground">{config.fullResumeExample.contact}</p>
+              </div>
+
+              {/* Summary */}
+              <div className="mb-8">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-primary">Resumo Profissional</h4>
+                <p className="text-sm leading-relaxed text-foreground">{config.fullResumeExample.summary}</p>
+              </div>
+
+              {/* Skills */}
+              <div className="mb-8">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-primary">Habilidades Técnicas</h4>
+                <div className="space-y-2">
+                  {config.fullResumeExample.skills.map((skill, i) => (
+                    <div key={i} className="flex flex-wrap gap-2 text-sm">
+                      <span className="font-semibold text-foreground">{skill.category}:</span>
+                      <span className="text-muted-foreground">{skill.items}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Experience */}
+              <div className="mb-8">
+                <h4 className="mb-4 text-sm font-bold uppercase tracking-wider text-primary">Experiência Profissional</h4>
+                <div className="space-y-6">
+                  {config.fullResumeExample.experience.map((exp, i) => (
+                    <div key={i}>
+                      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                        <h5 className="font-semibold text-foreground">{exp.role}</h5>
+                        <span className="text-xs text-muted-foreground">{exp.period}</span>
+                      </div>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">{exp.company}</p>
+                      <ul className="space-y-1">
+                        {exp.bullets.map((bullet, j) => (
+                          <li key={j} className="flex items-start gap-2 text-sm text-foreground">
+                            <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-primary" />
+                            {bullet}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Education */}
+              <div className="mb-8">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-primary">Formação Acadêmica</h4>
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <div>
+                    <span className="font-semibold text-foreground">{config.fullResumeExample.education.degree}</span>
+                    <span className="text-muted-foreground"> - {config.fullResumeExample.education.institution}</span>
+                  </div>
+                  <span className="text-muted-foreground">{config.fullResumeExample.education.year}</span>
+                </div>
+              </div>
+
+              {/* Certifications */}
+              <div>
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-primary">Certificações</h4>
+                <ul className="space-y-1">
+                  {config.fullResumeExample.certifications.map((cert, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                      {cert}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* Before/After CV Example (Quick Comparison) */}
+        <motion.section
+          className="bg-muted/30 py-16 md:py-24"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          <div className="container mx-auto max-w-5xl px-4">
+            <motion.div variants={itemVariants} className="mb-12 text-center">
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+                Antes vs Depois: Seção de Experiência
+              </h2>
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                Comparação rápida de como transformar uma experiência genérica em otimizada para ATS.
               </p>
             </motion.div>
 

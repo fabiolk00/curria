@@ -51,6 +51,29 @@ export type InternalLink = {
   description: string
 }
 
+export type FullResumeExample = {
+  name: string
+  title: string
+  contact: string
+  summary: string
+  skills: {
+    category: string
+    items: string
+  }[]
+  experience: {
+    role: string
+    company: string
+    period: string
+    bullets: string[]
+  }[]
+  education: {
+    degree: string
+    institution: string
+    year: string
+  }
+  certifications: string[]
+}
+
 export type RoleLandingConfig = {
   slug: string
   role: string
@@ -107,6 +130,9 @@ export type RoleLandingConfig = {
   // Before/After CV example
   cvExample: BeforeAfterExample
   
+  // NEW: Full resume example (complete ATS-ready resume)
+  fullResumeExample: FullResumeExample
+  
   // How to improve steps
   improvementSteps: {
     title: string
@@ -127,16 +153,16 @@ export const desenvolvedorConfig: RoleLandingConfig = {
   roleShort: "Desenvolvedor",
   
   meta: {
-    title: "Currículo ATS para Desenvolvedor: Guia, Exemplo e Palavras-chave | CurrIA",
+    title: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Aprenda como criar um currículo de desenvolvedor otimizado para ATS. Exemplos de resumo profissional, skills, experiência e palavras-chave para front-end, back-end e full stack.",
     canonical: "/curriculo-desenvolvedor-ats",
   },
   
   hero: {
-    h1: "Currículo ATS para Desenvolvedor: Guia e Exemplo Prático",
-    subtitle: "Muitos currículos são eliminados antes mesmo de chegar a um recrutador. Um dos principais motivos é a falta de compatibilidade com sistemas ATS. Veja como otimizar seu currículo de desenvolvedor e aumentar suas chances de entrevista.",
-    ctaText: "Descubra se seu currículo passa no ATS",
-    ctaSubtext: "Receba seu score ATS e veja o que corrigir",
+    h1: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Seu currículo de desenvolvedor pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos devs não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
   },
   
   problem: {
@@ -290,6 +316,55 @@ export const desenvolvedorConfig: RoleLandingConfig = {
     },
   },
   
+  fullResumeExample: {
+    name: "João Silva",
+    title: "Desenvolvedor Full Stack | React, Node.js, TypeScript",
+    contact: "joao.silva@email.com | (11) 99999-0000 | São Paulo, SP | linkedin.com/in/joaosilva | github.com/joaosilva",
+    summary: "Desenvolvedor Full Stack com 5 anos de experiência em React, Node.js, TypeScript e PostgreSQL. Atuação em startups e empresas de tecnologia, construindo aplicações web escaláveis que atendem 100K+ usuários. Experiência com metodologias ágeis (Scrum), CI/CD e deploy em AWS.",
+    skills: [
+      { category: "Linguagens", items: "JavaScript, TypeScript, Python, SQL" },
+      { category: "Front-end", items: "React, Next.js, Tailwind CSS, Redux, Jest, Testing Library" },
+      { category: "Back-end", items: "Node.js, Express, NestJS, REST APIs, GraphQL" },
+      { category: "Banco de Dados", items: "PostgreSQL, MongoDB, Redis, Prisma ORM" },
+      { category: "Cloud & DevOps", items: "AWS (EC2, S3, Lambda, RDS), Docker, GitHub Actions, Vercel" },
+      { category: "Metodologias", items: "Scrum, Kanban, Code Review, TDD, CI/CD" },
+    ],
+    experience: [
+      {
+        role: "Desenvolvedor Full Stack Pleno",
+        company: "TechStartup Ltda",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Desenvolvi 12 features críticas em React e TypeScript, aumentando retenção de usuários em 25%",
+          "Implementei microsserviços com Node.js e Docker, reduzindo tempo de resposta da API em 60%",
+          "Liderei migração de banco de dados MySQL para PostgreSQL, melhorando performance de queries em 40%",
+          "Mentorei 2 desenvolvedores júnior em boas práticas de código e arquitetura",
+        ],
+      },
+      {
+        role: "Desenvolvedor Front-end Júnior",
+        company: "AgênciaWeb",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Desenvolvi 20+ landing pages responsivas com React e Tailwind CSS",
+          "Implementei testes automatizados com Jest, alcançando 85% de cobertura de código",
+          "Colaborei em equipe de 5 devs usando Scrum, participando de code reviews diários",
+          "Integrei APIs de terceiros (Stripe, SendGrid) em aplicações de e-commerce",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Ciência da Computação",
+      institution: "Universidade de São Paulo (USP)",
+      year: "2019",
+    },
+    certifications: [
+      "AWS Certified Cloud Practitioner (2023)",
+      "React – Rocketseat (2022)",
+      "JavaScript Algorithms and Data Structures – freeCodeCamp (2020)",
+    ],
+  },
+  
   improvementSteps: [
     { title: "Liste suas tecnologias com precisão", description: "Use os nomes exatos das tecnologias (React, não ReactJS; Node.js, não NodeJS). Inclua versões se relevante." },
     { title: "Quantifique seus resultados", description: "Transforme 'melhorei a performance' em 'reduzi o tempo de carregamento em 40%'. Números passam melhor pelos filtros." },
@@ -349,16 +424,16 @@ export const analistaDadosConfig: RoleLandingConfig = {
   roleShort: "Analista de Dados",
   
   meta: {
-    title: "Currículo ATS para Analista de Dados: Guia, Exemplo e Palavras-chave | CurrIA",
+    title: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de analista de dados otimizado para ATS. Exemplos de SQL, Python, Power BI, resumo profissional e palavras-chave para passar nos filtros automáticos.",
     canonical: "/curriculo-analista-dados-ats",
   },
   
   hero: {
-    h1: "Currículo ATS para Analista de Dados: Guia e Exemplo Prático",
-    subtitle: "Seu currículo de analista de dados pode estar sendo filtrado antes de chegar ao recrutador. Muitos candidatos qualificados perdem oportunidades por falta de otimização para sistemas ATS. Veja como melhorar.",
-    ctaText: "Descubra se seu currículo passa no ATS",
-    ctaSubtext: "Receba seu score ATS e veja o que corrigir",
+    h1: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Seu currículo de analista de dados pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos profissionais de dados não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
   },
   
   problem: {
@@ -512,6 +587,55 @@ export const analistaDadosConfig: RoleLandingConfig = {
     },
   },
   
+  fullResumeExample: {
+    name: "Maria Santos",
+    title: "Analista de Dados | SQL, Python, Power BI",
+    contact: "maria.santos@email.com | (11) 98888-0000 | São Paulo, SP | linkedin.com/in/mariasantos",
+    summary: "Analista de Dados com 4 anos de experiência em SQL, Python (Pandas, NumPy) e Power BI. Especialista em ETL, dashboards executivos e análise estatística. Experiência processando datasets de 10M+ registros e gerando insights que impactaram R$3M+ em decisões de negócio.",
+    skills: [
+      { category: "SQL", items: "PostgreSQL, BigQuery, Snowflake, Window Functions, CTEs, Query Optimization" },
+      { category: "Python", items: "Pandas, NumPy, Matplotlib, Seaborn, Scikit-learn, Jupyter Notebooks" },
+      { category: "BI & Visualização", items: "Power BI (DAX, Power Query), Tableau, Looker, Google Data Studio" },
+      { category: "ETL & Pipeline", items: "Apache Airflow, dbt, Python scripts, Fivetran" },
+      { category: "Excel", items: "Power Query, Tabelas Dinâmicas, VBA, Power Pivot" },
+      { category: "Estatística", items: "Testes A/B, Análise de Coorte, Regressão, Segmentação RFV" },
+    ],
+    experience: [
+      {
+        role: "Analista de Dados Pleno",
+        company: "E-commerce Tech S.A.",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Desenvolvi 30+ dashboards em Power BI para marketing, vendas e operações, reduzindo tempo de reporting em 70%",
+          "Automatizei pipeline de ETL com Python e Airflow, processando 5M+ registros diários com 99.9% de uptime",
+          "Conduzi análise de coorte e LTV que identificou oportunidade de R$800K em retenção de clientes",
+          "Criei modelo de segmentação RFV no BigQuery, aumentando conversão de campanhas em 35%",
+        ],
+      },
+      {
+        role: "Analista de BI Júnior",
+        company: "Consultoria Analytics",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Criei 50+ relatórios em Power BI e Tableau para clientes de varejo e finanças",
+          "Desenvolvi queries SQL otimizadas, reduzindo tempo de processamento de 4h para 20min",
+          "Automatizei 15+ relatórios recorrentes com Python, economizando 20h/mês da equipe",
+          "Treinei equipe de 10+ pessoas em Power BI e SQL básico",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Estatística",
+      institution: "Universidade Estadual de Campinas (Unicamp)",
+      year: "2019",
+    },
+    certifications: [
+      "Google Data Analytics Professional Certificate (2023)",
+      "Microsoft Certified: Power BI Data Analyst Associate (2022)",
+      "SQL for Data Science – Coursera/UC Davis (2021)",
+    ],
+  },
+  
   improvementSteps: [
     { title: "Especifique suas ferramentas", description: "Liste SQL, Python, Power BI, Tableau com contexto de uso. Evite apenas 'ferramentas de análise'." },
     { title: "Inclua volume de dados", description: "Mencione escala: 'Analisei 1M+ registros' ou 'Processei 500GB de dados mensais' impressiona recrutadores." },
@@ -571,16 +695,16 @@ export const marketingConfig: RoleLandingConfig = {
   roleShort: "Marketing",
   
   meta: {
-    title: "Currículo ATS para Marketing: Guia, Exemplo e Palavras-chave | CurrIA",
+    title: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Otimize seu currículo de marketing digital para sistemas ATS. Exemplos de resumo profissional, métricas, palavras-chave de performance, SEO e growth para conquistar mais entrevistas.",
     canonical: "/curriculo-marketing-ats",
   },
   
   hero: {
-    h1: "Currículo ATS para Marketing: Guia e Exemplo Prático",
-    subtitle: "Profissionais de marketing sabem a importância de otimização, mas muitos esquecem de aplicar isso ao próprio currículo. Veja como incluir as palavras-chave certas e formatar para passar nos filtros ATS.",
-    ctaText: "Analise seu currículo e veja o que corrigir",
-    ctaSubtext: "Aumente suas chances de entrevista",
+    h1: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Você otimiza campanhas, mas seu currículo pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos profissionais de marketing não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
   },
   
   problem: {
@@ -732,6 +856,56 @@ export const marketingConfig: RoleLandingConfig = {
         "Liderei equipe de 3 pessoas em campanhas integradas, gerando 2.000+ leads qualificados/mês",
       ],
     },
+  },
+  
+  fullResumeExample: {
+    name: "Ana Costa",
+    title: "Analista de Marketing Digital | Performance, SEO, Automação",
+    contact: "ana.costa@email.com | (11) 97777-0000 | São Paulo, SP | linkedin.com/in/anacosta",
+    summary: "Analista de Marketing Digital com 5 anos de experiência em performance (Google Ads, Meta Ads) e inbound marketing (HubSpot). Gerenciei budgets de até R$500K/mês com ROAS médio de 4.5x. Especialista em SEO, automação de marketing e análise de funil com Google Analytics 4. Resultados comprovados em e-commerce e SaaS B2B.",
+    skills: [
+      { category: "Mídia Paga", items: "Google Ads, Meta Ads, LinkedIn Ads, TikTok Ads, Google Shopping" },
+      { category: "SEO & Conteúdo", items: "SEO On-page, Link Building, SEMrush, Ahrefs, Copywriting, WordPress" },
+      { category: "Automação", items: "HubSpot, RD Station, Mailchimp, ActiveCampaign, Zapier" },
+      { category: "Analytics", items: "Google Analytics 4, Data Studio, Tag Manager, Hotjar, Amplitude" },
+      { category: "CRM", items: "HubSpot CRM, Salesforce, Pipedrive" },
+      { category: "Metodologias", items: "Growth Hacking, A/B Testing, CRO, Funil AARRR, OKRs" },
+    ],
+    experience: [
+      {
+        role: "Analista de Marketing Digital Pleno",
+        company: "SaaS Tech Ltda",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Gerenciei R$300K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 35%",
+          "Implementei estratégia de SEO que aumentou tráfego orgânico em 180% (30K → 85K visitas/mês)",
+          "Estruturei automação no HubSpot com 20 fluxos de nurturing, aumentando conversão MQL→SQL em 45%",
+          "Conduzi 50+ testes A/B em landing pages, aumentando taxa de conversão de 2% para 4.5%",
+        ],
+      },
+      {
+        role: "Analista de Marketing Júnior",
+        company: "E-commerce Fashion S.A.",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Gerenciei campanhas de Google Shopping e Meta Ads com budget de R$150K/mês",
+          "Criei e otimizei 100+ anúncios, melhorando CTR médio de 1.2% para 2.8%",
+          "Desenvolvi estratégia de e-mail marketing com segmentação RFV, aumentando receita de e-mail em 60%",
+          "Implementei tracking completo com GTM e GA4, melhorando atribuição de conversões",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Comunicação Social - Publicidade e Propaganda",
+      institution: "ESPM - Escola Superior de Propaganda e Marketing",
+      year: "2019",
+    },
+    certifications: [
+      "Google Ads Search Certification (2024)",
+      "Meta Certified Digital Marketing Associate (2023)",
+      "HubSpot Inbound Marketing Certification (2022)",
+      "Google Analytics 4 Certification (2023)",
+    ],
   },
   
   improvementSteps: [
