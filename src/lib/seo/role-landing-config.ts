@@ -79,103 +79,76 @@ export type RoleLandingConfig = {
   slug: string
   role: string
   roleShort: string
-  
-  // SEO metadata
+
   meta: {
     title: string
     description: string
     canonical: string
   }
-  
-  // Hero section
+
   hero: {
     h1: string
     subtitle: string
     ctaText: string
     ctaSubtext: string
   }
-  
-  // Problem section - softened copy
+
   problem: {
     title: string
     description: string
     points: string[]
   }
-  
-  // ATS explanation for this role - softened copy
+
   atsExplanation: {
     title: string
     description: string
     whatRecruitersScan: string[]
   }
-  
-  // Keywords section (SEO gold)
+
   keywords: RoleKeyword[]
-  
-  // NEW: Common mistakes section
   commonMistakes: CommonMistake[]
-  
-  // NEW: Resume sections examples (resumo, skills, experiência)
+
   resumeSections: {
     summary: ResumeSection
     skills: ResumeSection
     experience: ResumeSection
   }
-  
-  // NEW: Specializations (frontend, backend, fullstack for dev)
+
   specializations: Specialization[]
-  
-  // NEW: Seniority levels
   seniorityLevels: SeniorityLevel[]
-  
-  // Before/After CV example
   cvExample: BeforeAfterExample
-  
-  // NEW: Full resume example (complete ATS-ready resume)
   fullResumeExample: FullResumeExample
-  
-  // How to improve steps
+
   improvementSteps: {
     title: string
     description: string
   }[]
-  
-  // NEW: Internal links for SEO
+
   internalLinks: InternalLink[]
-  
-  // Positioning mistakes (optional - shows "you might be selling yourself wrong" section)
   positioningMistakes?: string[]
-  
-  // Real campaign/project example (optional - strong conversion block)
   realExample?: {
     title: string
     before: string
     after: string
   }
-  
-  // FAQs - expanded with full answers
   faqs: RoleFaq[]
 }
 
-// Developer (Desenvolvedor) configuration
 export const desenvolvedorConfig: RoleLandingConfig = {
   slug: "curriculo-desenvolvedor-ats",
   role: "Desenvolvedor de Software",
   roleShort: "Desenvolvedor",
-  
   meta: {
     title: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Aprenda como criar um currículo de desenvolvedor otimizado para ATS. Exemplos de resumo profissional, skills, experiência e palavras-chave para front-end, back-end e full stack.",
     canonical: "/curriculo-desenvolvedor-ats",
   },
-  
   hero: {
     h1: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave)",
     subtitle: "Seu currículo de desenvolvedor pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos devs não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
     ctaText: "Veja seu score ATS em 30 segundos",
     ctaSubtext: "Cole seu currículo e descubra o que está errado",
   },
-  
   problem: {
     title: "Por que currículos de desenvolvedores são rejeitados pelo ATS?",
     description: "Mesmo desenvolvedores experientes podem ter seus currículos filtrados por erros simples de formatação ou falta de palavras-chave específicas.",
@@ -187,7 +160,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       "Colocar habilidades técnicas em formato de ícones, gráficos ou barras de progresso",
     ],
   },
-  
   atsExplanation: {
     title: "Como o ATS filtra currículos de desenvolvedores",
     description: "Os sistemas ATS para vagas de tecnologia são configurados para buscar correspondências de stack técnico, frameworks e metodologias. Alguns ATS dão mais peso para correspondências exatas ou mais próximas da descrição da vaga, então padronizar termos pode ajudar.",
@@ -200,7 +172,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       "Certificações técnicas relevantes",
     ],
   },
-  
   keywords: [
     { term: "JavaScript/TypeScript", description: "Linguagens essenciais para desenvolvimento web moderno" },
     { term: "React/Vue/Angular", description: "Frameworks front-end mais requisitados pelo mercado" },
@@ -213,30 +184,28 @@ export const desenvolvedorConfig: RoleLandingConfig = {
     { term: "REST APIs/GraphQL", description: "Arquitetura de APIs para integração de sistemas" },
     { term: "Scrum/Agile", description: "Metodologias ágeis presentes em praticamente todas as empresas" },
   ],
-  
   commonMistakes: [
-    { 
-      mistake: "Listar 30+ tecnologias sem contexto", 
-      fix: "Foque nas 10-15 mais relevantes para a vaga e adicione contexto de uso" 
+    {
+      mistake: "Listar 30+ tecnologias sem contexto",
+      fix: "Foque nas 10-15 mais relevantes para a vaga e adicione contexto de uso",
     },
-    { 
-      mistake: "Usar barras de progresso para skills", 
-      fix: "Liste tecnologias em texto, agrupadas por categoria (Linguagens, Frameworks, etc.)" 
+    {
+      mistake: "Usar barras de progresso para skills",
+      fix: "Liste tecnologias em texto, agrupadas por categoria (Linguagens, Frameworks, etc.)",
     },
-    { 
-      mistake: "Escrever 'Desenvolvedor Full Stack' sem especificar stack", 
-      fix: "Use 'Desenvolvedor Full Stack | React, Node.js, PostgreSQL'" 
+    {
+      mistake: "Escrever 'Desenvolvedor Full Stack' sem especificar stack",
+      fix: "Use 'Desenvolvedor Full Stack | React, Node.js, PostgreSQL'",
     },
-    { 
-      mistake: "Colocar apenas links do GitHub sem descrição", 
-      fix: "Descreva brevemente: 'GitHub: 15+ projetos em React e Node.js'" 
+    {
+      mistake: "Colocar apenas links do GitHub sem descrição",
+      fix: "Descreva brevemente: 'GitHub: 15+ projetos em React e Node.js'",
     },
-    { 
-      mistake: "Usar tabelas ou colunas múltiplas", 
-      fix: "Use layout linear com seções claras e bullets simples" 
+    {
+      mistake: "Usar tabelas ou colunas múltiplas",
+      fix: "Use layout linear com seções claras e bullets simples",
     },
   ],
-  
   resumeSections: {
     summary: {
       title: "Resumo Profissional",
@@ -254,7 +223,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       good: "Desenvolvi 12 aplicações web usando React e TypeScript, reduzindo tempo de carregamento em 40%. Implementei microsserviços com Node.js e Docker, suportando 50K+ requisições/dia. Liderei squad de 4 devs em Scrum.",
     },
   },
-  
   specializations: [
     {
       title: "Desenvolvedor Front-end",
@@ -272,7 +240,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       keywords: ["React + Node.js", "TypeScript", "Next.js", "PostgreSQL", "MongoDB", "Docker", "AWS", "CI/CD", "Git", "Scrum", "REST APIs", "Testes automatizados"],
     },
   ],
-  
   seniorityLevels: [
     {
       level: "Desenvolvedor Júnior",
@@ -305,7 +272,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       ],
     },
   ],
-  
   cvExample: {
     before: {
       title: "Experiência em Desenvolvimento",
@@ -326,7 +292,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       ],
     },
   },
-  
   fullResumeExample: {
     name: "João Silva",
     title: "Desenvolvedor Full Stack | React, Node.js, TypeScript",
@@ -375,7 +340,6 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       "JavaScript Algorithms and Data Structures – freeCodeCamp (2020)",
     ],
   },
-  
   improvementSteps: [
     { title: "Liste suas tecnologias com precisão", description: "Use os nomes exatos das tecnologias (React, não ReactJS; Node.js, não NodeJS). Inclua versões se relevante." },
     { title: "Quantifique seus resultados", description: "Transforme 'melhorei a performance' em 'reduzi o tempo de carregamento em 40%'. Números passam melhor pelos filtros." },
@@ -384,14 +348,12 @@ export const desenvolvedorConfig: RoleLandingConfig = {
     { title: "Inclua projetos com contexto", description: "Para cada projeto, mencione: tecnologias usadas, seu papel, métricas de resultado." },
     { title: "Adicione certificações", description: "AWS Certified, Google Cloud Professional, ou cursos reconhecidos agregam palavras-chave valiosas." },
   ],
-  
-internalLinks: [
+  internalLinks: [
     { label: "Currículo para Analista de Dados", href: "/curriculo-analista-dados-ats", description: "Guia específico para área de dados", image: "/images/seo/data-analyst-career.jpg" },
     { label: "Currículo para Marketing", href: "/curriculo-marketing-ats", description: "Otimização para marketing digital", image: "/images/seo/marketing-career.jpg" },
     { label: "O que é ATS?", href: "/what-is-ats", description: "Entenda como funcionam os sistemas ATS", image: "/images/seo/ats-guide.jpg" },
     { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/developer-career.jpg" },
   ],
-  
   faqs: [
     {
       question: "Quais palavras-chave são essenciais para desenvolvedor?",
@@ -428,25 +390,21 @@ internalLinks: [
   ],
 }
 
-// Data Analyst (Analista de Dados) configuration
 export const analistaDadosConfig: RoleLandingConfig = {
   slug: "curriculo-analista-dados-ats",
   role: "Analista de Dados",
   roleShort: "Analista de Dados",
-  
   meta: {
     title: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Crie um currículo de analista de dados otimizado para ATS. Exemplos de SQL, Python, Power BI, resumo profissional e palavras-chave para passar nos filtros automáticos.",
     canonical: "/curriculo-analista-dados-ats",
   },
-  
   hero: {
     h1: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave)",
     subtitle: "Você trabalha com dados, mas seu currículo pode não estar sendo lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos profissionais de dados não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
     ctaText: "Veja seu score ATS em 30 segundos",
     ctaSubtext: "Cole seu currículo e descubra o que está errado",
   },
-  
   problem: {
     title: "Por que currículos de analistas de dados são rejeitados pelo ATS?",
     description: "A área de dados exige termos técnicos específicos. Pequenos erros de nomenclatura podem fazer currículos excelentes serem filtrados automaticamente.",
@@ -458,7 +416,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       "Não incluir experiência com visualização de dados e ferramentas de BI",
     ],
   },
-  
   atsExplanation: {
     title: "Como o ATS filtra currículos de analistas de dados",
     description: "Recrutadores de data configuram o ATS para buscar combinações específicas de ferramentas de análise, linguagens de programação e experiência com bancos de dados. Usar os termos exatos da vaga aumenta suas chances.",
@@ -471,7 +428,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       "Experiência com estatística e modelagem",
     ],
   },
-  
   keywords: [
     { term: "SQL", description: "Linguagem fundamental para consultas e manipulação de dados em qualquer empresa" },
     { term: "Python", description: "Principal linguagem para análise de dados, automação e machine learning" },
@@ -484,30 +440,28 @@ export const analistaDadosConfig: RoleLandingConfig = {
     { term: "Data Visualization", description: "Criação de gráficos, dashboards e storytelling com dados" },
     { term: "Machine Learning", description: "Diferencial: Scikit-learn, modelos preditivos, classificação" },
   ],
-  
   commonMistakes: [
-    { 
-      mistake: "Escrever apenas 'Excel' sem especificar nível", 
-      fix: "Use 'Excel Avançado: Tabelas Dinâmicas, Power Query, VLOOKUP, Macros VBA'" 
+    {
+      mistake: "Escrever apenas 'Excel' sem especificar nível",
+      fix: "Use 'Excel Avançado: Tabelas Dinâmicas, Power Query, VLOOKUP, Macros VBA'",
     },
-    { 
-      mistake: "Listar 'análise de dados' sem ferramentas", 
-      fix: "Especifique: 'Análise de dados com SQL, Python (Pandas) e Power BI'" 
+    {
+      mistake: "Listar 'análise de dados' sem ferramentas",
+      fix: "Especifique: 'Análise de dados com SQL, Python (Pandas) e Power BI'",
     },
-    { 
-      mistake: "Não mencionar volume de dados trabalhado", 
-      fix: "Adicione escala: 'Processei datasets de 5M+ registros'" 
+    {
+      mistake: "Não mencionar volume de dados trabalhado",
+      fix: "Adicione escala: 'Processei datasets de 5M+ registros'",
     },
-    { 
-      mistake: "Usar 'dashboard' sem especificar ferramenta", 
-      fix: "Escreva: 'Criei 20+ dashboards em Power BI para equipe de vendas'" 
+    {
+      mistake: "Usar 'dashboard' sem especificar ferramenta",
+      fix: "Escreva: 'Criei 20+ dashboards em Power BI para equipe de vendas'",
     },
-    { 
-      mistake: "Omitir impacto de negócio das análises", 
-      fix: "Conecte análise a resultado: 'Análise identificou economia de R$200K'" 
+    {
+      mistake: "Omitir impacto de negócio das análises",
+      fix: "Conecte análise a resultado: 'Análise identificou economia de R$200K'",
     },
   ],
-  
   resumeSections: {
     summary: {
       title: "Resumo Profissional",
@@ -525,7 +479,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       good: "Desenvolvi 25+ dashboards em Power BI monitorando KPIs de vendas, marketing e operações. Automatizei pipeline de ETL com Python, reduzindo tempo de processamento de 4h para 20min. Conduzi análise de coorte que identificou oportunidade de R$500K em retenção.",
     },
   },
-  
   specializations: [
     {
       title: "Analista de BI",
@@ -543,7 +496,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       keywords: ["Python", "SQL", "Apache Airflow", "Spark", "ETL/ELT", "Data Warehouse", "BigQuery", "Snowflake", "Databricks", "dbt", "AWS/GCP"],
     },
   ],
-  
   seniorityLevels: [
     {
       level: "Analista Júnior",
@@ -576,7 +528,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       ],
     },
   ],
-  
   cvExample: {
     before: {
       title: "Experiência com Dados",
@@ -597,7 +548,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       ],
     },
   },
-  
   fullResumeExample: {
     name: "Maria Santos",
     title: "Analista de Dados | SQL, Python, Power BI",
@@ -646,7 +596,6 @@ export const analistaDadosConfig: RoleLandingConfig = {
       "SQL for Data Science – Coursera/UC Davis (2021)",
     ],
   },
-  
   improvementSteps: [
     { title: "Especifique suas ferramentas", description: "Liste SQL, Python, Power BI, Tableau com contexto de uso. Evite apenas 'ferramentas de análise'." },
     { title: "Inclua volume de dados", description: "Mencione escala: 'Analisei 1M+ registros' ou 'Processei 500GB de dados mensais' impressiona recrutadores." },
@@ -655,14 +604,12 @@ export const analistaDadosConfig: RoleLandingConfig = {
     { title: "Inclua visualizações", description: "Dashboards e relatórios são o output. Quantifique: 'Criei 30+ dashboards para 5 áreas de negócio'." },
     { title: "Adicione certificações de dados", description: "Google Data Analytics, Microsoft Power BI, AWS Data Analytics agregam credibilidade." },
   ],
-  
-internalLinks: [
+  internalLinks: [
     { label: "Currículo para Desenvolvedor", href: "/curriculo-desenvolvedor-ats", description: "Guia específico para desenvolvedores", image: "/images/seo/developer-career.jpg" },
     { label: "Currículo para Marketing", href: "/curriculo-marketing-ats", description: "Otimização para marketing digital", image: "/images/seo/marketing-career.jpg" },
     { label: "O que é ATS?", href: "/what-is-ats", description: "Entenda como funcionam os sistemas ATS", image: "/images/seo/ats-guide.jpg" },
     { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/data-analyst-career.jpg" },
   ],
-  
   faqs: [
     {
       question: "SQL é realmente obrigatório para analista de dados?",
@@ -699,25 +646,21 @@ internalLinks: [
   ],
 }
 
-// Marketing configuration
 export const marketingConfig: RoleLandingConfig = {
   slug: "curriculo-marketing-ats",
   role: "Profissional de Marketing",
   roleShort: "Marketing",
-  
   meta: {
     title: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
     description: "Otimize seu currículo de marketing digital para sistemas ATS. Exemplos de resumo profissional, métricas, palavras-chave de performance, SEO e growth para conquistar mais entrevistas.",
     canonical: "/curriculo-marketing-ats",
   },
-  
   hero: {
     h1: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave)",
     subtitle: "Você otimiza campanhas, mas seu currículo pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos profissionais de marketing não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
     ctaText: "Descubra por que seu currículo não gera entrevistas",
     ctaSubtext: "Análise gratuita com score ATS e correções específicas",
   },
-  
   problem: {
     title: "Por que currículos de marketing são rejeitados pelo ATS?",
     description: "Marketing é uma área ampla com muitas especialidades. Currículos genéricos que não especificam canais, ferramentas e métricas são facilmente filtrados.",
@@ -729,7 +672,6 @@ export const marketingConfig: RoleLandingConfig = {
       "Não especificar canais e estratégias utilizadas",
     ],
   },
-  
   atsExplanation: {
     title: "Como o ATS filtra currículos de marketing",
     description: "Recrutadores de marketing configuram filtros por especialidade (performance, conteúdo, branding) e ferramentas específicas. Um currículo de growth hacker precisa de palavras-chave diferentes de um brand manager.",
@@ -742,7 +684,6 @@ export const marketingConfig: RoleLandingConfig = {
       "Certificações de marketing digital",
     ],
   },
-  
   keywords: [
     { term: "Google Ads/Meta Ads", description: "Plataformas de mídia paga mais utilizadas no mercado" },
     { term: "SEO/SEM", description: "Otimização para buscadores é requisito em marketing digital" },
@@ -755,30 +696,28 @@ export const marketingConfig: RoleLandingConfig = {
     { term: "E-mail Marketing", description: "Automação, segmentação, nurturing e campanhas de e-mail" },
     { term: "Social Media", description: "Gestão de redes: Instagram, LinkedIn, TikTok, estratégia de conteúdo" },
   ],
-  
   commonMistakes: [
-    { 
-      mistake: "Escrever 'gerenciei redes sociais' sem detalhes", 
-      fix: "Especifique: 'Gerenciei Instagram e LinkedIn com 50K+ seguidores, alcance de 500K/mês'" 
+    {
+      mistake: "Escrever 'gerenciei redes sociais' sem detalhes",
+      fix: "Especifique: 'Gerenciei Instagram e LinkedIn com 50K+ seguidores, alcance de 500K/mês'",
     },
-    { 
-      mistake: "Listar 'campanhas de marketing' sem métricas", 
-      fix: "Adicione números: 'Campanhas de Google Ads com ROAS 4.5x e CTR de 3.2%'" 
+    {
+      mistake: "Listar 'campanhas de marketing' sem métricas",
+      fix: "Adicione números: 'Campanhas de Google Ads com ROAS 4.5x e CTR de 3.2%'",
     },
-    { 
-      mistake: "Não mencionar budget gerenciado", 
-      fix: "Contextualize: 'Gerenciei budget de R$200K/mês em mídia paga'" 
+    {
+      mistake: "Não mencionar budget gerenciado",
+      fix: "Contextualize: 'Gerenciei budget de R$200K/mês em mídia paga'",
     },
-    { 
-      mistake: "Usar 'marketing digital' sem especificar área", 
-      fix: "Seja específico: 'Marketing de Performance | Google Ads, Meta Ads, SEO'" 
+    {
+      mistake: "Usar 'marketing digital' sem especificar área",
+      fix: "Seja específico: 'Marketing de Performance | Google Ads, Meta Ads, SEO'",
     },
-    { 
-      mistake: "Omitir ferramentas de automação", 
-      fix: "Inclua: 'Automação de marketing no HubSpot com 15 fluxos de nurturing'" 
+    {
+      mistake: "Omitir ferramentas de automação",
+      fix: "Inclua: 'Automação de marketing no HubSpot com 15 fluxos de nurturing'",
     },
   ],
-  
   resumeSections: {
     summary: {
       title: "Resumo Profissional",
@@ -796,7 +735,6 @@ export const marketingConfig: RoleLandingConfig = {
       good: "Gerenciei R$500K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 30%. Implementei estratégia de SEO que aumentou tráfego orgânico em 150% (50K → 125K visitas/mês). Estruturei automação no HubSpot com 15 fluxos, aumentando conversão de leads em 40%.",
     },
   },
-  
   specializations: [
     {
       title: "Marketing de Performance",
@@ -814,7 +752,6 @@ export const marketingConfig: RoleLandingConfig = {
       keywords: ["Growth Hacking", "Product-Led Growth", "Experimentos A/B", "Métricas AARRR", "Funil de Conversão", "Onboarding", "Retenção", "Viral Loops", "Analytics", "SQL"],
     },
   ],
-  
   seniorityLevels: [
     {
       level: "Analista Júnior",
@@ -847,7 +784,6 @@ export const marketingConfig: RoleLandingConfig = {
       ],
     },
   ],
-  
   cvExample: {
     before: {
       title: "Experiência em Marketing",
@@ -868,7 +804,6 @@ export const marketingConfig: RoleLandingConfig = {
       ],
     },
   },
-  
   fullResumeExample: {
     name: "Ana Costa",
     title: "Analista de Marketing Digital | Performance, SEO, Automação",
@@ -918,7 +853,6 @@ export const marketingConfig: RoleLandingConfig = {
       "Google Analytics 4 Certification (2023)",
     ],
   },
-  
   improvementSteps: [
     { title: "Especifique suas plataformas", description: "Google Ads, Meta Ads, LinkedIn Ads - nomeie cada ferramenta. Evite apenas 'mídia paga'." },
     { title: "Inclua métricas de resultado", description: "CTR, ROAS, CAC, conversão - números provam seu impacto. 'Aumentei vendas em 50%' é melhor que 'melhorei vendas'." },
@@ -927,14 +861,12 @@ export const marketingConfig: RoleLandingConfig = {
     { title: "Inclua certificações", description: "Google Ads, Meta Blueprint, HubSpot, RD Station - certificações validam conhecimento técnico." },
     { title: "Mostre conhecimento de funil", description: "Mencione topo, meio e fundo de funil. Entender a jornada do cliente é valorizado." },
   ],
-  
-internalLinks: [
+  internalLinks: [
     { label: "Currículo para Desenvolvedor", href: "/curriculo-desenvolvedor-ats", description: "Guia específico para desenvolvedores", image: "/images/seo/developer-career.jpg" },
     { label: "Currículo para Analista de Dados", href: "/curriculo-analista-dados-ats", description: "Otimização para área de dados", image: "/images/seo/data-analyst-career.jpg" },
     { label: "O que é ATS?", href: "/what-is-ats", description: "Entenda como funcionam os sistemas ATS", image: "/images/seo/ats-guide.jpg" },
     { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/marketing-career.jpg" },
   ],
-  
   positioningMistakes: [
     "Não define especialidade clara (Performance? SEO? Growth? Conteúdo?)",
     "Mistura branding + performance sem mostrar clareza estratégica",
@@ -942,13 +874,11 @@ internalLinks: [
     "Usa termos genéricos como 'marketing digital' sem especificar canais",
     "Não conecta métricas a resultados de negócio",
   ],
-  
   realExample: {
     title: "Exemplo de campanha real no currículo",
     before: "Gerenciei campanhas de marketing",
     after: "Gerenciei campanhas de Google Ads com budget de R$200K/mês, alcançando ROAS 4.2x e reduzindo CAC em 28%, resultando em R$840K de receita incremental no trimestre",
   },
-  
   faqs: [
     {
       question: "Quais métricas devo incluir no currículo de marketing?",
@@ -985,19 +915,288 @@ internalLinks: [
   ],
 }
 
-// Helper to get config by slug
+export const customerSuccessConfig: RoleLandingConfig = {
+  slug: "curriculo-customer-success-ats",
+  role: "Profissional de Customer Success",
+  roleShort: "Customer Success",
+  meta: {
+    title: "Currículo para Customer Success que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    description: "Crie um currículo de Customer Success otimizado para ATS. Veja exemplos com onboarding, retenção, churn, NPS, expansão de receita, CRM e lifecycle para conquistar mais entrevistas.",
+    canonical: "/curriculo-customer-success-ats",
+  },
+  hero: {
+    h1: "Currículo para Customer Success que Passa no ATS (Guia, Exemplo e Palavras-chave)",
+    subtitle: "Você ajuda clientes a ter resultado, mas seu currículo pode estar sendo filtrado antes mesmo de chegar a um recrutador. Sistemas ATS buscam termos específicos de retenção, onboarding, churn e expansão. Veja exatamente o que corrigir.",
+    ctaText: "Veja seu score ATS em 30 segundos",
+    ctaSubtext: "Cole seu currículo e descubra o que está errado",
+  },
+  problem: {
+    title: "Por que currículos de Customer Success são rejeitados pelo ATS?",
+    description: "Customer Success exige clareza sobre relacionamento com clientes, métricas de retenção e ferramentas de CRM. Currículos genéricos, sem números ou sem contexto do ciclo de vida do cliente, costumam ser filtrados.",
+    points: [
+      "Usar descrições vagas como 'atendi clientes' sem mostrar impacto em retenção ou satisfação",
+      "Não mencionar métricas como churn, NPS, expansão de receita ou taxa de retenção",
+      "Omitir ferramentas de CRM e CS como Salesforce, HubSpot, Gainsight ou Zendesk",
+      "Não explicar atuação em onboarding, adoção, renewals ou gestão de carteira",
+      "Misturar suporte e Customer Success sem deixar claro o papel estratégico",
+    ],
+  },
+  atsExplanation: {
+    title: "Como o ATS filtra currículos de Customer Success",
+    description: "Recrutadores de Customer Success configuram filtros para buscar experiência com retenção, onboarding, relacionamento consultivo, gestão de carteira e métricas de saúde do cliente. Quanto mais próximo o seu currículo estiver da linguagem da vaga, melhor o match no ATS.",
+    whatRecruitersScan: [
+      "Métricas de retenção e churn (gross retention, net retention, renewals)",
+      "Experiência com onboarding, adoção e customer lifecycle",
+      "Ferramentas de CRM e CS (Salesforce, HubSpot, Gainsight, Zendesk)",
+      "Gestão de carteira, expansion revenue e relacionamento consultivo",
+      "Indicadores de satisfação como NPS, CSAT e health score",
+      "Capacidade de trabalhar com times de produto, vendas e suporte",
+    ],
+  },
+  keywords: [
+    { term: "Onboarding", description: "Etapa crítica de ativação inicial e adoção do cliente" },
+    { term: "Retenção", description: "Capacidade de manter clientes ativos e reduzir cancelamentos" },
+    { term: "Churn", description: "Métrica essencial para mostrar impacto em Customer Success" },
+    { term: "NPS/CSAT", description: "Indicadores de satisfação e experiência do cliente" },
+    { term: "Expansion Revenue", description: "Receita de upsell, cross-sell e expansão de contas" },
+    { term: "Customer Lifecycle", description: "Gestão do cliente ao longo de toda a jornada" },
+    { term: "Salesforce/HubSpot", description: "Ferramentas de CRM amplamente utilizadas em times de CS" },
+    { term: "Gainsight/Zendesk", description: "Plataformas comuns para acompanhamento e suporte ao cliente" },
+    { term: "Renewals", description: "Renovações contratuais são indicador forte de performance" },
+    { term: "Health Score", description: "Score de saúde da conta usado para prever risco e oportunidade" },
+  ],
+  commonMistakes: [
+    {
+      mistake: "Escrever apenas 'atendimento ao cliente' sem contexto estratégico",
+      fix: "Especifique: 'Gerenciei carteira de 80 clientes SaaS com foco em retenção, adoção e expansão'",
+    },
+    {
+      mistake: "Não mencionar métricas de retenção ou satisfação",
+      fix: "Inclua números como churn, retenção, NPS, CSAT ou expansion revenue",
+    },
+    {
+      mistake: "Confundir suporte com Customer Success",
+      fix: "Destaque ações consultivas, onboarding, planejamento de sucesso e relacionamento proativo",
+    },
+    {
+      mistake: "Omitir ferramentas de CRM e CS",
+      fix: "Liste Salesforce, HubSpot, Gainsight, Zendesk ou outras plataformas usadas no dia a dia",
+    },
+    {
+      mistake: "Descrever carteira sem segmentação ou impacto",
+      fix: "Contextualize porte da carteira, segmento dos clientes e resultados alcançados",
+    },
+  ],
+  resumeSections: {
+    summary: {
+      title: "Resumo Profissional",
+      bad: "Profissional com experiência em atendimento e relacionamento com clientes.",
+      good: "Profissional de Customer Success com 4 anos de experiência em onboarding, retenção e expansão de contas SaaS B2B. Gerenciei carteira com 90+ clientes, reduzindo churn em 22% e elevando NPS para 72. Experiência com Salesforce, HubSpot e estratégias de customer lifecycle.",
+    },
+    skills: {
+      title: "Seção de Habilidades",
+      bad: "Relacionamento com cliente, CRM, atendimento, métricas, comunicação",
+      good: "Customer Success: Onboarding, Retenção, Renewals, Expansion | Métricas: Churn, NPS, CSAT, Health Score, LTV | Ferramentas: Salesforce, HubSpot, Gainsight, Zendesk | Operação: QBR, Gestão de Carteira, Mapeamento de Risco, Customer Lifecycle",
+    },
+    experience: {
+      title: "Experiência Profissional",
+      bad: "Atendi clientes da empresa, resolvi problemas e acompanhei solicitações.",
+      good: "Gerenciei carteira de 75 clientes enterprise em SaaS B2B, reduzindo churn em 18% e aumentando expansion revenue em 25%. Conduzi onboarding de 40+ novas contas por trimestre, elevando adoção do produto em 35% nos primeiros 90 dias. Estruturei QBRs e planos de sucesso usando Salesforce e Gainsight.",
+    },
+  },
+  specializations: [
+    {
+      title: "Onboarding",
+      description: "Foco em ativação inicial, implementação, adoção e primeiros resultados do cliente.",
+      keywords: ["Onboarding", "Go-live", "Time to Value", "Ativação", "Adoção", "Treinamento", "Implementação", "Kickoff", "Customer Journey", "Success Plan"],
+    },
+    {
+      title: "Retenção & Renewals",
+      description: "Atuação com redução de churn, renovações contratuais e saúde da carteira.",
+      keywords: ["Retenção", "Churn", "Renewals", "Health Score", "NPS", "CSAT", "Plano de Ação", "Gestão de Carteira", "Risco", "QBR"],
+    },
+    {
+      title: "Account Management & Expansion",
+      description: "Relacionamento consultivo com foco em expansão de receita e crescimento da conta.",
+      keywords: ["Expansion Revenue", "Upsell", "Cross-sell", "Gestão de Conta", "Relacionamento Consultivo", "LTV", "Carteira Enterprise", "ROI", "Stakeholder Management", "Forecast"],
+    },
+  ],
+  seniorityLevels: [
+    {
+      level: "Customer Success Júnior",
+      focus: "Demonstre capacidade de relacionamento, organização e aprendizado rápido em operação com clientes",
+      tips: [
+        "Mostre experiência com atendimento, onboarding inicial e acompanhamento de clientes",
+        "Inclua ferramentas usadas como CRM, help desk ou plataformas de gestão de tickets",
+        "Mencione métricas de satisfação, tempo de resposta ou volume de carteira quando possível",
+        "Destaque comunicação, organização e capacidade de seguir playbooks",
+      ],
+    },
+    {
+      level: "Customer Success Pleno",
+      focus: "Mostre autonomia na gestão de carteira, retenção e geração de valor para o cliente",
+      tips: [
+        "Quantifique churn evitado, retenção alcançada ou expansão de receita",
+        "Mencione onboarding, QBRs, planos de sucesso e gestão de risco",
+        "Destaque relacionamento com contas estratégicas e stakeholders múltiplos",
+        "Inclua trabalho cross-functional com produto, vendas e suporte",
+      ],
+    },
+    {
+      level: "Customer Success Sênior / Lead",
+      focus: "Demonstre liderança, visão de operação e capacidade de escalar retenção e expansão",
+      tips: [
+        "Destaque desenho de processos, playbooks e estruturação da operação de CS",
+        "Mencione times liderados, metas globais da carteira e indicadores estratégicos",
+        "Inclua impacto em NRR, churn, expansion revenue ou health score",
+        "Mostre visão de negócio e capacidade de influenciar roadmap e estratégia",
+      ],
+    },
+  ],
+  cvExample: {
+    before: {
+      title: "Experiência com Clientes",
+      bullets: [
+        "Atendi clientes da empresa",
+        "Resolvi dúvidas e problemas",
+        "Acompanhei solicitações do time",
+        "Ajudei no relacionamento com contas",
+      ],
+    },
+    after: {
+      title: "Customer Success Manager | Onboarding, Retenção e Expansão",
+      bullets: [
+        "Gerenciei carteira de 80 clientes SaaS B2B, reduzindo churn em 20% e elevando retenção anual para 92%",
+        "Conduzi onboarding de 35 novas contas por trimestre, reduzindo time to value em 30%",
+        "Estruturei QBRs e planos de sucesso no Salesforce e Gainsight, aumentando health score médio da base em 18%",
+        "Liderei iniciativas de expansão que geraram R$450K em expansion revenue no ano",
+      ],
+    },
+  },
+  fullResumeExample: {
+    name: "Carla Mendes",
+    title: "Customer Success Manager | Retenção, Onboarding, Expansão",
+    contact: "carla.mendes@email.com | (11) 96666-0000 | São Paulo, SP | linkedin.com/in/carlamendes",
+    summary: "Customer Success Manager com 5 anos de experiência em SaaS B2B, atuando em onboarding, retenção, renovação e expansão de contas. Gerenciei carteira com 100+ clientes, reduzindo churn em 24% e elevando NPS para 74. Forte atuação com Salesforce, HubSpot, Gainsight e relacionamento consultivo com contas estratégicas.",
+    skills: [
+      { category: "Customer Success", items: "Onboarding, Retenção, Renewals, Expansion, QBR, Success Plan" },
+      { category: "Métricas", items: "Churn, NPS, CSAT, Health Score, Retenção, NRR, LTV" },
+      { category: "Ferramentas", items: "Salesforce, HubSpot, Gainsight, Zendesk, Intercom" },
+      { category: "Operação", items: "Gestão de Carteira, Mapeamento de Risco, Customer Lifecycle, Forecast" },
+      { category: "Relacionamento", items: "Stakeholder Management, Comunicação Executiva, Relacionamento Consultivo" },
+      { category: "Negócio", items: "Upsell, Cross-sell, Expansão de Receita, ROI, Renovações" },
+    ],
+    experience: [
+      {
+        role: "Customer Success Manager Pleno",
+        company: "SaaS Growth Tech",
+        period: "Jan 2022 – Presente",
+        bullets: [
+          "Gerenciei carteira de 95 clientes mid-market e enterprise, reduzindo churn em 24% e elevando retenção anual para 93%",
+          "Conduzi onboarding de 50+ contas por trimestre, reduzindo time to value em 35% e aumentando adoção inicial do produto em 40%",
+          "Implementei rotina de QBRs e mapeamento de risco via Gainsight, elevando o health score médio da carteira em 20%",
+          "Identifiquei oportunidades de upsell e cross-sell que geraram R$620K em expansion revenue no período",
+        ],
+      },
+      {
+        role: "Analista de Customer Success",
+        company: "Hub Solutions Brasil",
+        period: "Mar 2020 – Dez 2021",
+        bullets: [
+          "Acompanhei carteira de 60 clientes SMB com foco em onboarding, suporte consultivo e retenção",
+          "Contribuí para aumento de NPS de 58 para 70 com melhoria de processos e comunicação proativa",
+          "Estruturei playbooks de acompanhamento de clientes em HubSpot e Zendesk",
+          "Atuei em parceria com vendas e produto para reduzir causas recorrentes de cancelamento",
+        ],
+      },
+    ],
+    education: {
+      degree: "Bacharel em Administração de Empresas",
+      institution: "Universidade Presbiteriana Mackenzie",
+      year: "2019",
+    },
+    certifications: [
+      "Customer Success Manager Certification – SuccessHACKER (2023)",
+      "HubSpot Customer Success Certification (2022)",
+      "Salesforce Administrator Basics (2021)",
+    ],
+  },
+  improvementSteps: [
+    { title: "Mostre métricas de retenção e satisfação", description: "Inclua churn, retenção, NPS, CSAT ou expansion revenue sempre que possível para demonstrar impacto real." },
+    { title: "Especifique sua atuação no ciclo do cliente", description: "Explique se você trabalhou com onboarding, adoção, renewals, gestão de carteira ou expansão de contas." },
+    { title: "Liste ferramentas de CRM e Customer Success", description: "Salesforce, HubSpot, Gainsight, Zendesk e plataformas similares ajudam o ATS a identificar aderência à vaga." },
+    { title: "Destaque relacionamento consultivo", description: "Mostre como você apoiou clientes a alcançar resultado, não apenas resolver chamados ou responder dúvidas." },
+    { title: "Conecte seu trabalho a impacto financeiro", description: "Redução de churn, retenção e expansão de receita são sinais fortes de performance em Customer Success." },
+    { title: "Adapte o currículo à segmentação da vaga", description: "Se a posição pede enterprise, SMB ou SaaS B2B, espelhe esse contexto no seu currículo com clareza." },
+  ],
+  internalLinks: [
+    { label: "Currículo para Marketing", href: "/curriculo-marketing-ats", description: "Guia específico para marketing digital", image: "/images/seo/marketing-career.jpg" },
+    { label: "Currículo para Analista de Dados", href: "/curriculo-analista-dados-ats", description: "Otimização para área de dados", image: "/images/seo/data-analyst-career.jpg" },
+    { label: "Currículo para Desenvolvedor", href: "/curriculo-desenvolvedor-ats", description: "Guia específico para desenvolvedores", image: "/images/seo/developer-career.jpg" },
+    { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/ats-guide.jpg" },
+  ],
+  positioningMistakes: [
+    "Se apresentar como suporte sem mostrar atuação estratégica em retenção e expansão",
+    "Não deixar claro o tipo de carteira atendida (SMB, mid-market, enterprise)",
+    "Falar sobre relacionamento com clientes sem citar métricas ou impacto no negócio",
+    "Omitir ferramentas de CRM e gestão do ciclo de vida do cliente",
+    "Não mostrar como você gera valor ao longo da jornada do cliente",
+  ],
+  realExample: {
+    title: "Exemplo real de resultado em Customer Success",
+    before: "Fiz acompanhamento de clientes e ajudei no relacionamento com a carteira",
+    after: "Gerenciei carteira de 80 clientes SaaS B2B, reduzi churn em 20%, aumentei retenção anual para 92% e gerei R$450K em expansion revenue com upsell consultivo",
+  },
+  faqs: [
+    {
+      question: "Quais métricas devo incluir no currículo de Customer Success?",
+      answer: "As principais métricas para Customer Success são churn, retenção, NPS, CSAT, health score, expansion revenue e renewals. Sempre que possível, mostre o antes e depois, como por exemplo: 'reduzi churn de 8% para 5%' ou 'aumentei NPS de 60 para 74'. Essas métricas demonstram impacto direto na experiência do cliente e no negócio.",
+    },
+    {
+      question: "Customer Success é a mesma coisa que suporte?",
+      answer: "Não. Suporte costuma ser mais reativo, focado em resolver problemas pontuais. Customer Success tem atuação mais estratégica, com foco em onboarding, adoção, retenção, renovação e expansão da conta. No currículo, vale deixar essa diferença clara mostrando ações consultivas, gestão de carteira e resultados de retenção.",
+    },
+    {
+      question: "Preciso colocar ferramentas como Salesforce e HubSpot no currículo?",
+      answer: "Sim. Ferramentas de CRM e Customer Success ajudam o ATS a identificar aderência à vaga. Salesforce, HubSpot, Gainsight, Zendesk e Intercom são termos buscados com frequência. Mesmo que você não domine todas, mencione as que já utilizou no dia a dia com contexto de uso.",
+    },
+    {
+      question: "Como mostrar experiência com onboarding no currículo?",
+      answer: "Descreva o volume de contas acompanhadas, o tipo de cliente e o resultado gerado. Por exemplo: 'Conduzi onboarding de 40 novas contas por trimestre, reduzindo time to value em 30% e aumentando adoção do produto em 35%'. Isso mostra capacidade operacional e impacto real.",
+    },
+    {
+      question: "Vale incluir expansão de receita em uma vaga de Customer Success?",
+      answer: "Sim. Muitas vagas de Customer Success valorizam profissionais que conseguem equilibrar retenção com crescimento da conta. Expansion revenue, upsell e cross-sell mostram visão de negócio e relacionamento consultivo. Mesmo quando a vaga não é comercial, esse tipo de resultado costuma ser bem visto.",
+    },
+    {
+      question: "Como destacar carteira enterprise ou SMB?",
+      answer: "Contextualize o porte da carteira e a complexidade da gestão. Exemplo: 'Gerenciei carteira enterprise com 25 contas estratégicas e múltiplos stakeholders' ou 'Acompanhei base SMB com 120 clientes ativos e playbooks escaláveis'. Isso ajuda o recrutador a entender seu contexto e aderência ao perfil da vaga.",
+    },
+    {
+      question: "Customer Success sem experiência em SaaS ainda vale?",
+      answer: "Sim, especialmente se você tem experiência com relacionamento, retenção, onboarding ou atendimento consultivo em outros setores. O ideal é adaptar a linguagem do currículo para mostrar proximidade com o ciclo de vida do cliente, métricas de satisfação e foco em resultado, mesmo fora de SaaS.",
+    },
+    {
+      question: "Como mostrar que eu ajudava clientes a ter resultado?",
+      answer: "Vá além de frases genéricas como 'acompanhei clientes'. Mostre ações concretas e desfecho de negócio. Por exemplo: 'Estruturei planos de sucesso para contas estratégicas, aumentando adoção de funcionalidades críticas e reduzindo risco de cancelamento'. Isso demonstra valor real entregue ao cliente.",
+    },
+  ],
+}
+
 export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
   const configs: Record<string, RoleLandingConfig> = {
     "curriculo-desenvolvedor-ats": desenvolvedorConfig,
     "curriculo-analista-dados-ats": analistaDadosConfig,
     "curriculo-marketing-ats": marketingConfig,
+    "curriculo-customer-success-ats": customerSuccessConfig,
   }
+
   return configs[slug]
 }
 
-// Export all configs for sitemap generation
 export const allRoleLandingConfigs: RoleLandingConfig[] = [
   desenvolvedorConfig,
   analistaDadosConfig,
   marketingConfig,
+  customerSuccessConfig,
 ]
