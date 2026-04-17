@@ -87,6 +87,20 @@ Plans:
 Plans:
 - [x] 41-01: Refactor agent context into layered workflow-aware and source-aware builders
 
+### Phase 42: Redesign public SEO role landing pages with premium editorial UX
+**Goal**: Rebuild the public SEO role landing experience so it feels closer to Stripe, Linear, and modern premium SaaS product pages while preserving the existing content hierarchy, CTA logic, SEO structure, and config-driven rendering.
+**Depends on**: Phase 41
+**Requirements**: [SEO-UX-01]
+**Success Criteria** (what must be TRUE):
+  1. `SeoRoleLandingPage` remains config-driven and keeps the current routing, CTA semantics, metadata flow, and role content intact.
+  2. The public role landing experience no longer reads like a repeated card grid; hero, section rhythm, surfaces, and spacing feel editorial, premium, and profession-aware.
+  3. `developer`, `data_engineer`, and `finance` each have distinct premium visuals, while the remaining roles inherit a strong reusable default visual system that is ready for future specialization.
+  4. Public PT-BR copy remains correct, headings stay intentional for the Brazilian audience, and build plus copy-audit safety rails remain green after the redesign.
+**Plans**: 1 plan
+
+Plans:
+- [x] 42-01: Rebuild the SEO role landing renderer with premium visual primitives and role-specific hero systems
+
 ## Autonomous Execution Instruction
 
 The intended operating mode for this milestone is:
@@ -107,7 +121,7 @@ Recommended entrypoint:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41
+Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -116,6 +130,7 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41
 | 39. Move ATS, targeting, and artifact work into async processors | 1/1 | Completed | 2026-04-16 |
 | 40. Integrate status flow, observability, and stabilization | 1/1 | Complete    | 2026-04-17 |
 | 41. Refactor agent context into layered workflow, action, and source builders | 1/1 | Completed | 2026-04-17 |
+| 42. Redesign public SEO role landing pages with premium editorial UX | 1/1 | Completed | 2026-04-17 |
 
 ## Archived Milestones
 

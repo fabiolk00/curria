@@ -48,7 +48,7 @@ const dropdownColumns: Array<{
   items: DropdownItem[]
 }> = [
   {
-    title: "Tech & Data",
+    title: "Tecnologia e Dados",
     items: [
       {
         label: "Desenvolvedor",
@@ -77,7 +77,7 @@ const dropdownColumns: Array<{
     ],
   },
   {
-    title: "Business & Growth",
+    title: "Negócios e Crescimento",
     items: [
       {
         label: "Marketing",
@@ -89,19 +89,19 @@ const dropdownColumns: Array<{
         label: "Vendas",
         href: "/curriculo-vendas-ats",
         icon: TrendingUp,
-        description: "Meta, Receita, Conversão",
+        description: "Meta, Receita, ConversÃƒÂ£o",
       },
       {
         label: "Customer Success",
         href: "/curriculo-customer-success-ats",
         icon: Users,
-        description: "Onboarding, Retenção, Expansão",
+        description: "Onboarding, RetenÃƒÂ§ÃƒÂ£o, ExpansÃƒÂ£o",
       },
       {
         label: "Financeiro",
         href: "/curriculo-financeiro-ats",
         icon: Wallet,
-        description: "Controle, Indicadores, Gestão",
+        description: "Controle, Indicadores, GestÃƒÂ£o",
       },
     ],
   },
@@ -114,6 +114,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const showAuthButtons = !isLoaded || !isSignedIn
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileAreasOpen, setMobileAreasOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 12)
@@ -148,7 +149,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="group flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted/60 hover:text-foreground">
-                  Currículos por Área
+                  CurrÃƒÂ­culos por ÃƒÂrea
                   <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -213,7 +214,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <Button
                   asChild
                   size="sm"
-                  className="rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  className="hidden rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:inline-flex"
                 >
                   <Link href="/signup">Criar conta</Link>
                 </Button>
@@ -231,7 +232,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
               variant="ghost"
               size="icon"
               className="ml-1 rounded-xl md:hidden"
-              onClick={() => setMobileOpen((v) => !v)}
+              onClick={() =>
+                setMobileOpen((v) => {
+                  const next = !v
+                  if (!next) {
+                    setMobileAreasOpen(false)
+                  }
+                  return next
+                })
+              }
               aria-label="Menu"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -246,40 +255,76 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => {
+                    setMobileAreasOpen(false)
+                    setMobileOpen(false)
+                  }}
                   className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                 >
                   {link.label}
                 </Link>
               ))}
-              <p className="mt-2 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground/60">
-                Currículos por Área
-              </p>
-              {mobileDropdownItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileAreasOpen((v) => !v)}
+                  aria-expanded={mobileAreasOpen}
+                  aria-controls="mobile-areas-menu"
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground/60 transition-colors hover:bg-muted/60"
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <item.icon className="h-3.5 w-3.5" />
+                  <span>CurrÃ­culos por Ãrea</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform duration-200",
+                      mobileAreasOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+                {mobileAreasOpen && (
+                  <div id="mobile-areas-menu" className="mt-1 flex flex-col gap-1">
+                    {mobileDropdownItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => {
+                          setMobileAreasOpen(false)
+                          setMobileOpen(false)
+                        }}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <item.icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                </Link>
-              ))}
+                )}
+              </div>
               {showAuthButtons && (
                 <div className="mt-3 flex flex-col gap-2 border-t border-border/40 pt-3">
                   <Button asChild variant="outline" className="w-full rounded-xl">
-                    <Link href="/login" onClick={() => setMobileOpen(false)}>
+                    <Link
+                      href="/login"
+                      onClick={() => {
+                        setMobileAreasOpen(false)
+                        setMobileOpen(false)
+                      }}
+                    >
                       Entrar
                     </Link>
                   </Button>
                   <Button asChild className="w-full rounded-xl">
-                    <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                    <Link
+                      href="/signup"
+                      onClick={() => {
+                        setMobileAreasOpen(false)
+                        setMobileOpen(false)
+                      }}
+                    >
                       Criar conta
                     </Link>
                   </Button>
