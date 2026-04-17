@@ -2278,19 +2278,19 @@ export const engenheiroDadosConfig: RoleLandingConfig = {
   ],
 }
 
-export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
-  const configs: Record<string, RoleLandingConfig> = {
-    "curriculo-desenvolvedor-ats": desenvolvedorConfig,
-    "curriculo-analista-dados-ats": analistaDadosConfig,
-    "curriculo-marketing-ats": marketingConfig,
-    "curriculo-customer-success-ats": customerSuccessConfig,
-    "curriculo-product-manager-ats": productManagerConfig,
-    "curriculo-vendas-ats": vendasConfig,
-    "curriculo-financeiro-ats": financeiroConfig,
-    "curriculo-engenheiro-de-dados-ats": engenheiroDadosConfig,
-  }
+export const roleLandingConfigBySlug: Record<string, RoleLandingConfig> = {
+  "curriculo-desenvolvedor-ats": desenvolvedorConfig,
+  "curriculo-analista-dados-ats": analistaDadosConfig,
+  "curriculo-marketing-ats": marketingConfig,
+  "curriculo-customer-success-ats": customerSuccessConfig,
+  "curriculo-product-manager-ats": productManagerConfig,
+  "curriculo-vendas-ats": vendasConfig,
+  "curriculo-financeiro-ats": financeiroConfig,
+  "curriculo-engenheiro-de-dados-ats": engenheiroDadosConfig,
+}
 
-  return configs[slug]
+export function getRoleLandingConfigBySlug(slug: string): RoleLandingConfig | undefined {
+  return roleLandingConfigBySlug[slug]
 }
 
 export const allRoleLandingConfigs: RoleLandingConfig[] = [
