@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useState } from "react"
 import { motion, type Variants } from "motion/react"
 import {
   ArrowRight,
@@ -9,6 +10,7 @@ import {
   XCircle,
   ChevronRight,
   Lightbulb,
+  Plus,
 } from "lucide-react"
 
 import { BrandText } from "@/components/brand-wordmark"
@@ -33,6 +35,87 @@ const itemVariants: Variants = {
 
 interface SeoRoleLandingPageProps {
   config: RoleLandingConfig
+}
+
+// ─── Mistakes Accordion ──────────────────────────────────────────────────────
+function MistakesAccordion({ config }: { config: RoleLandingConfig }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  return (
+    <motion.section
+      className="py-24 md:py-32"
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+    >
+      <div className="container mx-auto max-w-5xl px-6">
+        <motion.div variants={itemVariants} className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
+          Diagnóstico
+        </motion.div>
+        <motion.h2 variants={itemVariants} className="mb-10 text-3xl font-bold tracking-tight md:text-4xl">
+          Erros mais comuns no currículo de {config.roleShort}
+        </motion.h2>
+
+        {/* 2-col grid on desktop */}
+        <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-2">
+          {config.commonMistakes.map((item, i) => {
+            const isOpen = openIndex === i
+            return (
+              <div
+                key={i}
+                className={`cursor-pointer overflow-hidden rounded-2xl border transition-all duration-300 ${
+                  isOpen
+                    ? "border-green-500/35 bg-card shadow-md shadow-green-500/8"
+                    : "group border-border/50 bg-card shadow-sm hover:-translate-y-0.5 hover:border-destructive/30 hover:shadow-md"
+                }`}
+                onClick={() => setOpenIndex(isOpen ? null : i)}
+              >
+                {/* Always-visible row */}
+                <div className="flex items-start justify-between gap-4 px-5 py-4">
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.15em] transition-colors duration-200 ${
+                        isOpen ? "text-green-600" : "text-destructive"
+                      }`}
+                    >
+                      {isOpen ? "Correção" : "Erro"}
+                    </span>
+                    <p className={`text-sm leading-snug transition-colors duration-200 ${isOpen ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                      {isOpen ? item.fix : item.mistake}
+                    </p>
+                  </div>
+                  <div
+                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                      isOpen
+                        ? "rotate-45 border-green-500/40 bg-green-500/10 text-green-600"
+                        : "border-border bg-muted/50 text-muted-foreground"
+                    }`}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+
+                {/* Revealed: original mistake shown crossed out */}
+                {isOpen && (
+                  <div className="border-t border-green-500/15 bg-destructive/[0.025] px-5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-destructive/50">Antes</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground/60 line-through decoration-destructive/25">
+                      {item.mistake}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+
+        <motion.p variants={itemVariants} className="mt-5 text-center text-xs text-muted-foreground/50">
+          Clique em cada item para ver a correção
+        </motion.p>
+      </div>
+    </motion.section>
+  )
 }
 
 export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) {
@@ -207,49 +290,8 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
           </motion.section>
         )}
 
-        {/* ─── ERRORS vs CORRECTIONS — vertical storytelling ────────────────── */}
-        <motion.section
-          className="py-24 md:py-32"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-        >
-          <div className="container mx-auto max-w-3xl px-6">
-            <motion.div variants={itemVariants} className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
-              Diagnóstico
-            </motion.div>
-            <motion.h2 variants={itemVariants} className="mb-16 text-3xl font-bold tracking-tight md:text-4xl">
-              Erros mais comuns no currículo de {config.roleShort}
-            </motion.h2>
-
-            <div className="space-y-20">
-              {config.commonMistakes.map((item, i) => (
-                <motion.div key={i} variants={itemVariants} className="relative">
-                  {/* Error */}
-                  <div className="rounded-2xl border border-destructive/25 bg-destructive/[0.04] px-7 py-6">
-                    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-destructive">Erro</p>
-                    <p className="text-[15px] leading-relaxed text-muted-foreground">{item.mistake}</p>
-                  </div>
-
-                  {/* Connector */}
-                  <div className="relative flex h-12 items-center justify-center">
-                    <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gradient-to-b from-destructive/25 to-green-500/30" />
-                    <div className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background">
-                      <ArrowRight className="h-3.5 w-3.5 rotate-90 text-muted-foreground" />
-                    </div>
-                  </div>
-
-                  {/* Correction — more prominent */}
-                  <div className="rounded-2xl border-2 border-green-500/30 bg-green-500/[0.06] px-7 py-6 shadow-sm shadow-green-500/10">
-                    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-green-600">Correção</p>
-                    <p className="text-[15px] font-medium leading-relaxed text-foreground">{item.fix}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
+        {/* ─── ERRORS — accordion 2-col ─────────────────────────────────────── */}
+        <MistakesAccordion config={config} />
 
         {/* ─── RESUME SECTIONS — inline split panels ────────────────────────── */}
         <motion.section
@@ -918,7 +960,7 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
   </div>
   </motion.section>
 
-        {/* ─── FAQ ─────────────────────────────────────────────────────────── */}
+        {/* ─── FAQ ─────────────────────────────────────────────────────��───── */}
         <motion.section
           className="border-t border-border/40 bg-muted/20 py-24 md:py-32"
           variants={containerVariants}
