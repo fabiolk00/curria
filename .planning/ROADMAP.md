@@ -71,7 +71,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 40-01: Wire async status flow, observability, and regression proof across the new execution model
+- [x] 40-01: Wire async status flow, observability, and regression proof across the new execution model
 
 ## Autonomous Execution Instruction
 
@@ -100,7 +100,7 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40
 | 37. Freeze async execution contracts and durable job foundations | 1/1 | Completed | 2026-04-16 |
 | 38. Refactor `/api/agent` into a lightweight orchestrator | 1/1 | Complete    | 2026-04-16 |
 | 39. Move ATS, targeting, and artifact work into async processors | 1/1 | Completed | 2026-04-16 |
-| 40. Integrate status flow, observability, and stabilization | 0/1 | Pending | — |
+| 40. Integrate status flow, observability, and stabilization | 1/1 | Complete    | 2026-04-17 |
 
 ## Archived Milestones
 

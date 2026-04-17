@@ -7,23 +7,23 @@
 
 ### Agent Orchestrator Boundary
 
-- [ ] **ORCH-01**: User can keep using `/api/agent` as the main entry point, with lightweight chat responses still streaming synchronously while heavy actions are acknowledged and dispatched asynchronously.
-- [ ] **ORCH-02**: Session load or create, message persistence, action classification, and execution-mode routing remain behaviorally consistent after `/api/agent` is reduced to a lightweight orchestrator.
+- [x] **ORCH-01**: User can keep using `/api/agent` as the main entry point, with lightweight chat responses still streaming synchronously while heavy actions are acknowledged and dispatched asynchronously.
+- [x] **ORCH-02**: Session load or create, message persistence, action classification, and execution-mode routing remain behaviorally consistent after `/api/agent` is reduced to a lightweight orchestrator.
 
 ### Durable Async Job Runtime
 
-- [ ] **JOB-01**: ATS enhancement, target-job rewriting, and artifact generation have durable persisted job records with explicit type, status, stage, progress, timestamps, and terminal result or error references.
-- [ ] **JOB-02**: ATS enhancement and target-job rewriting run outside the request path without changing their current business logic, validation semantics, or output persistence behavior.
+- [x] **JOB-01**: ATS enhancement, target-job rewriting, and artifact generation have durable persisted job records with explicit type, status, stage, progress, timestamps, and terminal result or error references.
+- [x] **JOB-02**: ATS enhancement and target-job rewriting run outside the request path without changing their current business logic, validation semantics, or output persistence behavior.
 
 ### Artifact and State Coherence
 
-- [ ] **ART-01**: Artifact generation runs outside the request path and records which resume snapshot or version produced each generated file.
-- [ ] **STATE-01**: Async failures preserve the previous valid `optimizedCvState`, and preview plus generated outputs keep using the correct effective source between `optimizedCvState` and canonical `cvState`.
+- [x] **ART-01**: Artifact generation runs outside the request path and records which resume snapshot or version produced each generated file.
+- [x] **STATE-01**: Async failures preserve the previous valid `optimizedCvState`, and preview plus generated outputs keep using the correct effective source between `optimizedCvState` and canonical `cvState`.
 
 ### Observability and Stabilization
 
-- [ ] **OBS-01**: UI and operators can query or stream job status, stage, progress, and terminal completion or failure state for ATS, targeting, and artifact work.
-- [ ] **TEST-01**: Regression coverage proves sync chat behavior, async dispatch, worker success and failure paths, snapshot consistency, and safe async integration under the new execution model.
+- [x] **OBS-01**: UI and operators can query or stream job status, stage, progress, and terminal completion or failure state for ATS, targeting, and artifact work.
+- [x] **TEST-01**: Regression coverage proves sync chat behavior, async dispatch, worker success and failure paths, snapshot consistency, and safe async integration under the new execution model.
 
 ## Future Requirements
 
@@ -46,14 +46,14 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ORCH-01 | Phase 38 | Planned |
-| ORCH-02 | Phase 38 | Planned |
-| JOB-01 | Phase 37 | Planned |
-| JOB-02 | Phase 39 | Planned |
-| ART-01 | Phase 39 | Planned |
-| STATE-01 | Phase 39 | Planned |
-| OBS-01 | Phase 40 | Planned |
-| TEST-01 | Phase 40 | Planned |
+| ORCH-01 | Phase 38 | Complete |
+| ORCH-02 | Phase 38 | Complete |
+| JOB-01 | Phase 37 | Complete |
+| JOB-02 | Phase 39 | Complete |
+| ART-01 | Phase 39 | Complete |
+| STATE-01 | Phase 39 | Complete |
+| OBS-01 | Phase 40 | Complete |
+| TEST-01 | Phase 40 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 8 total

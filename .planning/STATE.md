@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.6
-milestone_name: milestone
+milestone_name: async agent orchestration and background job runtime
 current_phase: 40
 current_phase_name: integrate status flow, observability, and stabilization
-current_plan: Not started
-status: executing
-stopped_at: Phase 39 execution complete
-last_updated: "2026-04-17T00:11:02.372Z"
-last_activity: 2026-04-17 -- Phase 40 planning complete
+current_plan: completed
+status: completed
+stopped_at: Phase 40 execution complete
+last_updated: "2026-04-17T00:38:00.000Z"
+last_activity: 2026-04-17 -- Phase 40 complete; milestone v1.6 ready for audit
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -24,27 +24,27 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Phase 40 - integrate status flow, observability, and stabilization
+**Current focus:** Milestone v1.6 complete - ready for audit and archival closeout
 
 ## Current Position
 
-Phase: 40 (integrate status flow, observability, and stabilization) - NEXT
-Plan: Not started
+Phase: 40 (integrate status flow, observability, and stabilization) - COMPLETE
+Plan: 01 complete
 Current Phase: 40
 Current Phase Name: integrate status flow, observability, and stabilization
-Current Plan: Not started
+Current Plan: Completed
 Total Plans in Phase: 1
-Status: Ready to execute
-Last activity: 2026-04-17 -- Phase 40 planning complete
-Last Activity Description: Phase 40 planning complete — 1 plans ready
+Status: Milestone complete
+Last activity: 2026-04-17
+Last Activity Description: Phase 40 complete; milestone v1.6 ready for audit
 
-Progress: [########--] 75%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 73
+- Total plans completed: 74
 - Milestones archived: 5
 
 ## Accumulated Context
@@ -74,6 +74,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 37 completed: durable job contracts, source-of-truth helpers, and fenced repository semantics were frozen
 - Phase 38 completed: `/api/agent` became a lightweight orchestrator with async durable dispatch handoff
 - Phase 39 completed: ATS, targeting, and artifact generation moved behind same-app durable processors with preserved last-good optimized state
+- Phase 40 completed: canonical job status reads, artifact lifecycle polling, and correlated async observability now make the durable execution model visible end to end
 
 ### Decisions
 
@@ -83,22 +84,22 @@ Recent decisions affecting the next cycle:
 - Critical resume transformation logic now lives in deterministic backend pipelines instead of optional chat decisions.
 - `cvState` remains canonical truth and `agentState` remains operational context.
 - Security, billing, file-access, and JSON persistence work now prefer route-level proof plus explicit non-claims over implicit trust.
-- The main async refactor must preserve `/api/agent` as the public entry point and keep lightweight chat synchronous.
+- The main async refactor preserved `/api/agent` as the public entry point and kept lightweight chat synchronous.
 - Heavy ATS, targeting, and artifact work now dispatch through durable in-process jobs instead of running in request-bound routes.
-- Shared async execution contracts and durable result refs are already frozen; Phase 40 should consume them rather than redefining them.
+- Shared async execution contracts and durable result refs remained stable across Phases 37-40; UI and operators now consume those same contracts directly.
 
 ### Pending Todos
 
-- Execute Phase 40.
+- Run `/gsd-audit-milestone`
+- Then run `/gsd-complete-milestone`
 
 ### Blockers or Concerns
 
 - No active implementation blocker is currently known.
-- Phase 40 should expose durable job status and observability without reopening the contracts frozen in Phases 37-39.
-- Any new UI or SSE status surface should preserve the brownfield funnel and reuse the canonical `JobStatusSnapshot` read model.
+- Milestone closeout should verify archive-readiness and decide whether to accept or address the pre-existing Radix dialog ref warning surfaced in `resume-workspace` tests.
 
 ## Session Continuity
 
-Last session: 2026-04-16T23:09:53.769Z
-Stopped at: Phase 40 planning complete
+Last session: 2026-04-17T00:38:00.000Z
+Stopped at: Phase 40 execution complete
 Resume file: .planning/ROADMAP.md
