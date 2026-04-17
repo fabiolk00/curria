@@ -27,7 +27,7 @@ import Footer from "@/components/landing/footer"
 import Header from "@/components/landing/header"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { cn } from "@/lib/utils"
-import type { RoleLandingConfig, RoleLandingVisualVariant } from "@/lib/seo/role-landing-config"
+import { allRoleLandingConfigs, type InternalLink, type RoleLandingConfig, type RoleLandingVisualVariant } from "@/lib/seo/role-landing-config"
 
 const reveal: Variants = {
   hidden: { opacity: 0, y: 28 },
@@ -142,6 +142,29 @@ const themeByVariant: Record<RoleLandingVisualVariant, Theme> = {
   },
 }
 
+const carouselImageByVariant: Record<RoleLandingVisualVariant, string> = {
+  default: "/images/seo/ats-guide.jpg",
+  developer: "/images/seo/developer-career.jpg",
+  data_analyst: "/images/seo/data-analyst-career.jpg",
+  data_engineer: "/images/seo/ats-guide.jpg",
+  marketing: "/images/seo/marketing-career.jpg",
+  customer_success: "/images/seo/ats-guide.jpg",
+  product_manager: "/images/seo/ats-guide.jpg",
+  sales: "/images/seo/marketing-career.jpg",
+  finance: "/images/seo/ats-guide.jpg",
+}
+
+function getRelatedSeoPages(currentSlug: string): InternalLink[] {
+  return allRoleLandingConfigs
+    .filter((entry) => entry.slug !== currentSlug)
+    .map((entry) => ({
+      label: entry.roleShort,
+      href: `/${entry.slug}`,
+      description: entry.hero.subtitle,
+      image: carouselImageByVariant[entry.visualVariant ?? "default"],
+    }))
+}
+
 function Section({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.section
@@ -233,8 +256,8 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
               ))}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              {["Front-end", "Cloud", "Observabilidade"].map((item) => (
-                <div key={item} className="rounded-full border border-sky-200/80 bg-sky-50/70 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">
+              {["Front-end", "Cloud"].map((item) => (
+                <div key={item} className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                   {item}
                 </div>
               ))}
@@ -346,7 +369,7 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {["Meta batida", "Receita gerada", "Conversão", "CRM", "Pipeline/Funil", "Growth"].map((item) => (
-                <span key={item} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-700">{item}</span>
+                <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">{item}</span>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -355,8 +378,8 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
                 ["SAP", "SAP CRM"],
                 ["MS", "Dynamics"],
               ].map(([short, label]) => (
-                <div key={label} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-50 text-[10px] text-orange-700">{short}</span>
+                <div key={label} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-700">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-emerald-700">{short}</span>
                   {label}
                 </div>
               ))}
@@ -407,7 +430,7 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {["Onboarding", "Retenção", "Churn", "NPS/CSAT", "Expansion Revenue", "Customer Lifecycle"].map((item) => (
-                <span key={item} className="rounded-full border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-medium text-teal-700">{item}</span>
+                <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">{item}</span>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -416,8 +439,8 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
                 ["SAP", "SAP CRM"],
                 ["MS", "Dynamics"],
               ].map(([short, label]) => (
-                <div key={label} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[10px] text-teal-700">{short}</span>
+                <div key={label} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-700">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-emerald-700">{short}</span>
                   {label}
                 </div>
               ))}
@@ -502,15 +525,15 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
               </div>
               <PieChart className="h-5 w-5 text-violet-300" />
             </div>
-            <div className="mt-10 flex flex-1 items-center justify-center">
-              <div className="relative h-40 w-40 rounded-full bg-[conic-gradient(#8b5cf6_0_42%,#38bdf8_42%_72%,#c084fc_72%_100%)]">
-                <div className="absolute inset-6 rounded-full bg-slate-950" />
-              </div>
-            </div>
             <div className="mt-6 grid gap-2 text-sm text-white/72">
               <div className="flex items-center justify-between"><span>BI</span><span>42%</span></div>
               <div className="flex items-center justify-between"><span>Produto</span><span>30%</span></div>
               <div className="flex items-center justify-between"><span>Growth</span><span>28%</span></div>
+            </div>
+            <div className="mt-auto flex items-end justify-center pt-8">
+              <div className="relative h-40 w-40 rounded-full bg-[conic-gradient(#8b5cf6_0_42%,#38bdf8_42%_72%,#c084fc_72%_100%)]">
+                <div className="absolute inset-6 rounded-full bg-slate-950" />
+              </div>
             </div>
           </div>
         </div>
@@ -527,7 +550,7 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Narrativa de campanha</p>
-                <p className="mt-2 text-xl font-semibold text-slate-950">Notícia, mídia e distribuição</p>
+                <p className="mt-2 max-w-[12ch] text-xl font-semibold leading-[1.15] text-slate-950">Notícia, mídia e distribuição</p>
               </div>
               <Newspaper className="h-5 w-5 text-rose-600" />
             </div>
@@ -539,27 +562,29 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
           </div>
           <div className="flex min-h-[348px] flex-col rounded-[30px] border border-white/10 bg-slate-950 p-5 text-white shadow-[0_28px_70px_rgba(2,6,23,0.28)]">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Performance</p>
-                <p className="mt-2 text-xl font-semibold">Distribuição e resultado</p>
+                <p className="mt-2 max-w-[12ch] text-[1.9rem] font-semibold leading-[1.05] text-white">Distribuição e resultado</p>
               </div>
               <Megaphone className="mt-1 h-5 w-5 text-rose-300" />
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="mt-7 grid grid-cols-3 gap-2.5">
               {[["CTR", "3.4%"], ["ROAS", "4.8x"], ["CAC", "-22%"]].map(([label, value]) => (
-                <div key={label} className="rounded-[22px] bg-white/6 px-4 py-5">
+                <div key={label} className="min-w-0 rounded-[20px] bg-white/6 px-3 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{label}</p>
-                  <p className="mt-2 text-[2rem] font-semibold leading-none">{value}</p>
+                  <p className="mt-2 text-[1.8rem] font-semibold leading-none tracking-[-0.03em]">{value}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-auto rounded-[22px] bg-[linear-gradient(90deg,rgba(244,63,94,0.18),rgba(251,146,60,0.12))] p-4">
-              <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                <span>Volume por canal</span>
-                <span>Semanal</span>
-              </div>
-              <div className="flex h-28 items-end gap-2 rounded-[18px] bg-black/10 px-3 pb-3 pt-6">
-                {[32, 54, 42, 78, 64, 88, 74].map((height, index) => <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-rose-500 to-orange-400" style={{ height: `${height}%` }} />)}
+            <div className="mt-auto pt-8">
+              <div className="rounded-[22px] bg-[linear-gradient(90deg,rgba(244,63,94,0.18),rgba(251,146,60,0.12))] p-4">
+                <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                  <span>Volume por canal</span>
+                  <span>Semanal</span>
+                </div>
+                <div className="flex h-36 items-end gap-2 rounded-[18px] bg-black/10 px-3 pb-3 pt-10">
+                  {[32, 54, 42, 78, 64, 88, 74].map((height, index) => <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-rose-500 to-orange-400" style={{ height: `${height}%` }} />)}
+                </div>
               </div>
             </div>
           </div>
@@ -602,6 +627,7 @@ function HeroVisual({ config, theme }: { config: RoleLandingConfig; theme: Theme
 export default function SeoRoleLandingPage({ config }: { config: RoleLandingConfig }) {
   const theme = themeByVariant[config.visualVariant ?? "default"]
   const resumeSections = [config.resumeSections.summary, config.resumeSections.skills, config.resumeSections.experience]
+  const relatedSeoPages = getRelatedSeoPages(config.slug)
   const relatedScrollRef = useRef<HTMLDivElement>(null)
   const isDraggingRelatedRef = useRef(false)
   const relatedStartXRef = useRef(0)
@@ -704,14 +730,14 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
               </div>
               <div className="bg-slate-950 p-8 text-white md:p-10">
                 <div className="max-w-2xl">
-                  <Label icon={<LineChart className={cn("h-4 w-4", theme.darkAccent)} />} className="text-white/55">Leitura ATS</Label>
+                  <Label icon={<LineChart className="h-4 w-4 text-emerald-300" />} className="text-white/55">Leitura ATS</Label>
                   <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em]">{config.atsExplanation.title}</h2>
                   <p className="mt-4 text-base leading-8 text-white/72">{config.atsExplanation.description}</p>
                 </div>
                 <div className="mt-8 divide-y divide-white/10">
                   {config.atsExplanation.whatRecruitersScan.map((item, index) => (
                     <div key={item} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
-                      <div className={cn("flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold", theme.darkAccent)}>{index + 1}</div>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/10 text-sm font-semibold text-emerald-300">{index + 1}</div>
                       <p className="text-sm leading-7 text-white/78">{item}</p>
                     </div>
                   ))}
@@ -723,34 +749,37 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
 
         <Section className="pt-10">
           <Surface>
-            <div className="grid xl:grid-cols-[1.16fr_0.84fr]">
-              <div className="border-b border-slate-200/80 p-8 md:p-10 xl:border-b-0 xl:border-r">
-                <div className="max-w-2xl">
-                  <Label icon={<ShieldCheck className={cn("h-4 w-4", theme.accentText)} />}>Palavras-chave e sinais da vaga</Label>
-                  <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-slate-950">Palavras-chave importantes para {config.roleShort}</h2>
-                </div>
-                <div className="mt-8 divide-y divide-slate-200/80">
-                  {config.keywords.map((keyword) => (
-                    <div key={keyword.term} className="grid gap-3 py-4 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-6">
-                      <p className="text-base font-semibold text-slate-950">{keyword.term}</p>
-                      <p className="text-sm leading-7 text-slate-600">{keyword.description}</p>
-                    </div>
-                  ))}
-                </div>
+            <div className="p-8 md:p-10">
+              <div className="max-w-2xl">
+                <Label icon={<ShieldCheck className={cn("h-4 w-4", theme.accentText)} />}>Palavras-chave e sinais da vaga</Label>
+                <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-slate-950">Palavras-chave importantes para {config.roleShort}</h2>
               </div>
-              <div className="p-8 md:p-10">
-                <Label icon={<CircleAlert className="h-4 w-4 text-amber-500" />}>Erros que travam a leitura</Label>
-                <div className="mt-7 divide-y divide-slate-200/80">
-                  {config.commonMistakes.map((item, index) => (
-                    <div key={item.mistake} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700">{String(index + 1).padStart(2, "0")}</div>
-                      <div>
-                        <p className="font-semibold text-slate-950">{item.mistake}</p>
-                        <p className="mt-2 text-sm leading-7 text-slate-600">{item.fix}</p>
-                      </div>
+              <div className="mt-8 divide-y divide-slate-200/80">
+                {config.keywords.map((keyword) => (
+                  <div key={keyword.term} className="grid gap-3 py-4 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-6">
+                    <p className="text-base font-semibold text-slate-950">{keyword.term}</p>
+                    <p className="text-sm leading-7 text-slate-600">{keyword.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Surface>
+        </Section>
+
+        <Section className="pt-6 md:pt-8">
+          <Surface>
+            <div className="p-8 md:p-10">
+              <Label icon={<CircleAlert className="h-4 w-4 text-amber-500" />}>Erros que travam a leitura</Label>
+              <div className="mt-7 divide-y divide-slate-200/80">
+                {config.commonMistakes.map((item, index) => (
+                  <div key={item.mistake} className="grid gap-4 py-5 md:grid-cols-[auto_1fr]">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700">{String(index + 1).padStart(2, "0")}</div>
+                    <div>
+                      <p className="font-semibold text-slate-950">{item.mistake}</p>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">{item.fix}</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
           </Surface>
@@ -758,59 +787,62 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
 
         <Section className="pt-10">
           <Surface>
-            <div className="grid xl:grid-cols-[1.05fr_0.95fr]">
-              <div className="border-b border-slate-200/80 p-8 md:p-10 xl:border-b-0 xl:border-r">
-                <div className="max-w-2xl">
-                  <Label icon={<BarChart3 className={cn("h-4 w-4", theme.accentText)} />}>Recortes da área</Label>
-                  <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-slate-950">Adapte o currículo ao recorte certo da área</h2>
-                </div>
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {config.specializations.map((specialization) => (
-                    <div key={specialization.title} className="border-t border-slate-200/80 pt-4">
-                      <h3 className="text-lg font-semibold text-slate-950">{specialization.title}</h3>
-                      <p className="mt-3 text-sm leading-7 text-slate-600">{specialization.description}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {specialization.keywords.map((keyword) => (
-                          <span key={keyword} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="p-8 md:p-10">
+              <div className="max-w-2xl">
+                <Label icon={<BarChart3 className={cn("h-4 w-4", theme.accentText)} />}>Recortes da área</Label>
+                <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-slate-950">Adapte o currículo ao recorte certo da área</h2>
               </div>
-              <div className="p-8 md:p-10">
-                <Label icon={<BriefcaseBusiness className={cn("h-4 w-4", theme.accentText)} />}>Senioridade e posicionamento</Label>
-                <div className="mt-7 divide-y divide-slate-200/80">
-                  {config.seniorityLevels.map((level) => (
-                    <div key={level.level} className="py-5">
-                      <h3 className="text-lg font-semibold text-slate-950">{level.level}</h3>
-                      <p className="mt-3 text-sm leading-7 text-slate-600">{level.focus}</p>
-                      <ul className="mt-4 space-y-2">
-                        {level.tips.map((tip) => (
-                          <li key={tip} className="flex items-start gap-3 text-sm leading-7 text-slate-600">
-                            <CheckCircle2 className={cn("mt-1 h-4 w-4 shrink-0", theme.accentText)} />
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                {config.positioningMistakes?.length ? (
-                  <div className="mt-8 border-t border-slate-200/80 pt-8">
-                    <Label icon={<CircleAlert className="h-4 w-4 text-amber-500" />}>Erros de posicionamento</Label>
-                    <div className="mt-4 space-y-3">
-                      {config.positioningMistakes.map((mistake) => (
-                        <div key={mistake} className="border-l-2 border-amber-200 pl-4">
-                          <p className="text-sm leading-7 text-slate-600">{mistake}</p>
-                        </div>
+              <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {config.specializations.map((specialization) => (
+                  <div key={specialization.title} className="border-t border-slate-200/80 pt-4">
+                    <h3 className="text-lg font-semibold text-slate-950">{specialization.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{specialization.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {specialization.keywords.map((keyword) => (
+                        <span key={keyword} className="rounded-full border border-emerald-200 bg-emerald-50/70 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                          {keyword}
+                        </span>
                       ))}
                     </div>
                   </div>
-                ) : null}
+                ))}
               </div>
+            </div>
+          </Surface>
+        </Section>
+
+        <Section className="pt-6 md:pt-8">
+          <Surface>
+            <div className="p-8 md:p-10">
+              <Label icon={<BriefcaseBusiness className={cn("h-4 w-4", theme.accentText)} />}>Senioridade e posicionamento</Label>
+              <div className="mt-7 divide-y divide-slate-200/80">
+                {config.seniorityLevels.map((level) => (
+                  <div key={level.level} className="py-5">
+                    <h3 className="text-lg font-semibold text-slate-950">{level.level}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{level.focus}</p>
+                    <ul className="mt-4 space-y-2">
+                      {level.tips.map((tip) => (
+                        <li key={tip} className="flex items-start gap-3 text-sm leading-7 text-slate-600">
+                          <CheckCircle2 className={cn("mt-1 h-4 w-4 shrink-0", theme.accentText)} />
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              {config.positioningMistakes?.length ? (
+                <div className="mt-8 border-t border-slate-200/80 pt-8">
+                  <Label icon={<CircleAlert className="h-4 w-4 text-amber-500" />}>Erros de posicionamento</Label>
+                  <div className="mt-4 space-y-3">
+                    {config.positioningMistakes.map((mistake) => (
+                      <div key={mistake} className="border-l-2 border-amber-200 pl-4">
+                        <p className="text-sm leading-7 text-slate-600">{mistake}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </Surface>
         </Section>
@@ -887,26 +919,25 @@ export default function SeoRoleLandingPage({ config }: { config: RoleLandingConf
 
         <Section className="pt-10">
           <div className="overflow-hidden rounded-[32px] border border-white/70 bg-white/90 p-8 shadow-[0_24px_90px_rgba(15,23,42,0.06)] md:p-10">
-            <div className="mb-8 grid gap-4 md:grid-cols-[0.8fr_1.2fr] md:items-end">
+            <div className="mb-8">
               <div className="max-w-2xl">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Páginas relacionadas</p>
                 <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Explore outros guias de currículo ATS</h2>
               </div>
-              <p className="max-w-2xl text-sm leading-7 text-slate-600 md:justify-self-end md:text-base">Esse é o carrossel das SEO pages. Aqui a navegação fica mais editorial, maior e com mais presença visual.</p>
             </div>
             <div className="relative -mx-8 md:-mx-10">
               <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-white to-transparent md:w-16" />
               <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent md:w-16" />
               <div ref={relatedScrollRef} onMouseDown={onRelatedMouseDown} onMouseLeave={onRelatedMouseLeave} onMouseUp={onRelatedMouseUp} onMouseMove={onRelatedMouseMove} className="cursor-grab overflow-x-auto px-8 pb-2 select-none touch-pan-y active:cursor-grabbing md:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="flex w-max gap-5 pr-8 md:gap-6 md:pr-10">
-                  {config.internalLinks.map((link, index) => (
+                  {relatedSeoPages.map((link, index) => (
                     <Link key={link.href} href={link.href} onClick={(e) => { if (relatedMovedRef.current) e.preventDefault() }} className={[ "group relative shrink-0 overflow-hidden rounded-[30px] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.10)]", index === 0 ? "w-[332px] md:w-[400px]" : "w-[300px] md:w-[340px]"].join(" ")}>
                       <div className="relative min-h-[430px] md:min-h-[520px]">
                         <Image src={link.image} alt={link.label} fill className="object-cover transition duration-500 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
                         <div className="absolute inset-x-0 bottom-0 p-6 md:p-7">
                           <p className="text-2xl font-semibold text-white md:text-[2rem] md:leading-[1.02]">{link.label}</p>
-                          <p className="mt-3 max-w-[28ch] text-base leading-7 text-white/80">{link.description}</p>
+                          <p className="mt-3 line-clamp-3 max-w-[28ch] text-base leading-7 text-white/80">{link.description}</p>
                           <div className="mt-5 inline-flex items-center gap-2 text-base font-medium text-white">Ver página<ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></div>
                         </div>
                       </div>
