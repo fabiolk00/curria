@@ -1,7 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 
 import { embeddedClerkLocalizationPtBr } from "@/components/auth/clerk-localization"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
@@ -60,9 +63,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider localization={embeddedClerkLocalizationPtBr}>
-      <html lang="pt-BR" suppressHydrationWarning>
+      <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable}`}>
         <head />
-        <body>
+        <body className="font-sans">
           <ThemeProvider>
             <TooltipProvider delayDuration={300}>
               {children}
