@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { UserButton, useAuth } from "@clerk/nextjs"
 import {
   Menu,
@@ -48,7 +48,7 @@ const dropdownColumns: Array<{
   items: DropdownItem[]
 }> = [
   {
-    title: "Tecnologia e Dados",
+    title: "Tech & Data",
     items: [
       {
         label: "Desenvolvedor",
@@ -77,7 +77,7 @@ const dropdownColumns: Array<{
     ],
   },
   {
-    title: "Negócios e Crescimento",
+    title: "Business & Growth",
     items: [
       {
         label: "Marketing",
@@ -89,19 +89,19 @@ const dropdownColumns: Array<{
         label: "Vendas",
         href: "/curriculo-vendas-ats",
         icon: TrendingUp,
-        description: "Meta, Receita, ConversÃƒÂ£o",
+        description: "Meta, Receita, Conversão",
       },
       {
         label: "Customer Success",
         href: "/curriculo-customer-success-ats",
         icon: Users,
-        description: "Onboarding, RetenÃƒÂ§ÃƒÂ£o, ExpansÃƒÂ£o",
+        description: "Onboarding, Retenção, Expansão",
       },
       {
         label: "Financeiro",
         href: "/curriculo-financeiro-ats",
         icon: Wallet,
-        description: "Controle, Indicadores, GestÃƒÂ£o",
+        description: "Controle, Indicadores, Gestão",
       },
     ],
   },
@@ -122,13 +122,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  const closeMobileMenu = () => {
+    setMobileAreasOpen(false)
+    setMobileOpen(false)
+  }
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-4">
       <header
         className={cn(
           "w-full max-w-5xl rounded-2xl border border-border/50 bg-white/80 backdrop-blur-xl transition-all duration-300",
           scrolled
-            ? "shadow-[0_8px_32px_rgba(0,0,0,0.10)] border-border/60 bg-white/90"
+            ? "border-border/60 bg-white/90 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
             : "shadow-[0_2px_16px_rgba(0,0,0,0.06)]",
         )}
       >
@@ -149,7 +154,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="group flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted/60 hover:text-foreground">
-                  CurrÃƒÂ­culos por ÃƒÂrea
+                  Currículos por Área
                   <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -232,15 +237,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
               variant="ghost"
               size="icon"
               className="ml-1 rounded-xl md:hidden"
-              onClick={() =>
-                setMobileOpen((v) => {
-                  const next = !v
+              onClick={() => {
+                onMenuClick?.()
+                setMobileOpen((value) => {
+                  const next = !value
                   if (!next) {
                     setMobileAreasOpen(false)
                   }
                   return next
                 })
-              }
+              }}
               aria-label="Menu"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -255,76 +261,57 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => {
-                    setMobileAreasOpen(false)
-                    setMobileOpen(false)
-                  }}
+                  onClick={closeMobileMenu}
                   className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setMobileAreasOpen((v) => !v)}
-                  aria-expanded={mobileAreasOpen}
-                  aria-controls="mobile-areas-menu"
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground/60 transition-colors hover:bg-muted/60"
-                >
-                  <span>CurrÃ­culos por Ãrea</span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform duration-200",
-                      mobileAreasOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-                {mobileAreasOpen && (
-                  <div id="mobile-areas-menu" className="mt-1 flex flex-col gap-1">
-                    {mobileDropdownItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => {
-                          setMobileAreasOpen(false)
-                          setMobileOpen(false)
-                        }}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                      >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <item.icon className="h-3.5 w-3.5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{item.label}</p>
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {showAuthButtons && (
-                <div className="mt-3 flex flex-col gap-2 border-t border-border/40 pt-3">
-                  <Button asChild variant="outline" className="w-full rounded-xl">
+
+              <button
+                type="button"
+                onClick={() => setMobileAreasOpen((value) => !value)}
+                className="mt-2 flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground/70 transition-colors hover:bg-muted/50"
+              >
+                <span>Currículos por Área</span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    mobileAreasOpen && "rotate-180",
+                  )}
+                />
+              </button>
+
+              {mobileAreasOpen && (
+                <div className="mt-1 flex flex-col gap-1">
+                  {mobileDropdownItems.map((item) => (
                     <Link
-                      href="/login"
-                      onClick={() => {
-                        setMobileAreasOpen(false)
-                        setMobileOpen(false)
-                      }}
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-muted/60"
                     >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{item.label}</p>
+                        <p className="truncate text-xs text-muted-foreground">{item.description}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {showAuthButtons && (
+                <div className="mt-4 flex flex-col gap-2 border-t border-border/40 pt-4">
+                  <Button asChild variant="outline" className="w-full rounded-xl">
+                    <Link href="/login" onClick={closeMobileMenu}>
                       Entrar
                     </Link>
                   </Button>
                   <Button asChild className="w-full rounded-xl">
-                    <Link
-                      href="/signup"
-                      onClick={() => {
-                        setMobileAreasOpen(false)
-                        setMobileOpen(false)
-                      }}
-                    >
+                    <Link href="/signup" onClick={closeMobileMenu}>
                       Criar conta
                     </Link>
                   </Button>
