@@ -146,9 +146,108 @@ export default function SeoRoleLandingPage({ config }: SeoRoleLandingPageProps) 
           </div>
         </motion.section>
 
+        {/* Real Example Section (conditional - strong conversion block) */}
+        {config.realExample && (
+          <motion.section
+            className="py-16 md:py-24"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <div className="container mx-auto max-w-4xl px-4">
+              <motion.div variants={itemVariants} className="mb-8 text-center">
+                <div className="mb-6 inline-flex items-center justify-center rounded-2xl bg-green-500/10 p-4 text-green-500">
+                  <TrendingUp className="h-8 w-8" />
+                </div>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+                  {config.realExample.title}
+                </h2>
+                <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                  Veja a diferença que faz ser específico e mostrar resultados reais.
+                </p>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-2">
+                {/* Before */}
+                <div className="rounded-[2rem] border-2 border-destructive/20 bg-card p-8">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="rounded-full bg-destructive/10 p-2">
+                      <XCircle className="h-5 w-5 text-destructive" />
+                    </div>
+                    <span className="text-sm font-semibold uppercase tracking-wider text-destructive">Antes</span>
+                  </div>
+                  <p className="text-lg text-muted-foreground italic">&quot;{config.realExample.before}&quot;</p>
+                </div>
+
+                {/* After */}
+                <div className="rounded-[2rem] border-2 border-green-500/30 bg-card p-8">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="rounded-full bg-green-500/10 p-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    </div>
+                    <span className="text-sm font-semibold uppercase tracking-wider text-green-500">Depois</span>
+                  </div>
+                  <p className="text-lg text-foreground">&quot;{config.realExample.after}&quot;</p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="mt-8 text-center">
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Resultados específicos e mensuráveis fazem toda a diferença para o ATS e recrutadores.
+                </p>
+              </motion.div>
+            </div>
+          </motion.section>
+        )}
+
+        {/* Positioning Mistakes Section (conditional) */}
+        {config.positioningMistakes && config.positioningMistakes.length > 0 && (
+          <motion.section
+            className="py-16 md:py-24"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <div className="container mx-auto max-w-4xl px-4">
+              <motion.div 
+                variants={itemVariants} 
+                className="rounded-[2rem] border-2 border-orange-500/30 bg-orange-500/5 p-8 md:p-12"
+              >
+                <div className="mb-6 flex items-center gap-4">
+                  <div className="rounded-xl bg-orange-500/10 p-3">
+                    <AlertTriangle className="h-6 w-6 text-orange-500" />
+                  </div>
+                  <h2 className="text-2xl font-bold md:text-3xl">
+                    Você pode estar se vendendo errado se...
+                  </h2>
+                </div>
+                <ul className="space-y-4">
+                  {config.positioningMistakes.map((mistake, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+                      <span className="text-muted-foreground">{mistake}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8">
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 font-semibold text-white transition-all hover:bg-orange-600"
+                  >
+                    Analisar meu posicionamento
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+          </motion.section>
+        )}
+
         {/* Common Mistakes Section */}
         <motion.section
-          className="py-16 md:py-24"
+          className="bg-muted/30 py-16 md:py-24"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"

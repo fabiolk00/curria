@@ -143,6 +143,16 @@ export type RoleLandingConfig = {
   // NEW: Internal links for SEO
   internalLinks: InternalLink[]
   
+  // Positioning mistakes (optional - shows "you might be selling yourself wrong" section)
+  positioningMistakes?: string[]
+  
+  // Real campaign/project example (optional - strong conversion block)
+  realExample?: {
+    title: string
+    before: string
+    after: string
+  }
+  
   // FAQs - expanded with full answers
   faqs: RoleFaq[]
 }
@@ -704,8 +714,8 @@ export const marketingConfig: RoleLandingConfig = {
   hero: {
     h1: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave)",
     subtitle: "Você otimiza campanhas, mas seu currículo pode estar sendo rejeitado antes mesmo de ser lido. Sistemas ATS filtram candidatos automaticamente, e a maioria dos profissionais de marketing não sabe por que nunca recebe retorno. Veja exatamente o que corrigir.",
-    ctaText: "Veja seu score ATS em 30 segundos",
-    ctaSubtext: "Cole seu currículo e descubra o que está errado",
+    ctaText: "Descubra por que seu currículo não gera entrevistas",
+    ctaSubtext: "Análise gratuita com score ATS e correções específicas",
   },
   
   problem: {
@@ -925,10 +935,24 @@ internalLinks: [
     { label: "Analisar meu currículo", href: "/signup", description: "Receba seu score ATS gratuitamente", image: "/images/seo/marketing-career.jpg" },
   ],
   
+  positioningMistakes: [
+    "Não define especialidade clara (Performance? SEO? Growth? Conteúdo?)",
+    "Mistura branding + performance sem mostrar clareza estratégica",
+    "Não mostra impacto financeiro das campanhas (falta ROI, receita gerada)",
+    "Usa termos genéricos como 'marketing digital' sem especificar canais",
+    "Não conecta métricas a resultados de negócio",
+  ],
+  
+  realExample: {
+    title: "Exemplo de campanha real no currículo",
+    before: "Gerenciei campanhas de marketing",
+    after: "Gerenciei campanhas de Google Ads com budget de R$200K/mês, alcançando ROAS 4.2x e reduzindo CAC em 28%, resultando em R$840K de receita incremental no trimestre",
+  },
+  
   faqs: [
     {
       question: "Quais métricas devo incluir no currículo de marketing?",
-      answer: "As métricas mais valorizadas dependem da sua especialidade. Para performance: ROAS, CAC, LTV, CTR, CPC, taxa de conversão. Para SEO: crescimento de tráfego orgânico, posições de ranking, backlinks. Para conteúdo: engajamento, alcance, leads gerados. Sempre conecte métricas a resultados de negócio - 'ROAS de 4x que gerou R$2M em vendas' é mais poderoso que apenas 'ROAS de 4x'.",
+      answer: "CTR, ROAS, CAC, LTV, conversões e crescimento percentual. Sempre contextualize com o canal (Google Ads, Meta Ads, SEO). Métricas mostram impacto real, não só atividade. Para performance: ROAS, CAC, CPA. Para SEO: tráfego orgânico, posições de ranking. Para conteúdo: engajamento, leads gerados. Conecte a resultados financeiros quando possível.",
     },
     {
       question: "Marketing tradicional ainda vale no currículo?",
