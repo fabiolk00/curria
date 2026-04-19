@@ -109,7 +109,7 @@ export default function CustomerSuccessPage() {
         )
       }}
       content={{
-        heroTitle: "Currículo de CS para Alta Conversão no ATS",
+        heroTitle: "Currículo de Customer Success para alta Conversão no ATS",
         heroSubtitle: "Destaque seu valor estratégico com métricas de NRR, renovação e expansão. Faça o ATS entender que você não é apenas suporte.",
         problemCards: [
           { title: "Confundido com Suporte", desc: "Escrever bullet points focados em responder e-mails ou fechar tickets (Zendesk) no lugar do gerenciamento pró-ativo de carteiras de clientes e revisões de negócios (EBRs)." },

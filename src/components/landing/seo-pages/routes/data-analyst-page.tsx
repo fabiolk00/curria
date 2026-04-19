@@ -65,7 +65,7 @@ export default function DataAnalystPage() {
         )
       }}
       content={{
-        heroTitle: "Currículo de Analista Estruturado para o ATS",
+        heroTitle: "Currículo de Analista de Dados estruturado para o ATS",
         heroSubtitle: "Transforme suas habilidades de SQL, Python e BI em um formato legível para algoritmos e irresistível para recrutadores.",
         problemCards: [
           { title: "Consultas SQL Escondidas", desc: "Listar 'SQL' apenas uma vez no final, em vez de detalhar joins complexos, CTEs e window functions na sua experiência." },

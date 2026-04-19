@@ -80,7 +80,7 @@ export default function ProductManagerPage() {
         )
       }}
       content={{
-        heroTitle: "Currículos de PM Projetados para Escalar",
+        heroTitle: "Currículos de Product Manager otimizado para ATS",
         heroSubtitle: "Traduza sua visão estratégica em métricas objetivas. Mostre aos algoritmos como você lidera squads e entrega resultados reais de negócio.",
         problemCards: [
           { title: "Esquecer o 'Porquê'", desc: "Listar features que você construiu sem explicar o problema do cliente ou o resultado para o negócio (ROI/Receita)." },

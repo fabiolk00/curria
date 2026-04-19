@@ -13,7 +13,7 @@ export default function FinancePage() {
         accent: "bg-slate-700",
         bgAccent: "bg-slate-500/10",
         textAccent: "text-slate-600",
-        badgeLabel: "Guia de CurrÃ­culo Financeiro",
+        badgeLabel: "Guia de currículo Financeiro",
         icon: <Building2 className="w-6 h-6 text-slate-600" />,
         heroVisual: (
           <div className="w-full h-full flex flex-col justify-end bg-white p-8 rounded-b-xl relative overflow-hidden">
@@ -89,7 +89,7 @@ export default function FinancePage() {
         )
       }}
       content={{
-        heroTitle: "O CurrÃ­culo Financeiro Perfeito para o ATS",
+        heroTitle: "O Currículo Financeiro perfeito para o ATS",
         heroSubtitle: "Traduza suas planilhas em impacto real. Destaque suas habilidades de FP&A, modelagem e reduÃ§Ã£o de custos no formato que os recrutadores buscam.",
         problemCards: [
           { title: "Planilhas NÃ£o Lidas", desc: "Listar 'Excel AvanÃ§ado' repetidamente sem mencionar modelagem de 3-statements, macros ou automaÃ§Ã£o que salvaram dias de trabalho." },

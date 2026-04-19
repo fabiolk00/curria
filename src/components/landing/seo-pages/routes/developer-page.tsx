@@ -58,7 +58,7 @@ export default function DeveloperPage() {
         )
       }}
       content={{
-        heroTitle: "Currículo de Dev Otimizado para ATS",
+        heroTitle: "Currículo de Desenvolvedor otimizado para ATS",
         heroSubtitle: "Pare de ser rejeitado por algoritmos. Formate sua stack e impacto da maneira exata que os parsers e recrutadores buscam.",
         problemCards: [
           { title: "Stack Tecnológica Oculta", desc: "Se você esconder sua stack em parágrafos densos, o parser falha em associar a habilidade aos seus anos de experiência." },
