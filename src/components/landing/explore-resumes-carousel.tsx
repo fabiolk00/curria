@@ -6,6 +6,7 @@ import {
   BarChart2,
   Briefcase,
   Code2,
+  Database,
   Megaphone,
   TrendingUp,
   Users,
@@ -34,6 +35,13 @@ const resumeGuides = [
     href: "/curriculo-analista-dados-ats",
     icon: BarChart2,
     background: "from-sky-700 via-cyan-700 to-teal-600",
+  },
+  {
+    title: "Engenheiro de Dados",
+    subtitle: "Pipelines, ETL, Data Warehouse",
+    href: "/curriculo-engenheiro-de-dados-ats",
+    icon: Database,
+    background: "from-cyan-800 via-sky-700 to-blue-700",
   },
   {
     title: "Product Manager",
