@@ -106,7 +106,10 @@ function collectAsciiCopyIssues(filePath, text) {
       // SEO route slugs and canonicals must stay ASCII-safe in URLs.
       || trimmedLine.includes('/curriculo-')
       || trimmedLine.startsWith('slug:')
+      || trimmedLine.startsWith('slug=')
       || trimmedLine.startsWith('canonical:')
+      || trimmedLine.includes('buildRoleLandingMetadata("curriculo-')
+      || trimmedLine.includes("buildRoleLandingMetadata('curriculo-")
       || trimmedLine.startsWith('"curriculo-')
       || trimmedLine.startsWith("'curriculo-")
     )
