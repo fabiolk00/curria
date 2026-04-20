@@ -2,6 +2,7 @@ import type { ResumeGenerationType } from '@/types/agent'
 import { PLANS, type PlanSlug } from '@/lib/plans'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
+import { logWarn } from '@/lib/observability/structured-log'
 
 type CreditAccountRow = {
   credits_remaining: number
@@ -55,6 +56,17 @@ function normalizeBillingStatus(value: string | null): BillingStatus | null {
   }
 
   return null
+}
+
+function isMissingGenerationBillingInfraError(message: string | undefined): boolean {
+  const normalized = (message ?? '').toLowerCase()
+
+  return (
+    normalized.includes('does not exist')
+    || normalized.includes('relation')
+    || normalized.includes('column')
+    || normalized.includes('type')
+  )
 }
 
 async function setCreditBalance(appUserId: string, creditsRemaining: number): Promise<void> {
@@ -160,7 +172,14 @@ export async function consumeCreditForGeneration(
     p_generation_type: type,
   })
 
-  if (error && error.message.includes('function') && error.message.includes('does not exist')) {
+  if (error && isMissingGenerationBillingInfraError(error.message)) {
+    logWarn('billing.consume_credit_for_generation_fallback', {
+      appUserId,
+      resumeGenerationId,
+      generationType: type,
+      reason: error.message,
+      stage: 'billing',
+    })
     return consumeCredit(appUserId)
   }
 

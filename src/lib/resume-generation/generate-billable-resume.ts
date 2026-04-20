@@ -122,13 +122,36 @@ async function safeUpdateResumeGeneration(
   try {
     return await updateResumeGeneration(input)
   } catch (error) {
-    logWarn('resume_generation.update_failed', {
+    logWarn('resume_generation.persistence_failed', {
       resumeGenerationId: input.id,
       status: input.status,
+      stage: 'persistence',
       ...serializeError(error),
     })
     return null
   }
+}
+
+function logGenerationStageWarning(input: {
+  event: 'resume_generation.render_failed' | 'resume_generation.billing_failed'
+  userId: string
+  sessionId: string
+  targetId?: string
+  resumeGenerationId?: string
+  type: ResumeGenerationType
+  error?: string
+  code?: string
+}): void {
+  logWarn(input.event, {
+    userId: input.userId,
+    sessionId: input.sessionId,
+    targetId: input.targetId,
+    resumeGenerationId: input.resumeGenerationId,
+    generationType: input.type,
+    stage: input.event === 'resume_generation.render_failed' ? 'render' : 'billing',
+    errorMessage: input.error,
+    errorCode: input.code,
+  })
 }
 
 async function completeResumeGenerationBestEffort(input: {
@@ -456,6 +479,17 @@ export async function generateBillableResume(input: {
   )
 
   if (!generationResult.output.success) {
+    logGenerationStageWarning({
+      event: 'resume_generation.render_failed',
+      userId: input.userId,
+      sessionId: input.sessionId,
+      targetId: input.targetId,
+      resumeGenerationId: resumeGeneration.id,
+      type: generationType,
+      error: generationResult.generatedOutput?.error ?? generationResult.output.error,
+      code: generationResult.output.code,
+    })
+
     await safeUpdateResumeGeneration({
       id: resumeGeneration.id,
       status: 'failed',
@@ -475,6 +509,17 @@ export async function generateBillableResume(input: {
   )
 
   if (!creditConsumed) {
+    logGenerationStageWarning({
+      event: 'resume_generation.billing_failed',
+      userId: input.userId,
+      sessionId: input.sessionId,
+      targetId: input.targetId,
+      resumeGenerationId: resumeGeneration.id,
+      type: generationType,
+      error: 'No credits available to finalize this generation.',
+      code: TOOL_ERROR_CODES.INSUFFICIENT_CREDITS,
+    })
+
     await safeUpdateResumeGeneration({
       id: resumeGeneration.id,
       status: 'failed',
