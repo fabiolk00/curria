@@ -134,9 +134,13 @@ Expected anomaly output:
 Run every 15 minutes:
 
 ```sql
-SELECT generation_intent_key,
-       failure_reason,
-       COUNT(*) AS repeated_failures
+SELECT user_id,
+       CASE
+         WHEN failure_reason ILIKE '%release%' THEN 'release'
+         ELSE 'finalize'
+       END AS failure_kind,
+       COUNT(*) AS repeated_failures,
+       COUNT(DISTINCT generation_intent_key) AS affected_intents
 FROM credit_reservations
 WHERE status = 'needs_reconciliation'
   AND created_at > NOW() - INTERVAL '24 hours'
@@ -144,12 +148,12 @@ WHERE status = 'needs_reconciliation'
     failure_reason ILIKE '%finalize%'
     OR failure_reason ILIKE '%release%'
   )
-GROUP BY generation_intent_key, failure_reason
+GROUP BY user_id, failure_kind
 HAVING COUNT(*) >= 2
 ORDER BY repeated_failures DESC;
 ```
 
-Alert if any row is returned.
+Alert if any row is returned. This is intentionally keyed by `user_id` plus failure kind because the reservation model keeps at most one row per `generation_intent_key`.
 
 Repo-native fallback:
 

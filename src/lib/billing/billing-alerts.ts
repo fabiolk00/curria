@@ -94,7 +94,7 @@ function groupRepeatedFailures(
       continue
     }
 
-    const key = `${anomalyKind}:${reservation.userId}:${reservation.generationIntentKey}`
+    const key = `${anomalyKind}:${reservation.userId}`
     const existing = grouped.get(key) ?? []
     existing.push(reservation)
     grouped.set(key, existing)

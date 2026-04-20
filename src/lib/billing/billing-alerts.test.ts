@@ -88,7 +88,7 @@ describe('billing anomaly summaries', () => {
       buildReservation({
         id: 'reservation_finalize_a',
         userId: 'usr_finalize',
-        generationIntentKey: 'intent_finalize',
+        generationIntentKey: 'intent_finalize_a',
         status: 'needs_reconciliation',
         failureReason: 'finalize_failed_after_render',
         createdAt: '2026-04-20T09:00:00.000Z',
@@ -96,7 +96,7 @@ describe('billing anomaly summaries', () => {
       buildReservation({
         id: 'reservation_finalize_b',
         userId: 'usr_finalize',
-        generationIntentKey: 'intent_finalize',
+        generationIntentKey: 'intent_finalize_b',
         status: 'needs_reconciliation',
         failureReason: 'finalize_failed_retry',
         createdAt: '2026-04-20T09:05:00.000Z',
@@ -104,7 +104,7 @@ describe('billing anomaly summaries', () => {
       buildReservation({
         id: 'reservation_release_a',
         userId: 'usr_release',
-        generationIntentKey: 'intent_release',
+        generationIntentKey: 'intent_release_a',
         status: 'needs_reconciliation',
         failureReason: 'release_failed_timeout',
         createdAt: '2026-04-20T09:10:00.000Z',
@@ -112,7 +112,7 @@ describe('billing anomaly summaries', () => {
       buildReservation({
         id: 'reservation_release_b',
         userId: 'usr_release',
-        generationIntentKey: 'intent_release',
+        generationIntentKey: 'intent_release_b',
         status: 'needs_reconciliation',
         failureReason: 'release_failed_timeout',
         createdAt: '2026-04-20T09:15:00.000Z',
@@ -137,7 +137,7 @@ describe('billing anomaly summaries', () => {
     expect(summary.anomalies.find((anomaly) => anomaly.kind === 'repeated_release_failure')?.examples[0])
       .toMatchObject({
         userId: 'usr_release',
-        generationIntentKey: 'intent_release',
+        generationIntentKey: 'intent_release_a',
         failureReason: 'release_failed_timeout',
       })
   })
