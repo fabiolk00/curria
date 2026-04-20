@@ -60,6 +60,13 @@ Response:
 }
 ```
 
+Business limits:
+
+- `free`: 1 LinkedIn import request for the lifetime of the free trial
+- `unit`, `monthly`, `pro`: up to 2 LinkedIn import requests per rolling hour
+
+If the limit is reached, the route returns `429` with a user-facing message and skips job creation.
+
 ### `GET /api/profile/status/[jobId]`
 
 Polls import job state. If the job is still pending, the status endpoint atomically claims and processes it on-demand.

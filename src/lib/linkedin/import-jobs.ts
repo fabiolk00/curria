@@ -1,9 +1,9 @@
-import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
-import { createInsertTimestamps, createUpdatedAtTimestamp } from '@/lib/db/timestamps'
+import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 import { logError, logInfo } from '@/lib/observability/structured-log'
 
 import { extractAndSaveProfile } from './extract-profile'
+import { toLinkedInImportLimitError } from './import-limits'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,25 +40,25 @@ export async function createImportJob(
 ): Promise<{ jobId: string }> {
   const supabase = getSupabaseAdminClient()
 
-  const { data, error } = await supabase
-    .from('linkedin_import_jobs')
-    .insert({
-      id: createDatabaseId(),
-      user_id: appUserId,
-      linkedin_url: linkedinUrl,
-      status: 'pending' as ImportJobStatus,
-      ...createInsertTimestamps(),
-    })
-    .select('id')
-    .single()
+  const { data, error } = await supabase.rpc('create_linkedin_import_job', {
+    p_user_id: appUserId,
+    p_linkedin_url: linkedinUrl,
+  })
 
-  if (error || !data) {
+  const limitError = toLinkedInImportLimitError(error)
+  if (limitError) {
+    throw limitError
+  }
+
+  const row = Array.isArray(data) ? data[0] : data
+
+  if (error || !row || typeof row.id !== 'string') {
     throw new Error(`Failed to create import job: ${error?.message}`)
   }
 
-  logInfo('[import-jobs] Job created', { jobId: data.id, appUserId })
+  logInfo('[import-jobs] Job created', { jobId: row.id, appUserId })
 
-  return { jobId: data.id }
+  return { jobId: row.id }
 }
 
 // ---------------------------------------------------------------------------

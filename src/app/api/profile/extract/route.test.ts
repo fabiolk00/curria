@@ -3,10 +3,24 @@ import { NextRequest } from 'next/server'
 
 import { POST } from './route'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import { LinkedInImportLimitError } from '@/lib/linkedin/import-limits'
 import { createImportJob } from '@/lib/linkedin/import-jobs'
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
+}))
+
+vi.mock('@/lib/linkedin/import-limits', () => ({
+  LinkedInImportLimitError: class LinkedInImportLimitError extends Error {
+    code = 'LINKEDIN_IMPORT_LIMIT_REACHED'
+    status = 429
+    retryAfterSeconds?: number
+
+    constructor(message: string, retryAfterSeconds?: number) {
+      super(message)
+      this.retryAfterSeconds = retryAfterSeconds
+    }
+  },
 }))
 
 vi.mock('@/lib/linkedin/import-jobs', () => ({
@@ -15,6 +29,7 @@ vi.mock('@/lib/linkedin/import-jobs', () => ({
 
 vi.mock('@/lib/observability/structured-log', () => ({
   logInfo: vi.fn(),
+  logWarn: vi.fn(),
   logError: vi.fn(),
   serializeError: (error: unknown) => ({
     errorMessage: error instanceof Error ? error.message : String(error),
@@ -78,6 +93,21 @@ describe('POST /api/profile/extract', () => {
     const json = await res.json()
     expect(json.success).toBe(true)
     expect(json.jobId).toBe('job_abc')
+    expect(createImportJob).toHaveBeenCalledWith('usr_1', 'https://www.linkedin.com/in/testuser/')
+  })
+
+  it('returns 429 when the LinkedIn import limit is reached', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValueOnce({ id: 'usr_1', email: 'a@b.com' } as unknown as NonNullable<Awaited<ReturnType<typeof getCurrentAppUser>>>)
+    vi.mocked(createImportJob).mockRejectedValueOnce(
+      new LinkedInImportLimitError('Você atingiu o limite.', 120),
+    )
+
+    const res = await POST(makeRequest({ linkedinUrl: 'https://www.linkedin.com/in/testuser/' }))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('120')
+    const json = await res.json()
+    expect(json.error).toBe('Você atingiu o limite.')
+    expect(json.code).toBe('LINKEDIN_IMPORT_LIMIT_REACHED')
     expect(createImportJob).toHaveBeenCalledWith('usr_1', 'https://www.linkedin.com/in/testuser/')
   })
 

@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import {
+  LinkedInImportLimitError,
+} from '@/lib/linkedin/import-limits'
 import { createImportJob } from '@/lib/linkedin/import-jobs'
-import { logError, logInfo, serializeError } from '@/lib/observability/structured-log'
+import {
+  logError,
+  logInfo,
+  logWarn,
+  serializeError,
+} from '@/lib/observability/structured-log'
 
 const BodySchema = z.object({
   linkedinUrl: z.string().url('Informe um link válido do LinkedIn.'),
@@ -68,6 +76,28 @@ export async function POST(req: NextRequest) {
       message: 'Profile extraction started',
     })
   } catch (error) {
+    if (error instanceof LinkedInImportLimitError) {
+      logWarn('[api/profile/extract] LinkedIn import limit reached', {
+        appUserId: appUser.id,
+        linkedinUrl,
+        errorCode: error.code,
+        retryAfterSeconds: error.retryAfterSeconds ?? null,
+      })
+
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+        },
+        {
+          status: error.status,
+          headers: error.retryAfterSeconds
+            ? { 'Retry-After': String(error.retryAfterSeconds) }
+            : undefined,
+        },
+      )
+    }
+
     logError('[api/profile/extract] Failed to create job', {
       appUserId: appUser.id,
       linkedinUrl,

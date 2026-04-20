@@ -7,6 +7,7 @@ import {
   getImportJob,
   type ImportJobRow,
 } from './import-jobs'
+import { LinkedInImportLimitError } from './import-limits'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -35,11 +36,20 @@ vi.mock('@/lib/observability/structured-log', () => ({
   logError: vi.fn(),
 }))
 
+vi.mock('./import-limits', () => ({
+  toLinkedInImportLimitError: vi.fn(),
+  LinkedInImportLimitError: class LinkedInImportLimitError extends Error {
+    code = 'LINKEDIN_IMPORT_LIMIT_REACHED'
+    status = 429
+  },
+}))
+
 vi.mock('./extract-profile', () => ({
   extractAndSaveProfile: vi.fn(),
 }))
 
 import { extractAndSaveProfile } from './extract-profile'
+import { toLinkedInImportLimitError } from './import-limits'
 
 // ---------------------------------------------------------------------------
 // Supabase chain builder
@@ -113,7 +123,11 @@ function makeFrom(overrides: Record<string, () => ReturnType<typeof createChainM
   })
 }
 
-let mockSupabase: { from: ReturnType<typeof makeFrom> }
+let mockSupabase: {
+  from: ReturnType<typeof makeFrom>
+  rpc?: ReturnType<typeof vi.fn>
+}
+let mockRpc: ReturnType<typeof vi.fn>
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -167,31 +181,51 @@ describe('createImportJob', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetChains()
+    mockRpc = vi.fn()
   })
 
-  it('inserts a pending row and returns the job ID', async () => {
+  it('creates a pending row through the limiting RPC and returns the job ID', async () => {
     mockSupabase = {
-      from: makeFrom({
-        'linkedin_import_jobs.insert': () =>
-          createChainMock({ data: { id: JOB_ID }, error: null }),
-      }),
+      from: makeFrom(),
+      rpc: mockRpc.mockResolvedValue({ data: [{ id: JOB_ID }], error: null }),
     }
 
     const result = await createImportJob(USER_ID, LINKEDIN_URL)
     expect(result).toEqual({ jobId: JOB_ID })
+    expect(mockRpc).toHaveBeenCalledWith('create_linkedin_import_job', {
+      p_user_id: USER_ID,
+      p_linkedin_url: LINKEDIN_URL,
+    })
   })
 
   it('throws on insert failure', async () => {
     mockSupabase = {
-      from: makeFrom({
-        'linkedin_import_jobs.insert': () =>
-          createChainMock({ data: null, error: { message: 'duplicate key' } }),
+      from: makeFrom(),
+      rpc: mockRpc.mockResolvedValue({
+        data: null,
+        error: { message: 'duplicate key' },
       }),
     }
 
     await expect(createImportJob(USER_ID, LINKEDIN_URL)).rejects.toThrow(
       'Failed to create import job: duplicate key',
     )
+  })
+
+  it('surfaces the mapped limit error from the RPC', async () => {
+    mockSupabase = {
+      from: makeFrom(),
+      rpc: mockRpc.mockResolvedValue({
+        data: null,
+        error: { message: 'FREE_TRIAL_LINKEDIN_IMPORT_LIMIT_REACHED' },
+      }),
+    }
+
+    vi.mocked(toLinkedInImportLimitError).mockReturnValueOnce(
+      new LinkedInImportLimitError('limit reached'),
+    )
+
+    await expect(createImportJob(USER_ID, LINKEDIN_URL)).rejects.toThrow('limit reached')
   })
 })
 
