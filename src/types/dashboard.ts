@@ -211,6 +211,23 @@ export type DownloadUrlsResponse = {
   reconciliation?: ArtifactStatusSummary['reconciliation']
 }
 
+export type BillingHistoryResponse = {
+  entries: Array<{
+    createdAt: string
+    generationIntentKey: string
+    reservationStatus: 'reserved' | 'finalized' | 'released' | 'needs_reconciliation'
+    reconciliationStatus: 'not_required' | 'pending' | 'repaired' | 'manual_review'
+    ledgerEntryType: 'reservation_hold' | 'reservation_finalize' | 'reservation_release'
+    creditsDelta: number
+    eventLabel: string
+    eventStatus: 'pending' | 'completed' | 'released' | 'attention'
+    jobId?: string
+    sessionId?: string
+    resumeTargetId?: string
+    resumeGenerationId?: string
+  }>
+}
+
 export type ResumeComparisonResponse = {
   sessionId: string
   workflowMode?: WorkflowMode

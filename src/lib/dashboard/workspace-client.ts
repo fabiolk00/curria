@@ -5,6 +5,7 @@ import type {
   ResumeEditorSaveOutput,
 } from '@/types/agent'
 import type {
+  BillingHistoryResponse,
   DownloadUrlsResponse,
   GenerateResumeResponse,
   ResumeComparisonResponse,
@@ -113,6 +114,14 @@ export async function getDownloadUrls(
   return requestJson<DownloadUrlsResponse>(
     `/api/file/${sessionId}${suffix}`,
   )
+}
+
+export async function getBillingHistory(limit = 10): Promise<BillingHistoryResponse> {
+  const searchParams = new URLSearchParams({
+    limit: String(limit),
+  })
+
+  return requestJson<BillingHistoryResponse>(`/api/billing/history?${searchParams.toString()}`)
 }
 
 export function isGeneratedOutputReady(generatedOutput?: GeneratedOutput): boolean {
