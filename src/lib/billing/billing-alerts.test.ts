@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { listCreditReservationsForReconciliation } from '@/lib/db/credit-reservations'
+import type { CreditReservation } from '@/lib/db/credit-reservations'
 import type { ResumeGenerationType } from '@/types/agent'
 import { summarizeBillingAnomalies } from './billing-alerts'
 
@@ -15,7 +16,7 @@ function buildReservation(input: {
   status: 'reserved' | 'finalized' | 'released' | 'needs_reconciliation'
   failureReason?: string
   createdAt: string
-}) {
+}): CreditReservation {
   return {
     id: input.id,
     userId: input.userId,

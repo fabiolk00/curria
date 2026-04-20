@@ -4,6 +4,7 @@ import {
   listCreditLedgerEntriesForUser,
   listCreditReservationsForUser,
 } from '@/lib/db/credit-reservations'
+import type { CreditReservation } from '@/lib/db/credit-reservations'
 import type { ResumeGenerationType } from '@/types/agent'
 import { listBillingHistoryForUser } from './credit-activity'
 
@@ -18,7 +19,7 @@ function buildReservation(input: {
   createdAt: string
   sessionId?: string
   resumeTargetId?: string
-}) {
+}): CreditReservation {
   return {
     id: `reservation_${input.generationIntentKey}`,
     userId: 'usr_123',
