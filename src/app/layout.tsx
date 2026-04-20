@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   authors: [{ name: "CurrIA", url: baseUrl }],
   creator: "CurrIA",
   publisher: "CurrIA",
+  verification: {
+    google: "PPOK95ojSMP50nd8OtAHu6nEvLzJFhzNcMU6ApjPII0",
+  },
   robots: {
     index: true,
     follow: true,

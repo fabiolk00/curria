@@ -78,7 +78,7 @@ const BEFORE_DATA: ResumePreviewData = {
 
 const AFTER_DATA: ResumePreviewData = {
   name: "John Doe",
-  subtitle: "Desenvolvedora Full Stack",
+  subtitle: "Desenvolvedor Full Stack",
   contact: "john.doe@email.com | (11) 99999-9999",
   atsStatus: { label: "ATS Friendly", passed: true },
   sections: [
