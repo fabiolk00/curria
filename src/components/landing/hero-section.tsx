@@ -14,13 +14,13 @@ export default function HeroSection() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="text-center lg:text-left">
             <h1 className="text-balance text-4xl font-extrabold leading-tight tracking-tight md:text-5xl lg:text-6xl">
-              Seu currículo merece ser{" "}
+              Passe no ATS. Consiga mais {" "}
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                visto.
+                entrevistas.
               </span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground text-pretty md:text-xl lg:mx-0">
-              <BrandText text="CurrIA usa IA para decodificar exatamente o que recrutadores e softwares de triagem procuram e reescreve seu currículo para corresponder." />
+              <BrandText text="CurrIA CurrIA reescreve seu currículo com base no que recrutadores realmente buscam — usando dados reais de vagas." />
             </p>
             <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
               <Button asChild size="lg" className="gap-2 text-base font-semibold">
