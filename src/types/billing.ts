@@ -24,3 +24,42 @@ export type BillingHistoryEntry = {
 export type BillingHistory = {
   entries: BillingHistoryEntry[]
 }
+
+export type BillingAnomalyKind =
+  | 'stale_reconciliation'
+  | 'repeated_finalize_failure'
+  | 'repeated_release_failure'
+  | 'reserved_backlog'
+
+export type BillingAnomalyExample = {
+  reservationId: string
+  userId: string
+  generationIntentKey: string
+  status: CreditReservationStatus
+  ageMinutes: number
+  failureReason?: string
+}
+
+export type BillingAnomalySummary = {
+  kind: BillingAnomalyKind
+  count: number
+  threshold: number
+  examples: BillingAnomalyExample[]
+}
+
+export type BillingAnomalyThresholds = {
+  staleReconciliationMinutes: number
+  repeatedFailureCount: number
+  reservedBacklogCount: number
+  exampleLimit: number
+}
+
+export type BillingAnomalyReport = {
+  generatedAt: Date
+  thresholds: BillingAnomalyThresholds
+  totals: {
+    reservedCount: number
+    needsReconciliationCount: number
+  }
+  anomalies: BillingAnomalySummary[]
+}
