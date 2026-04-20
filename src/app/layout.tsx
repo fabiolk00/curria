@@ -4,20 +4,20 @@ import { Inter } from "next/font/google"
 
 import GoogleAnalytics from "@/components/analytics/google-analytics"
 import { embeddedClerkLocalizationPtBr } from "@/components/auth/clerk-localization"
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
 import { getAppOrigin } from "@/lib/config/app-url"
 import "./globals.css"
 
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+
 const baseUrl = getAppOrigin()
 const imageUrl = `${baseUrl}/og-image.svg`
 
 export const metadata: Metadata = {
-  title: "CurrIA - Otimizador de Curr\u00EDculo com IA",
-  description: "Otimize seu curr\u00EDculo para sistemas ATS com intelig\u00EAncia artificial.",
+  title: "CurrIA - Consiga mais entrevistas",
+  description: "Consiga mais entrevistas.",
   applicationName: "CurrIA",
   authors: [{ name: "CurrIA", url: baseUrl }],
   creator: "CurrIA",
@@ -38,22 +38,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: baseUrl,
-    title: "CurrIA - Otimizador de Curr\u00EDculo com IA",
-    description: "Otimize seu curr\u00EDculo para sistemas ATS com intelig\u00EAncia artificial.",
+    title: "CurrIA - Consiga mais entrevistas.",
+    description: "Consiga mais entrevistas.",
     siteName: "CurrIA",
     images: [
       {
         url: imageUrl,
         width: 1200,
         height: 630,
-        alt: "CurrIA - Otimizador de Curr\u00EDculo com IA",
+        alt: "CurrIA - Consiga mais entrevistas.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CurrIA - Otimizador de Curr\u00EDculo com IA",
-    description: "Otimize seu curr\u00EDculo para sistemas ATS com intelig\u00EAncia artificial.",
+    title: "CurrIA - Consiga mais entrevistas.",
+    description: "Consiga mais entrevistas.",
     images: [imageUrl],
   },
   alternates: {
