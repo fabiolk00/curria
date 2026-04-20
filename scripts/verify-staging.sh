@@ -11,6 +11,8 @@ REQUIRED_MIGRATIONS=(
   "prisma/migrations/20260407_persist_billing_display_totals.sql"
   "prisma/migrations/20260407_harden_text_id_generation.sql"
   "prisma/migrations/20260407_harden_standard_timestamps.sql"
+  "prisma/migrations/20260412_resume_generation_billing.sql"
+  "prisma/migrations/20260420_credit_reservation_ledger.sql"
 )
 
 echo "======================================================================"
@@ -129,13 +131,13 @@ if [ "$DB_MODE" = "psql" ]; then
   TABLES_FOUND=$(psql "$STAGING_DB_URL" -t -A -c "
     SELECT COUNT(*) FROM information_schema.tables
     WHERE table_schema = 'public'
-    AND table_name IN ('billing_checkouts', 'credit_accounts', 'user_quotas', 'processed_events');
+    AND table_name IN ('billing_checkouts', 'credit_accounts', 'user_quotas', 'processed_events', 'credit_reservations', 'credit_ledger_entries');
   ")
 
-  if [ "$TABLES_FOUND" = "4" ]; then
-    echo "Billing tables exist (4/4)."
+  if [ "$TABLES_FOUND" = "6" ]; then
+    echo "Billing tables exist (6/6)."
   else
-    echo "Expected billing tables are missing ($TABLES_FOUND/4 found)."
+    echo "Expected billing tables are missing ($TABLES_FOUND/6 found)."
     echo "Apply the current billing migrations before retrying:"
     for migration in "${REQUIRED_MIGRATIONS[@]}"; do
       echo "  - $migration"
@@ -146,13 +148,13 @@ if [ "$DB_MODE" = "psql" ]; then
   RPC_COUNT=$(psql "$STAGING_DB_URL" -t -A -c "
     SELECT COUNT(*) FROM information_schema.routines
     WHERE routine_schema = 'public'
-    AND routine_name IN ('apply_billing_credit_grant_event', 'apply_billing_subscription_metadata_event');
+    AND routine_name IN ('apply_billing_credit_grant_event', 'apply_billing_subscription_metadata_event', 'reserve_credit_for_generation_intent', 'finalize_credit_reservation', 'release_credit_reservation');
   ")
 
-  if [ "$RPC_COUNT" = "2" ]; then
-    echo "Billing RPC functions exist (2/2)."
+  if [ "$RPC_COUNT" = "5" ]; then
+    echo "Billing RPC functions exist (5/5)."
   else
-    echo "Billing RPC functions are missing ($RPC_COUNT/2 found)."
+    echo "Billing RPC functions are missing ($RPC_COUNT/5 found)."
     echo "Re-apply the migration sequence documented above."
     exit 1
   fi

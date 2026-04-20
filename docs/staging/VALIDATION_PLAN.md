@@ -17,6 +17,8 @@ Before running scenarios:
    - `20260407_persist_billing_display_totals.sql`
    - `20260407_harden_text_id_generation.sql`
    - `20260407_harden_standard_timestamps.sql`
+   - `20260412_resume_generation_billing.sql`
+   - `20260420_credit_reservation_ledger.sql`
 4. Run the preflight script:
 
 ```bash

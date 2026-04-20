@@ -11,6 +11,8 @@ Status: launch hardening complete through Phase 4.
 - [ ] `prisma/migrations/20260407_persist_billing_display_totals.sql` is applied.
 - [ ] `prisma/migrations/20260407_harden_text_id_generation.sql` is applied.
 - [ ] `prisma/migrations/20260407_harden_standard_timestamps.sql` is applied.
+- [ ] `prisma/migrations/20260412_resume_generation_billing.sql` is applied.
+- [ ] `prisma/migrations/20260420_credit_reservation_ledger.sql` is applied.
 - [ ] The old overload of `apply_billing_credit_grant_event` is removed.
 - [ ] Deploy environments use the canonical runtime contract from `.env.example`.
 - [ ] Dedicated webhook secrets are set separately from broader API credentials.
@@ -43,7 +45,7 @@ Status: launch hardening complete through Phase 4.
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts')
+  AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts', 'credit_reservations', 'credit_ledger_entries')
 ORDER BY table_name;
 ```
 
@@ -51,6 +53,8 @@ Expected:
 
 - `billing_checkouts`
 - `credit_accounts`
+- `credit_ledger_entries`
+- `credit_reservations`
 - `processed_events`
 - `user_quotas`
 

@@ -58,9 +58,11 @@ npx prisma db execute --file prisma/migrations/20260406_fix_billing_checkout_tim
 npx prisma db execute --file prisma/migrations/20260407_persist_billing_display_totals.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_text_id_generation.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_standard_timestamps.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260412_resume_generation_billing.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260420_credit_reservation_ledger.sql --schema prisma/schema.prisma
 ```
 
-These migrations are required for the current settlement-based billing contract and the Phase 1 hardening checks.
+These migrations are required for the current settlement-based billing contract, resume-generation charging, and the reservation-ledger export billing checks.
 
 ## 4. Run the preflight script before any billing scenario
 
@@ -142,7 +144,7 @@ If `bash scripts/verify-staging.sh` fails:
 - confirm Bash, `npx`, and `curl` are installed in the shell you are using
 - confirm `.env.staging` was copied from `.env.staging.example`
 - re-check `STAGING_ASAAS_WEBHOOK_TOKEN` and `STAGING_ASAAS_ACCESS_TOKEN`
-- confirm all six billing migrations above were applied to the staging database
+- confirm all eight billing migrations above were applied to the staging database
 - verify `STAGING_API_URL` points at the deployed staging environment
 - if `psql` is unavailable, confirm `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are populated for the fallback path
 

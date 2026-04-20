@@ -7,6 +7,7 @@ Apply the billing hardening changes safely and verify that:
 - post-cutover checkout resolution and pre-cutover recurring renewals both work
 - resume-generation billing is enabled
 - credits are consumed on successful generation outcomes instead of session creation
+- reservation-backed export billing and ledger auditing are enabled
 
 ## 1. Apply the SQL Migration
 
@@ -20,6 +21,7 @@ npx prisma db execute --file prisma/migrations/20260407_persist_billing_display_
 npx prisma db execute --file prisma/migrations/20260407_harden_text_id_generation.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260407_harden_standard_timestamps.sql --schema prisma/schema.prisma
 npx prisma db execute --file prisma/migrations/20260412_resume_generation_billing.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/migrations/20260420_credit_reservation_ledger.sql --schema prisma/schema.prisma
 ```
 
 If your deployment flow requires manual SQL execution, run the contents of:
@@ -31,8 +33,9 @@ If your deployment flow requires manual SQL execution, run the contents of:
 - `prisma/migrations/20260407_harden_text_id_generation.sql`
 - `prisma/migrations/20260407_harden_standard_timestamps.sql`
 - `prisma/migrations/20260412_resume_generation_billing.sql`
+- `prisma/migrations/20260420_credit_reservation_ledger.sql`
 
-against the target database before deploying code that depends on `billing_checkouts`, the updated RPC signatures, and the persisted dashboard display totals.
+against the target database before deploying code that depends on `billing_checkouts`, the updated RPC signatures, the export reservation ledger, and the persisted dashboard display totals.
 
 ## 2. Verify Database Objects
 
@@ -42,7 +45,7 @@ against the target database before deploying code that depends on `billing_check
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts');
+  AND table_name IN ('billing_checkouts', 'processed_events', 'user_quotas', 'credit_accounts', 'credit_reservations', 'credit_ledger_entries');
 ```
 
 ### ID default checks
@@ -117,7 +120,10 @@ WHERE routine_schema = 'public'
   AND routine_name IN (
     'apply_billing_credit_grant_event',
     'apply_billing_subscription_metadata_event',
-    'consume_credit_for_generation'
+    'consume_credit_for_generation',
+    'reserve_credit_for_generation_intent',
+    'finalize_credit_reservation',
+    'release_credit_reservation'
   );
 ```
 
@@ -127,7 +133,7 @@ WHERE routine_schema = 'public'
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_name IN ('resume_generations', 'credit_consumptions');
+  AND table_name IN ('resume_generations', 'credit_consumptions', 'credit_reservations', 'credit_ledger_entries');
 ```
 
 ### Resume-generation enum check
@@ -233,8 +239,8 @@ Also validate the new generation-billing behavior:
 
 - start a session and confirm no credit is consumed
 - chat and run fit analysis and confirm no credit is consumed
-- generate an ATS-enhanced resume and confirm exactly one `credit_consumptions` row is written
-- generate a job-targeted resume and confirm exactly one `credit_consumptions` row is written
+- generate an ATS-enhanced resume and confirm exactly one reservation hold is created and finalized
+- generate a job-targeted resume and confirm exactly one reservation hold is created and finalized
 - retry the same generation request and confirm the existing result is reused with no second charge
 
 Useful SQL:
@@ -268,6 +274,20 @@ FROM user_quotas AS quota
 JOIN credit_accounts AS account ON account.user_id = quota.user_id
 WHERE quota.credits_remaining < account.credits_remaining
 ORDER BY quota.user_id;
+```
+
+```sql
+SELECT generation_intent_key, status, reconciliation_status, updated_at
+FROM credit_reservations
+ORDER BY updated_at DESC
+LIMIT 50;
+```
+
+```sql
+SELECT generation_intent_key, entry_type, credits_delta, balance_after, created_at
+FROM credit_ledger_entries
+ORDER BY created_at DESC
+LIMIT 100;
 ```
 
 ## 7. Rollback Guidance

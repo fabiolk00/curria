@@ -17,9 +17,11 @@ Do not start until all are true:
 1. Latest billing code is deployed.
 2. `prisma/migrations/billing_webhook_hardening.sql` has been applied.
 3. `prisma/migrations/20260406_align_asaas_webhook_contract.sql` has been applied.
-4. Staging DB is reachable.
-5. Staging webhook endpoint is reachable.
-6. `STAGING_API_URL`, `STAGING_DB_URL`, and `STAGING_ASAAS_WEBHOOK_TOKEN` are available.
+4. `prisma/migrations/20260412_resume_generation_billing.sql` has been applied.
+5. `prisma/migrations/20260420_credit_reservation_ledger.sql` has been applied.
+6. Staging DB is reachable.
+7. Staging webhook endpoint is reachable.
+8. `STAGING_API_URL`, `STAGING_DB_URL`, and `STAGING_ASAAS_WEBHOOK_TOKEN` are available.
 
 ## Important implementation truths
 
