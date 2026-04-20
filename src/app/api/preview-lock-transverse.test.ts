@@ -199,7 +199,7 @@ function buildLockedPreviewAccess() {
     requiresRegenerationAfterUnlock: true,
     reason: 'free_trial_locked' as const,
     lockedAt: '2026-04-20T12:00:00.000Z',
-    message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+    message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
   }
 }
 
@@ -217,7 +217,7 @@ describe('preview lock transverse regression flow', () => {
 
   it('keeps trial artifacts locked through replay and upgrade, and only unlocks after a new paid generation', async () => {
     const baseCvState = buildCvState()
-    const lockedOptimizedCvState = buildCvState('Resumo real otimizado que nao deve vazar no trial.')
+    const lockedOptimizedCvState = buildCvState('Resumo real otimizado que não deve vazar no trial.')
     const unlockedOptimizedCvState = buildCvState('Resumo real otimizado apos upgrade e nova geracao.')
     const lockedPreviewAccess = buildLockedPreviewAccess()
 

@@ -164,7 +164,7 @@ describe('session comparison route', () => {
           phone: '555-0100',
           linkedin: 'https://linkedin.com/in/ana',
           location: 'Sao Paulo',
-          summary: 'Resumo real que nao deve vazar.',
+          summary: 'Resumo real que não deve vazar.',
           experience: [],
           skills: ['SQL', 'Python'],
           education: [],
@@ -182,7 +182,7 @@ describe('session comparison route', () => {
           requiresRegenerationAfterUnlock: true,
           reason: 'free_trial_locked',
           lockedAt: '2026-04-20T12:00:00.000Z',
-          message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
         },
       },
     } as unknown as Awaited<ReturnType<typeof getSession>>)
@@ -224,7 +224,7 @@ describe('session comparison route', () => {
     expect(await response.json()).toMatchObject({
       optimizedCvState: {
         fullName: 'Preview bloqueado',
-        summary: 'Esta e uma visualizacao ilustrativa. O curriculo real gerado no free trial nao fica disponivel para leitura ou download.',
+        summary: 'Esta é uma visualização ilustrativa. O currículo real gerado no free trial não fica disponível para leitura ou download.',
       },
       previewLock: {
         locked: true,

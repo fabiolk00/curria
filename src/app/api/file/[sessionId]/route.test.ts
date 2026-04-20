@@ -191,7 +191,7 @@ describe('GET /api/file/[sessionId]', () => {
           requiresRegenerationAfterUnlock: true,
           reason: 'free_trial_locked',
           lockedAt: '2026-04-20T12:00:00.000Z',
-          message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
         },
       },
     })
@@ -214,7 +214,7 @@ describe('GET /api/file/[sessionId]', () => {
         reason: 'free_trial_locked',
         requiresUpgrade: true,
         requiresPaidRegeneration: true,
-        message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+        message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
       },
     })
     expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()

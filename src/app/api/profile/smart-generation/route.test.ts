@@ -509,7 +509,7 @@ describe('POST /api/profile/smart-generation', () => {
   it('returns a synthetic optimized preview when free-trial generation is locked', async () => {
     const optimizedCvState = {
       ...buildCvState(),
-      summary: 'Resumo real que nao deve vazar.',
+      summary: 'Resumo real que não deve vazar.',
     }
 
     vi.mocked(runAtsEnhancementPipeline).mockResolvedValue({
@@ -540,7 +540,7 @@ describe('POST /api/profile/smart-generation', () => {
             requiresRegenerationAfterUnlock: true,
             reason: 'free_trial_locked',
             lockedAt: '2026-04-20T12:00:00.000Z',
-            message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+            message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
           },
         },
       },
@@ -569,7 +569,7 @@ describe('POST /api/profile/smart-generation', () => {
         reason: 'free_trial_locked',
         requiresUpgrade: true,
         requiresPaidRegeneration: true,
-        message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+        message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
       },
     })
   })

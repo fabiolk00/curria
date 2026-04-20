@@ -3,7 +3,7 @@ import type { CVState } from '@/types/cv'
 import type { PreviewLockSummary } from '@/types/dashboard'
 
 const LOCKED_PREVIEW_MESSAGE =
-  'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.'
+  'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.'
 
 export function buildLockedPreviewAccess(
   lockedAt = new Date().toISOString(),
@@ -100,8 +100,8 @@ export function buildLockedPreviewCvState(
   scope: 'optimized' | 'target',
 ): CVState {
   const headline = scope === 'target'
-    ? 'Curriculo demonstrativo para vaga'
-    : 'Curriculo demonstrativo ATS'
+    ? 'Currículo demonstrativo para vaga'
+    : 'Currículo demonstrativo ATS'
 
   return {
     fullName: 'Preview bloqueado',
@@ -109,7 +109,7 @@ export function buildLockedPreviewCvState(
     phone: '(00) 00000-0000',
     linkedin: 'linkedin.com/company/curria-preview',
     location: 'Sao Paulo, SP',
-    summary: 'Esta e uma visualizacao ilustrativa. O curriculo real gerado no free trial nao fica disponivel para leitura ou download.',
+    summary: 'Esta é uma visualização ilustrativa. O currículo real gerado no free trial não fica disponível para leitura ou download.',
     experience: [
       {
         title: headline,
@@ -119,21 +119,21 @@ export function buildLockedPreviewCvState(
         endDate: 'present',
         bullets: [
           'Mostra apenas um documento demonstrativo no plano gratuito.',
-          'Exige novo processamento apos o upgrade para liberar o curriculo verdadeiro.',
+          'Exige novo processamento após o upgrade para liberar o currículo verdadeiro.',
         ],
       },
     ],
     skills: ['Preview bloqueado', 'Upgrade necessario', 'Regeneracao obrigatoria'],
     education: [
       {
-        degree: 'Versao de demonstracao',
+        degree: 'Versão de demonstração',
         institution: 'CurrIA',
         year: '2026',
       },
     ],
     certifications: [
       {
-        name: 'Acesso ao curriculo real disponivel apenas apos upgrade',
+        name: 'Acesso ao currículo real disponível apenas após upgrade',
         issuer: 'CurrIA',
         year: '2026',
       },
@@ -200,8 +200,8 @@ export function buildLockedPreviewPdfBytes(scope: 'optimized' | 'target'): Uint8
     scope === 'target' ? 'PREVIEW BLOQUEADO - TARGET JOB' : 'PREVIEW BLOQUEADO - ATS',
     '',
     'Este PDF e apenas ilustrativo.',
-    'O curriculo real gerado no free trial nao fica disponivel para leitura.',
-    'Faca upgrade e gere novamente para receber a versao real.',
+    'O currículo real gerado no free trial não fica disponível para leitura.',
+    'Faça upgrade e gere novamente para receber a versão real.',
   ]
 
   const content = [

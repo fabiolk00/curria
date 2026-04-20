@@ -44,8 +44,8 @@ export function WorkspaceSidePanel({
         </p>
         {!baseOutputReady ? (
           <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs text-amber-900">
-            <p>1 credito sera reservado para esta exportacao.</p>
-            <p className="mt-1 text-amber-800/80">Se a geracao falhar, o credito sera liberado.</p>
+            <p>1 crédito será reservado para esta exportação.</p>
+            <p className="mt-1 text-amber-800/80">Se a geração falhar, o crédito será liberado.</p>
           </div>
         ) : null}
       </div>

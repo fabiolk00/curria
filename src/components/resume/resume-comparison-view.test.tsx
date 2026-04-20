@@ -107,7 +107,7 @@ describe('ResumeComparisonView', () => {
           reason: 'free_trial_locked',
           requiresUpgrade: true,
           requiresPaidRegeneration: true,
-          message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
         }}
         onContinue={vi.fn()}
       />,

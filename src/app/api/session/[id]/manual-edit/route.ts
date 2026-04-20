@@ -82,7 +82,7 @@ export async function POST(
 
         if (isLockedPreview(target.generatedOutput)) {
           return NextResponse.json({
-            error: 'Este preview gratuito esta bloqueado. Faca upgrade e gere novamente para editar a versao real.',
+            error: 'Este preview gratuito está bloqueado. Faça upgrade e gere novamente para editar a versão real.',
           }, { status: 409 })
         }
 
@@ -123,7 +123,7 @@ export async function POST(
 
         if (isLockedPreview(session.generatedOutput)) {
           return NextResponse.json({
-            error: 'Este preview gratuito esta bloqueado. Faca upgrade e gere novamente para editar a versao real.',
+            error: 'Este preview gratuito está bloqueado. Faça upgrade e gere novamente para editar a versão real.',
           }, { status: 409 })
         }
 

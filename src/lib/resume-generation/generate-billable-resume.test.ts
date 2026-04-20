@@ -322,7 +322,7 @@ describe('generateBillableResume', () => {
           requiresRegenerationAfterUnlock: true,
           reason: 'free_trial_locked',
           lockedAt: '2026-04-12T12:01:00.000Z',
-          message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
         },
       },
     })

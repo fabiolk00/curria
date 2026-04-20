@@ -460,7 +460,7 @@ describe('manual edit route', () => {
         requiresRegenerationAfterUnlock: true,
         reason: 'free_trial_locked',
         lockedAt: '2026-04-20T12:00:00.000Z',
-        message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+        message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
       },
     }
 
@@ -475,7 +475,7 @@ describe('manual edit route', () => {
           scope: 'optimized',
           cvState: {
             ...buildOptimizedCvState(),
-            summary: 'Nao deveria salvar.',
+            summary: 'Não deveria salvar.',
           },
         }),
       }),
@@ -484,7 +484,7 @@ describe('manual edit route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Este preview gratuito esta bloqueado. Faca upgrade e gere novamente para editar a versao real.',
+      error: 'Este preview gratuito está bloqueado. Faça upgrade e gere novamente para editar a versão real.',
     })
     expect(applyToolPatchWithVersion).not.toHaveBeenCalled()
   })
@@ -502,7 +502,7 @@ describe('manual edit route', () => {
           requiresRegenerationAfterUnlock: true,
           reason: 'free_trial_locked',
           lockedAt: '2026-04-20T12:00:00.000Z',
-          message: 'Seu preview gratuito esta bloqueado. Faca upgrade e gere novamente para liberar o curriculo real.',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
         },
       },
     }
@@ -520,7 +520,7 @@ describe('manual edit route', () => {
           targetId: 'target_123',
           cvState: {
             ...target.derivedCvState,
-            summary: 'Nao deveria salvar.',
+            summary: 'Não deveria salvar.',
           },
         }),
       }),
@@ -529,7 +529,7 @@ describe('manual edit route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Este preview gratuito esta bloqueado. Faca upgrade e gere novamente para editar a versao real.',
+      error: 'Este preview gratuito está bloqueado. Faça upgrade e gere novamente para editar a versão real.',
     })
     expect(updateResumeTargetCvStateWithVersion).not.toHaveBeenCalled()
   })
