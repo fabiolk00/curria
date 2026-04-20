@@ -23,8 +23,14 @@ function resolveThresholds(
   }
 }
 
-function resolveAgeMinutes(createdAt: Date, now: Date): number {
-  return Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / 60000))
+function resolveAgeMinutes(since: Date, now: Date): number {
+  return Math.max(0, Math.floor((now.getTime() - since.getTime()) / 60000))
+}
+
+function resolveReconciliationAgeStart(reservation: CreditReservation): Date {
+  return reservation.status === 'needs_reconciliation'
+    ? reservation.updatedAt
+    : reservation.createdAt
 }
 
 function buildExample(
@@ -36,7 +42,7 @@ function buildExample(
     userId: reservation.userId,
     generationIntentKey: reservation.generationIntentKey,
     status: reservation.status,
-    ageMinutes: resolveAgeMinutes(reservation.createdAt, now),
+    ageMinutes: resolveAgeMinutes(resolveReconciliationAgeStart(reservation), now),
     failureReason: reservation.failureReason,
   }
 }
@@ -112,7 +118,7 @@ export function summarizeBillingAnomaliesFromReservations(
   const needsReconciliation = reservations.filter((reservation) => reservation.status === 'needs_reconciliation')
   const reserved = reservations.filter((reservation) => reservation.status === 'reserved')
   const staleReconciliation = needsReconciliation.filter(
-    (reservation) => resolveAgeMinutes(reservation.createdAt, now) >= thresholds.staleReconciliationMinutes,
+    (reservation) => resolveAgeMinutes(resolveReconciliationAgeStart(reservation), now) >= thresholds.staleReconciliationMinutes,
   )
 
   const anomalies: BillingAnomalySummary[] = []

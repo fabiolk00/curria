@@ -16,7 +16,10 @@ function buildReservation(input: {
   status: 'reserved' | 'finalized' | 'released' | 'needs_reconciliation'
   failureReason?: string
   createdAt: string
+  updatedAt?: string
 }): CreditReservation {
+  const updatedAt = input.updatedAt ?? input.createdAt
+
   return {
     id: input.id,
     userId: input.userId,
@@ -35,7 +38,7 @@ function buildReservation(input: {
     reconciliationStatus: input.status === 'needs_reconciliation' ? 'pending' : 'clean',
     metadata: { source: 'test' },
     createdAt: new Date(input.createdAt),
-    updatedAt: new Date(input.createdAt),
+    updatedAt: new Date(updatedAt),
   }
 }
 
@@ -53,6 +56,7 @@ describe('billing anomaly summaries', () => {
         status: 'needs_reconciliation',
         failureReason: 'finalize_failed',
         createdAt: '2026-04-20T09:00:00.000Z',
+        updatedAt: '2026-04-20T09:00:00.000Z',
       }),
       buildReservation({
         id: 'reservation_fresh',
@@ -61,6 +65,7 @@ describe('billing anomaly summaries', () => {
         status: 'needs_reconciliation',
         failureReason: 'finalize_failed',
         createdAt: '2026-04-20T09:55:00.000Z',
+        updatedAt: '2026-04-20T09:55:00.000Z',
       }),
     ])
 
@@ -81,6 +86,49 @@ describe('billing anomaly summaries', () => {
         generationIntentKey: 'intent_stale',
         ageMinutes: 60,
       })
+  })
+
+  it('measures stale reconciliation age from the reconciliation transition time when available', async () => {
+    vi.mocked(listCreditReservationsForReconciliation).mockResolvedValue([
+      buildReservation({
+        id: 'reservation_recent_transition',
+        userId: 'usr_123',
+        generationIntentKey: 'intent_recent_transition',
+        status: 'needs_reconciliation',
+        failureReason: 'finalize_failed',
+        createdAt: '2026-04-20T08:00:00.000Z',
+        updatedAt: '2026-04-20T09:50:00.000Z',
+      }),
+      buildReservation({
+        id: 'reservation_old_transition',
+        userId: 'usr_123',
+        generationIntentKey: 'intent_old_transition',
+        status: 'needs_reconciliation',
+        failureReason: 'finalize_failed',
+        createdAt: '2026-04-20T08:05:00.000Z',
+        updatedAt: '2026-04-20T09:20:00.000Z',
+      }),
+    ])
+
+    const summary = await summarizeBillingAnomalies({
+      now: new Date('2026-04-20T10:00:00.000Z'),
+      thresholds: {
+        staleReconciliationMinutes: 30,
+      },
+    })
+
+    expect(summary.anomalies).toContainEqual(expect.objectContaining({
+      kind: 'stale_reconciliation',
+      count: 1,
+    }))
+    expect(summary.anomalies.find((anomaly) => anomaly.kind === 'stale_reconciliation')?.examples)
+      .toEqual([
+        expect.objectContaining({
+          reservationId: 'reservation_old_transition',
+          generationIntentKey: 'intent_old_transition',
+          ageMinutes: 40,
+        }),
+      ])
   })
 
   it('summarizes repeated finalize and release failures into machine-readable counts and examples', async () => {
