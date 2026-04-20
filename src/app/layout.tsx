@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 
+import GoogleAnalytics from "@/components/analytics/google-analytics"
 import { embeddedClerkLocalizationPtBr } from "@/components/auth/clerk-localization"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable}`}>
         <head />
         <body className="font-sans">
+          <GoogleAnalytics />
           <ThemeProvider>
             <TooltipProvider delayDuration={300}>
               {children}

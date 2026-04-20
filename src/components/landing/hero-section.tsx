@@ -14,7 +14,11 @@ export default function HeroSection() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="text-center lg:text-left">
             <h1 className="text-[clamp(2.2rem,8vw,4.5rem)] font-extrabold leading-[0.98] tracking-tight">
-              <span className="block whitespace-nowrap bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent md:hidden">
+                <span className="block">Consiga mais</span>
+                <span className="block">entrevistas.</span>
+              </span>
+              <span className="hidden bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent md:block md:whitespace-nowrap">
                 Consiga mais entrevistas.
               </span>
               <span className="block">Passe no ATS.</span>
