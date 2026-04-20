@@ -6,11 +6,11 @@ current_phase: 44
 current_phase_name: implement credit reservation ledger and billing reconciliation
 current_plan: 02
 status: verifying
-stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-04-20T04:50:19.822Z"
+stopped_at: Completed 45-01-PLAN.md
+last_updated: "2026-04-20T13:26:06.556Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 6
   total_plans: 6
   completed_plans: 6
@@ -100,6 +100,9 @@ Recent decisions affecting the next cycle:
 - [Phase 44]: Use the durable generation intent as the reservation identity so export retries reuse the same credit hold.
 - [Phase 44]: Keep ready artifacts valid under finalize drift and surface the debt as needs_reconciliation instead of reverting to a user-visible failure.
 - [Phase 44]: Expose billing-stage and reconciliation hints through the existing generate, file, job, and dashboard polling surfaces instead of adding a new UI.
+- [Phase 45]: Expose the first user-facing feed as recent export credit activity because the current audit trail only covers reservation-backed export movements.
+- [Phase 45]: Keep billing history and anomaly summaries read-only over the Phase 44 reservation and ledger truth instead of adding a second reporting table.
+- [Phase 45]: Encode stale-state, repeated-failure, and backlog thresholds directly in the shared contract so later scripts and APIs reuse the same definitions.
 
 ### Pending Todos
 
@@ -119,9 +122,10 @@ Recent decisions affecting the next cycle:
 | Phase 43 P01 | 5min | 2 tasks | 10 files |
 | Phase 44 P01 | 7min | 2 tasks | 8 files |
 | Phase 44 P02 | 18min | 3 tasks | 18 files |
+| Phase 45 P01 | 4min | 2 tasks | 7 files |
 
 ## Session Continuity
 
-Last session: 2026-04-20T04:50:19.818Z
-Stopped at: Completed 44-02-PLAN.md
+Last session: 2026-04-20T13:26:06.552Z
+Stopped at: Completed 45-01-PLAN.md
 Resume file: None

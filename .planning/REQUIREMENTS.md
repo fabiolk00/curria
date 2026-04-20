@@ -43,6 +43,12 @@
 - [x] **BILL-OBS-01**: Operators and existing polling surfaces can distinguish reservation, render, finalize, release, and reconciliation states for billable exports through structured logs and stage-aware status reads.
 - [x] **BILL-TEST-01**: Regression coverage proves reservation idempotency, finalize/release safety, reconciliation behavior, and reservation-backed export integration without double-holds or double-charges.
 
+### Billing Transparency, Alerting, and Concurrency Proof
+
+- [x] **BILL-UX-01**: Authenticated users can inspect recent export credit activity derived from `credit_reservations` and `credit_ledger_entries` inside the existing authenticated product surface without introducing a second billing-history source.
+- [x] **BILL-ALERT-01**: Operators can detect actionable export billing anomalies such as stale `needs_reconciliation`, repeated finalize or release failures, and unusual reserved backlogs through repo-native metrics, thresholds, alert hooks, and documented commands.
+- [ ] **BILL-CONC-01**: Automated and staging-friendly proof demonstrates that concurrent export retries do not create double holds or unsafe reconciliation loops, and that reservation or reconciliation states can be reproduced and diagnosed repeatably.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -81,10 +87,13 @@
 | BILL-LEDGER-01 | Phase 44 | Complete |
 | BILL-OBS-01 | Phase 44 | Planned |
 | BILL-TEST-01 | Phase 44 | Planned |
+| BILL-UX-01 | Phase 45 | Planned |
+| BILL-ALERT-01 | Phase 45 | Planned |
+| BILL-CONC-01 | Phase 45 | Planned |
 
 **Coverage:**
-- v1.6 requirements: 15 total
-- Mapped to phases: 15
+- v1.6 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0
 
 ---

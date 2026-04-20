@@ -163,3 +163,15 @@ Plans:
 Plans:
 - [x] 44-01-PLAN.md — Add reservation and ledger schema plus atomic reserve/finalize/release billing wrappers
 - [x] 44-02-PLAN.md — Integrate reservation-backed export runtime, reconciliation support, and stage-aware diagnostics
+
+### Phase 45: Improve billing transparency alerts and concurrency proof
+
+**Goal:** Make reservation-backed export billing inspectable to users, actionable to operators, and provably safe under concurrent retries without changing the existing billing state machine or authenticated surfaces.
+**Requirements**: [BILL-UX-01, BILL-ALERT-01, BILL-CONC-01]
+**Depends on:** Phase 44
+**Plans:** 1/3 plans executed
+
+Plans:
+- [x] 45-01-PLAN.md — Freeze shared billing activity and anomaly contracts over the existing ledger and reservation audit trail
+- [ ] 45-02-PLAN.md — Add authenticated export credit history to the existing settings surface
+- [ ] 45-03-PLAN.md — Land anomaly alert hooks plus concurrency and staging proof for reservation-backed export billing
