@@ -121,7 +121,7 @@ Recommended entrypoint:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42
+Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42 -> 43
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -131,6 +131,7 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 40. Integrate status flow, observability, and stabilization | 1/1 | Complete    | 2026-04-17 |
 | 41. Refactor agent context into layered workflow, action, and source builders | 1/1 | Completed | 2026-04-17 |
 | 42. Redesign public SEO role landing pages with premium editorial UX | 1/1 | Completed | 2026-04-17 |
+| 43. Refactor export and billing pipeline resilience | 1/1 | Completed | 2026-04-20 |
 
 ## Archived Milestones
 
@@ -140,3 +141,13 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42
 - [v1.2 Code Hygiene and Dead Code Reduction](./milestones/v1.2-ROADMAP.md)
 - [v1.1 Agent Reliability and Response Continuity](./milestones/v1.1-ROADMAP.md)
 - [v1.0 Launch Hardening for the Core Funnel](./milestones/v1.0-ROADMAP.md)
+
+### Phase 43: Refactor export and billing pipeline resilience
+
+**Goal:** Separate artifact generation, billing consumption, and generation-record persistence inside the billable export path so successful ATS exports stay recoverable under schema drift without weakening billing safety.
+**Requirements**: [PIPE-RES-01, PIPE-TEST-01]
+**Depends on:** Phase 42
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 43-01-PLAN.md — Refactor the billable export pipeline so artifact success, billing safety, and degraded persistence handling are explicit and test-backed

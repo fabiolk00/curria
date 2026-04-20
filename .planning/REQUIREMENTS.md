@@ -31,6 +31,11 @@
 - [ ] **CTX-02**: Resume source-of-truth selection is explicit, typed, and inspectable so workflows can deterministically explain whether they are using canonical `cvState`, `optimizedCvState`, target-job context, validation state, or generated artifact metadata.
 - [ ] **TEST-02**: Regression coverage proves lightweight chat stays minimal, ATS and job-targeting flows receive workflow-specific rewrite context, and context composition remains inspectable without changing current business semantics.
 
+### Export and Billing Pipeline Resilience
+
+- [x] **PIPE-RES-01**: No-target ATS export treats successful artifact generation as the primary outcome and keeps billing consumption plus generation-history persistence as explicit supporting stages, so late bookkeeping drift does not surface `INTERNAL_ERROR` after the artifact already exists.
+- [x] **PIPE-TEST-01**: Focused regression coverage proves degraded generation billing infrastructure, degraded `resume_generations` persistence, and the successful-artifact-return contract for no-target ATS export.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -63,6 +68,8 @@
 | CTX-01 | Phase 41 | Planned |
 | CTX-02 | Phase 41 | Planned |
 | TEST-02 | Phase 41 | Planned |
+| PIPE-RES-01 | Phase 43 | Complete |
+| PIPE-TEST-01 | Phase 43 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 11 total
