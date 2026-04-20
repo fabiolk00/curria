@@ -67,14 +67,14 @@ function buildRetryArtifactJobIdempotencyKey(input: {
   session: Session
   target?: NonNullable<Awaited<ReturnType<typeof getResumeTargetForSession>>>
   targetId?: string
-  retryNonce: string
+  retryOfJobId: string
 }): string {
   const effectiveSource = resolveEffectiveResumeSource(input.session, input.target)
   const fingerprint = createHash('sha256')
     .update(JSON.stringify({
       sessionId: input.session.id,
       targetId: input.targetId ?? null,
-      retryNonce: input.retryNonce,
+      retryOfJobId: input.retryOfJobId,
       dispatchInputRef: effectiveSource.ref,
       sourceCvState: effectiveSource.cvState,
     }))
@@ -341,7 +341,7 @@ export async function POST(
           session,
           target: target ?? undefined,
           targetId: target?.id,
-          retryNonce: crypto.randomUUID(),
+          retryOfJobId: createdJob.job.jobId,
         }),
         stage: 'queued',
         dispatchInputRef: effectiveSource.ref,
