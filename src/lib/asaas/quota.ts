@@ -160,6 +160,10 @@ export async function consumeCreditForGeneration(
     p_generation_type: type,
   })
 
+  if (error && error.message.includes('function') && error.message.includes('does not exist')) {
+    return consumeCredit(appUserId)
+  }
+
   if (error) {
     throw new Error(`Failed to consume credit for generation: ${error.message}`)
   }

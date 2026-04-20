@@ -3,11 +3,13 @@ import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { toastSuccess, toastError, toastInfo, toastWarning } = vi.hoisted(() => ({
+const { toastSuccess, toastError, toastInfo, toastWarning, toastLoading, toastDismiss } = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   toastInfo: vi.fn(),
   toastWarning: vi.fn(),
+  toastLoading: vi.fn(),
+  toastDismiss: vi.fn(),
 }))
 
 vi.mock("@/components/ui/dialog", () => ({
@@ -36,6 +38,8 @@ vi.mock("sonner", () => ({
     error: toastError,
     info: toastInfo,
     warning: toastWarning,
+    loading: toastLoading,
+    dismiss: toastDismiss,
   },
 }))
 
@@ -114,7 +118,10 @@ describe("ImportResumeModal", () => {
       null,
       "pdf",
     )
-    expect(toastSuccess).toHaveBeenCalledWith("Currículo importado com sucesso.")
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "Currículo importado com sucesso.",
+      expect.objectContaining({ id: "resume-import-pdf" }),
+    )
   })
 
   it("shows an import error when the upload route fails", async () => {
@@ -146,6 +153,7 @@ describe("ImportResumeModal", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith(
         "Não conseguimos extrair texto desse PDF. Se ele for escaneado, tente outro PDF com texto selecionável ou preencha manualmente.",
+        expect.objectContaining({ id: "resume-import-pdf" }),
       )
     })
   })
@@ -226,10 +234,11 @@ describe("ImportResumeModal", () => {
       )
     }, { timeout: 8000 })
 
-    expect(toastWarning).toHaveBeenCalledWith(
-      "Revise os dados importados antes de salvar. A confianca desta leitura foi baixa.",
+    expect(toastWarning).not.toHaveBeenCalled()
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "Currículo importado com sucesso. Revise os dados importados antes de salvar. A confianca desta leitura foi baixa.",
+      expect.objectContaining({ id: "resume-import-pdf" }),
     )
-    expect(toastSuccess).toHaveBeenCalledWith("Currículo importado com sucesso.")
   })
 
   it("shows a failed async PDF import status when the background job fails", async () => {
@@ -278,6 +287,7 @@ describe("ImportResumeModal", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith(
         "Não conseguimos extrair texto desse PDF. Se ele for escaneado, tente outro PDF com texto selecionável ou preencha manualmente.",
+        expect.objectContaining({ id: "resume-import-pdf" }),
       )
     }, { timeout: 5000 })
   })
@@ -369,7 +379,10 @@ describe("ImportResumeModal", () => {
     await user.click(screen.getAllByRole("button", { name: /importar arquivo/i })[0])
 
     await waitFor(() => {
-      expect(toastError).toHaveBeenCalledWith("Esse arquivo não trouxe novas informações para o seu perfil atual.")
+      expect(toastError).toHaveBeenCalledWith(
+        "Esse arquivo não trouxe novas informações para o seu perfil atual.",
+        expect.objectContaining({ id: "resume-import-pdf" }),
+      )
     })
 
     expect(screen.getByText("resume.pdf")).toBeInTheDocument()

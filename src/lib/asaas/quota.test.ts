@@ -4,6 +4,7 @@ import { PLANS } from '@/lib/plans'
 import {
   checkUserQuota,
   consumeCredit,
+  consumeCreditForGeneration,
   getActiveRecurringSubscription,
   getUserBillingInfo,
   grantCredits,
@@ -170,6 +171,28 @@ describe('quota credit source of truth', () => {
 
     expect(results.filter(Boolean)).toHaveLength(1)
     expect(creditAccountUpdateSelect).toHaveBeenCalledTimes(5)
+  })
+
+  it('falls back to generic credit consumption when generation rpc is unavailable', async () => {
+    mockSupabase.rpc
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'function consume_credit_for_generation does not exist' },
+      })
+      .mockResolvedValueOnce({ data: true, error: null })
+
+    await expect(
+      consumeCreditForGeneration('usr_123', 'gen_123', 'ATS_ENHANCEMENT'),
+    ).resolves.toBe(true)
+
+    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(1, 'consume_credit_for_generation', {
+      p_user_id: 'usr_123',
+      p_resume_generation_id: 'gen_123',
+      p_generation_type: 'ATS_ENHANCEMENT',
+    })
+    expect(mockSupabase.rpc).toHaveBeenNthCalledWith(2, 'consume_credit_atomic', {
+      p_user_id: 'usr_123',
+    })
   })
 
   it('returns the full billing view model when metadata and credits exist', async () => {

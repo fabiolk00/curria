@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowRight,
+  CircleAlert,
   CheckCircle2,
   FileText,
   Linkedin,
@@ -40,6 +41,19 @@ type JobStatus = "active" | "completed" | "failed" | "delayed" | "waiting"
 type FileImportStage = "idle" | "uploading" | "queued" | "extracting" | "completed" | "failed"
 type PdfImportJobStatus = "pending" | "processing" | "completed" | "failed"
 export type ImportSource = "linkedin" | "pdf"
+
+const importToastMessages = {
+  linkedin: {
+    loading: "Importando dados do LinkedIn...",
+    success: "Perfil importado do LinkedIn com sucesso.",
+    error: "Não foi possível importar seu perfil do LinkedIn.",
+  },
+  pdf: {
+    loading: "Importando currículo em PDF...",
+    success: "Currículo importado com sucesso.",
+    error: "Não foi possível importar seu currículo.",
+  },
+} as const
 
 type ImportResumeModalProps = {
   isOpen: boolean
@@ -133,6 +147,7 @@ export function ImportResumeModal({
   const isFileImportInFlightRef = useRef(false)
   const keepImportStateOnCloseRef = useRef(false)
   const backgroundCloseResetTimeoutRef = useRef<number | null>(null)
+  const activeImportToastIdRef = useRef<string | number | null>(null)
   const [linkedinUrl, setLinkedinUrl] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLinkedinSubmitting, setIsLinkedinSubmitting] = useState(false)
@@ -168,6 +183,41 @@ export function ImportResumeModal({
     onClose()
   }
 
+  const showImportToast = (
+    source: ImportSource,
+    state: "loading" | "success" | "error",
+    message?: string,
+  ): void => {
+    const toastId = `resume-import-${source}`
+    activeImportToastIdRef.current = toastId
+
+    const icon = state === "loading"
+      ? <Loader2 className="h-4 w-4 animate-spin text-white" />
+      : state === "success"
+        ? (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </span>
+        )
+        : (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white">
+            <CircleAlert className="h-3.5 w-3.5" />
+          </span>
+        )
+
+    const toastMethod = state === "loading"
+      ? toast.loading
+      : state === "success"
+        ? toast.success
+        : toast.error
+
+    toastMethod(message ?? importToastMessages[source][state], {
+      id: toastId,
+      icon,
+      duration: state === "loading" ? Infinity : 5000,
+    })
+  }
+
   const closeForBackgroundImport = (source: ImportSource): void => {
     if (backgroundCloseResetTimeoutRef.current) {
       window.clearTimeout(backgroundCloseResetTimeoutRef.current)
@@ -200,6 +250,9 @@ export function ImportResumeModal({
 
   useEffect(() => {
     return () => {
+      if (activeImportToastIdRef.current) {
+        toast.dismiss(activeImportToastIdRef.current)
+      }
       if (backgroundCloseResetTimeoutRef.current) {
         window.clearTimeout(backgroundCloseResetTimeoutRef.current)
       }
@@ -248,7 +301,7 @@ export function ImportResumeModal({
           setLinkedinUrl("")
           setJobId(null)
           setJobStatus(null)
-          toast.success("Perfil importado do LinkedIn com sucesso.")
+          showImportToast("linkedin", "success")
         }
 
         if (data.status === "failed") {
@@ -256,14 +309,18 @@ export function ImportResumeModal({
           onImportFinished?.()
           setJobId(null)
           setJobStatus("failed")
-          toast.error(data.errorMessage ?? "N\u00e3o foi poss\u00edvel importar seu perfil do LinkedIn.")
+          showImportToast("linkedin", "error", data.errorMessage)
         }
       } catch (error) {
         window.clearInterval(interval)
         onImportFinished?.()
         setJobId(null)
         setJobStatus(null)
-        toast.error(error instanceof Error ? error.message : "Erro ao acompanhar a importa\u00e7\u00e3o do LinkedIn.")
+        showImportToast(
+          "linkedin",
+          "error",
+          error instanceof Error ? error.message : "Erro ao acompanhar a importação do LinkedIn.",
+        )
       }
     }, linkedinPollMs)
 
@@ -323,10 +380,13 @@ export function ImportResumeModal({
           resetFileImportState()
           setFileImportStage("completed")
           setFileImportMessage("Os dados importados j\u00e1 foram aplicados ao formul\u00e1rio.")
-          if (data.warningMessage) {
-            toast.warning(data.warningMessage)
-          }
-          toast.success("Curr\u00edculo importado com sucesso.")
+          showImportToast(
+            "pdf",
+            "success",
+            data.warningMessage
+              ? `Currículo importado com sucesso. ${data.warningMessage}`
+              : undefined,
+          )
           return
         }
 
@@ -336,7 +396,7 @@ export function ImportResumeModal({
           setPdfImportJobId(null)
           setFileImportStage("failed")
           setFileImportMessage(null)
-          toast.error(data.errorMessage ?? "N\u00e3o foi poss\u00edvel importar seu curr\u00edculo.")
+          showImportToast("pdf", "error", data.errorMessage)
         }
       } catch (error) {
         window.clearInterval(interval)
@@ -344,7 +404,11 @@ export function ImportResumeModal({
         setPdfImportJobId(null)
         setFileImportStage("failed")
         setFileImportMessage(null)
-        toast.error(error instanceof Error ? error.message : "Erro ao acompanhar a importa\u00e7\u00e3o do curr\u00edculo.")
+        showImportToast(
+          "pdf",
+          "error",
+          error instanceof Error ? error.message : "Erro ao acompanhar a importação do currículo.",
+        )
       }
     }, pdfImportPollMs)
 
@@ -354,6 +418,7 @@ export function ImportResumeModal({
   const handleLinkedInImport = async (): Promise<void> => {
     setIsLinkedinSubmitting(true)
     closeForBackgroundImport("linkedin")
+    showImportToast("linkedin", "loading")
 
     try {
       const response = await fetch("/api/profile/extract", {
@@ -372,10 +437,13 @@ export function ImportResumeModal({
 
       setJobId(data.jobId)
       setJobStatus("waiting")
-      toast.info("Importa\u00e7\u00e3o iniciada. Estamos buscando seus dados no LinkedIn.")
     } catch (error) {
       onImportFinished?.()
-      toast.error(error instanceof Error ? error.message : "Erro ao iniciar a importa\u00e7\u00e3o do LinkedIn.")
+      showImportToast(
+        "linkedin",
+        "error",
+        error instanceof Error ? error.message : "Erro ao iniciar a importação do LinkedIn.",
+      )
     } finally {
       setIsLinkedinSubmitting(false)
     }
@@ -398,6 +466,7 @@ export function ImportResumeModal({
     setFileImportStage("uploading")
     setFileImportMessage("Estamos enviando seu curr\u00edculo para leitura segura.")
     closeForBackgroundImport("pdf")
+    showImportToast("pdf", "loading")
 
     try {
       const formData = new FormData()
@@ -416,6 +485,10 @@ export function ImportResumeModal({
       const data = (await response.json()) as FileUploadResponse
       if (response.status === 409 && data.requiresConfirmation) {
         onImportFinished?.()
+        if (activeImportToastIdRef.current) {
+          toast.dismiss(activeImportToastIdRef.current)
+          activeImportToastIdRef.current = null
+        }
         setIsReplaceConfirmOpen(true)
         return
       }
@@ -452,10 +525,11 @@ export function ImportResumeModal({
       resetFileImportState()
       setFileImportStage("completed")
       setFileImportMessage("Os dados importados j\u00e1 foram aplicados ao formul\u00e1rio.")
-      if (data.warning) {
-        toast.warning(data.warning)
-      }
-      toast.success("Curr\u00edculo importado com sucesso.")
+      showImportToast(
+        "pdf",
+        "success",
+        data.warning ? `Currículo importado com sucesso. ${data.warning}` : undefined,
+      )
     } catch (error) {
       if (activeFileImportIdRef.current !== importId) {
         return
@@ -464,7 +538,11 @@ export function ImportResumeModal({
       setFileImportStage("failed")
       setFileImportMessage(null)
       onImportFinished?.()
-      toast.error(error instanceof Error ? error.message : "Erro ao importar seu curr\u00edculo.")
+      showImportToast(
+        "pdf",
+        "error",
+        error instanceof Error ? error.message : "Erro ao importar seu currículo.",
+      )
     } finally {
       if (activeFileImportIdRef.current === importId) {
         isFileImportInFlightRef.current = false

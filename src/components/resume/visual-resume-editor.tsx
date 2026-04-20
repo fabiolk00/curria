@@ -95,6 +95,7 @@ function SectionCard({
   onToggle,
   compactMode = false,
   loadingState = "idle",
+  loadingProgress = 0,
   loadingLabel = null,
   children,
 }: {
@@ -105,9 +106,14 @@ function SectionCard({
   onToggle: () => void
   compactMode?: boolean
   loadingState?: "idle" | "loading" | "complete"
+  loadingProgress?: number
   loadingLabel?: string | null
   children: ReactNode
 }) {
+  const progressWidth = loadingState === "complete"
+    ? "100%"
+    : `${Math.max(0, Math.min(loadingProgress, 100))}%`
+
   return (
     <Card
       data-loading-state={loadingState}
@@ -116,11 +122,19 @@ function SectionCard({
         loadingState !== "idle" && "border-emerald-300 bg-emerald-50/40",
       )}
     >
+      {loadingState !== "idle" ? (
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 bg-emerald-200/50 transition-[width] duration-150 ease-linear"
+          style={{ width: progressWidth }}
+        />
+      ) : null}
+
       <button
         type="button"
         onClick={onToggle}
         className={cn(
-          "flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/50",
+          "relative z-10 flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/50",
           compactMode && !isOpen && "py-3",
         )}
         aria-expanded={isOpen}
@@ -277,6 +291,7 @@ export function VisualResumeEditor({
   const [skillsDraft, setSkillsDraft] = useState(() => buildSkillsDraft(value.skills))
   const [isEditingSkills, setIsEditingSkills] = useState(false)
   const [activeImportSectionIndex, setActiveImportSectionIndex] = useState<number | null>(null)
+  const [activeImportSectionProgress, setActiveImportSectionProgress] = useState(0)
 
   useEffect(() => {
     onAllSectionsClosedChange?.(Object.values(openSections).every((isOpen) => !isOpen))
@@ -291,41 +306,55 @@ export function VisualResumeEditor({
   useEffect(() => {
     if (!importProgressSource) {
       setActiveImportSectionIndex(null)
+      setActiveImportSectionProgress(0)
       return
     }
 
     let cancelled = false
-    let stepTimeout: number | undefined
+    let stepInterval: number | undefined
 
-    const advance = (nextIndex: number) => {
+    setActiveImportSectionIndex(0)
+    setActiveImportSectionProgress(0)
+    setOpenSections((current) => ({
+      ...current,
+      [importSectionOrder[0]]: true,
+    }))
+
+    stepInterval = window.setInterval(() => {
       if (cancelled) {
         return
       }
 
-      const boundedIndex = Math.min(nextIndex, importSectionOrder.length - 1)
-      const nextSection = importSectionOrder[boundedIndex]
+      setActiveImportSectionProgress((currentProgress) => {
+        const nextProgress = Math.min(currentProgress + 10, 100)
+        if (nextProgress < 100) {
+          return nextProgress
+        }
 
-      setActiveImportSectionIndex(boundedIndex)
-      setOpenSections((current) => ({
-        ...current,
-        [nextSection]: true,
-      }))
+        setActiveImportSectionIndex((currentIndex) => {
+          if (currentIndex === null) {
+            return 0
+          }
 
-      if (boundedIndex >= importSectionOrder.length - 1) {
-        return
-      }
+          const nextIndex = Math.min(currentIndex + 1, importSectionOrder.length - 1)
+          const nextSection = importSectionOrder[nextIndex]
 
-      stepTimeout = window.setTimeout(() => {
-        advance(boundedIndex + 1)
-      }, 950)
-    }
+          setOpenSections((currentSections) => ({
+            ...currentSections,
+            [nextSection]: true,
+          }))
 
-    advance(0)
+          return nextIndex
+        })
+
+        return 0
+      })
+    }, 90)
 
     return () => {
       cancelled = true
-      if (stepTimeout) {
-        window.clearTimeout(stepTimeout)
+      if (stepInterval) {
+        window.clearInterval(stepInterval)
       }
     }
   }, [importProgressSource])
@@ -374,6 +403,27 @@ export function VisualResumeEditor({
     return sectionIndex < activeImportSectionIndex ? "complete" : "idle"
   }
 
+  const getSectionLoadingProgress = (section: SectionId): number => {
+    if (!importProgressSource || activeImportSectionIndex === null) {
+      return 0
+    }
+
+    const sectionIndex = importSectionOrder.indexOf(section)
+    if (sectionIndex === -1) {
+      return 0
+    }
+
+    if (sectionIndex < activeImportSectionIndex) {
+      return 100
+    }
+
+    if (sectionIndex === activeImportSectionIndex) {
+      return activeImportSectionProgress
+    }
+
+    return 0
+  }
+
   return (
     <div className={cn("space-y-3", compactMode && "space-y-3")}>
       <SectionCard
@@ -384,6 +434,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("personal")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("personal")}
+        loadingProgress={getSectionLoadingProgress("personal")}
         loadingLabel={getSectionLoadingState("personal") === "loading" ? loadingLabel : null}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -429,6 +480,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("summary")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("summary")}
+        loadingProgress={getSectionLoadingProgress("summary")}
         loadingLabel={getSectionLoadingState("summary") === "loading" ? loadingLabel : null}
       >
         <Textarea
@@ -448,6 +500,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("skills")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("skills")}
+        loadingProgress={getSectionLoadingProgress("skills")}
         loadingLabel={getSectionLoadingState("skills") === "loading" ? loadingLabel : null}
       >
         <Textarea
@@ -469,6 +522,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("experience")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("experience")}
+        loadingProgress={getSectionLoadingProgress("experience")}
         loadingLabel={getSectionLoadingState("experience") === "loading" ? loadingLabel : null}
       >
         <div className="space-y-4">
@@ -600,6 +654,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("education")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("education")}
+        loadingProgress={getSectionLoadingProgress("education")}
         loadingLabel={getSectionLoadingState("education") === "loading" ? loadingLabel : null}
       >
         <div className="space-y-4">
@@ -698,6 +753,7 @@ export function VisualResumeEditor({
         onToggle={() => toggleSection("certifications")}
         compactMode={compactMode}
         loadingState={getSectionLoadingState("certifications")}
+        loadingProgress={getSectionLoadingProgress("certifications")}
         loadingLabel={getSectionLoadingState("certifications") === "loading" ? loadingLabel : null}
       >
         <div className="space-y-4">
