@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 43
-current_phase_name: refactor export and billing pipeline resilience
-current_plan: Completed
-status: completed
-stopped_at: Completed 43-01-PLAN.md
-last_updated: "2026-04-20T03:32:37.011Z"
-last_activity: 2026-04-20 -- Phase 43 complete; artifact-first export resilience shipped with safe billing fallback
+current_phase: 44
+current_phase_name: implement credit reservation ledger and billing reconciliation
+current_plan: "02"
+status: in_progress
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-04-20T04:28:11.674Z"
+last_activity: 2026-04-20
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_plans: 9
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State
@@ -24,21 +24,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Export and billing pipeline resilience shipped so successful ATS artifacts survive degraded generation bookkeeping without weakening credit safety
+**Current focus:** Reservation-backed export billing now has schema and service seams; the next plan wires runtime integration, reconciliation, and stage-aware diagnostics on top of that foundation
 
 ## Current Position
 
-Phase: 43 (refactor export and billing pipeline resilience) - COMPLETE
-Plan: 01 complete
-Current Phase: 43
-Current Phase Name: refactor export and billing pipeline resilience
-Current Plan: Completed
-Total Plans in Phase: 1
-Status: Phase complete
+Phase: 44 (implement credit reservation ledger and billing reconciliation) - IN PROGRESS
+Plan: 02 pending
+Current Phase: 44
+Current Phase Name: implement credit reservation ledger and billing reconciliation
+Current Plan: 02
+Total Plans in Phase: 2
+Status: Phase in progress
 Last activity: 2026-04-20
-Last Activity Description: Phase 43 completed; artifact-first export resilience now preserves successful ATS files under degraded billing or resume_generation persistence drift
+Last Activity Description: Phase 44 Plan 01 completed; reservation-backed billing schema, ledger primitives, and quota wrappers are ready for runtime integration
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 41 completed: the agent prompt stack now composes layered workflow, action, source, and output-contract context builders with inspectable debug metadata
 - Phase 42 completed: the public SEO role landing pages now use a premium editorial renderer with stronger role-specific visuals and preserved config-driven content logic
 - Phase 43 completed: ATS export generation now treats artifact success as primary, falls back safely under generation-billing drift, and preserves durable completion when resume_generation bookkeeping degrades
+- Phase 44 plan 01 completed: export billing now has reservation and ledger schema plus typed reserve/finalize/release wrappers without changing the current runtime surface
 
 ### Decisions
 
@@ -93,6 +94,9 @@ Recent decisions affecting the next cycle:
 - [Phase 43]: Successful file generation is the source of truth for export success; resumeGenerationId is optional when final persistence cannot be trusted.
 - [Phase 43]: Completed durable artifact jobs may omit terminalResultRef instead of forcing a new async result contract.
 - [Phase 43]: Render, billing, persistence, and billing-fallback drift now emit distinct structured warnings for export diagnosis.
+- [Phase 44]: Reservation state now lives in credit_reservations while append-only movement history lives in credit_ledger_entries.
+- [Phase 44]: Reserve, finalize, and release transition through Postgres RPCs so balance mutation and ledger writes stay atomic at the database boundary.
+- [Phase 44]: credit_accounts remains the fast balance view; wrappers do not recompute balance from the ledger on each runtime read.
 
 ### Pending Todos
 
@@ -110,9 +114,10 @@ Recent decisions affecting the next cycle:
 |---|-------------|------|--------|-----------|
 | 260419-peq | Acoplar SEO Pages.zip nas páginas SEO, remover rota variant, tornar páginas independentes e substituir FAQ pelo conteúdo do zip | 2026-04-19 | uncommitted | [260419-peq-acoplar-seo-pages-zip-nas-p-ginas-seo-re](./quick/260419-peq-acoplar-seo-pages-zip-nas-p-ginas-seo-re/) |
 | Phase 43 P01 | 5min | 2 tasks | 10 files |
+| Phase 44 P01 | 7min | 2 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-04-20T03:32:37.007Z
-Stopped at: Completed 43-01-PLAN.md
+Last session: 2026-04-20T04:28:11.670Z
+Stopped at: Completed 44-01-PLAN.md
 Resume file: None
