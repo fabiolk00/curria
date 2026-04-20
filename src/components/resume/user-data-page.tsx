@@ -458,7 +458,11 @@ export default function UserDataPage({
     try {
       await persistProfile()
 
-      const response = await fetch("/api/profile/smart-generation", {
+      const generationEndpoint = generationMode === "job_targeting"
+        ? "/api/profile/smart-generation"
+        : "/api/profile/ats-enhancement"
+
+      const response = await fetch(generationEndpoint, {
         method: "POST",
         credentials: "include",
         headers: {

@@ -305,7 +305,7 @@ describe("UserDataPage", () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_ats_123")
     })
-    expect(fetchMock).toHaveBeenCalledWith("/api/profile/smart-generation", expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith("/api/profile/ats-enhancement", expect.objectContaining({
       method: "POST",
     }))
   })
@@ -611,7 +611,7 @@ describe("UserDataPage", () => {
     expect(screen.getByText("Melhorar para ATS (1 crédito)")).toBeInTheDocument()
   })
 
-  it("shows a readable message when the smart-generation route returns a schema error object", async () => {
+  it("shows a readable message when the ATS route returns a schema error object", async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({

@@ -40,12 +40,12 @@ type SectionId =
   | "certifications"
 
 const importSectionOrder: SectionId[] = [
+  "personal",
   "summary",
   "experience",
   "skills",
   "education",
   "certifications",
-  "personal",
 ]
 
 const emptyExperience = (): ExperienceEntry => ({
@@ -116,21 +116,11 @@ function SectionCard({
         loadingState !== "idle" && "border-emerald-300 bg-emerald-50/40",
       )}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-emerald-100">
-        <div
-          className={cn(
-            "h-full bg-emerald-500 transition-[width] duration-1000 ease-linear",
-            loadingState === "idle" && "w-0",
-            loadingState !== "idle" && "w-full",
-          )}
-        />
-      </div>
-
       <button
         type="button"
         onClick={onToggle}
         className={cn(
-          "flex w-full items-center gap-4 p-4 pt-5 text-left transition-colors hover:bg-muted/50",
+          "flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/50",
           compactMode && !isOpen && "py-3",
         )}
         aria-expanded={isOpen}
@@ -312,17 +302,21 @@ export function VisualResumeEditor({
         return
       }
 
-      const normalizedIndex = nextIndex % importSectionOrder.length
-      const nextSection = importSectionOrder[normalizedIndex]
+      const boundedIndex = Math.min(nextIndex, importSectionOrder.length - 1)
+      const nextSection = importSectionOrder[boundedIndex]
 
-      setActiveImportSectionIndex(normalizedIndex)
+      setActiveImportSectionIndex(boundedIndex)
       setOpenSections((current) => ({
         ...current,
         [nextSection]: true,
       }))
 
+      if (boundedIndex >= importSectionOrder.length - 1) {
+        return
+      }
+
       stepTimeout = window.setTimeout(() => {
-        advance(normalizedIndex + 1)
+        advance(boundedIndex + 1)
       }, 950)
     }
 

@@ -8,7 +8,7 @@ describe("VisualResumeEditor", () => {
     vi.useRealTimers()
   })
 
-  it("animates section loading in sequence starting from resumo profissional", () => {
+  it("animates section loading in visual order without looping back to the first section", () => {
     vi.useFakeTimers()
 
     render(
@@ -30,7 +30,7 @@ describe("VisualResumeEditor", () => {
       />,
     )
 
-    expect(screen.getByText("Resumo profissional").closest("[data-loading-state]")).toHaveAttribute(
+    expect(screen.getByText("Dados pessoais").closest("[data-loading-state]")).toHaveAttribute(
       "data-loading-state",
       "loading",
     )
@@ -40,13 +40,26 @@ describe("VisualResumeEditor", () => {
       vi.advanceTimersByTime(1000)
     })
 
-    expect(screen.getByText("Resumo profissional").closest("[data-loading-state]")).toHaveAttribute(
+    expect(screen.getByText("Dados pessoais").closest("[data-loading-state]")).toHaveAttribute(
       "data-loading-state",
       "complete",
     )
-    expect(screen.getByText("Experiência").closest("[data-loading-state]")).toHaveAttribute(
+    expect(screen.getByText("Resumo profissional").closest("[data-loading-state]")).toHaveAttribute(
       "data-loading-state",
       "loading",
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+
+    expect(screen.getByText("Certificações").closest("[data-loading-state]")).toHaveAttribute(
+      "data-loading-state",
+      "loading",
+    )
+    expect(screen.getByText("Dados pessoais").closest("[data-loading-state]")).toHaveAttribute(
+      "data-loading-state",
+      "complete",
     )
   })
 })

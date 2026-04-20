@@ -4,6 +4,7 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { CVStateSchema } from '@/lib/cv/schema'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 import { logError, logInfo } from '@/lib/observability/structured-log'
 import { getExistingUserProfile, type UserProfileRow } from '@/lib/profile/user-profiles'
 import { validateTrustedMutationRequest } from '@/lib/security/request-trust'
@@ -123,6 +124,7 @@ export async function PUT(request: NextRequest) {
       linkedin_url: normalizeLinkedinUrl(body.data, existingProfile?.linkedin_url),
       profile_photo_url: existingProfile?.profile_photo_url ?? null,
       extracted_at: existingProfile?.extracted_at ?? new Date().toISOString(),
+      ...createUpdatedAtTimestamp(),
     }
 
     const { data, error } = await supabase
