@@ -474,6 +474,64 @@ describe('generateBillableResume', () => {
     )
   })
 
+  it('still rejects fallback exports when the latest cv version source is not billable', async () => {
+    const cvState = buildCvState()
+    mockGetLatestCompletedResumeGenerationForScope.mockRejectedValue(
+      new Error('Failed to load latest completed resume generation: relation "resume_generations" does not exist'),
+    )
+    mockGetLatestCvVersionForScope.mockResolvedValue({
+      id: 'ver_manual',
+      sessionId: 'sess_123',
+      snapshot: cvState,
+      source: 'manual',
+      createdAt: new Date('2026-04-12T12:00:00.000Z'),
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+    })
+
+    expect(result.output).toEqual({
+      success: false,
+      code: 'VALIDATION_ERROR',
+      error: 'Gere uma nova versão otimizada pela IA antes de exportar este currículo.',
+    })
+    expect(mockCheckUserQuota).not.toHaveBeenCalled()
+    expect(mockGenerateFile).not.toHaveBeenCalled()
+    expect(mockConsumeCreditForGeneration).not.toHaveBeenCalled()
+  })
+
+  it('still stops fallback exports before rendering when the user has no credits', async () => {
+    const cvState = buildCvState()
+    mockGetLatestCompletedResumeGenerationForScope.mockRejectedValue(
+      new Error('Failed to load latest completed resume generation: relation "resume_generations" does not exist'),
+    )
+    mockGetLatestCvVersionForScope.mockResolvedValue({
+      id: 'ver_rewrite',
+      sessionId: 'sess_123',
+      snapshot: cvState,
+      source: 'rewrite',
+      createdAt: new Date('2026-04-12T12:00:00.000Z'),
+    })
+    mockCheckUserQuota.mockResolvedValue(false)
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      sourceCvState: cvState,
+    })
+
+    expect(result.output).toEqual({
+      success: false,
+      code: 'INSUFFICIENT_CREDITS',
+      error: 'Seus créditos acabaram. Gere um novo currículo quando houver saldo disponível.',
+    })
+    expect(mockGenerateFile).not.toHaveBeenCalled()
+    expect(mockConsumeCreditForGeneration).not.toHaveBeenCalled()
+  })
+
   it('falls back to legacy generation when resume_generations inserts are unavailable', async () => {
     const cvState = buildCvState()
     mockGetLatestCvVersionForScope.mockResolvedValue({

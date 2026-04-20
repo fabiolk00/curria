@@ -272,6 +272,7 @@ export async function generateBillableResume(input: {
   const generationType = resolveGenerationType(scope)
   let resumeGeneration: ResumeGeneration | undefined
   let latestCompletedGeneration: ResumeGeneration | null = null
+  let resumeGenerationSchemaUnavailable = false
 
   try {
     latestCompletedGeneration = await getLatestCompletedResumeGenerationForScope({
@@ -289,26 +290,19 @@ export async function generateBillableResume(input: {
         stage: 'lookup_latest_completed',
         ...serializeError(error),
       })
-
-      return generateWithoutResumeGenerationPersistence({
-        userId: input.userId,
-        sessionId: input.sessionId,
-        sourceCvState: input.sourceCvState,
-        targetId: input.targetId,
-        generationType,
-        idempotencyKey: input.idempotencyKey,
-        templateTargetSource: input.templateTargetSource,
-      })
+      resumeGenerationSchemaUnavailable = true
     }
-
-    throw error
+    else {
+      throw error
+    }
   }
 
   if (
-    latestCompletedGeneration
+    !resumeGenerationSchemaUnavailable
+    && latestCompletedGeneration
     && areCvStatesEqual(input.sourceCvState, latestCompletedGeneration.generatedCvState ?? latestCompletedGeneration.sourceCvSnapshot)
   ) {
-      const existingSuccess = buildExistingGenerationSuccessResult(latestCompletedGeneration)
+    const existingSuccess = buildExistingGenerationSuccessResult(latestCompletedGeneration)
     if (existingSuccess) {
       const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
         latestCompletedGeneration.outputDocxPath,
@@ -335,8 +329,8 @@ export async function generateBillableResume(input: {
     }
   }
 
-  if (input.idempotencyKey) {
-    let existing: ResumeGeneration | null
+  if (input.idempotencyKey && !resumeGenerationSchemaUnavailable) {
+    let existing: ResumeGeneration | null = null
 
     try {
       existing = await getResumeGenerationByIdempotencyKey(input.userId, input.idempotencyKey)
@@ -350,22 +344,14 @@ export async function generateBillableResume(input: {
           idempotencyKey: input.idempotencyKey,
           ...serializeError(error),
         })
-
-        return generateWithoutResumeGenerationPersistence({
-          userId: input.userId,
-          sessionId: input.sessionId,
-          sourceCvState: input.sourceCvState,
-          targetId: input.targetId,
-          generationType,
-          idempotencyKey: input.idempotencyKey,
-          templateTargetSource: input.templateTargetSource,
-        })
+        resumeGenerationSchemaUnavailable = true
       }
-
-      throw error
+      else {
+        throw error
+      }
     }
 
-    if (existing) {
+    if (!resumeGenerationSchemaUnavailable && existing) {
       const existingSuccess = buildExistingGenerationSuccessResult(existing)
       if (existingSuccess) {
         const signedUrls = await createSignedResumeArtifactUrlsBestEffort(
@@ -434,8 +420,20 @@ export async function generateBillableResume(input: {
     }
   }
 
+  if (resumeGenerationSchemaUnavailable) {
+    return generateWithoutResumeGenerationPersistence({
+      userId: input.userId,
+      sessionId: input.sessionId,
+      sourceCvState: input.sourceCvState,
+      targetId: input.targetId,
+      generationType,
+      idempotencyKey: input.idempotencyKey,
+      templateTargetSource: input.templateTargetSource,
+    })
+  }
+
   if (!resumeGeneration) {
-    let pendingGeneration: Awaited<ReturnType<typeof createPendingResumeGeneration>>
+    let pendingGeneration: Awaited<ReturnType<typeof createPendingResumeGeneration>> | null = null
 
     try {
       pendingGeneration = await createPendingResumeGeneration({
@@ -456,19 +454,27 @@ export async function generateBillableResume(input: {
           idempotencyKey: input.idempotencyKey,
           ...serializeError(error),
         })
-
-        return generateWithoutResumeGenerationPersistence({
-          userId: input.userId,
-          sessionId: input.sessionId,
-          sourceCvState: input.sourceCvState,
-          targetId: input.targetId,
-          generationType,
-          idempotencyKey: input.idempotencyKey,
-          templateTargetSource: input.templateTargetSource,
-        })
+        resumeGenerationSchemaUnavailable = true
       }
+      else {
+        throw error
+      }
+    }
 
-      throw error
+    if (resumeGenerationSchemaUnavailable) {
+      return generateWithoutResumeGenerationPersistence({
+        userId: input.userId,
+        sessionId: input.sessionId,
+        sourceCvState: input.sourceCvState,
+        targetId: input.targetId,
+        generationType,
+        idempotencyKey: input.idempotencyKey,
+        templateTargetSource: input.templateTargetSource,
+      })
+    }
+
+    if (!pendingGeneration) {
+      throw new Error('Pending generation was not created before continuing billable export flow.')
     }
 
     resumeGeneration = pendingGeneration.generation
