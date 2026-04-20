@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
 import type { BillingAnomalyReport } from '../src/types/billing'
+import type { CreditReservation } from '../src/lib/db/credit-reservations'
 
 type JsonRow = Record<string, unknown>
 type SnapshotTransport = 'psql' | 'supabase_admin'
@@ -67,17 +69,40 @@ type ProcessedEventPayload = {
   } | null
 }
 
-async function getSupabaseAdminClientDynamic() {
-  const module = await import('../src/lib/db/supabase-admin')
-  return module.getSupabaseAdminClient()
+function getNamedExport<T>(
+  module: Record<string, unknown>,
+  exportName: string,
+): T {
+  const directExport = module[exportName]
+
+  if (directExport) {
+    return directExport as T
+  }
+
+  const defaultExport = module.default
+  if (defaultExport && typeof defaultExport === 'object' && exportName in defaultExport) {
+    return (defaultExport as Record<string, unknown>)[exportName] as T
+  }
+
+  throw new Error(`Failed to load ${exportName} from dynamic module import.`)
 }
 
-async function summarizeBillingAnomaliesDynamic(input: {
-  userId?: string
-  limit?: number
-}): Promise<BillingAnomalyReport> {
-  const module = await import('../src/lib/billing/billing-alerts')
-  return module.summarizeBillingAnomalies(input)
+async function getSupabaseAdminClientDynamic() {
+  const module = await import('../src/lib/db/supabase-admin')
+  return getNamedExport<() => ReturnType<typeof import('../src/lib/db/supabase-admin').getSupabaseAdminClient>>(
+    module,
+    'getSupabaseAdminClient',
+  )()
+}
+
+async function summarizeBillingAnomaliesFromReservationsDynamic(
+  reservations: CreditReservation[],
+): Promise<BillingAnomalyReport> {
+  const module = await import('../src/lib/billing/billing-anomaly-summary')
+  return getNamedExport<(typeof import('../src/lib/billing/billing-anomaly-summary'))['summarizeBillingAnomaliesFromReservations']>(
+    module,
+    'summarizeBillingAnomaliesFromReservations',
+  )(reservations)
 }
 
 const BILLING_CHECKOUT_COLUMNS = [
@@ -540,16 +565,32 @@ function buildDiscoveredIds(
   }
 }
 
-async function buildBillingAnomalySnapshot(filters: SnapshotFilters): Promise<BillingAnomalyReport> {
-  const userId = filters.userId ?? undefined
-
-  return summarizeBillingAnomaliesDynamic({
-    userId,
-    limit: 200,
-  })
+function mapSnapshotReservationRow(row: JsonRow): CreditReservation {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    generationIntentKey: String(row.generation_intent_key),
+    jobId: typeof row.job_id === 'string' ? row.job_id : undefined,
+    sessionId: typeof row.session_id === 'string' ? row.session_id : undefined,
+    resumeTargetId: typeof row.resume_target_id === 'string' ? row.resume_target_id : undefined,
+    resumeGenerationId: typeof row.resume_generation_id === 'string' ? row.resume_generation_id : undefined,
+    type: String(row.type) as CreditReservation['type'],
+    status: String(row.status) as CreditReservation['status'],
+    creditsReserved: Number(row.credits_reserved),
+    failureReason: typeof row.failure_reason === 'string' ? row.failure_reason : undefined,
+    reservedAt: new Date(String(row.reserved_at)),
+    finalizedAt: typeof row.finalized_at === 'string' ? new Date(row.finalized_at) : undefined,
+    releasedAt: typeof row.released_at === 'string' ? new Date(row.released_at) : undefined,
+    reconciliationStatus: String(row.reconciliation_status) as CreditReservation['reconciliationStatus'],
+    metadata: row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? row.metadata as Record<string, unknown>
+      : undefined,
+    createdAt: new Date(String(row.created_at)),
+    updatedAt: new Date(String(row.updated_at)),
+  }
 }
 
-function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
+export async function createPsqlSnapshot(filters: SnapshotFilters): Promise<Snapshot> {
   const databaseUrl = process.env.STAGING_DB_URL
   if (!databaseUrl) {
     throw new Error('Missing STAGING_DB_URL for direct psql snapshot mode.')
@@ -561,15 +602,32 @@ function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
     filters.subscriptionId ? `asaas_subscription_id = ${escapeSqlLiteral(filters.subscriptionId)}` : null,
   ].filter((clause): clause is string => Boolean(clause))
 
-  const billingCheckouts = runPsqlJsonQuery(
-    databaseUrl,
-    `SELECT ${BILLING_CHECKOUT_COLUMNS}
-     FROM billing_checkouts
-     WHERE ${checkoutClauses.join(' OR ')}
-     ORDER BY created_at DESC`,
-  )
+  const reservationSeedClauses = [
+    filters.userId ? `user_id = ${escapeSqlLiteral(filters.userId)}` : null,
+    filters.sessionId ? `session_id = ${escapeSqlLiteral(filters.sessionId)}` : null,
+  ].filter((clause): clause is string => Boolean(clause))
 
-  const discoveredIds = buildDiscoveredIds(filters, billingCheckouts, [])
+  const seededReservations = reservationSeedClauses.length > 0
+    ? runPsqlJsonQuery(
+      databaseUrl,
+      `SELECT ${CREDIT_RESERVATION_COLUMNS}
+       FROM credit_reservations
+       WHERE ${reservationSeedClauses.join(' OR ')}
+       ORDER BY updated_at DESC`,
+    )
+    : []
+
+  const billingCheckouts = checkoutClauses.length > 0
+    ? runPsqlJsonQuery(
+      databaseUrl,
+      `SELECT ${BILLING_CHECKOUT_COLUMNS}
+       FROM billing_checkouts
+       WHERE ${checkoutClauses.join(' OR ')}
+       ORDER BY created_at DESC`,
+    )
+    : []
+
+  const discoveredIds = buildDiscoveredIds(filters, billingCheckouts, [], seededReservations)
 
   const creditAccounts = discoveredIds.userIds.length > 0
     ? runPsqlJsonQuery(
@@ -604,7 +662,7 @@ function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
     )
   })()
 
-  const refreshedDiscoveredIds = buildDiscoveredIds(filters, billingCheckouts, userQuotas)
+  const refreshedDiscoveredIds = buildDiscoveredIds(filters, billingCheckouts, userQuotas, seededReservations)
   const processedEventClauses: string[] = []
 
   if (refreshedDiscoveredIds.subscriptionIds.length > 0) {
@@ -657,7 +715,7 @@ function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
        WHERE ${reservationClauses.join(' OR ')}
        ORDER BY updated_at DESC`,
     )
-    : []
+    : seededReservations
 
   const reservationIntentKeys = unique(
     creditReservations.map((row) => (typeof row.generation_intent_key === 'string' ? row.generation_intent_key : null)),
@@ -684,20 +742,9 @@ function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
     )
     : []
 
-  const billingAnomalies = {
-    generatedAt: new Date().toISOString(),
-    thresholds: {
-      staleReconciliationMinutes: 30,
-      repeatedFailureCount: 2,
-      reservedBacklogCount: 10,
-      exampleLimit: 5,
-    },
-    totals: {
-      reservedCount: creditReservations.filter((row) => row.status === 'reserved').length,
-      needsReconciliationCount: creditReservations.filter((row) => row.status === 'needs_reconciliation').length,
-    },
-    anomalies: [],
-  } as unknown as BillingAnomalyReport
+  const billingAnomalies = await summarizeBillingAnomaliesFromReservationsDynamic(
+    creditReservations.map(mapSnapshotReservationRow),
+  )
 
   return buildSnapshot(
     'psql',
@@ -712,7 +759,7 @@ function createPsqlSnapshot(filters: SnapshotFilters): Snapshot {
   )
 }
 
-async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapshot> {
+export async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapshot> {
   const billingCheckouts = mergeRowsById(
     filters.userId
       ? await selectRowsByEquality(
@@ -743,38 +790,14 @@ async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapsho
       : [],
   )
 
-  const discoveredIds = buildDiscoveredIds(filters, billingCheckouts, [])
-  const creditAccounts = await selectRows(
-    'credit_accounts',
-    CREDIT_ACCOUNT_COLUMNS,
-    'user_id',
-    discoveredIds.userIds,
-    'updated_at',
-  )
-
-  const userQuotas = mergeRowsById(
-    await selectRows(
-      'user_quotas',
-      USER_QUOTA_COLUMNS,
-      'user_id',
-      discoveredIds.userIds,
-      'updated_at',
-    ),
-    await selectRows(
-      'user_quotas',
-      USER_QUOTA_COLUMNS,
-      'asaas_subscription_id',
-      discoveredIds.subscriptionIds,
-      'updated_at',
-    ),
-  )
+  const initialIds = buildDiscoveredIds(filters, billingCheckouts, [])
 
   const creditReservations = mergeRowsById(
     await selectRows(
       'credit_reservations',
       CREDIT_RESERVATION_COLUMNS,
       'user_id',
-      discoveredIds.userIds,
+      initialIds.userIds,
       'updated_at',
     ),
     filters.sessionId
@@ -787,6 +810,31 @@ async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapsho
       )
       : [],
   )
+  const refreshedIdsFromReservations = buildDiscoveredIds(filters, billingCheckouts, [], creditReservations)
+  const creditAccounts = await selectRows(
+    'credit_accounts',
+    CREDIT_ACCOUNT_COLUMNS,
+    'user_id',
+    refreshedIdsFromReservations.userIds,
+    'updated_at',
+  )
+
+  const userQuotas = mergeRowsById(
+    await selectRows(
+      'user_quotas',
+      USER_QUOTA_COLUMNS,
+      'user_id',
+      refreshedIdsFromReservations.userIds,
+      'updated_at',
+    ),
+    await selectRows(
+      'user_quotas',
+      USER_QUOTA_COLUMNS,
+      'asaas_subscription_id',
+      refreshedIdsFromReservations.subscriptionIds,
+      'updated_at',
+    ),
+  )
   const reservationIntentKeys = unique(
     creditReservations.map((row) => (typeof row.generation_intent_key === 'string' ? row.generation_intent_key : null)),
   )
@@ -795,7 +843,7 @@ async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapsho
       'credit_ledger_entries',
       CREDIT_LEDGER_COLUMNS,
       'user_id',
-      discoveredIds.userIds,
+      refreshedIdsFromReservations.userIds,
       'created_at',
     ),
     filters.sessionId
@@ -835,7 +883,9 @@ async function createSupabaseSnapshot(filters: SnapshotFilters): Promise<Snapsho
       refreshedIds.userIds,
       refreshedIds.subscriptionIds,
     ))
-  const billingAnomalies = await buildBillingAnomalySnapshot(filters)
+  const billingAnomalies = await summarizeBillingAnomaliesFromReservationsDynamic(
+    creditReservations.map(mapSnapshotReservationRow),
+  )
 
   return buildSnapshot(
     'supabase_admin',
@@ -1024,13 +1074,18 @@ async function main(): Promise<void> {
   }
 
   const snapshot = transport === 'psql'
-    ? createPsqlSnapshot(filters)
+    ? await createPsqlSnapshot(filters)
     : await createSupabaseSnapshot(filters)
 
   console.log(JSON.stringify(snapshot, null, 2))
 }
 
-main().catch((error) => {
-  console.error('[check-staging-billing-state] Failed:', error instanceof Error ? error.message : error)
-  process.exitCode = 1
-})
+const entryFile = process.argv[1] ? path.resolve(process.argv[1]) : null
+const moduleFile = path.resolve(fileURLToPath(import.meta.url))
+
+if (entryFile === moduleFile) {
+  main().catch((error) => {
+    console.error('[check-staging-billing-state] Failed:', error instanceof Error ? error.message : error)
+    process.exitCode = 1
+  })
+}
