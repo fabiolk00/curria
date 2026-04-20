@@ -45,7 +45,7 @@ type FunctionDefinition = {
   inserts: FunctionInsert[]
 }
 
-const TABLE_CONVENTIONS: Record<string, TableConvention> = {
+export const TABLE_CONVENTIONS: Record<string, TableConvention> = {
   users: {
     id: 'domain',
     timestamps: 'mutable',
@@ -106,6 +106,14 @@ const TABLE_CONVENTIONS: Record<string, TableConvention> = {
   credit_consumptions: {
     id: 'generic',
     timestamps: 'mutable',
+  },
+  credit_reservations: {
+    id: 'generic',
+    timestamps: 'mutable',
+  },
+  credit_ledger_entries: {
+    id: 'generic',
+    timestamps: 'append_only',
   },
   user_profiles: {
     id: 'domain',

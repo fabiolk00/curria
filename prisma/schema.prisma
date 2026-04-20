@@ -34,6 +34,32 @@ enum ResumeGenerationType {
   @@map("resume_generation_type")
 }
 
+enum CreditReservationStatus {
+  reserved
+  finalized
+  released
+  needs_reconciliation
+
+  @@map("credit_reservation_status")
+}
+
+enum CreditReservationReconciliationStatus {
+  clean
+  pending
+  repaired
+  manual_review
+
+  @@map("credit_reservation_reconciliation_status")
+}
+
+enum CreditLedgerEntryType {
+  reservation_hold
+  reservation_finalize
+  reservation_release
+
+  @@map("credit_ledger_entry_type")
+}
+
 model Session {
   id             String    @id @default(cuid())
   userId         String    @map("user_id")
@@ -59,6 +85,8 @@ model Session {
   resumeTargets  ResumeTarget[]
   jobs           Job[]
   resumeGenerations ResumeGeneration[]
+  creditReservations CreditReservation[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@index([userId])
   @@map("sessions")
@@ -98,6 +126,8 @@ model ResumeTarget {
   cvVersions           CVVersion[]
   jobs                 Job[]
   resumeGenerations    ResumeGeneration[]
+  creditReservations   CreditReservation[]
+  creditLedgerEntries  CreditLedgerEntry[]
 
   @@index([sessionId, createdAt])
   @@map("resume_targets")
@@ -164,6 +194,8 @@ model Job {
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   session           Session?    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   resumeTarget      ResumeTarget? @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
+  creditReservations CreditReservation[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@unique([userId, type, idempotencyKey])
   @@index([userId, createdAt(sort: Desc)])
@@ -272,6 +304,8 @@ model User {
   linkedInImportJobs LinkedInImportJob[]
   resumeGenerations ResumeGeneration[]
   creditConsumptions CreditConsumption[]
+  creditReservations CreditReservation[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@map("users")
 }
@@ -404,6 +438,8 @@ model ResumeGeneration {
   session          Session?             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   resumeTarget     ResumeTarget?        @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
   creditConsumptions CreditConsumption[]
+  creditReservations CreditReservation[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@index([userId, createdAt])
   @@index([sessionId, createdAt])
@@ -425,4 +461,71 @@ model CreditConsumption {
 
   @@index([userId, createdAt])
   @@map("credit_consumptions")
+}
+
+model CreditReservation {
+  id                   String                                  @id @default(dbgenerated("gen_random_uuid()::text"))
+  userId               String                                  @map("user_id")
+  generationIntentKey  String                                  @unique @map("generation_intent_key")
+  jobId                String?                                 @map("job_id")
+  sessionId            String?                                 @map("session_id")
+  resumeTargetId       String?                                 @map("resume_target_id")
+  resumeGenerationId   String?                                 @map("resume_generation_id")
+  type                 ResumeGenerationType
+  status               CreditReservationStatus                 @default(reserved)
+  creditsReserved      Int                                     @default(1) @map("credits_reserved")
+  failureReason        String?                                 @map("failure_reason")
+  reservedAt           DateTime                                @default(now()) @map("reserved_at")
+  finalizedAt          DateTime?                               @map("finalized_at")
+  releasedAt           DateTime?                               @map("released_at")
+  reconciliationStatus CreditReservationReconciliationStatus   @default(clean) @map("reconciliation_status")
+  metadata             Json?
+  createdAt            DateTime                                @default(now()) @map("created_at")
+  updatedAt            DateTime                                @updatedAt @map("updated_at")
+
+  user                 User                                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                  Job?                                    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  session              Session?                                @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  resumeTarget         ResumeTarget?                           @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
+  resumeGeneration     ResumeGeneration?                       @relation(fields: [resumeGenerationId], references: [id], onDelete: SetNull)
+  ledgerEntries        CreditLedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([jobId])
+  @@index([sessionId])
+  @@index([resumeTargetId])
+  @@index([resumeGenerationId])
+  @@map("credit_reservations")
+}
+
+model CreditLedgerEntry {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()::text"))
+  userId              String                @map("user_id")
+  reservationId       String?               @map("reservation_id")
+  generationIntentKey String                @map("generation_intent_key")
+  entryType           CreditLedgerEntryType @map("entry_type")
+  creditsDelta        Int                   @map("credits_delta")
+  balanceAfter        Int?                  @map("balance_after")
+  jobId               String?               @map("job_id")
+  sessionId           String?               @map("session_id")
+  resumeTargetId      String?               @map("resume_target_id")
+  resumeGenerationId  String?               @map("resume_generation_id")
+  metadata            Json?
+  createdAt           DateTime              @default(now()) @map("created_at")
+
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservation         CreditReservation?    @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  job                 Job?                  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  session             Session?              @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  resumeTarget        ResumeTarget?         @relation(fields: [resumeTargetId], references: [id], onDelete: SetNull)
+  resumeGeneration    ResumeGeneration?     @relation(fields: [resumeGenerationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([reservationId])
+  @@index([generationIntentKey, createdAt])
+  @@index([jobId])
+  @@index([sessionId])
+  @@index([resumeTargetId])
+  @@index([resumeGenerationId])
+  @@map("credit_ledger_entries")
 }
