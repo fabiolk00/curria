@@ -132,7 +132,7 @@ Phases execute in numeric order: 37 -> 38 -> 39 -> 40 -> 41 -> 42 -> 43
 | 41. Refactor agent context into layered workflow, action, and source builders | 1/1 | Completed | 2026-04-17 |
 | 42. Redesign public SEO role landing pages with premium editorial UX | 1/1 | Completed | 2026-04-17 |
 | 43. Refactor export and billing pipeline resilience | 1/1 | Completed | 2026-04-20 |
-| 44. Implement credit reservation, ledger, and billing reconciliation | 1/2 | In Progress | 2026-04-20 |
+| 44. Implement credit reservation, ledger, and billing reconciliation | 2/2 | Complete   | 2026-04-20 |
 
 ## Archived Milestones
 
@@ -158,8 +158,8 @@ Plans:
 **Goal:** Upgrade billable export generation to a reservation-backed credit flow with append-only ledger records, reconciliation support, and stage-aware billing observability while preserving the existing route and durable-job surfaces.
 **Requirements**: [BILL-RES-01, BILL-LEDGER-01, BILL-OBS-01, BILL-TEST-01]
 **Depends on:** Phase 43
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 44-01-PLAN.md — Add reservation and ledger schema plus atomic reserve/finalize/release billing wrappers
-- [ ] 44-02-PLAN.md — Integrate reservation-backed export runtime, reconciliation support, and stage-aware diagnostics
+- [x] 44-02-PLAN.md — Integrate reservation-backed export runtime, reconciliation support, and stage-aware diagnostics

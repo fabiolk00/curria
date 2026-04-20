@@ -40,8 +40,8 @@
 
 - [x] **BILL-RES-01**: Billable resume export reserves exactly one credit before expensive render work starts, then finalizes or releases that hold through an explicit idempotent `reserve -> finalize/release` state machine keyed to the generation intent.
 - [x] **BILL-LEDGER-01**: Export billing writes an append-only ledger and reservation trail that remains auditable even when `resume_generations` persistence is degraded, while `credit_accounts` continues serving as the fast runtime balance view.
-- [ ] **BILL-OBS-01**: Operators and existing polling surfaces can distinguish reservation, render, finalize, release, and reconciliation states for billable exports through structured logs and stage-aware status reads.
-- [ ] **BILL-TEST-01**: Regression coverage proves reservation idempotency, finalize/release safety, reconciliation behavior, and reservation-backed export integration without double-holds or double-charges.
+- [x] **BILL-OBS-01**: Operators and existing polling surfaces can distinguish reservation, render, finalize, release, and reconciliation states for billable exports through structured logs and stage-aware status reads.
+- [x] **BILL-TEST-01**: Regression coverage proves reservation idempotency, finalize/release safety, reconciliation behavior, and reservation-backed export integration without double-holds or double-charges.
 
 ## Future Requirements
 

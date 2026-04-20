@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: milestone
 current_phase: 44
 current_phase_name: implement credit reservation ledger and billing reconciliation
-current_plan: "02"
-status: in_progress
-stopped_at: Completed 44-01-PLAN.md
-last_updated: "2026-04-20T04:28:11.674Z"
+current_plan: 02
+status: verifying
+stopped_at: Completed 44-02-PLAN.md
+last_updated: "2026-04-20T04:50:19.822Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -34,7 +34,7 @@ Current Phase: 44
 Current Phase Name: implement credit reservation ledger and billing reconciliation
 Current Plan: 02
 Total Plans in Phase: 2
-Status: Phase in progress
+Status: Phase complete — ready for verification
 Last activity: 2026-04-20
 Last Activity Description: Phase 44 Plan 01 completed; reservation-backed billing schema, ledger primitives, and quota wrappers are ready for runtime integration
 
@@ -97,6 +97,9 @@ Recent decisions affecting the next cycle:
 - [Phase 44]: Reservation state now lives in credit_reservations while append-only movement history lives in credit_ledger_entries.
 - [Phase 44]: Reserve, finalize, and release transition through Postgres RPCs so balance mutation and ledger writes stay atomic at the database boundary.
 - [Phase 44]: credit_accounts remains the fast balance view; wrappers do not recompute balance from the ledger on each runtime read.
+- [Phase 44]: Use the durable generation intent as the reservation identity so export retries reuse the same credit hold.
+- [Phase 44]: Keep ready artifacts valid under finalize drift and surface the debt as needs_reconciliation instead of reverting to a user-visible failure.
+- [Phase 44]: Expose billing-stage and reconciliation hints through the existing generate, file, job, and dashboard polling surfaces instead of adding a new UI.
 
 ### Pending Todos
 
@@ -115,9 +118,10 @@ Recent decisions affecting the next cycle:
 | 260419-peq | Acoplar SEO Pages.zip nas páginas SEO, remover rota variant, tornar páginas independentes e substituir FAQ pelo conteúdo do zip | 2026-04-19 | uncommitted | [260419-peq-acoplar-seo-pages-zip-nas-p-ginas-seo-re](./quick/260419-peq-acoplar-seo-pages-zip-nas-p-ginas-seo-re/) |
 | Phase 43 P01 | 5min | 2 tasks | 10 files |
 | Phase 44 P01 | 7min | 2 tasks | 8 files |
+| Phase 44 P02 | 18min | 3 tasks | 18 files |
 
 ## Session Continuity
 
-Last session: 2026-04-20T04:28:11.670Z
-Stopped at: Completed 44-01-PLAN.md
+Last session: 2026-04-20T04:50:19.818Z
+Stopped at: Completed 44-02-PLAN.md
 Resume file: None
