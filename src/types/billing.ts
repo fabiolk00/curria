@@ -25,6 +25,10 @@ export type BillingHistory = {
   entries: BillingHistoryEntry[]
 }
 
+export type BillingHistoryResponse = {
+  entries: Array<Omit<BillingHistoryEntry, 'createdAt'> & { createdAt: string }>
+}
+
 export type BillingAnomalyKind =
   | 'stale_reconciliation'
   | 'repeated_finalize_failure'

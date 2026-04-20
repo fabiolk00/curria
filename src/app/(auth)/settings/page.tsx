@@ -3,6 +3,7 @@ import { BarChart3, CreditCard, Plus, Settings2, ShieldCheck, Sparkles } from "l
 import Link from "next/link"
 
 import SessionList from "@/components/dashboard/session-list"
+import { BillingActivityCard } from "@/components/dashboard/billing-activity-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -222,6 +223,8 @@ export default async function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <BillingActivityCard />
           </div>
         </section>
       </div>

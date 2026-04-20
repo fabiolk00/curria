@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { listBillingHistoryForUser } from '@/lib/billing/credit-activity'
-import type { BillingHistory, BillingHistoryEntry } from '@/types/billing'
+import type { BillingHistory, BillingHistoryResponse } from '@/types/billing'
 
 const querySchema = z.object({
   limit: z.preprocess((value) => {
@@ -20,10 +20,6 @@ const querySchema = z.object({
     return Math.min(Math.max(Math.trunc(parsed), 1), 20)
   }, z.number().int().default(10)),
 })
-
-type BillingHistoryResponse = {
-  entries: Array<Omit<BillingHistoryEntry, 'createdAt'> & { createdAt: string }>
-}
 
 function serializeBillingHistory(history: BillingHistory): BillingHistoryResponse {
   return {
