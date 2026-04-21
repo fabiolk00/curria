@@ -584,3 +584,13 @@ Plans:
 
 Plans:
 - [x] 86-01-PLAN.md - Carry winner category/tier through the preview contract, keep strong inline treatment for metric/scope evidence, render contextual evidence with secondary emphasis, and add focused motor/UI regressions without retuning the selector
+
+### Phase 87: Formalize experience-entry highlight surfacing policy as an explicit code layer
+
+**Goal:** Formalize an explicit, testable experience-entry surfacing layer so visible optimized-preview highlights follow editorial evidence priority within each experience entry instead of relying on incidental bullet order or generic score side effects.
+**Requirements**: [EXP-HILITE-SURFACING-01, EXP-HILITE-SURFACING-PRIORITY-01, EXP-HILITE-SURFACING-TEST-01]
+**Depends on:** Phase 86
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 87 to break down)

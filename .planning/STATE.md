@@ -122,6 +122,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 80 added: Repeated query fingerprinting for stronger N+1 detection
 - [Phase 80]: Repeated-pattern diagnostics now sit on top of the existing Phase 78 tracking architecture; the live seam remains Supabase/PostgREST descriptor tracking rather than SQL parsing or Prisma-only instrumentation.
 - [Phase 80]: Fingerprinting is conservative by design: UUIDs, numbers, opaque ids, and list shapes normalize, but semantic string filters such as status-like values should stay distinct when possible.
+- Phase 87 added: Formalize experience-entry highlight surfacing policy as an explicit code layer
 
 ### Pending Todos
 
