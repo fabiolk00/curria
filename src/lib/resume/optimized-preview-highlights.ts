@@ -20,6 +20,10 @@ export type OptimizedPreviewHighlights = {
   experience: HighlightedExperienceEntry[]
 }
 
+export const SUMMARY_SEMANTIC_HIGHLIGHT_ENABLED = false
+export const MAX_HIGHLIGHTED_SPANS_PER_EXPERIENCE_BULLET = 1
+export const MAX_HIGHLIGHTED_BULLETS_PER_EXPERIENCE_ENTRY = 2
+
 type HighlightDensityMode = "summary" | "experience" | "inline"
 
 type PhraseUnit = {
@@ -902,7 +906,7 @@ export function buildOptimizedPreviewHighlights(
           .map((entry, index) => ({ index, score: entry.score }))
           .filter((entry) => entry.score > 0)
           .sort((left, right) => right.score - left.score)
-          .slice(0, 2)
+          .slice(0, MAX_HIGHLIGHTED_BULLETS_PER_EXPERIENCE_ENTRY)
           .map((entry) => entry.index),
       )
 
