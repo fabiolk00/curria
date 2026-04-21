@@ -355,4 +355,37 @@ describe('POST /api/profile/ats-enhancement', () => {
     expect(createSession).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
   })
+
+  it('preserves typed generate_file handoff failures instead of flattening them to generic 500s', async () => {
+    vi.mocked(dispatchToolWithContext).mockReset()
+    vi.mocked(dispatchToolWithContext).mockResolvedValue({
+      output: {
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      },
+      outputJson: JSON.stringify({
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      }),
+      outputFailure: {
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      },
+    } as never)
+
+    const response = await POST(new NextRequest('https://example.com/api/profile/ats-enhancement', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      code: 'PRECONDITION_FAILED',
+    })
+  })
 })

@@ -1,3 +1,4 @@
+import { getHttpStatusForToolError } from '@/lib/agent/tool-errors'
 import { sanitizeGeneratedCvStateForClient } from '@/lib/generated-preview/locked-preview'
 
 import { assertPreviewAccessConsistency, resolvePersistedGeneratedOutput, resolvePreviewLockSummary } from './preview-access'
@@ -81,12 +82,14 @@ export function normalizeSmartGenerationPipelineFailure(input: {
 export function normalizeSmartGenerationDispatchFailure(
   generationResult: Awaited<ReturnType<typeof import('@/lib/agent/tools').dispatchToolWithContext>>,
 ): Extract<SmartGenerationDecision, { kind: 'validation_error' }> {
+  const code = generationResult.outputFailure?.code
+
   return {
     kind: 'validation_error',
-    status: 500,
+    status: code ? getHttpStatusForToolError(code) : 500,
     body: {
       error: generationResult.outputFailure?.error,
-      code: generationResult.outputFailure?.code,
+      code,
     },
   }
 }

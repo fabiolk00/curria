@@ -6,6 +6,7 @@ import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
 import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
+import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import { applyToolPatchWithVersion, checkUserQuota, createSession } from '@/lib/db/sessions'
 
 vi.mock('@/lib/auth/app-user', () => ({
@@ -20,6 +21,10 @@ vi.mock('@/lib/db/sessions', () => ({
   createSession: vi.fn(),
   checkUserQuota: vi.fn(),
   applyToolPatchWithVersion: vi.fn(),
+}))
+
+vi.mock('@/lib/db/cv-versions', () => ({
+  getLatestCvVersionForScope: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/ats-enhancement-pipeline', () => ({
@@ -87,9 +92,14 @@ function buildTrustedHeaders() {
   }
 }
 
+let latestCvVersionSnapshot = buildCvState()
+let latestCvVersionSource = 'ats-enhancement'
+
 describe('POST /api/profile/smart-generation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    latestCvVersionSnapshot = buildCvState()
+    latestCvVersionSource = 'ats-enhancement'
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
       status: 'active',
@@ -127,6 +137,13 @@ describe('POST /api/profile/smart-generation', () => {
         resumeGenerationId: 'gen_123',
       }),
     } as never)
+    vi.mocked(getLatestCvVersionForScope).mockImplementation(async () => ({
+      id: 'ver_123',
+      sessionId: 'sess_generation_123',
+      snapshot: latestCvVersionSnapshot,
+      source: latestCvVersionSource,
+      createdAt: new Date(),
+    }) as never)
   })
 
   it('uses ATS enhancement when no target job description is provided', async () => {
@@ -134,6 +151,8 @@ describe('POST /api/profile/smart-generation', () => {
       ...buildCvState(),
       summary: 'Resumo otimizado para ATS com foco em BI e SQL.',
     }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
     vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
       session.agentState.optimizedCvState = optimizedCvState
       session.agentState.rewriteStatus = 'completed'
@@ -199,13 +218,19 @@ describe('POST /api/profile/smart-generation', () => {
   })
 
   it('uses job targeting when a target job description is present', async () => {
-    vi.mocked(runJobTargetingPipeline).mockResolvedValue({
-      success: true,
-      optimizedCvState: {
-        ...buildCvState(),
-        summary: 'Analista de dados orientada a produto e indicadores para a vaga alvo.',
-      },
-    } as never)
+    latestCvVersionSnapshot = {
+      ...buildCvState(),
+      summary: 'Analista de dados orientada a produto e indicadores para a vaga alvo.',
+    }
+    latestCvVersionSource = 'job-targeting'
+    vi.mocked(runJobTargetingPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = latestCvVersionSnapshot
+
+      return {
+        success: true,
+        optimizedCvState: latestCvVersionSnapshot,
+      } as never
+    })
 
     const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
       method: 'POST',
@@ -372,6 +397,8 @@ describe('POST /api/profile/smart-generation', () => {
       ...buildCvState(),
       summary: 'Resumo final otimizado para ATS com contexto atualizado.',
     }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
 
     vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
       session.agentState.optimizedCvState = optimizedCvState
@@ -511,11 +538,18 @@ describe('POST /api/profile/smart-generation', () => {
       ...buildCvState(),
       summary: 'Resumo real que não deve vazar.',
     }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
 
-    vi.mocked(runAtsEnhancementPipeline).mockResolvedValue({
-      success: true,
-      optimizedCvState,
-    } as never)
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
     vi.mocked(dispatchToolWithContext).mockResolvedValue({
       output: {
         success: true,
@@ -571,6 +605,54 @@ describe('POST /api/profile/smart-generation', () => {
         requiresPaidRegeneration: true,
         message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
       },
+    })
+  })
+
+  it('preserves typed generate_file handoff failures instead of flattening them to generic 500s', async () => {
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado para ATS com contexto atualizado.',
+    }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
+
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+    vi.mocked(dispatchToolWithContext).mockResolvedValue({
+      output: {
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      },
+      outputJson: JSON.stringify({
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      }),
+      outputFailure: {
+        success: false,
+        code: 'PRECONDITION_FAILED',
+        error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      },
+    } as never)
+
+    const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+      code: 'PRECONDITION_FAILED',
     })
   })
 })

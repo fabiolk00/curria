@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Session } from '@/types/agent'
 
 import { scoreATS } from '@/lib/ats/score'
+import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import { getResumeTargetForSession, updateResumeTargetGeneratedOutput } from '@/lib/db/resume-targets'
 import { applyGeneratedOutputPatch, applyToolPatchWithVersion, mergeToolPatch } from '@/lib/db/sessions'
 
@@ -15,11 +16,12 @@ import { rewriteSection } from './rewrite-section'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
 import { generateBillableResume } from '@/lib/resume-generation/generate-billable-resume'
 
-const { logError, logInfo, logWarn, serializeError } = vi.hoisted(() => ({
+const { logError, logInfo, logWarn, serializeError, recordMetricCounter } = vi.hoisted(() => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   serializeError: vi.fn(() => ({})),
+  recordMetricCounter: vi.fn(),
 }))
 
 vi.mock('./parse-file', () => ({
@@ -70,12 +72,17 @@ vi.mock('@/lib/db/resume-targets', () => ({
   updateResumeTargetGeneratedOutput: vi.fn(),
 }))
 
+vi.mock('@/lib/db/cv-versions', () => ({
+  getLatestCvVersionForScope: vi.fn(),
+}))
+
 vi.mock('@/lib/resume-targets/create-target-resume', () => ({
   createTargetResumeVariant: vi.fn(),
 }))
 
 vi.mock('@/lib/resume-generation/generate-billable-resume', () => ({
   generateBillableResume: vi.fn(),
+  BILLABLE_CV_VERSION_SOURCES: new Set(['rewrite', 'ats-enhancement', 'job-targeting', 'target-derived']),
 }))
 
 vi.mock('@/lib/agent/usage-tracker', () => ({
@@ -87,6 +94,10 @@ vi.mock('@/lib/observability/structured-log', () => ({
   logInfo,
   logWarn,
   serializeError,
+}))
+
+vi.mock('@/lib/observability/metric-events', () => ({
+  recordMetricCounter,
 }))
 
 function buildSession(): Session {
@@ -147,6 +158,13 @@ describe('agent tool dispatch', () => {
     })
     vi.mocked(getResumeTargetForSession).mockResolvedValue(null)
     vi.mocked(updateResumeTargetGeneratedOutput).mockResolvedValue(undefined)
+    vi.mocked(getLatestCvVersionForScope).mockResolvedValue({
+      id: 'ver_123',
+      sessionId: 'sess_123',
+      snapshot: buildSession().cvState,
+      source: 'ats-enhancement',
+      createdAt: new Date('2026-03-27T11:59:00.000Z'),
+    } as never)
     vi.mocked(applyToolPatchWithVersion).mockImplementation(async (session, patch) => {
       if (!patch) {
         return
@@ -680,7 +698,7 @@ describe('agent tool dispatch', () => {
     )
   })
 
-  it('reads generate_file input from optimizedCvState when available for base generation', async () => {
+  it('reads generate_file input from the authoritative optimized source when the request matches it', async () => {
     const session = buildSession()
     session.agentState.optimizedCvState = {
       ...session.cvState,
@@ -706,13 +724,9 @@ describe('agent tool dispatch', () => {
 
     const execution = await executeTool('generate_file', {
       cv_state: {
-        fullName: 'Wrong Name',
-        email: 'wrong@example.com',
-        phone: '000',
-        summary: 'wrong summary',
-        experience: [],
-        skills: [],
-        education: [],
+        ...session.cvState,
+        summary: 'Optimized ATS summary',
+        skills: ['TypeScript', 'AWS'],
       },
     }, session)
 
@@ -739,19 +753,84 @@ describe('agent tool dispatch', () => {
     expect(updateResumeTargetGeneratedOutput).not.toHaveBeenCalled()
   })
 
+  it('returns PRECONDITION_FAILED when generate_file payload does not match the authoritative optimized source', async () => {
+    const session = buildSession()
+    session.agentState.optimizedCvState = {
+      ...session.cvState,
+      summary: 'Optimized ATS summary',
+      skills: ['TypeScript', 'AWS'],
+    }
+
+    const execution = await executeTool('generate_file', {
+      cv_state: {
+        fullName: 'Wrong Name',
+        email: 'wrong@example.com',
+        phone: '000',
+        summary: 'wrong summary',
+        experience: [],
+        skills: [],
+        education: [],
+      },
+    }, session)
+
+    expect(execution.output).toEqual({
+      success: false,
+      code: 'GENERATE_FILE_SESSION_SOURCE_MISMATCH',
+      error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
+    })
+    expect(generateBillableResume).not.toHaveBeenCalled()
+    expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.source_mismatch')
+    expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.precondition_failed')
+    expect(logWarn).toHaveBeenCalledWith(
+      'agent.generate_file.preflight.failed',
+      expect.objectContaining({
+        resolvedSourceScope: 'optimized',
+        payloadMatchesResolvedSource: false,
+        failureCode: 'GENERATE_FILE_SESSION_SOURCE_MISMATCH',
+      }),
+    )
+  })
+
+  it('returns a typed failure when the latest billable CV version is missing before export', async () => {
+    const session = buildSession()
+    vi.mocked(getLatestCvVersionForScope).mockResolvedValue(null as never)
+
+    const execution = await executeTool('generate_file', {
+      cv_state: session.cvState,
+    }, session)
+
+    expect(execution.output).toEqual({
+      success: false,
+      code: 'GENERATE_FILE_LATEST_VERSION_MISSING',
+      error: 'Gere uma nova versÃ£o otimizada pela IA antes de exportar este currÃ­culo.',
+    })
+    expect(generateBillableResume).not.toHaveBeenCalled()
+    expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.latest_version_missing')
+    expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.precondition_failed')
+    expect(logWarn).toHaveBeenCalledWith(
+      'agent.generate_file.preflight.failed',
+      expect.objectContaining({
+        resolvedSourceScope: 'base',
+        latestVersionFound: false,
+        failureCode: 'GENERATE_FILE_LATEST_VERSION_MISSING',
+      }),
+    )
+  })
+
   it('generates files from the selected target derived cvState without overwriting the base resume', async () => {
     const session = buildSession()
     const originalCvState = structuredClone(session.cvState)
+    const targetDerivedCvState = {
+      ...session.cvState,
+      summary: 'Target-specific AWS summary.',
+      skills: ['TypeScript', 'AWS'],
+    }
 
     vi.mocked(getResumeTargetForSession).mockResolvedValue({
       id: 'target_123',
       sessionId: session.id,
       targetJobDescription: 'AWS backend role',
-      derivedCvState: {
-        ...session.cvState,
-        summary: 'Target-specific AWS summary.',
-        skills: ['TypeScript', 'AWS'],
-      },
+      derivedCvState: targetDerivedCvState,
       createdAt: new Date('2026-03-27T12:00:00.000Z'),
       updatedAt: new Date('2026-03-27T12:00:00.000Z'),
     })
@@ -770,7 +849,7 @@ describe('agent tool dispatch', () => {
     })
 
     const execution = await executeTool('generate_file', {
-      cv_state: session.cvState,
+      cv_state: targetDerivedCvState,
       target_id: 'target_123',
     }, session)
 
@@ -778,11 +857,7 @@ describe('agent tool dispatch', () => {
     expect(generateBillableResume).toHaveBeenCalledWith({
       userId: session.userId,
       sessionId: session.id,
-      sourceCvState: {
-        ...session.cvState,
-        summary: 'Target-specific AWS summary.',
-        skills: ['TypeScript', 'AWS'],
-      },
+      sourceCvState: targetDerivedCvState,
       targetId: 'target_123',
       idempotencyKey: undefined,
       templateTargetSource: 'AWS backend role',
@@ -809,15 +884,16 @@ describe('agent tool dispatch', () => {
   it('persists target generatedOutput on failure without updating the session generatedOutput', async () => {
     const session = buildSession()
     const originalGeneratedOutput = structuredClone(session.generatedOutput)
+    const targetDerivedCvState = {
+      ...session.cvState,
+      email: '',
+    }
 
     vi.mocked(getResumeTargetForSession).mockResolvedValue({
       id: 'target_123',
       sessionId: session.id,
       targetJobDescription: 'AWS backend role',
-      derivedCvState: {
-        ...session.cvState,
-        email: '',
-      },
+      derivedCvState: targetDerivedCvState,
       createdAt: new Date('2026-03-27T12:00:00.000Z'),
       updatedAt: new Date('2026-03-27T12:00:00.000Z'),
     })
@@ -837,7 +913,7 @@ describe('agent tool dispatch', () => {
     })
 
     const rawResult = await dispatchTool('generate_file', {
-      cv_state: session.cvState,
+      cv_state: targetDerivedCvState,
       target_id: 'target_123',
     }, session)
 

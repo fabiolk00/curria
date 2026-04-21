@@ -235,5 +235,7 @@ describe('tool errors integration', () => {
       error: 'Request failed.',
     })
     expect(getHttpStatusForToolError(TOOL_ERROR_CODES.RATE_LIMITED)).toBe(429)
+    expect(getHttpStatusForToolError(TOOL_ERROR_CODES.GENERATE_FILE_SESSION_SOURCE_MISMATCH)).toBe(409)
+    expect(getHttpStatusForToolError(TOOL_ERROR_CODES.GENERATE_FILE_LATEST_VERSION_MISSING)).toBe(409)
   })
 })

@@ -81,6 +81,12 @@
 - [x] **REPO-HYGIENE-DOC-01**: Architecture and planning docs expose clear canonical entry points so contributors can find current source-of-truth guidance quickly.
 - [x] **REPO-HYGIENE-GUARD-01**: Lightweight hygiene guardrails explain what belongs in `.planning/` and keep local scratch outputs out of version control.
 
+### ATS Enhancement Generate File Handoff Hardening
+
+- [x] **GEN-HANDOFF-01**: The `generate_file` execution seam defines the authoritative export source explicitly and rejects payload-to-source mismatches before billable generation begins.
+- [x] **GEN-HANDOFF-ERR-01**: Post-persistence handoff and generate-file intake failures are surfaced as typed tool failures with route-visible HTTP semantics instead of opaque generic internal errors.
+- [x] **GEN-HANDOFF-TEST-01**: Regression tests cover payload/source mismatch, post-persistence handoff preflight, typed dispatch failure mapping, and preview-lock transverse compatibility for the hardened seam.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -139,10 +145,13 @@
 | REPO-HYGIENE-01 | Phase 57 | Complete |
 | REPO-HYGIENE-DOC-01 | Phase 57 | Complete |
 | REPO-HYGIENE-GUARD-01 | Phase 57 | Complete |
+| GEN-HANDOFF-01 | Phase 58 | Complete |
+| GEN-HANDOFF-ERR-01 | Phase 58 | Complete |
+| GEN-HANDOFF-TEST-01 | Phase 58 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 35 total
-- Mapped to phases: 35
+- v1.6 requirements: 38 total
+- Mapped to phases: 38
 - Unmapped: 0
 
 ---

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { getHttpStatusForToolError } from '@/lib/agent/tool-errors'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { validateGenerationCvState } from '@/lib/agent/tools/generate-file'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
@@ -93,7 +94,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       error: generationResult.outputFailure.error,
       code: generationResult.outputFailure.code,
-    }, { status: 500 })
+    }, {
+      status: generationResult.outputFailure.code
+        ? getHttpStatusForToolError(generationResult.outputFailure.code)
+        : 500,
+    })
   }
 
   const output = generationResult.output as {

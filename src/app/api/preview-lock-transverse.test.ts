@@ -299,8 +299,9 @@ describe('preview lock transverse regression flow', () => {
     mockRunJobTargetingPipeline.mockResolvedValue({
       success: false,
     })
-    mockRunAtsEnhancementPipeline.mockImplementation(async () => {
-      sharedSession.agentState.optimizedCvState = lockedOptimizedCvState
+    mockRunAtsEnhancementPipeline.mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = lockedOptimizedCvState
+      session.agentState.rewriteStatus = 'completed'
       return {
         success: true,
         optimizedCvState: lockedOptimizedCvState,
@@ -340,6 +341,13 @@ describe('preview lock transverse regression flow', () => {
       cvState: baseCvState,
       warnings: [],
     }))
+    mockGetLatestCvVersionForScope.mockResolvedValue({
+      id: 'ver_locked_123',
+      sessionId: sharedSession.id,
+      snapshot: lockedOptimizedCvState,
+      source: 'ats-enhancement',
+      createdAt: new Date('2026-04-20T12:05:00.000Z'),
+    })
     mockGetCvTimelineForSession.mockResolvedValue([{
       ...sharedVersion,
       label: 'ATS Enhancement Created',

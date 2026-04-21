@@ -284,3 +284,13 @@ Plans:
 
 Plans:
 - [x] 57-01-PLAN.md — Remove local planning debris, add narrow hygiene guardrails, and curate architecture/planning doc entry points
+
+### Phase 58: ATS Enhancement Generate File Handoff Hardening
+
+**Goal:** Make the ATS enhancement to `generate_file` handoff explicit, validated, observable, and regression-tested so post-persistence export failures stop collapsing into opaque internal errors.
+**Requirements**: [GEN-HANDOFF-01, GEN-HANDOFF-ERR-01, GEN-HANDOFF-TEST-01]
+**Depends on:** Phase 57
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 58-01-PLAN.md - Harden the post-ATS generate_file handoff with an explicit intake contract, coherence preflight, typed failures, and seam regression coverage

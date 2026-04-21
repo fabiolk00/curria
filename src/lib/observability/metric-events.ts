@@ -16,6 +16,9 @@ export type MetricCounterEventName =
   | 'architecture.compare.locked_responses'
   | 'architecture.versions.locked_responses'
   | 'architecture.smart_generation.replay_locked_after_upgrade'
+  | 'architecture.generate_file.source_mismatch'
+  | 'architecture.generate_file.precondition_failed'
+  | 'architecture.generate_file.latest_version_missing'
 
 export function recordMetricCounter(
   metric: MetricCounterEventName,

@@ -64,7 +64,7 @@ type ResumeGenerationPersistenceResult = {
   resumeGenerationId?: string
 }
 
-const BILLABLE_CV_VERSION_SOURCES = new Set(['rewrite', 'ats-enhancement', 'job-targeting', 'target-derived'])
+export const BILLABLE_CV_VERSION_SOURCES = new Set(['rewrite', 'ats-enhancement', 'job-targeting', 'target-derived'])
 
 function isMissingResumeGenerationSchemaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : ''

@@ -3,23 +3,24 @@ import type OpenAI from 'openai'
 import { AGENT_CONFIG } from '@/lib/agent/config'
 import { scoreATS } from '@/lib/ats/score'
 import {
-  getResumeTargetForSession,
   updateResumeTargetGeneratedOutput,
 } from '@/lib/db/resume-targets'
-import { resolveEffectiveResumeSource } from '@/lib/jobs/source-of-truth'
 import {
   applyToolPatchWithVersion,
   mergeToolPatch,
 } from '@/lib/db/sessions'
 import { isToolFailure, TOOL_ERROR_CODES, toolFailure, toolFailureFromUnknown } from '@/lib/agent/tool-errors'
+import { recordMetricCounter } from '@/lib/observability/metric-events'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import { generateBillableResume } from '@/lib/resume-generation/generate-billable-resume'
 import { createTargetResumeVariant } from '@/lib/resume-targets/create-target-resume'
+import { resolveEffectiveResumeSource } from '@/lib/jobs/source-of-truth'
 import type {
   ApplyGapActionInput,
   AnalyzeGapInput,
   CVVersionSource,
   CreateTargetResumeInput,
+  GenerateFileInput,
   GeneratedOutput,
   ParseFileInput,
   RewriteSectionInput,
@@ -33,6 +34,7 @@ import type { Phase } from '@/types/cv'
 
 import { applyGapAction } from './gap-to-action'
 import { analyzeGap } from './gap-analysis'
+import { resolveGenerateFileExecutionContext } from './generate-file-intake'
 import { parseFile } from './parse-file'
 import { ingestResumeText } from './resume-ingestion'
 import { rewriteSection } from './rewrite-section'
@@ -40,6 +42,24 @@ import { TOOL_INPUT_SCHEMAS } from './schemas'
 import { deriveTargetFitAssessment } from '@/lib/agent/target-fit'
 
 type OpenAITool = OpenAI.Chat.Completions.ChatCompletionTool
+
+function recordGenerateFilePreflightMetric(code: string | undefined): void {
+  switch (code) {
+    case TOOL_ERROR_CODES.GENERATE_FILE_SESSION_SOURCE_MISMATCH:
+      recordMetricCounter('architecture.generate_file.source_mismatch')
+      recordMetricCounter('architecture.generate_file.precondition_failed')
+      break
+    case TOOL_ERROR_CODES.GENERATE_FILE_LATEST_VERSION_MISSING:
+      recordMetricCounter('architecture.generate_file.latest_version_missing')
+      recordMetricCounter('architecture.generate_file.precondition_failed')
+      break
+    case TOOL_ERROR_CODES.PRECONDITION_FAILED:
+      recordMetricCounter('architecture.generate_file.precondition_failed')
+      break
+    default:
+      break
+  }
+}
 
 const TOOL_DEFINITIONS: OpenAITool[] = [
   {
@@ -416,32 +436,53 @@ export async function executeTool(
     }
 
     case 'generate_file': {
-      const targetId = typeof toolInput.target_id === 'string' ? toolInput.target_id : undefined
-      const idempotencyKey = typeof toolInput.idempotency_key === 'string'
-        ? toolInput.idempotency_key
-        : undefined
-      const target = targetId
-        ? await getResumeTargetForSession(session.id, targetId)
-        : null
+      const intake = await resolveGenerateFileExecutionContext(toolInput as GenerateFileInput, session)
+      if (intake.kind === 'error') {
+        recordGenerateFilePreflightMetric(intake.failure.code)
+        logWarn('agent.generate_file.preflight.failed', {
+          sessionId: intake.diagnostics.sessionId,
+          appUserId: intake.diagnostics.appUserId,
+          targetId: intake.diagnostics.targetId,
+          resolvedSourceScope: intake.diagnostics.resolvedSourceScope,
+          requestedCvStateProvided: intake.diagnostics.requestedCvStateProvided,
+          payloadMatchesResolvedSource: intake.diagnostics.payloadMatchesResolvedSource,
+          latestVersionId: intake.diagnostics.latestVersionId,
+          latestVersionSource: intake.diagnostics.latestVersionSource,
+          latestVersionFound: intake.diagnostics.latestVersionFound,
+          preflightOutcome: 'failed',
+          failureCode: intake.failure.code,
+          failureMessage: intake.failure.error,
+        })
 
-      if (targetId && !target) {
         return {
-          output: toolFailure(TOOL_ERROR_CODES.NOT_FOUND, 'Target resume not found.'),
+          output: intake.failure,
         }
       }
-      const effectiveSource = resolveEffectiveResumeSource(session, target)
 
-      const result = await generateBillableResume({
-        userId: session.userId,
-        sessionId: session.id,
-        sourceCvState: effectiveSource.cvState,
-        targetId,
-        idempotencyKey,
-        templateTargetSource: target?.targetJobDescription ?? session.agentState,
+      logInfo('agent.generate_file.preflight.passed', {
+        sessionId: intake.diagnostics.sessionId,
+        appUserId: intake.diagnostics.appUserId,
+        targetId: intake.diagnostics.targetId,
+        resolvedSourceScope: intake.diagnostics.resolvedSourceScope,
+        requestedCvStateProvided: intake.diagnostics.requestedCvStateProvided,
+        payloadMatchesResolvedSource: intake.diagnostics.payloadMatchesResolvedSource,
+        latestVersionId: intake.diagnostics.latestVersionId,
+        latestVersionSource: intake.diagnostics.latestVersionSource,
+        latestVersionFound: intake.diagnostics.latestVersionFound,
+        preflightOutcome: 'passed',
       })
 
-    if (target && result.generatedOutput) {
-      await updateResumeTargetGeneratedOutput(session.id, target.id, result.generatedOutput)
+      const result = await generateBillableResume({
+        userId: intake.context.appUserId,
+        sessionId: intake.context.sessionId,
+        sourceCvState: intake.context.resolvedCvState,
+        targetId: intake.context.targetId,
+        idempotencyKey: intake.context.idempotencyKey,
+        templateTargetSource: intake.context.templateTargetSource,
+      })
+
+    if (intake.context.targetId && result.generatedOutput) {
+      await updateResumeTargetGeneratedOutput(session.id, intake.context.targetId, result.generatedOutput)
 
       return {
         output: result.output,
