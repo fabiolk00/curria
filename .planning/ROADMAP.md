@@ -484,3 +484,13 @@ Plans:
 
 Plans:
 - [x] 76-01-PLAN.md - Add a shared estimated-score help badge with accessible tooltip behavior, wire it into ATS readiness surfaces that render `Estimado`, and cover display plus interaction regressions
+
+### Phase 77: Corrigir encoding no PDF, alinhar datas ? direita na experi?ncia e reduzir o tooltip do badge Estimado
+
+**Goal:** Eliminate broken glyphs in PDF export, move experience dates into a right-aligned same-line header beside the role title, and shrink the `Estimado` badge tooltip into a lighter contextual help affordance.
+**Requirements**: [PDF-EXPORT-ENCODING-01, PDF-EXPERIENCE-HEADER-01, ATS-ESTIMATED-TOOLTIP-01, PDF-EXPORT-ENCODING-TEST-01]
+**Depends on:** Phase 76
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 77-01-PLAN.md - Replace the PDF font embedding with a broader Inter asset plus deterministic text sanitization, render experience periods on the same header line as the role title with right alignment, reduce the estimated-score tooltip footprint, and harden PDF plus badge regression coverage

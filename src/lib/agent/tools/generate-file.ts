@@ -160,13 +160,13 @@ const PREVIEW_FONT_REGULAR_PATH = path.join(
   process.cwd(),
   'public',
   'fonts',
-  'inter-latin-400-normal.woff2',
+  'inter-all-400-normal.woff',
 )
 const PREVIEW_FONT_SEMIBOLD_PATH = path.join(
   process.cwd(),
   'public',
   'fonts',
-  'inter-latin-600-normal.woff2',
+  'inter-all-600-normal.woff',
 )
 
 let previewPdfFontBytesPromise: Promise<{ regular: Uint8Array; semibold: Uint8Array }> | null = null
@@ -580,6 +580,18 @@ function buildContactLines(templateData: TemplateData): string[] {
   return lines
 }
 
+function sanitizePdfText(text: string): string {
+  return text
+    .normalize('NFC')
+    .replace(/[\u00A0\u2007\u202F]/gu, ' ')
+    .replace(/[‐‑‒–—−]/gu, '-')
+    .replace(/[•▪◦●○]/gu, '-')
+    .replace(/[“”]/gu, '"')
+    .replace(/[‘’]/gu, "'")
+    .replace(/\s+/gu, ' ')
+    .trim()
+}
+
 function buildSkillGroupLines(templateData: TemplateData): string[] {
   if (templateData.skillGroups.length > 0) {
     return templateData.skillGroups.map((group) => `${group.label}: ${group.items.join(', ')}`)
@@ -600,6 +612,16 @@ function formatExperienceMetadata(experience: TemplateData['experiences'][number
   }
 
   return parts.join(' | ')
+}
+
+function formatExperienceSecondaryLine(experience: TemplateData['experiences'][number]): string {
+  const parts = [experience.company.trim()]
+
+  if (experience.location.trim().length > 0) {
+    parts.push(experience.location.trim())
+  }
+
+  return parts.filter(Boolean).join(' | ')
 }
 
 function formatCertificationLine(certification: TemplateData['certifications'][number]): string {
@@ -870,7 +892,7 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
     color = palette.text,
     lineGap = 4,
   ): number {
-    activePage.drawText(text, { x, y, size, font: activeFont, color })
+    activePage.drawText(sanitizePdfText(text), { x, y, size, font: activeFont, color })
     return y - size - lineGap
   }
 
@@ -884,7 +906,7 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
   }
 
   function wrapText(text: string, activeFont: typeof font, size: number, maxWidth: number): string[] {
-    const words = text.split(' ')
+    const words = sanitizePdfText(text).split(' ')
     const lines: string[] = []
     let currentLine = ''
 
@@ -969,6 +991,70 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
     }
   }
 
+  function drawExperienceHeader(experience: TemplateData['experiences'][number]): void {
+    const period = sanitizePdfText(experience.period)
+    const periodWidth = period.length > 0
+      ? font.widthOfTextAtSize(period, typography.metaSize)
+      : 0
+    const titleMaxWidth = period.length > 0
+      ? Math.max(160, USABLE_WIDTH - periodWidth - 16)
+      : USABLE_WIDTH
+    const titleLines = wrapText(experience.title, fontBold, typography.experienceTitleSize, titleMaxWidth)
+    const headerTopY = currentY
+
+    for (let index = 0; index < titleLines.length; index += 1) {
+      page = checkPageOverflow(currentY, 40)
+      const line = titleLines[index]
+      const lineY = currentY
+
+      currentY = drawText(
+        page,
+        line,
+        MARGIN,
+        lineY,
+        typography.experienceTitleSize,
+        fontBold,
+        palette.text,
+        4,
+      )
+
+      if (index === 0 && period.length > 0) {
+        page.drawText(period, {
+          x: PAGE_WIDTH - MARGIN - periodWidth,
+          y: lineY + 0.5,
+          size: typography.metaSize,
+          font,
+          color: palette.muted,
+        })
+      }
+    }
+
+    if (titleLines.length === 0 && period.length > 0) {
+      page.drawText(period, {
+        x: PAGE_WIDTH - MARGIN - periodWidth,
+        y: headerTopY + 0.5,
+        size: typography.metaSize,
+        font,
+        color: palette.muted,
+      })
+      currentY = headerTopY - typography.metaSize - 4
+    }
+
+    const secondaryLine = formatExperienceSecondaryLine(experience)
+    if (secondaryLine.length > 0) {
+      currentY = drawText(
+        page,
+        secondaryLine,
+        MARGIN,
+        currentY,
+        typography.companySize,
+        font,
+        palette.heading,
+        5,
+      )
+    }
+  }
+
   const contactLines = buildContactLines(templateData)
   const skillLines = buildSkillGroupLines(templateData)
 
@@ -1014,36 +1100,7 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
     for (let index = 0; index < templateData.experiences.length; index += 1) {
       const experience = templateData.experiences[index]
       page = checkPageOverflow(currentY, 120)
-      currentY = drawText(
-        page,
-        experience.title,
-        MARGIN,
-        currentY,
-        typography.experienceTitleSize,
-        fontBold,
-        palette.text,
-        4,
-      )
-      currentY = drawText(
-        page,
-        experience.company,
-        MARGIN,
-        currentY,
-        typography.companySize,
-        font,
-        palette.heading,
-        3,
-      )
-      currentY = drawText(
-        page,
-        formatExperienceMetadata(experience),
-        MARGIN,
-        currentY,
-        typography.metaSize,
-        font,
-        palette.muted,
-        5,
-      )
+      drawExperienceHeader(experience)
       currentY -= 3
 
       drawBulletParagraphs(experience.bullets.map((bullet) => bullet.text))

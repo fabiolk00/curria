@@ -42,8 +42,8 @@ export function AtsReadinessStatusBadge({
           </TooltipTrigger>
           <TooltipContent
             side="top"
-            sideOffset={6}
-            className="max-w-[220px] rounded-lg bg-black px-3 py-2 text-[11px] leading-relaxed text-white"
+            sideOffset={4}
+            className="max-w-[180px] rounded-md bg-black px-2.5 py-1.5 text-[10px] leading-snug text-white shadow-lg"
           >
             {ESTIMATED_TOOLTIP_TEXT}
           </TooltipContent>

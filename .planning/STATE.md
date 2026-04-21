@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 76
-current_phase_name: adicionar icone de ajuda no badge estimado com explicacao curta do contexto do ats
+current_phase: 77
+current_phase_name: corrigir encoding no pdf alinhar datas a direita na experiencia e reduzir o tooltip do badge estimado
 current_plan: 01
 status: complete
-stopped_at: Completed 76-01-PLAN.md
-last_updated: "2026-04-21T15:25:00.000Z"
+stopped_at: Completed 77-01-PLAN.md
+last_updated: "2026-04-21T16:40:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 24
@@ -24,19 +24,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** ATS estimated scores now explain themselves more clearly in-product: the `Estimado` badge carries a compact help affordance with plain-language context, while final scores remain visually clean.
+**Current focus:** PDF export now renders pt-BR and technical strings without broken glyphs, experience headers place dates on the right beside the role title, and the `Estimado` badge help cue is lighter and more compact.
 
 ## Current Position
 
-Phase: 76 (adicionar icone de ajuda no badge estimado com explicacao curta do contexto do ats) - COMPLETE
+Phase: 77 (corrigir encoding no pdf alinhar datas a direita na experiencia e reduzir o tooltip do badge estimado) - COMPLETE
 Plan: 01 complete
-Current Phase: 76
-Current Phase Name: adicionar icone de ajuda no badge estimado com explicacao curta do contexto do ats
+Current Phase: 77
+Current Phase Name: corrigir encoding no pdf alinhar datas a direita na experiencia e reduzir o tooltip do badge estimado
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-21
-Last Activity Description: Estimated ATS Readiness badges now expose a compact accessible help cue in the comparison and session-list surfaces so users understand why the score is shown as a range
+Last Activity Description: PDF export now uses a broader Inter font asset with deterministic text sanitization, experience dates are right-aligned in the role header, and the estimated ATS badge tooltip is smaller and lighter without losing accessibility
 
 Progress: [##########] 100%
 
@@ -129,5 +129,5 @@ Baseline carried forward from earlier shipped milestones:
 ## Session Continuity
 
 Last session: 2026-04-21T09:00:00.000Z
-Stopped at: Completed 73-01-PLAN.md
+Stopped at: Completed 77-01-PLAN.md
 Resume file: None

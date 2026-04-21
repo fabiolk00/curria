@@ -95,6 +95,13 @@
 
 - [x] **ATS-ESTIMATED-HELP-01**: Product surfaces that render the ATS Readiness `Estimado` badge also render a compact help affordance that explains the estimated range in plain PT-BR without exposing internal scoring jargon.
 - [x] **ATS-ESTIMATED-HELP-TEST-01**: Regression coverage proves the help icon only appears for estimated readiness states and the explanation stays accessible through hover, focus, and click interactions.
+
+### PDF Export Encoding and Experience Header Polish
+
+- [x] **PDF-EXPORT-ENCODING-01**: PDF export embeds a broad enough Inter font asset and normalizes resume text deterministically so pt-BR accents plus common technical separators render without broken glyphs.
+- [x] **PDF-EXPERIENCE-HEADER-01**: Experience entries in the PDF render the role title on the left and the period on the right within the same header line, while company and location stay on the line below.
+- [x] **ATS-ESTIMATED-TOOLTIP-01**: The `Estimado` badge tooltip remains accessible but uses a smaller, lighter visual footprint so it reads as contextual help instead of a heavy popover.
+- [x] **PDF-EXPORT-ENCODING-TEST-01**: Regression tests verify accented/technical PDF strings, same-line role/date alignment, company placement below the header, and the compact estimated-tooltip contract.
 - [x] **REPO-HYGIENE-DOC-01**: Architecture and planning docs expose clear canonical entry points so contributors can find current source-of-truth guidance quickly.
 - [x] **REPO-HYGIENE-GUARD-01**: Lightweight hygiene guardrails explain what belongs in `.planning/` and keep local scratch outputs out of version control.
 
@@ -245,6 +252,10 @@
 | MANUAL-EXPORT-REVIEW-OBS-01 | Phase 75 | Complete |
 | ATS-ESTIMATED-HELP-01 | Phase 76 | Complete |
 | ATS-ESTIMATED-HELP-TEST-01 | Phase 76 | Complete |
+| PDF-EXPORT-ENCODING-01 | Phase 77 | Complete |
+| PDF-EXPERIENCE-HEADER-01 | Phase 77 | Complete |
+| ATS-ESTIMATED-TOOLTIP-01 | Phase 77 | Complete |
+| PDF-EXPORT-ENCODING-TEST-01 | Phase 77 | Complete |
 | MANUAL-EDIT-CANON-01 | Phase 70 | Complete |
 | MANUAL-EDIT-EXPORT-01 | Phase 70 | Complete |
 | MANUAL-EDIT-OBS-01 | Phase 70 | Complete |

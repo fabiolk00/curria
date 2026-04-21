@@ -71,6 +71,42 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   return pages.join('\n')
 }
 
+type ExtractedPdfTextItem = {
+  text: string
+  x: number
+  y: number
+}
+
+async function extractPdfTextItems(buffer: Buffer): Promise<ExtractedPdfTextItem[]> {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) })
+  const pdfDocument = await loadingTask.promise
+  const items: ExtractedPdfTextItem[] = []
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+      const page = await pdfDocument.getPage(pageNumber)
+      const textContent = await page.getTextContent()
+
+      for (const item of textContent.items) {
+        if (!('str' in item) || !item.str) {
+          continue
+        }
+
+        items.push({
+          text: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+        })
+      }
+    }
+  } finally {
+    await loadingTask.destroy()
+  }
+
+  return items
+}
+
 function normalizeExtractedPdfText(text: string): string {
   return text
     .replace(/[°•·]/g, '-')
@@ -164,7 +200,73 @@ describe('generateFile', () => {
     expect(pdfText.indexOf('EXPERIENCIA PROFISSIONAL')).toBeLessThan(pdfText.indexOf('EDUCACAO'))
     expect(pdfText.indexOf('EDUCACAO')).toBeLessThan(pdfText.indexOf('CERTIFICACOES'))
     expect(pdfText.indexOf('CERTIFICACOES')).toBeLessThan(pdfText.indexOf('IDIOMAS'))
-  })
+  }, 15_000)
+
+  it('renders accented pt-BR and technical strings without broken glyphs in the PDF', async () => {
+    const pdfBuffer = await generateFileDeps.generatePDF({
+      ...buildCvState(),
+      fullName: 'Fábio Kröker',
+      summary: 'Estagiário com experiência em ETL e Python - Programming Language.',
+      experience: [
+        {
+          title: 'Estagiário de Dados',
+          company: 'Grupo Positivo',
+          location: 'Curitiba, Paraná',
+          startDate: '01/2024',
+          endDate: '04/2026',
+          bullets: ['Atuação em ETL e automações com Python - Programming Language.'],
+        },
+      ],
+      education: [
+        {
+          degree: 'Graduação em Estatística',
+          institution: 'UFPR',
+          year: '2026',
+        },
+      ],
+      skills: ['ETL', 'Python - Programming Language'],
+    })
+
+    const pdfText = await extractPdfText(pdfBuffer)
+
+    expect(pdfText).toContain('Fábio Kröker')
+    expect(pdfText).toContain('Estagiário')
+    expect(pdfText).toContain('Graduação em Estatística')
+    expect(pdfText).toContain('ETL')
+    expect(pdfText).toContain('Python - Programming Language')
+    expect(pdfText).not.toContain('□')
+    expect(pdfText).not.toContain('Est9giário')
+    expect(pdfText).not.toContain('Gr9du9ção')
+  }, 15_000)
+
+  it('aligns experience dates on the same header line as the title and keeps the company below', async () => {
+    const pdfBuffer = await generateFileDeps.generatePDF({
+      ...buildCvState(),
+      experience: [
+        {
+          title: 'Senior Business Intelligence',
+          company: 'CNH',
+          location: 'Curitiba, Paraná',
+          startDate: '01/2025',
+          endDate: '04/2026',
+          bullets: ['Conduziu análises executivas para operações LATAM.'],
+        },
+      ],
+    })
+
+    const pdfItems = await extractPdfTextItems(pdfBuffer)
+    const titleItem = pdfItems.find((item) => item.text.includes('Senior Business Intelligence'))
+    const periodItem = pdfItems.find((item) => item.text.includes('01/2025 - 04/2026'))
+    const companyItem = pdfItems.find((item) => item.text.includes('CNH | Curitiba, Paraná'))
+
+    expect(titleItem).toBeDefined()
+    expect(periodItem).toBeDefined()
+    expect(companyItem).toBeDefined()
+
+    expect(Math.abs((titleItem?.y ?? 0) - (periodItem?.y ?? 0))).toBeLessThan(2)
+    expect((periodItem?.x ?? 0)).toBeGreaterThan((titleItem?.x ?? 0))
+    expect((companyItem?.y ?? 0)).toBeLessThan((titleItem?.y ?? 0))
+  }, 15_000)
 
   it('creates transient signed urls from the provided storage seam only', async () => {
     const createSignedUrl = vi.fn().mockResolvedValue({

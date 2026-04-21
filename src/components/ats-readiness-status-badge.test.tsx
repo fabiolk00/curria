@@ -33,7 +33,9 @@ describe("AtsReadinessStatusBadge", () => {
     expect((await screen.findAllByText(ESTIMATED_TOOLTIP_TEXT)).length).toBeGreaterThan(0)
 
     await userEvent.click(helpButton)
-    expect((await screen.findAllByText(ESTIMATED_TOOLTIP_TEXT)).length).toBeGreaterThan(0)
+    const tooltipCopies = await screen.findAllByText(ESTIMATED_TOOLTIP_TEXT)
+    expect(tooltipCopies.length).toBeGreaterThan(0)
+    expect(tooltipCopies[0]).toHaveClass("max-w-[180px]", "px-2.5", "py-1.5", "text-[10px]")
   })
 })
 
