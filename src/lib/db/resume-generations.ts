@@ -107,6 +107,7 @@ export async function createPendingResumeGeneration(input: {
   sourceCvSnapshot: CVState
 }): Promise<{ generation: ResumeGeneration; wasCreated: boolean }> {
   const supabase = getSupabaseAdminClient()
+  const now = new Date().toISOString()
 
   let versionQuery = supabase
     .from('resume_generations')
@@ -149,6 +150,7 @@ export async function createPendingResumeGeneration(input: {
       idempotency_key: input.idempotencyKey ?? null,
       source_cv_snapshot: structuredClone(input.sourceCvSnapshot),
       version_number: (count ?? 0) + 1,
+      updated_at: now,
     })
     .select('*')
     .single<ResumeGenerationRow>()

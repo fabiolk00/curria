@@ -17,9 +17,11 @@ describe('createPendingResumeGeneration', () => {
   const insert = vi.fn()
   const maybeSingle = vi.fn()
   const select = vi.fn()
+  const insertedRows: Array<Record<string, unknown>> = []
 
   beforeEach(() => {
     vi.clearAllMocks()
+    insertedRows.length = 0
 
     countEq.mockReturnValue({
       eq: countEq,
@@ -79,10 +81,13 @@ describe('createPendingResumeGeneration', () => {
       }
     })
 
-    insert.mockReturnValue({
-      select: () => ({
-        single: insertSelect,
-      }),
+    insert.mockImplementation((row: Record<string, unknown>) => {
+      insertedRows.push(row)
+      return {
+        select: () => ({
+          single: insertSelect,
+        }),
+      }
     })
 
     vi.mocked(getSupabaseAdminClient).mockReturnValue({
@@ -120,6 +125,65 @@ describe('createPendingResumeGeneration', () => {
     expect(result.generation.id).toBe('gen_existing')
     expect(result.generation.idempotencyKey).toBe('dup_key')
     expect(result.generation.status).toBe('pending')
+  })
+
+  it('sets updated_at explicitly on create inserts', async () => {
+    insertSelect.mockResolvedValueOnce({
+      data: {
+        id: 'gen_created',
+        user_id: 'usr_123',
+        session_id: 'sess_123',
+        resume_target_id: null,
+        type: 'ATS_ENHANCEMENT',
+        status: 'pending',
+        idempotency_key: 'new_key',
+        source_cv_snapshot: {
+          fullName: 'Ana Silva',
+          email: 'ana@example.com',
+          phone: '555-0100',
+          summary: 'Backend engineer',
+          experience: [],
+          skills: ['TypeScript'],
+          education: [],
+        },
+        generated_cv_state: null,
+        output_pdf_path: null,
+        output_docx_path: null,
+        failure_reason: null,
+        version_number: 1,
+        created_at: '2026-04-12T12:00:00.000Z',
+        updated_at: '2026-04-12T12:00:00.000Z',
+      },
+      error: null,
+    })
+
+    const result = await createPendingResumeGeneration({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      type: 'ATS_ENHANCEMENT',
+      idempotencyKey: 'new_key',
+      sourceCvSnapshot: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '555-0100',
+        summary: 'Backend engineer',
+        experience: [],
+        skills: ['TypeScript'],
+        education: [],
+      },
+    })
+
+    expect(result.wasCreated).toBe(true)
+    expect(insertedRows).toHaveLength(1)
+    expect(insertedRows[0]).toEqual(expect.objectContaining({
+      user_id: 'usr_123',
+      session_id: 'sess_123',
+      resume_target_id: null,
+      idempotency_key: 'new_key',
+      status: 'pending',
+      version_number: 1,
+      updated_at: expect.any(String),
+    }))
   })
 
   it('rejects malformed generated_cv_state payloads on update mapping', async () => {

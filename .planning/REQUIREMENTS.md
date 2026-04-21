@@ -166,6 +166,9 @@
 | PENDING-PERSIST-01 | Phase 60 | Complete |
 | PENDING-PERSIST-OBS-01 | Phase 60 | Complete |
 | PENDING-PERSIST-TEST-01 | Phase 60 | Complete |
+| RESUME-GEN-TS-01 | Phase 61 | Complete |
+| RESUME-GEN-TS-ALIGN-01 | Phase 61 | Complete |
+| RESUME-GEN-TS-TEST-01 | Phase 61 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 44 total

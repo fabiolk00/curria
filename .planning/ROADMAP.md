@@ -314,3 +314,13 @@ Plans:
 
 Plans:
 - [x] 60-01-PLAN.md - Split create vs reuse pending-generation persistence, log raw DB failure details, add narrower failure codes, and cover the narrowed seam with regression tests
+
+### Phase 61: Resume Generation Timestamp Persistence Fix
+
+**Goal:** Ensure the `resume_generations` create path always persists `updated_at` explicitly so pending-generation inserts stay aligned with the DB/model timestamp contract.
+**Requirements**: [RESUME-GEN-TS-01, RESUME-GEN-TS-ALIGN-01, RESUME-GEN-TS-TEST-01]
+**Depends on:** Phase 60
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 61-01-PLAN.md - Align resume-generation create timestamps with the DB contract and prove the create branch persists updated_at explicitly
