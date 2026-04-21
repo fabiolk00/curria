@@ -42,6 +42,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     clerkFrontendApi,
     'https://*.clerk.accounts.dev',
     'https://challenges.cloudflare.com',
+    'https://www.googletagmanager.com',
   ].filter(Boolean).join(' ')
 
   const clerkConnectSrc = [
