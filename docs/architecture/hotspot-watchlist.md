@@ -1,5 +1,10 @@
 # Hotspot Watchlist
 
+## Recently Resolved
+
+- `src/app/api/session/[id]/comparison/route.ts` is no longer a route-architecture ambiguity hotspot after the extraction to `src/lib/routes/session-comparison/*`.
+- `POST /api/session/[id]/compare` remains the canonical compare seam; future compare semantics should land there instead of reopening overlap with `comparison`.
+
 ## `src/lib/routes/session-generate/decision.ts`
 
 Why it is a hotspot:
