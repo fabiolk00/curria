@@ -11,7 +11,7 @@ Updated: 2026-04-20
 - Signed URL emitter count: 3 approved chokepoints.
 - Preview policy enforcement points: `locked-preview.ts`, `preview-sanitization.ts`, route decision invariants, and proof-pack tests.
 - Transverse test coverage: pass. Preview-lock transverse flow remains in the release proof pack.
-- Governance automation coverage: pass. CI now runs `npm run audit:route-architecture`.
+- Governance automation coverage: pass. CI now runs both `npm run audit:route-architecture` and `npm run test:architecture-proof-pack`, and the enforced critical-route list includes `generate`, `file`, `smart-generation`, `compare`, `comparison`, and `versions`.
 
 ## How To Read It
 

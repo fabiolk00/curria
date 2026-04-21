@@ -38,6 +38,33 @@ const criticalRoutes = [
       normalize('src/lib/routes/smart-generation/response.ts'),
     ],
   },
+  {
+    route: normalize('src/app/api/session/[id]/compare/route.ts'),
+    modules: [
+      normalize('src/lib/routes/session-compare/context.ts'),
+      normalize('src/lib/routes/session-compare/decision.ts'),
+      normalize('src/lib/routes/session-compare/response.ts'),
+      normalize('src/lib/routes/session-compare/types.ts'),
+    ],
+  },
+  {
+    route: normalize('src/app/api/session/[id]/comparison/route.ts'),
+    modules: [
+      normalize('src/lib/routes/session-comparison/context.ts'),
+      normalize('src/lib/routes/session-comparison/decision.ts'),
+      normalize('src/lib/routes/session-comparison/response.ts'),
+      normalize('src/lib/routes/session-comparison/types.ts'),
+    ],
+  },
+  {
+    route: normalize('src/app/api/session/[id]/versions/route.ts'),
+    modules: [
+      normalize('src/lib/routes/session-versions/context.ts'),
+      normalize('src/lib/routes/session-versions/decision.ts'),
+      normalize('src/lib/routes/session-versions/response.ts'),
+      normalize('src/lib/routes/session-versions/types.ts'),
+    ],
+  },
 ]
 
 const violations = []

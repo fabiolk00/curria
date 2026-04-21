@@ -38,6 +38,9 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+      - name: Architecture Proof Pack
+        run: npm run test:architecture-proof-pack
+
       - name: Database Conventions
         run: npm run audit:db-conventions
 

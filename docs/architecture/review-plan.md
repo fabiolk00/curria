@@ -26,6 +26,15 @@ Apply this plan to any PR that touches:
 - `src/lib/asaas/**`
 - `src/lib/observability/**`
 
+The enforced critical-route governance surface currently includes:
+
+- `src/app/api/session/[id]/generate/route.ts`
+- `src/app/api/file/[sessionId]/route.ts`
+- `src/app/api/profile/smart-generation/route.ts`
+- `src/app/api/session/[id]/compare/route.ts`
+- `src/app/api/session/[id]/comparison/route.ts`
+- `src/app/api/session/[id]/versions/route.ts`
+
 Use it in three cadences:
 
 - continuous PR review for critical changes
@@ -38,7 +47,7 @@ Use it in three cadences:
 
 - apply the route, policy, replay, and preview checklist
 - validate approved chokepoints
-- validate tests, audit, and proof pack when the change is critical
+- validate `npm run audit:route-architecture`, `npm run test:architecture-proof-pack`, and focused tests when the change is critical
 
 ### Weekly
 
@@ -97,7 +106,7 @@ Ask:
 
 - Is the new branch covered by tests?
 - Did `npm run audit:route-architecture` pass?
-- Did `npm run test:architecture-proof-pack` stay green when applicable?
+- Did `npm run test:architecture-proof-pack` pass in CI and stay green locally when applicable?
 - Are invariants still exercised?
 
 Without this, do not approve a critical change.

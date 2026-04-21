@@ -2,7 +2,7 @@
 
 Use this checklist when reviewing changes to semantically dense routes.
 
-For the full operating procedure, cadence, gates, hotspot review, and verdict format, see [review-plan.md](/C:/CurrIA/docs/architecture/review-plan.md).
+For the full operating procedure, cadence, gates, hotspot review, and verdict format, see [review-plan.md](./review-plan.md).
 
 - Does the route inline repeated business policy instead of delegating to `policy.ts` or `decision.ts`?
 - Is signed URL emission gated by an explicit decision-layer outcome?

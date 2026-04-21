@@ -69,6 +69,12 @@
 - [x] **ROUTE-CONS-TEST-01**: Regression coverage proves the migrated compare or comparison surface preserves public contract, preview-aware behavior, not-found handling, and compare semantics after the extraction.
 - [x] **ROUTE-CONS-DOC-01**: README, route-topology docs, governance artifacts, and component-boundary guidance reflect the current repo topology and the compare versus comparison canonical decision.
 
+### Governance Enforcement Alignment
+
+- [x] **ROUTE-GOV-ALIGN-01**: CI, route-architecture audit enforcement, and the documented critical-route governance surface all agree on which sensitive route families must pass architecture-specific checks.
+- [x] **ROUTE-GOV-ALIGN-TEST-01**: The curated architecture proof pack includes the migrated `comparison` surface and stays green alongside the route-architecture audit and typecheck commands.
+- [x] **ROUTE-GOV-ALIGN-DOC-01**: Review docs, scorecards, and architecture checklists describe the current automation truth and use repo-portable links.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -118,13 +124,16 @@
 | ROUTE-GOV-01 | Phase 52 | Complete |
 | ROUTE-OPS-01 | Phase 53 | Complete |
 | ROUTE-PROOF-01 | Phase 54 | Complete |
-| ROUTE-CONS-01 | Phase 55 | Planned |
-| ROUTE-CONS-TEST-01 | Phase 55 | Planned |
-| ROUTE-CONS-DOC-01 | Phase 55 | Planned |
+| ROUTE-CONS-01 | Phase 55 | Complete |
+| ROUTE-CONS-TEST-01 | Phase 55 | Complete |
+| ROUTE-CONS-DOC-01 | Phase 55 | Complete |
+| ROUTE-GOV-ALIGN-01 | Phase 56 | Complete |
+| ROUTE-GOV-ALIGN-TEST-01 | Phase 56 | Complete |
+| ROUTE-GOV-ALIGN-DOC-01 | Phase 56 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 29 total
-- Mapped to phases: 29
+- v1.6 requirements: 32 total
+- Mapped to phases: 32
 - Unmapped: 0
 
 ---

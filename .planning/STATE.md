@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 54
-current_phase_name: architecture proof pack
+current_phase: 56
+current_phase_name: governance enforcement alignment
 current_plan: 01
-status: verifying
-stopped_at: Completed 55-02-PLAN.md
-last_updated: "2026-04-21T00:56:28.283Z"
+status: complete
+stopped_at: Completed 56-01-PLAN.md
+last_updated: "2026-04-21T01:25:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 17
-  completed_phases: 6
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 7
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -28,15 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 54 (architecture proof pack) - COMPLETE
+Phase: 56 (governance enforcement alignment) - COMPLETE
 Plan: 01 complete
-Current Phase: 54
-Current Phase Name: architecture proof pack
+Current Phase: 56
+Current Phase Name: governance enforcement alignment
 Current Plan: 01
 Total Plans in Phase: 1
-Status: Phase complete — ready for verification
+Status: Phase complete - verified locally
 Last activity: 2026-04-21
-Last Activity Description: Hotspot decomposition, invariants, governance automation, operational telemetry, and architecture proof pack all completed and validated
+Last Activity Description: CI, audit scope, proof pack membership, and governance docs now align with the documented critical-route architecture
 
 Progress: [##########] 100%
 
@@ -44,7 +44,7 @@ Progress: [##########] 100%
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 79
+- Total plans completed: 80
 - Milestones archived: 5
 
 ## Accumulated Context
@@ -59,7 +59,8 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 52 completed: route architecture anti-patterns are enforced by CI audit and PR checklist prompts.
 - Phase 53 completed: architecture telemetry counters and incident drill docs now cover locked and artifact-available flows.
 - Phase 54 completed: a curated architecture proof pack, scorecard, and approved chokepoint map now gate sensitive route behavior.
-- Phase 55 added: Brownfield Route Consolidation And Repo Topology Alignment.
+- Phase 55 completed: compare ownership is canonicalized, comparison is extracted into route layers, and repo-topology docs now match the current architecture.
+- Phase 56 completed: CI now runs the architecture proof pack, the audit enforces compare/comparison/versions seams, and governance docs reflect the enforced critical-route surface.
 
 ### Decisions
 
@@ -71,8 +72,10 @@ Baseline carried forward from earlier shipped milestones:
 - [Phase 55]: Keep POST /api/session/[id]/compare as the canonical compare seam; keep GET /api/session/[id]/comparison compatibility-only.
 - [Phase 55]: Preserve preview-lock sanitization in the comparison decision layer before resume text generation or scoring.
 - [Phase 55]: README stays onboarding-focused and links to architecture docs instead of restating them.
-- [Phase 55]: POST /api/session/[id]/compare is documented as canonical, while GET /api/session/[id]/comparison remains compatibility-only.
 - [Phase 55]: approved-chokepoints.md remains unchanged because session-comparison/decision.ts is not a new monitored chokepoint.
+- [Phase 56]: CI enforcement must match the PR checklist for critical-route changes.
+- [Phase 56]: The route-architecture audit must enforce `compare`, `comparison`, and `versions` alongside the previously audited critical surfaces.
+- [Phase 56]: The architecture proof pack now includes the `comparison` route plus its seam tests.
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ Baseline carried forward from earlier shipped milestones:
 
 ## Session Continuity
 
-Last session: 2026-04-21T00:56:28.278Z
-Stopped at: Completed 55-02-PLAN.md
+Last session: 2026-04-21T01:25:00.000Z
+Stopped at: Completed 56-01-PLAN.md
 Resume file: None

@@ -264,3 +264,13 @@ Plans:
 Plans:
 - [x] 55-01-PLAN.md — Canonicalize compare ownership and extract the brownfield comparison route into the route-layer pattern with regression proof
 - [x] 55-02-PLAN.md — Refresh README, component-boundary guidance, and route governance artifacts for the consolidated topology
+
+### Phase 56: Governance Enforcement Alignment
+
+**Goal:** Close the remaining governance-level gaps so CI, automation, docs, and curated proof flows match the architecture promises already documented in the repo without changing runtime behavior.
+**Requirements**: [ROUTE-GOV-ALIGN-01, ROUTE-GOV-ALIGN-TEST-01, ROUTE-GOV-ALIGN-DOC-01]
+**Depends on:** Phase 55
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 56-01-PLAN.md — Align CI, audit scope, proof pack membership, and governance docs with the documented critical-route architecture
