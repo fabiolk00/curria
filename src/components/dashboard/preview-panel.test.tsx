@@ -4,7 +4,7 @@ import '@testing-library/jest-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePreviewPanel } from '@/context/preview-panel-context'
-import { getDownloadUrls } from '@/lib/dashboard/workspace-client'
+import { getDownloadUrls, getSessionWorkspace } from '@/lib/dashboard/workspace-client'
 
 import { PreviewPanel } from './preview-panel'
 
@@ -18,20 +18,24 @@ vi.mock('@/hooks/use-preview-panel-overlay', () => ({
 
 vi.mock('@/lib/dashboard/workspace-client', () => ({
   getDownloadUrls: vi.fn(),
+  getSessionWorkspace: vi.fn(),
 }))
 
 vi.mock('./resume-editor-modal', () => ({
   ResumeEditorModal: ({
     open,
+    scope,
     onOpenChange,
     onSaved,
   }: {
     open: boolean
+    scope?: string
     onOpenChange: (open: boolean) => void
     onSaved: () => void
   }) => (
       <div>
         <div data-testid="resume-editor-state">{open ? 'open' : 'closed'}</div>
+        <div data-testid="resume-editor-scope">{scope ?? 'base'}</div>
       <button type="button" onClick={() => onOpenChange(true)}>simulate modal open</button>
       <button type="button" onClick={onSaved}>trigger saved</button>
     </div>
@@ -62,6 +66,25 @@ describe('PreviewPanel', () => {
       pdfUrl: 'https://example.com/resume.pdf',
       generationStatus: 'ready',
       previewLock: undefined,
+    })
+    vi.mocked(getSessionWorkspace).mockResolvedValue({
+      session: {
+        id: 'sess_123',
+        phase: 'generation',
+        stateVersion: 1,
+        cvState: {} as never,
+        agentState: {
+          parseStatus: 'parsed',
+          optimizedCvState: { summary: 'optimized' } as never,
+        },
+        generatedOutput: { status: 'ready' },
+        messageCount: 0,
+        creditConsumed: true,
+        createdAt: '2026-04-21T00:00:00.000Z',
+        updatedAt: '2026-04-21T00:00:00.000Z',
+      },
+      jobs: [],
+      targets: [],
     })
   })
 
@@ -96,12 +119,36 @@ describe('PreviewPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('resume-editor-state')).toHaveTextContent('open')
     })
+    expect(screen.getByTestId('resume-editor-scope')).toHaveTextContent('base')
 
     await userEvent.click(screen.getByRole('button', { name: 'trigger saved' }))
 
     await waitFor(() => {
       expect(invalidateCache).toHaveBeenCalledWith('sess_123:target_123')
       expect(getDownloadUrls).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('opens the preview editor in optimized scope when the session has an optimized cvState', async () => {
+    render(
+      <PreviewPanel
+        inline
+        showCloseButton={false}
+        fileOverride={{
+          sessionId: 'sess_123',
+          targetId: null,
+          type: 'pdf',
+          label: 'Resume',
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(getSessionWorkspace).toHaveBeenCalledWith('sess_123')
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('resume-editor-scope')).toHaveTextContent('optimized')
     })
   })
 

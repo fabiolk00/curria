@@ -4,7 +4,8 @@ import '@testing-library/jest-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSessionCvState } from '@/hooks/use-session-cv-state'
-import { saveEditedResume } from '@/lib/dashboard/workspace-client'
+import { generateResume, saveEditedResume } from '@/lib/dashboard/workspace-client'
+import { toast } from 'sonner'
 
 import { ResumeEditorModal } from './resume-editor-modal'
 
@@ -14,6 +15,7 @@ vi.mock('@/hooks/use-session-cv-state', () => ({
 
 vi.mock('@/lib/dashboard/workspace-client', () => ({
   saveEditedResume: vi.fn(),
+  generateResume: vi.fn(),
 }))
 
 vi.mock('sonner', () => ({
@@ -61,6 +63,14 @@ describe('ResumeEditorModal', () => {
       refetch: vi.fn(),
     })
     vi.mocked(saveEditedResume).mockResolvedValue({ changed: true })
+    vi.mocked(generateResume).mockResolvedValue({
+      success: true,
+      scope: 'base',
+      creditsUsed: 1,
+      generationType: 'ATS_ENHANCEMENT',
+      jobId: 'job_123',
+      inProgress: true,
+    })
   })
 
   it('renders the loaded resume state', async () => {
@@ -93,7 +103,7 @@ describe('ResumeEditorModal', () => {
       />,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: /save and generate pdf/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar e atualizar pdf/i }))
 
     expect(saveEditedResume).not.toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
@@ -114,7 +124,7 @@ describe('ResumeEditorModal', () => {
     const summary = screen.getByDisplayValue('Base summary')
     await userEvent.clear(summary)
     await userEvent.type(summary, 'Updated summary')
-    await userEvent.click(screen.getByRole('button', { name: /save and generate pdf/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar e atualizar pdf/i }))
 
     await waitFor(() => {
       expect(saveEditedResume).toHaveBeenCalledWith('sess_123', {
@@ -123,12 +133,16 @@ describe('ResumeEditorModal', () => {
           summary: 'Updated summary',
         }),
       })
+      expect(generateResume).toHaveBeenCalledWith('sess_123', {
+        scope: 'base',
+      })
     })
 
     expect(onSaved).toHaveBeenCalledTimes(1)
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({
       summary: 'Updated summary',
     }))
+    expect(toast.success).toHaveBeenCalledWith('Edição salva. Atualizando o PDF.')
   })
 
   it('loads and saves the optimized resume scope when requested', async () => {
@@ -152,7 +166,7 @@ describe('ResumeEditorModal', () => {
     const summary = screen.getByDisplayValue('Base summary')
     await userEvent.clear(summary)
     await userEvent.type(summary, 'Optimized summary')
-    await userEvent.click(screen.getByRole('button', { name: /save and generate pdf/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar e atualizar pdf/i }))
 
     await waitFor(() => {
       expect(saveEditedResume).toHaveBeenCalledWith('sess_123', {
@@ -160,6 +174,9 @@ describe('ResumeEditorModal', () => {
         cvState: expect.objectContaining({
           summary: 'Optimized summary',
         }),
+      })
+      expect(generateResume).toHaveBeenCalledWith('sess_123', {
+        scope: 'base',
       })
     })
 
@@ -183,7 +200,7 @@ describe('ResumeEditorModal', () => {
     const summary = screen.getByDisplayValue('Base summary')
     await userEvent.clear(summary)
     await userEvent.type(summary, 'Updated summary')
-    await userEvent.click(screen.getByRole('button', { name: /save and generate pdf/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar e atualizar pdf/i }))
 
     await waitFor(() => {
       expect(screen.getByText('save failed')).toBeInTheDocument()

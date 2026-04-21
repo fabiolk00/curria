@@ -17,7 +17,11 @@ describe('useSessionDocuments', () => {
   it('returns an idle artifact status when there is no session', () => {
     const { result } = renderHook(() => useSessionDocuments(null))
 
-    expect(result.current.files).toEqual({ docxUrl: null, pdfUrl: null })
+    expect(result.current.files).toEqual({
+      docxUrl: null,
+      pdfUrl: null,
+      pdfFileName: null,
+    })
     expect(result.current.artifactStatus).toEqual({ generationStatus: 'idle' })
     expect(result.current.isLoading).toBe(false)
     expect(result.current.error).toBeNull()
@@ -44,7 +48,11 @@ describe('useSessionDocuments', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(result.current.files).toEqual({ docxUrl: null, pdfUrl: null })
+    expect(result.current.files).toEqual({
+      docxUrl: null,
+      pdfUrl: null,
+      pdfFileName: null,
+    })
     expect(result.current.artifactStatus).toEqual({
       generationStatus: 'generating',
       jobId: 'job_123',
@@ -77,6 +85,7 @@ describe('useSessionDocuments', () => {
   it('captures ready artifact status and signed URLs when a file is available', async () => {
     vi.mocked(getDownloadUrls).mockResolvedValue({
       docxUrl: null,
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       pdfUrl: 'https://example.com/resume.pdf',
       available: true,
       generationStatus: 'ready',
@@ -87,6 +96,8 @@ describe('useSessionDocuments', () => {
     await waitFor(() => {
       expect(result.current.files.pdfUrl).toBe('https://example.com/resume.pdf')
     })
+
+    expect(result.current.files.pdfFileName).toBe('Curriculo_Ana_Silva.pdf')
 
     expect(result.current.artifactStatus).toEqual({
       generationStatus: 'ready',
@@ -101,6 +112,7 @@ describe('useSessionDocuments', () => {
   it('passes reconciliation detail through the existing polling hook', async () => {
     vi.mocked(getDownloadUrls).mockResolvedValue({
       docxUrl: null,
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       pdfUrl: 'https://example.com/resume.pdf',
       available: true,
       generationStatus: 'ready',

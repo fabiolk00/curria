@@ -7,6 +7,7 @@ import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { manualEditSection } from '@/lib/agent/tools/manual-edit'
 import {
   getResumeTargetForSession,
+  updateResumeTargetGeneratedOutput,
   updateResumeTargetCvStateWithVersion,
 } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession } from '@/lib/db/sessions'
@@ -28,6 +29,7 @@ vi.mock('@/lib/agent/tools/manual-edit', async () => {
 
 vi.mock('@/lib/db/resume-targets', () => ({
   getResumeTargetForSession: vi.fn(),
+  updateResumeTargetGeneratedOutput: vi.fn(),
   updateResumeTargetCvStateWithVersion: vi.fn(),
 }))
 
@@ -172,6 +174,14 @@ describe('manual edit route', () => {
         cvState: {
           summary: 'Backend engineer focused on platform reliability.',
         },
+        generatedOutput: {
+          status: 'idle',
+          docxPath: undefined,
+          pdfPath: undefined,
+          generatedAt: undefined,
+          error: undefined,
+          previewAccess: undefined,
+        },
       },
       'manual',
     )
@@ -307,6 +317,14 @@ describe('manual edit route', () => {
         cvState: expect.objectContaining({
           summary: 'Updated base summary.',
         }),
+        generatedOutput: {
+          status: 'idle',
+          docxPath: undefined,
+          pdfPath: undefined,
+          generatedAt: undefined,
+          error: undefined,
+          previewAccess: undefined,
+        },
       },
       'manual',
     )
@@ -382,6 +400,13 @@ describe('manual edit route', () => {
         summary: 'Updated target summary.',
       }),
     })
+    expect(updateResumeTargetGeneratedOutput).toHaveBeenCalledWith(
+      'sess_123',
+      'target_123',
+      expect.objectContaining({
+        status: 'idle',
+      }),
+    )
   })
 
   it('saves the optimized cvState without overwriting the canonical base cvState', async () => {
@@ -420,7 +445,54 @@ describe('manual edit route', () => {
           }),
           rewriteStatus: 'completed',
         }),
+        generatedOutput: {
+          status: 'idle',
+          docxPath: undefined,
+          pdfPath: undefined,
+          generatedAt: undefined,
+          error: undefined,
+          previewAccess: undefined,
+        },
       },
+    )
+  })
+
+  it('keeps the current generated artifact metadata intact when only the base cvState changes behind an optimized resume', async () => {
+    const session = buildSession()
+    session.agentState.optimizedCvState = buildOptimizedCvState()
+    session.generatedOutput = {
+      status: 'ready',
+      pdfPath: 'usr_123/sess_123/resume.pdf',
+      generatedAt: '2026-04-21T00:00:00.000Z',
+    }
+
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(session)
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        headers: buildTrustedHeaders(),
+        body: JSON.stringify({
+          scope: 'base',
+          cvState: {
+            ...session.cvState,
+            summary: 'Base summary updated behind optimized state.',
+          },
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(applyToolPatchWithVersion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sess_123' }),
+      {
+        cvState: expect.objectContaining({
+          summary: 'Base summary updated behind optimized state.',
+        }),
+      },
+      'manual',
     )
   })
 

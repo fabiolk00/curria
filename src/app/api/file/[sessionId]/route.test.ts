@@ -136,6 +136,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'ready',
       reconciliation: undefined,
@@ -205,6 +206,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: '/api/file/sess_123/locked-preview',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'ready',
       reconciliation: undefined,
@@ -290,6 +292,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'ready',
     })
@@ -362,6 +365,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'failed',
       jobId: 'job_failed_123',
@@ -431,6 +435,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'ready',
       jobId: 'job_reconcile_123',
@@ -473,7 +478,7 @@ describe('GET /api/file/[sessionId]', () => {
         workflowMode: 'job_targeting',
         rewriteStatus: 'completed',
         lastRewriteMode: 'job_targeting',
-        targetJobDescription: 'Senior Analytics Engineer com foco em dbt e BigQuery.',
+        targetJobDescription: 'Cargo: Senior Analytics Engineer',
         optimizedCvState: {
           ...buildSession().cvState,
           summary: 'Analytics engineer com foco em dbt, SQL e BigQuery.',
@@ -500,6 +505,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/pdf-targeted',
+      pdfFileName: 'Curriculo_Ana_Silva_Senior_Analytics_Engineer.pdf',
       available: true,
       generationStatus: 'ready',
     })
@@ -535,7 +541,7 @@ describe('GET /api/file/[sessionId]', () => {
     vi.mocked(getResumeTargetForSession).mockResolvedValue({
       id: 'target_123',
       sessionId: 'sess_123',
-      targetJobDescription: 'AWS backend role',
+      targetJobDescription: 'Cargo: Analista de Dados',
       derivedCvState: buildSession().cvState,
       generatedOutput: {
         status: 'ready',
@@ -559,6 +565,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: 'https://cdn.example.com/signed/target-pdf',
+      pdfFileName: 'Curriculo_Ana_Silva_Analista_de_Dados.pdf',
       available: true,
       generationStatus: 'ready',
     })
@@ -678,6 +685,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: null,
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: false,
       generationStatus: 'failed',
       errorMessage: 'File generation failed.',
@@ -725,6 +733,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: null,
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: false,
       generationStatus: 'failed',
       errorMessage: 'No credits available to finalize this generation.',
@@ -758,7 +767,7 @@ describe('GET /api/file/[sessionId]', () => {
     vi.mocked(getResumeTargetForSession).mockResolvedValue({
       id: 'target_123',
       sessionId: 'sess_123',
-      targetJobDescription: 'AWS backend role',
+      targetJobDescription: 'Cargo: Analista de Dados',
       derivedCvState: buildSession().cvState,
       generatedOutput: {
         status: 'failed',
@@ -777,6 +786,7 @@ describe('GET /api/file/[sessionId]', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: null,
+      pdfFileName: 'Curriculo_Ana_Silva_Analista_de_Dados.pdf',
       available: false,
       generationStatus: 'failed',
       errorMessage: 'File generation failed.',

@@ -33,7 +33,7 @@ describe('SessionDocumentsPanel', () => {
   it('renders actionable retry UI when document loading fails', async () => {
     const refresh = vi.fn()
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: null },
+      files: { docxUrl: null, pdfUrl: null, pdfFileName: null },
       artifactStatus: { generationStatus: 'idle' },
       isLoading: false,
     error: 'Não foi possível carregar seus arquivos agora. Tente novamente em instantes.',
@@ -54,7 +54,11 @@ describe('SessionDocumentsPanel', () => {
     const refresh = vi.fn()
 
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: 'https://example.com/resume.pdf' },
+      files: {
+        docxUrl: null,
+        pdfUrl: 'https://example.com/resume.pdf',
+        pdfFileName: 'Curriculo_Ana_Silva.pdf',
+      },
       artifactStatus: { generationStatus: 'ready' },
       isLoading: false,
       error: null,
@@ -64,14 +68,18 @@ describe('SessionDocumentsPanel', () => {
     render(<SessionDocumentsPanel isSidebarOpen />)
 
     expect(screen.queryByText('Resume.docx')).not.toBeInTheDocument()
-    expect(screen.getByText('Resume.pdf')).toBeInTheDocument()
+    expect(screen.getByText('Curriculo_Ana_Silva.pdf')).toBeInTheDocument()
     expect(screen.getByTestId('session-documents-panel')).toHaveAttribute('data-pdf-available', 'true')
   })
 
   it('re-enables the download button after a failed download attempt', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('network failed'))
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: 'https://example.com/resume.pdf' },
+      files: {
+        docxUrl: null,
+        pdfUrl: 'https://example.com/resume.pdf',
+        pdfFileName: 'Curriculo_Ana_Silva.pdf',
+      },
       artifactStatus: { generationStatus: 'ready' },
       isLoading: false,
       error: null,
@@ -95,7 +103,7 @@ describe('SessionDocumentsPanel', () => {
 
   it('renders generating status even before a PDF URL exists', () => {
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: null },
+      files: { docxUrl: null, pdfUrl: null, pdfFileName: null },
       artifactStatus: {
         generationStatus: 'generating',
         jobId: 'job_123',
@@ -113,13 +121,13 @@ describe('SessionDocumentsPanel', () => {
     render(<SessionDocumentsPanel isSidebarOpen />)
 
     expect(screen.getByTestId('session-documents-panel')).toHaveAttribute('data-state', 'generating')
-    expect(screen.getByText('Geracao em andamento. Atualizaremos este arquivo quando estiver pronto.')).toBeInTheDocument()
+    expect(screen.getByText('Preparando sua exportacao. Atualizaremos este arquivo quando estiver pronto.')).toBeInTheDocument()
     expect(screen.getByTestId('documents-progress-label')).toHaveTextContent('rendering (60%)')
   })
 
   it('renders failed status with the latest durable error message', () => {
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: null },
+      files: { docxUrl: null, pdfUrl: null, pdfFileName: null },
       artifactStatus: {
         generationStatus: 'failed',
         jobId: 'job_123',
@@ -135,12 +143,16 @@ describe('SessionDocumentsPanel', () => {
 
     expect(screen.getByTestId('session-documents-panel')).toHaveAttribute('data-state', 'failed')
     expect(screen.getByText('No credits available to finalize this generation.')).toBeInTheDocument()
-    expect(screen.getByTestId('documents-progress-label')).toHaveTextContent('Ultima etapa: generation failed')
+    expect(screen.getByTestId('documents-progress-label')).toHaveTextContent('Ultima etapa: Falha na exportacao')
   })
 
   it('shows a reconciliation notice while keeping the ready PDF available', () => {
     mockUseSessionDocuments.mockReturnValue({
-      files: { docxUrl: null, pdfUrl: 'https://example.com/resume.pdf' },
+      files: {
+        docxUrl: null,
+        pdfUrl: 'https://example.com/resume.pdf',
+        pdfFileName: 'Curriculo_Ana_Silva_Analista_de_Dados.pdf',
+      },
       artifactStatus: {
         generationStatus: 'ready',
         stage: 'needs_reconciliation',
@@ -157,8 +169,8 @@ describe('SessionDocumentsPanel', () => {
 
     render(<SessionDocumentsPanel isSidebarOpen />)
 
-    expect(screen.getByText('Arquivo pronto. A cobranca desta geracao esta em reconciliacao.')).toBeInTheDocument()
+    expect(screen.getByText('Estamos conferindo a cobranca desta geracao. Seu arquivo continua disponivel.')).toBeInTheDocument()
     expect(screen.getByText('billing finalize pending repair')).toBeInTheDocument()
-    expect(screen.getByText('Resume.pdf')).toBeInTheDocument()
+    expect(screen.getByText('Curriculo_Ana_Silva_Analista_de_Dados.pdf')).toBeInTheDocument()
   })
 })

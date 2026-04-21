@@ -8,6 +8,7 @@ import type { ArtifactStatusSummary } from '@/types/dashboard'
 type SessionFiles = {
   docxUrl: string | null
   pdfUrl: string | null
+  pdfFileName?: string | null
 }
 
 type SessionDocuments = {
@@ -35,7 +36,11 @@ function getDocumentErrorMessage(error: unknown): string {
 }
 
 export function useSessionDocuments(sessionId: string | null): SessionDocuments {
-  const [files, setFiles] = useState<SessionFiles>({ docxUrl: null, pdfUrl: null })
+  const [files, setFiles] = useState<SessionFiles>({
+    docxUrl: null,
+    pdfUrl: null,
+    pdfFileName: null,
+  })
   const [artifactStatus, setArtifactStatus] = useState<ArtifactStatusSummary>(EMPTY_ARTIFACT_STATUS)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +52,7 @@ export function useSessionDocuments(sessionId: string | null): SessionDocuments 
 
   useEffect(() => {
     if (!sessionId) {
-      setFiles({ docxUrl: null, pdfUrl: null })
+      setFiles({ docxUrl: null, pdfUrl: null, pdfFileName: null })
       setArtifactStatus(EMPTY_ARTIFACT_STATUS)
       setError(null)
       setIsLoading(false)
@@ -70,6 +75,7 @@ export function useSessionDocuments(sessionId: string | null): SessionDocuments 
         setFiles({
           docxUrl: null,
           pdfUrl: nextFiles.pdfUrl ?? null,
+          pdfFileName: nextFiles.pdfFileName ?? null,
         })
         setArtifactStatus({
           generationStatus: nextFiles.generationStatus,

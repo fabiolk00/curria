@@ -404,3 +404,33 @@ Plans:
 
 Plans:
 - [x] 69-01-PLAN.md - Add centralized editorial observability for premium-bullet detection, regression diagnosis, recovery-path selection, and final preservation outcomes without leaking resume content
+
+### Phase 70: Corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export
+
+**Goal:** Fix the manual resume editing consistency seam so preview edits persist canonically, rehydration reads the latest saved draft, and export no longer serves stale artifacts after manual changes.
+**Requirements**: [MANUAL-EDIT-CANON-01, MANUAL-EDIT-EXPORT-01, MANUAL-EDIT-OBS-01]
+**Depends on:** Phase 69
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 70-01-PLAN.md - Align preview editing with the canonical resume owner, persist manual edits durably, invalidate stale artifacts, regenerate export from the edited source, and cover the disappearing-edit regression
+
+### Phase 71: Highlight visual inteligente das melhorias no preview otimizado do curriculo
+
+**Goal:** Add a preview-only, subtle green highlight layer to the optimized resume comparison so users can quickly see meaningful ATS/content improvements without polluting the original, export artifacts, or persisted resume state.
+**Requirements**: [OPT-PREVIEW-HILITE-01, OPT-PREVIEW-HILITE-GUARD-01, OPT-PREVIEW-HILITE-TEST-01]
+**Depends on:** Phase 70
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 71-01-PLAN.md - Add a selective semantic highlight helper for optimized preview content, render subtle green emphasis only on meaningful changes in the optimized column, and cover relevance-vs-noise regressions without touching export or persistence
+
+### Phase 72: Padronizar nome inteligente dos arquivos exportados por tipo de fluxo
+
+**Goal:** Centralize intelligent export filenames so ATS exports use `Curriculo_{Nome}` while job-targeted exports append a reliable normalized target role, and propagate that canonical filename through file/download surfaces without touching resume content.
+**Requirements**: [EXPORT-FILENAME-01, EXPORT-FILENAME-CANON-01, EXPORT-FILENAME-TEST-01]
+**Depends on:** Phase 71
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 72-01-PLAN.md - Add centralized filename normalization/build helpers, expose canonical export filenames from the file access route, update preview/download consumers to use them, and cover ATS vs job-targeting naming regressions

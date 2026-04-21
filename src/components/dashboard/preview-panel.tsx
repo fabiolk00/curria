@@ -7,7 +7,7 @@ import { Download, ExternalLink, Loader2, Pencil, X } from 'lucide-react'
 import type { PreviewFile } from '@/context/preview-panel-context'
 import { usePreviewPanel } from '@/context/preview-panel-context'
 import { usePreviewPanelOverlay } from '@/hooks/use-preview-panel-overlay'
-import { getDownloadUrls } from '@/lib/dashboard/workspace-client'
+import { getDownloadUrls, getSessionWorkspace } from '@/lib/dashboard/workspace-client'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import type { PreviewLockSummary } from '@/types/dashboard'
 
@@ -18,6 +18,8 @@ type PreviewPanelProps = {
   fileOverride?: PreviewFile | null
   showCloseButton?: boolean
 }
+
+type GenerationStatus = 'idle' | 'generating' | 'ready' | 'failed'
 
 export function PreviewPanel({
   inline = false,
@@ -85,6 +87,9 @@ function PreviewPanelContent({
   const [isDownloading, setIsDownloading] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [previewLock, setPreviewLock] = useState<PreviewLockSummary | null>(null)
+  const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle')
+  const [editorScope, setEditorScope] = useState<'base' | 'optimized'>('base')
+  const [downloadFileName, setDownloadFileName] = useState<string | null>(null)
 
   const cacheKey = `${file.sessionId}:${file.targetId ?? 'base'}`
 
@@ -94,6 +99,8 @@ function PreviewPanelContent({
     setPreviewUrl(null)
     setExternalUrl(null)
     setPreviewLock(null)
+    setGenerationStatus('idle')
+    setDownloadFileName(null)
 
     const cachedUrl = getCachedUrl(cacheKey)
     if (cachedUrl) {
@@ -103,13 +110,19 @@ function PreviewPanelContent({
 
     try {
       const urls = await getDownloadUrls(file.sessionId, file.targetId ?? undefined)
+      setGenerationStatus(urls.generationStatus)
 
       if (!urls.pdfUrl) {
-        setError('Não foi possível carregar a pré-visualização do PDF.')
+        if (urls.generationStatus === 'generating') {
+          return
+        }
+
+        setError(urls.errorMessage ?? 'Não foi possível carregar a pré-visualização do PDF.')
         return
       }
 
       setPreviewLock(urls.previewLock ?? null)
+      setDownloadFileName(urls.pdfFileName ?? null)
       setPreviewUrl(urls.pdfUrl)
       setExternalUrl(urls.pdfUrl)
       setCachedUrl(cacheKey, urls.pdfUrl)
@@ -124,6 +137,49 @@ function PreviewPanelContent({
   useEffect(() => {
     void fetchUrls()
   }, [fetchUrls])
+
+  useEffect(() => {
+    if (file.targetId) {
+      return
+    }
+
+    let isCancelled = false
+
+    const loadEditorScope = async () => {
+      try {
+        const workspace = await getSessionWorkspace(file.sessionId)
+        if (isCancelled) {
+          return
+        }
+
+        setEditorScope(
+          workspace.session.agentState.optimizedCvState ? 'optimized' : 'base',
+        )
+      } catch {
+        if (!isCancelled) {
+          setEditorScope('base')
+        }
+      }
+    }
+
+    void loadEditorScope()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [file.sessionId, file.targetId])
+
+  useEffect(() => {
+    if (generationStatus !== 'generating') {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void fetchUrls()
+    }, 2500)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [fetchUrls, generationStatus])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -154,7 +210,7 @@ function PreviewPanelContent({
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = objectUrl
-      anchor.download = `${file.label}.pdf`
+      anchor.download = downloadFileName ?? `${file.label}.pdf`
       anchor.rel = 'noopener noreferrer'
       document.body.appendChild(anchor)
       anchor.click()
@@ -168,7 +224,15 @@ function PreviewPanelContent({
     }
   }
 
-  const previewState = isLoading ? 'loading' : error ? 'error' : previewUrl ? 'ready' : 'idle'
+  const previewState = isLoading
+    ? 'loading'
+    : generationStatus === 'generating'
+      ? 'generating'
+      : error
+        ? 'error'
+        : previewUrl
+          ? 'ready'
+          : 'idle'
   const isLockedPreview = previewLock?.locked === true
 
   return (
@@ -255,7 +319,16 @@ function PreviewPanelContent({
           </div>
         ) : null}
 
-        {error && !isLoading ? (
+        {generationStatus === 'generating' && !isLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Atualizando o PDF com a versão salva.
+            </p>
+          </div>
+        ) : null}
+
+        {error && !isLoading && generationStatus !== 'generating' ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted-foreground">{error}</p>
             <button
@@ -295,6 +368,7 @@ function PreviewPanelContent({
         <ResumeEditorModal
           sessionId={file.sessionId}
           targetId={file.targetId}
+          scope={editorScope}
           open={isEditorOpen}
           onOpenChange={setIsEditorOpen}
           onSaved={() => {

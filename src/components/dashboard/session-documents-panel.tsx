@@ -325,7 +325,7 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
         >
           {files.pdfUrl ? (
             <DownloadItem
-              label="Resume.pdf"
+              label={files.pdfFileName ?? 'Resume.pdf'}
               downloadUrl={files.pdfUrl}
               isActive={isBasePdfActive}
               onPreviewClick={() => {

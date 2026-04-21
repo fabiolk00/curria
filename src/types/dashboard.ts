@@ -224,6 +224,7 @@ export type ArtifactStatusSummary = {
 export type DownloadUrlsResponse = {
   docxUrl: string | null
   pdfUrl: string | null
+  pdfFileName?: string | null
   available: boolean
   generationStatus: ArtifactStatusSummary['generationStatus']
   jobId?: string

@@ -111,6 +111,12 @@
 - [x] **ATS-READINESS-OBS-01**: Canonical ATS Readiness decisions emit structured logs, contract-version metadata, and outcome metrics for finalization, withholding, floor-89 application, low confidence, monotonicity protection, comparison rendering, and legacy fallback usage.
 - [x] **ATS-READINESS-MIGRATION-01**: Legacy ATS sessions without persisted `atsReadiness` resolve through one deterministic canonical fallback path, and mixed old/new session shapes remain safe across session and comparison routes.
 
+### Manual Edit Persistence and Export Coherence
+
+- [x] **MANUAL-EDIT-CANON-01**: Manual resume edits persist to the correct canonical owner (`session.cvState`, `session.agentState.optimizedCvState`, or target `derivedCvState`) so preview re-entry and subsequent edits always rehydrate the latest saved draft.
+- [x] **MANUAL-EDIT-EXPORT-01**: Preview and export stay aligned after manual resume edits by invalidating stale artifact metadata and regenerating the PDF from the same canonical edited source used by the preview flow.
+- [x] **MANUAL-EDIT-OBS-01**: Manual edit persistence and artifact invalidation emit structured lifecycle logs so future preview/export divergence can be diagnosed without logging resume content.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -205,10 +211,19 @@
 | ATS-METRIC-OBS-01 | Phase 69 | Complete |
 | ATS-METRIC-OBS-RECOVERY-01 | Phase 69 | Complete |
 | ATS-METRIC-OBS-TEST-01 | Phase 69 | Complete |
+| MANUAL-EDIT-CANON-01 | Phase 70 | Complete |
+| MANUAL-EDIT-EXPORT-01 | Phase 70 | Complete |
+| MANUAL-EDIT-OBS-01 | Phase 70 | Complete |
+| OPT-PREVIEW-HILITE-01 | Phase 71 | Complete |
+| OPT-PREVIEW-HILITE-GUARD-01 | Phase 71 | Complete |
+| OPT-PREVIEW-HILITE-TEST-01 | Phase 71 | Complete |
+| EXPORT-FILENAME-01 | Phase 72 | Complete |
+| EXPORT-FILENAME-CANON-01 | Phase 72 | Complete |
+| EXPORT-FILENAME-TEST-01 | Phase 72 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 59 total
-- Mapped to phases: 59
+- v1.6 requirements: 68 total
+- Mapped to phases: 68
 - Unmapped: 0
 
 ---

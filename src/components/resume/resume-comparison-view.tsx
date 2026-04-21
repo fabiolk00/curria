@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Download, Loader2, Pencil } from "lucide-react"
+import { ArrowLeft, Download, Highlighter, Loader2, Pencil } from "lucide-react"
 
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
+import { buildOptimizedPreviewHighlights, type HighlightedLine } from "@/lib/resume/optimized-preview-highlights"
 import { getDownloadUrls } from "@/lib/dashboard/workspace-client"
 import { cn } from "@/lib/utils"
 import type { AtsReadinessScoreContract } from "@/lib/ats/scoring/types"
@@ -62,6 +63,34 @@ function ChangeIndicator({ show }: { show: boolean }) {
   )
 }
 
+function HighlightText({
+  line,
+  enabled,
+  testId,
+}: {
+  line: HighlightedLine
+  enabled: boolean
+  testId?: string
+}) {
+  return (
+    <span data-testid={testId}>
+      {line.segments.map((segment, index) => (
+        <span
+          key={`${segment.text}-${index}`}
+          data-highlighted={enabled && segment.highlighted ? "true" : "false"}
+          className={cn(
+            enabled && segment.highlighted
+              ? "rounded-[0.4rem] bg-emerald-100/80 px-1 py-0.5 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)] dark:bg-emerald-500/15 dark:text-emerald-100"
+              : undefined,
+          )}
+        >
+          {segment.text}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 function ResumeDocument({
   cvState,
   variant,
@@ -70,6 +99,7 @@ function ResumeDocument({
   onDownload,
   isDownloading,
   previewLock,
+  showHighlights = false,
 }: {
   cvState: CVState
   variant: "original" | "optimized"
@@ -78,10 +108,17 @@ function ResumeDocument({
   onDownload?: () => void
   isDownloading?: boolean
   previewLock?: PreviewLockSummary
+  showHighlights?: boolean
 }) {
   const isOptimized = variant === "optimized"
   const compare = originalCvState || cvState
   const isLockedPreview = isOptimized && previewLock?.locked === true
+  const highlights = useMemo(
+    () => isOptimized && originalCvState
+      ? buildOptimizedPreviewHighlights(originalCvState, cvState)
+      : null,
+    [cvState, isOptimized, originalCvState],
+  )
 
   return (
     <div
@@ -166,7 +203,15 @@ function ResumeDocument({
             ) : null}
           </h3>
           <p className="text-xs leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-sm">
-            {cvState.summary}
+            {highlights ? (
+              <HighlightText
+                line={highlights.summary}
+                enabled={showHighlights}
+                testId={isOptimized ? "optimized-summary-highlight" : undefined}
+              />
+            ) : (
+              cvState.summary
+            )}
           </p>
         </div>
       ) : null}
@@ -216,12 +261,33 @@ function ResumeDocument({
                             <span
                               className={cn(
                                 "mt-1.5 h-1 w-1 shrink-0 rounded-full sm:mt-2",
-                                bulletChanged
+                                showHighlights && highlights?.experience[index]?.bullets[bulletIndex]?.highlightWholeLine
+                                  ? "bg-emerald-500"
+                                  : bulletChanged
                                   ? "bg-emerald-500"
                                   : "bg-zinc-400 dark:bg-zinc-600",
                               )}
                             />
-                            <span>{bullet}</span>
+                            <span
+                              className={cn(
+                                showHighlights && highlights?.experience[index]?.bullets[bulletIndex]?.highlightWholeLine
+                                  ? "rounded-lg bg-emerald-50/90 px-2 py-1 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)] dark:bg-emerald-500/10 dark:text-emerald-100"
+                                  : undefined,
+                              )}
+                            >
+                              {highlights ? (
+                                <HighlightText
+                                  line={highlights.experience[index]?.bullets[bulletIndex] ?? {
+                                    segments: [{ text: bullet, highlighted: false }],
+                                    highlightWholeLine: false,
+                                  }}
+                                  enabled={showHighlights && !highlights.experience[index]?.bullets[bulletIndex]?.highlightWholeLine}
+                                  testId={isOptimized ? `optimized-bullet-highlight-${index}-${bulletIndex}` : undefined}
+                                />
+                              ) : (
+                                bullet
+                              )}
+                            </span>
                           </li>
                         )
                       })}
@@ -332,6 +398,7 @@ export function ResumeComparisonView({
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [currentOptimizedCvState, setCurrentOptimizedCvState] = useState(optimizedCvState)
+  const [showHighlights, setShowHighlights] = useState(true)
 
   useEffect(() => {
     setCurrentOptimizedCvState(optimizedCvState)
@@ -369,7 +436,8 @@ export function ResumeComparisonView({
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = objectUrl
-      anchor.download = generationType === "JOB_TARGETING" ? "currículo-vaga.pdf" : "currículo-ats.pdf"
+      anchor.download = urls.pdfFileName
+        ?? (generationType === "JOB_TARGETING" ? "Curriculo_Usuario_Vaga.pdf" : "Curriculo_Usuario.pdf")
       anchor.rel = "noopener noreferrer"
       document.body.appendChild(anchor)
       anchor.click()
@@ -477,6 +545,16 @@ export function ResumeComparisonView({
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
                   Otimizado
                 </span>
+                {!previewLock?.locked ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowHighlights((value) => !value)}
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20 sm:text-xs"
+                  >
+                    <Highlighter className="h-3 w-3" />
+                    {showHighlights ? "Ocultar destaques" : "Mostrar destaques"}
+                  </button>
+                ) : null}
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:text-xs">{scoreLabel}:</span>
@@ -498,6 +576,7 @@ export function ResumeComparisonView({
               onDownload={previewLock?.locked ? undefined : handleDownload}
               isDownloading={isDownloading}
               previewLock={previewLock}
+              showHighlights={showHighlights}
             />
           </div>
         </div>

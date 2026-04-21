@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 68
-current_phase_name: hardening do rewrite ats para preservar e promover metricas reais de impacto
+current_phase: 70
+current_phase_name: corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export
 current_plan: 01
 status: complete
-stopped_at: Completed 68-01-PLAN.md
-last_updated: "2026-04-21T08:35:00.000Z"
+stopped_at: Completed 70-01-PLAN.md
+last_updated: "2026-04-21T09:00:00.000Z"
 last_activity: 2026-04-21
 progress:
-  total_phases: 23
-  completed_phases: 13
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 24
+  completed_phases: 14
+  total_plans: 14
+  completed_plans: 14
   percent: 100
 ---
 
@@ -24,19 +24,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** ATS enhancement rewrite now preserves high-value quantified impact more conservatively, with prompt guardrails and validation gates that prevent strong factual metrics from being flattened into generic bullets.
+**Current focus:** Manual resume edits now persist through the same canonical owner used by preview and export, with stale artifacts invalidated and regenerated from the edited source instead of silently serving older snapshots.
 
 ## Current Position
 
-Phase: 68 (hardening do rewrite ats para preservar e promover metricas reais de impacto) - COMPLETE
+Phase: 70 (corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export) - COMPLETE
 Plan: 01 complete
-Current Phase: 68
-Current Phase Name: hardening do rewrite ats para preservar e promover metricas reais de impacto
+Current Phase: 70
+Current Phase Name: corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-21
-Last Activity Description: ATS enhancement now emits editorial observability for premium-bullet detection, metric regressions, recovery paths, and final preservation outcomes without logging resume text
+Last Activity Description: Manual resume edits now update the canonical edited source, rehydrate correctly across subsequent edits, and force preview/export regeneration instead of serving stale artifacts
 
 Progress: [##########] 100%
 
@@ -99,6 +99,12 @@ Baseline carried forward from earlier shipped milestones:
 - [Phase 68]: Validation now detects editorial metric regression when strong original impact bullets lose their numbers, scope, or substantive result in the optimized rewrite.
 - [Phase 69]: ATS enhancement now records structured editorial telemetry for premium-bullet detection, metric regressions, recovery-path selection, and final preservation status using counts and flags only.
 - [Phase 69]: Editorial observability is centralized in the ATS rewrite domain and intentionally avoids logging bullet text, names, or other sensitive resume content.
+- [Phase 70]: Preview-panel editing now resolves the same canonical resume owner used by generated export, preferring `optimizedCvState` when the active preview is backed by the optimized resume.
+- [Phase 70]: Manual edit persistence now invalidates stale artifact metadata for the edited resume source and the editor modal immediately triggers regeneration so preview and export cannot silently drift apart.
+- [Phase 71]: Optimized resume comparison previews now derive a selective semantic highlight map at render time, emphasizing only meaningful improvements such as stronger keywords, seniority reinforcement, and preserved/prompted metric impact.
+- [Phase 71]: Highlight rendering is preview-only: the original column stays clean, export/persistence remain untouched, and whole-line emphasis is reserved for materially improved premium bullets while minor wording/punctuation changes are ignored.
+- [Phase 72]: Export filenames are now built by one centralized helper that strips accents, removes invalid characters, collapses separators, and chooses between `Curriculo_{Nome}` and `Curriculo_{Nome}_{Vaga}` based on a reliable job-targeting signal.
+- [Phase 72]: The file-download route now returns canonical filename metadata so preview downloads and the documents panel use the same product filename instead of local hardcoded fallbacks.
 - [Phase 59]: The remaining opaque post-preflight failure path is now localized inside `generateBillableResume(...)` with explicit billable stages, stage-aware logs, and stage-failure metrics.
 - [Phase 59]: Known billable state failures such as missing latest version, missing pending generation, reservation failures, render throws, and persistence failures now preserve stable typed codes or stage-tagged exceptions instead of collapsing into an unqualified opaque throw.
 
@@ -113,6 +119,6 @@ Baseline carried forward from earlier shipped milestones:
 
 ## Session Continuity
 
-Last session: 2026-04-21T08:35:00.000Z
-Stopped at: Completed 69-01-PLAN.md
+Last session: 2026-04-21T09:00:00.000Z
+Stopped at: Completed 72-01-PLAN.md
 Resume file: None

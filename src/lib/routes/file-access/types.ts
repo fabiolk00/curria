@@ -25,6 +25,7 @@ export type FileAccessContextResult =
 export type FileAccessResponseBody = {
   docxUrl: null
   available: boolean
+  pdfFileName?: string | null
   pdfUrl?: string | null
   generationStatus: GeneratedOutput['status']
   jobId?: string

@@ -91,7 +91,7 @@ describe('ResumeComparisonView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Mock Save' }))
 
-    expect(screen.getByText('Edited optimized summary')).toBeInTheDocument()
+    expect(screen.getByTestId('optimized-summary-highlight')).toHaveTextContent('Edited optimized summary')
   })
 
   it('shows a locked overlay and hides edit/download actions for blocked previews', () => {
@@ -203,5 +203,72 @@ describe('ResumeComparisonView', () => {
     expect(
       screen.queryByText('Ajustei o resumo para 5 linhas, dentro do limite solicitado.'),
     ).not.toBeInTheDocument()
+  })
+
+  it('highlights relevant improvements only in the optimized column', () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={{
+          ...buildCvState('Consultor de Business Intelligence com dashboards.'),
+          experience: [
+            {
+              title: 'Senior Business Intelligence',
+              company: 'Grupo Positivo',
+              location: 'Curitiba',
+              startDate: '01/2025',
+              endDate: '04/2026',
+              bullets: [
+                'Aumentei em 15% os indicadores de qualidade de produção na LATAM com dashboards e governança de dados.',
+              ],
+            },
+          ],
+        }}
+        optimizedCvState={{
+          ...buildCvState('Atuação em Senior Business Intelligence, Consultor de Business Intelligence e Desenvolvedor de Business Intelligence.'),
+          experience: [
+            {
+              title: 'Senior Business Intelligence',
+              company: 'Grupo Positivo',
+              location: 'Curitiba',
+              startDate: '01/2025',
+              endDate: '04/2026',
+              bullets: [
+                'Liderei dashboards estratégicos e governança analítica, contribuindo para aumento de 15% nos indicadores de qualidade de produção na LATAM.',
+              ],
+            },
+          ],
+        }}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_123"
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Ocultar destaques')).toBeInTheDocument()
+
+    const summaryHighlight = screen.getByTestId('optimized-summary-highlight')
+    expect(summaryHighlight.querySelector('[data-highlighted="true"]')).not.toBeNull()
+
+    const bulletHighlight = screen.getByTestId('optimized-bullet-highlight-0-0')
+    expect(bulletHighlight.closest('span')).toBeInTheDocument()
+    expect(screen.getAllByText(/15%/)).toHaveLength(2)
+  })
+
+  it('lets the user hide visual highlights without changing the content', async () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Consultor de Business Intelligence com dashboards.')}
+        optimizedCvState={buildCvState('Atuação em Senior Business Intelligence com dashboards estratégicos.')}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_123"
+        onContinue={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: /ocultar destaques/i })
+    await userEvent.click(button)
+
+    expect(screen.getByRole('button', { name: /mostrar destaques/i })).toBeInTheDocument()
+    expect(screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')).toBeNull()
   })
 })

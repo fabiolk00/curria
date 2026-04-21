@@ -7,12 +7,14 @@ import { manualEditSection, ManualEditInputSchema } from '@/lib/agent/tools/manu
 import { CVStateSchema } from '@/lib/cv/schema'
 import {
   getResumeTargetForSession,
+  updateResumeTargetGeneratedOutput,
   updateResumeTargetCvStateWithVersion,
 } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession, mergeToolPatch } from '@/lib/db/sessions'
 import { isLockedPreview } from '@/lib/generated-preview/locked-preview'
-import { logWarn } from '@/lib/observability/structured-log'
+import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import { validateTrustedMutationRequest } from '@/lib/security/request-trust'
+import type { GeneratedOutput, ToolPatch } from '@/types/agent'
 
 function didCanonicalStateChange(previous: string, next: string): boolean {
   return previous !== next
@@ -37,6 +39,33 @@ const ResumeEditorSaveSchema = z.discriminatedUnion('scope', [
 const ManualEditRequestSchema = z.union([ManualEditInputSchema, ResumeEditorSaveSchema])
 
 type ResumeEditorSaveInput = z.infer<typeof ResumeEditorSaveSchema>
+
+function createInvalidatedGeneratedOutputPatch(): Partial<GeneratedOutput> {
+  return {
+    status: 'idle',
+    docxPath: undefined,
+    pdfPath: undefined,
+    generatedAt: undefined,
+    error: undefined,
+    previewAccess: undefined,
+  }
+}
+
+function createManualEditPersistenceLogFields(input: {
+  sessionId: string
+  targetId?: string
+  scope: 'base' | 'optimized' | 'target'
+  changed: boolean
+  invalidatedArtifact: boolean
+}): Record<string, string | boolean | undefined> {
+  return {
+    sessionId: input.sessionId,
+    targetId: input.targetId,
+    scope: input.scope,
+    changed: input.changed,
+    invalidatedArtifact: input.invalidatedArtifact,
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -92,6 +121,13 @@ export async function POST(
         )
 
         if (!changed) {
+          logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
+            sessionId: session.id,
+            targetId: body.data.targetId,
+            scope: 'target',
+            changed: false,
+            invalidatedArtifact: false,
+          }))
           return NextResponse.json({
             success: true,
             scope: 'target',
@@ -106,6 +142,24 @@ export async function POST(
           userId: appUser.id,
           derivedCvState: body.data.cvState,
         })
+        await updateResumeTargetGeneratedOutput(
+          session.id,
+          body.data.targetId,
+          createInvalidatedGeneratedOutputPatch() as GeneratedOutput,
+        )
+        logInfo('resume_export.stale_artifact_invalidated', {
+          sessionId: session.id,
+          targetId: body.data.targetId,
+          scope: 'target',
+        })
+
+        logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
+          sessionId: session.id,
+          targetId: body.data.targetId,
+          scope: 'target',
+          changed: true,
+          invalidatedArtifact: true,
+        }))
 
         return NextResponse.json({
           success: true,
@@ -133,6 +187,12 @@ export async function POST(
         )
 
         if (!changed) {
+          logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
+            sessionId: session.id,
+            scope: 'optimized',
+            changed: false,
+            invalidatedArtifact: false,
+          }))
           return NextResponse.json({
             success: true,
             scope: 'optimized',
@@ -146,7 +206,19 @@ export async function POST(
             optimizedAt: new Date().toISOString(),
             rewriteStatus: 'completed',
           },
+          generatedOutput: createInvalidatedGeneratedOutputPatch(),
         })
+        logInfo('resume_export.stale_artifact_invalidated', {
+          sessionId: session.id,
+          scope: 'optimized',
+        })
+
+        logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
+          sessionId: session.id,
+          scope: 'optimized',
+          changed: true,
+          invalidatedArtifact: true,
+        }))
 
         return NextResponse.json({
           success: true,
@@ -161,6 +233,12 @@ export async function POST(
       )
 
       if (!changed) {
+        logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
+          sessionId: session.id,
+          scope: 'base',
+          changed: false,
+          invalidatedArtifact: false,
+        }))
         return NextResponse.json({
           success: true,
           scope: 'base',
@@ -168,7 +246,26 @@ export async function POST(
         })
       }
 
-      await applyToolPatchWithVersion(session, { cvState: body.data.cvState }, 'manual')
+      const shouldInvalidateArtifact = !session.agentState.optimizedCvState
+      const patch: ToolPatch = { cvState: body.data.cvState }
+      if (shouldInvalidateArtifact) {
+        patch.generatedOutput = createInvalidatedGeneratedOutputPatch()
+      }
+
+      await applyToolPatchWithVersion(session, patch, 'manual')
+      if (shouldInvalidateArtifact) {
+        logInfo('resume_export.stale_artifact_invalidated', {
+          sessionId: session.id,
+          scope: 'base',
+        })
+      }
+
+      logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
+        sessionId: session.id,
+        scope: 'base',
+        changed: true,
+        invalidatedArtifact: shouldInvalidateArtifact,
+      }))
 
       return NextResponse.json({
         success: true,
@@ -193,7 +290,35 @@ export async function POST(
     )
 
     if (changed && result.patch) {
-      await applyToolPatchWithVersion(session, result.patch, 'manual')
+      const shouldInvalidateArtifact = !session.agentState.optimizedCvState
+      const patch: ToolPatch = {
+        ...result.patch,
+        generatedOutput: shouldInvalidateArtifact
+          ? createInvalidatedGeneratedOutputPatch()
+          : result.patch.generatedOutput,
+      }
+
+      await applyToolPatchWithVersion(session, patch, 'manual')
+      if (shouldInvalidateArtifact) {
+        logInfo('resume_export.stale_artifact_invalidated', {
+          sessionId: session.id,
+          scope: 'base',
+        })
+      }
+
+      logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
+        sessionId: session.id,
+        scope: 'base',
+        changed: true,
+        invalidatedArtifact: shouldInvalidateArtifact,
+      }))
+    } else {
+      logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
+        sessionId: session.id,
+        scope: 'base',
+        changed,
+        invalidatedArtifact: false,
+      }))
     }
 
     return NextResponse.json({
