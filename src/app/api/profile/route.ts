@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { CVStateSchema } from '@/lib/cv/schema'
@@ -8,7 +9,12 @@ import { createUpdatedAtTimestamp } from '@/lib/db/timestamps'
 import { logError, logInfo } from '@/lib/observability/structured-log'
 import { getExistingUserProfile, type UserProfileRow } from '@/lib/profile/user-profiles'
 import { validateTrustedMutationRequest } from '@/lib/security/request-trust'
+import { getDashboardWelcomeGuideSeen, setDashboardWelcomeGuideSeen } from '@/lib/users/dashboard-preferences'
 import type { CVState } from '@/types/cv'
+
+const DashboardWelcomeGuidePreferenceSchema = z.object({
+  dashboardWelcomeGuideSeen: z.boolean(),
+})
 
 function mapProfileResponse(data: UserProfileRow) {
   return {
@@ -47,7 +53,10 @@ export async function GET() {
   }
 
   try {
-    const data = await getExistingUserProfile(appUser.id)
+    const [data, dashboardWelcomeGuideSeen] = await Promise.all([
+      getExistingUserProfile(appUser.id),
+      getDashboardWelcomeGuideSeen(appUser.id),
+    ])
 
     if (!data) {
       logInfo('[api/profile] No profile found', {
@@ -55,6 +64,7 @@ export async function GET() {
       })
       return NextResponse.json({
         profile: null,
+        dashboardWelcomeGuideSeen,
       })
     }
 
@@ -65,6 +75,7 @@ export async function GET() {
 
     return NextResponse.json({
       profile: mapProfileResponse(data),
+      dashboardWelcomeGuideSeen,
     })
   } catch (error) {
     logError('[api/profile] Unexpected error', {
@@ -76,6 +87,64 @@ export async function GET() {
       { error: 'Internal server error' },
       { status: 500 },
     )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const appUser = await getCurrentAppUser()
+  if (!appUser) {
+    logError('[api/profile] Unauthorized PATCH attempt')
+    return NextResponse.json(
+      { error: 'Você precisa estar autenticado para atualizar suas preferências.' },
+      { status: 401 },
+    )
+  }
+
+  const trust = validateTrustedMutationRequest(request)
+  if (!trust.ok) {
+    logError('[api/profile] Rejected untrusted PATCH request', {
+      appUserId: appUser.id,
+      requestPath: request.nextUrl.pathname,
+      trustSignal: trust.signal,
+      trustReason: trust.reason,
+    })
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  let rawBody: unknown
+  try {
+    rawBody = await request.json()
+  } catch {
+    logError('[api/profile] Invalid JSON in PATCH request', { appUserId: appUser.id })
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const body = DashboardWelcomeGuidePreferenceSchema.safeParse(rawBody)
+  if (!body.success) {
+    return NextResponse.json({ error: body.error.flatten() }, { status: 400 })
+  }
+
+  try {
+    const dashboardWelcomeGuideSeen = await setDashboardWelcomeGuideSeen(
+      appUser.id,
+      body.data.dashboardWelcomeGuideSeen,
+    )
+
+    logInfo('[api/profile] Dashboard welcome guide preference updated', {
+      appUserId: appUser.id,
+      dashboardWelcomeGuideSeen,
+    })
+
+    return NextResponse.json({
+      dashboardWelcomeGuideSeen,
+    })
+  } catch (error) {
+    logError('[api/profile] Unexpected PATCH error', {
+      appUserId: appUser.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

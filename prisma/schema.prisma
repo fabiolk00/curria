@@ -287,6 +287,7 @@ model User {
   status         String             @default("active")
   displayName    String?            @map("display_name")
   primaryEmail   String?            @map("primary_email")
+  dashboardWelcomeGuideSeen Boolean @default(false) @map("dashboard_welcome_guide_seen")
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
 

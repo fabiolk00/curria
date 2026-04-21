@@ -9,7 +9,6 @@ import {
   DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
   DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
-  DASHBOARD_WELCOME_GUIDE_STORAGE_KEY,
   dashboardWelcomeGuideTargets,
   getDashboardGuideTargetProps,
 } from "@/lib/dashboard/welcome-guide"
@@ -19,6 +18,7 @@ const mockOpen = vi.fn()
 const mockOpenMobile = vi.fn()
 const mockCloseMobile = vi.fn()
 let mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
+let backendWelcomeGuideSeen = false
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -81,8 +81,8 @@ function TestTargets({
 describe("DashboardWelcomeGuide", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    window.localStorage.clear()
     mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
+    backendWelcomeGuideSeen = false
     window.HTMLElement.prototype.scrollIntoView = vi.fn()
     window.requestAnimationFrame = ((callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0)) as typeof window.requestAnimationFrame
     window.cancelAnimationFrame = ((id: number) => window.clearTimeout(id)) as typeof window.cancelAnimationFrame
@@ -91,6 +91,23 @@ describe("DashboardWelcomeGuide", () => {
       disconnect() {}
       unobserve() {}
     })
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (typeof input === "string" && input === "/api/profile" && (!init || !init.method || init.method === "GET")) {
+        return new Response(JSON.stringify({
+          profile: null,
+          dashboardWelcomeGuideSeen: backendWelcomeGuideSeen,
+        }), { status: 200 })
+      }
+
+      if (typeof input === "string" && input === "/api/profile" && init?.method === "PATCH") {
+        backendWelcomeGuideSeen = true
+        return new Response(JSON.stringify({
+          dashboardWelcomeGuideSeen: true,
+        }), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch call: ${String(input)}`)
+    }) as unknown as typeof fetch)
   })
 
   it("redirects to Perfil before opening the first step when the user enters /dashboard", async () => {
@@ -166,7 +183,7 @@ describe("DashboardWelcomeGuide", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
-    expect(window.localStorage.getItem(DASHBOARD_WELCOME_GUIDE_STORAGE_KEY)).toBe("seen")
+    expect(backendWelcomeGuideSeen).toBe(true)
 
     unmount()
     render(<TestTargets />)

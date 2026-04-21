@@ -1,4 +1,3 @@
-export const DASHBOARD_WELCOME_GUIDE_STORAGE_KEY = "curria:dashboard:welcome-guide:v1"
 export const DASHBOARD_WELCOME_GUIDE_TARGET_ATTR = "data-dashboard-guide-target"
 export const DASHBOARD_WELCOME_GUIDE_PROFILE_PATH = "/dashboard/resumes/new"
 export const DASHBOARD_WELCOME_GUIDE_CHAT_PATH = "/dashboard"

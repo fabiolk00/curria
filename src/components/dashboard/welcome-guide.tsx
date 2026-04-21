@@ -10,7 +10,6 @@ import {
   DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
   DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
-  DASHBOARD_WELCOME_GUIDE_STORAGE_KEY,
   DASHBOARD_WELCOME_GUIDE_TARGET_ATTR,
   dashboardWelcomeGuideSteps,
   type DashboardWelcomeGuideStepDefinition,
@@ -29,22 +28,6 @@ type SpotlightRect = {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
-}
-
-function readGuideCompletion(): boolean {
-  if (typeof window === "undefined") {
-    return true
-  }
-
-  return window.localStorage.getItem(DASHBOARD_WELCOME_GUIDE_STORAGE_KEY) === "seen"
-}
-
-function writeGuideCompletion(): void {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  window.localStorage.setItem(DASHBOARD_WELCOME_GUIDE_STORAGE_KEY, "seen")
 }
 
 function getTargetElement(step: DashboardWelcomeGuideStepDefinition): HTMLElement | null {
@@ -92,6 +75,7 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
   const { open, openMobile, closeMobile } = useSidebarContext()
   const [hasHydrated, setHasHydrated] = useState(false)
   const [shouldStart, setShouldStart] = useState(false)
+  const [hasResolvedPreference, setHasResolvedPreference] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null)
@@ -101,11 +85,52 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     setHasHydrated(true)
-    setShouldStart(!readGuideCompletion())
   }, [])
 
   useEffect(() => {
-    if (!hasHydrated || !shouldStart) {
+    if (!hasHydrated) {
+      return
+    }
+
+    let isCancelled = false
+
+    const loadGuidePreference = async () => {
+      try {
+        const response = await fetch("/api/profile", {
+          credentials: "include",
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          if (!isCancelled) {
+            setShouldStart(false)
+            setHasResolvedPreference(true)
+          }
+          return
+        }
+
+        const data = await response.json() as { dashboardWelcomeGuideSeen?: boolean }
+        if (!isCancelled) {
+          setShouldStart(!data.dashboardWelcomeGuideSeen)
+          setHasResolvedPreference(true)
+        }
+      } catch {
+        if (!isCancelled) {
+          setShouldStart(false)
+          setHasResolvedPreference(true)
+        }
+      }
+    }
+
+    void loadGuidePreference()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [hasHydrated])
+
+  useEffect(() => {
+    if (!hasHydrated || !hasResolvedPreference || !shouldStart) {
       return
     }
 
@@ -123,7 +148,7 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
     }
 
     setIsOpen(true)
-  }, [currentStepIndex, hasHydrated, pathname, router, shouldStart])
+  }, [currentStepIndex, hasHydrated, hasResolvedPreference, pathname, router, shouldStart])
 
   useEffect(() => {
     if (!isOpen) {
@@ -132,9 +157,7 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        writeGuideCompletion()
-        setIsOpen(false)
-        setShouldStart(false)
+        void closeGuide()
       }
     }
 
@@ -244,15 +267,29 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
     return getDesktopCardPosition(spotlightRect, currentStep.preferredSide)
   }, [currentStep.preferredSide, isMobile, spotlightRect])
 
-  const closeGuide = () => {
-    writeGuideCompletion()
+  const closeGuide = async () => {
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dashboardWelcomeGuideSeen: true,
+        }),
+      })
+    } catch {
+      // Keep UX responsive even if preference persistence fails.
+    }
+
     setIsOpen(false)
     setShouldStart(false)
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (currentStepIndex >= dashboardWelcomeGuideSteps.length - 1) {
-      closeGuide()
+      await closeGuide()
       return
     }
 
@@ -309,7 +346,7 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
               <div className="mt-4 flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={closeGuide}
+                  onClick={() => void closeGuide()}
                   className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Pular
