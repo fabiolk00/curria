@@ -15,6 +15,13 @@ Do not require the full pattern for:
 - simple list endpoints
 - low-risk internal utilities
 
+## Compare Ownership
+
+- `POST /api/session/[id]/compare` is the canonical compare seam for compare semantics, diff behavior, and future compare-specific architectural work.
+- `GET /api/session/[id]/comparison` is a compatibility and dashboard-facing surface. It stays public, but it is not the canonical home for generic compare behavior.
+- Both routes may use thin route-layer modules under `src/lib/routes/`, but they own different public contracts and should not be merged casually.
+- This is still an opt-in pattern for semantically dense routes only. Do not spread the full split across ordinary CRUD handlers.
+
 ## `context.ts`
 
 May do:
@@ -92,6 +99,11 @@ For any new critical route:
 - keep signed URL emission out of the route body
 - keep preview-lock interpretation out of the response layer
 - keep the route itself limited to mapping internal outcomes to HTTP
+
+## Current Brownfield Example
+
+- `src/app/api/session/[id]/compare/route.ts` delegates to `src/lib/routes/session-compare/*` and is the reference compare implementation.
+- `src/app/api/session/[id]/comparison/route.ts` delegates to `src/lib/routes/session-comparison/*` to preserve the dashboard contract while keeping the route thin.
 
 ## Execution Order
 

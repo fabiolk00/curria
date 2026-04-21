@@ -66,56 +66,20 @@ This suite uses mocked API providers plus the test-only `E2E_AUTH_ENABLED` and `
 
 ## Documentation Start Here
 
-- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Audience-based entry point for developers, operations, and product.
+- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Audience-based entry point for local setup and day-one tasks.
+- [docs/INDEX.md](docs/INDEX.md) - Full documentation map when you need deeper references.
 - [docs/CONCEPTS.md](docs/CONCEPTS.md) - Core mental model for sessions, tools, billing, and identity.
-- [docs/INDEX.md](docs/INDEX.md) - Complete documentation map.
-- [docs/FEATURES.md](docs/FEATURES.md) - Product capabilities overview.
-- [docs/GLOSSARY.md](docs/GLOSSARY.md) - Shared terminology.
+- [docs/GLOSSARY.md](docs/GLOSSARY.md) - Shared terminology used across product and code.
 
 Current OpenAI routing is controlled in `src/lib/agent/config.ts`. The default runtime stays on `gpt-5-nano`, and the bakeoff combos only vary the agent model while keeping structured and vision work on the cheaper baseline unless explicitly overridden.
 
-## Key Documentation Areas
+## Architecture Entry Points
 
-### Architecture
-
-- [CLAUDE.md](CLAUDE.md)
-- [docs/architecture-overview.md](docs/architecture-overview.md)
-- [docs/state-model.md](docs/state-model.md)
-- [docs/tool-development.md](docs/tool-development.md)
-
-### Billing
-
-- [docs/billing/README.md](docs/billing/README.md)
-- [docs/billing/IMPLEMENTATION.md](docs/billing/IMPLEMENTATION.md)
-- [docs/billing/OPS_RUNBOOK.md](docs/billing/OPS_RUNBOOK.md)
-- [docs/billing/MONITORING.md](docs/billing/MONITORING.md)
-
-### OpenAI and Model Strategy
-
-- [docs/openai/README.md](docs/openai/README.md)
-- [docs/openai/MODEL_SELECTION_MATRIX.md](docs/openai/MODEL_SELECTION_MATRIX.md)
-- [docs/openai/PORTUGUESE_QUALITY_GATE.md](docs/openai/PORTUGUESE_QUALITY_GATE.md)
-- [docs/openai/PORTUGUESE_TEST_RESULTS.md](docs/openai/PORTUGUESE_TEST_RESULTS.md)
-- [docs/openai/PT_BR_WEBSITE_PROOFREADER_AGENT_PROMPT.md](docs/openai/PT_BR_WEBSITE_PROOFREADER_AGENT_PROMPT.md)
-
-### Staging and Release Validation
-
-- [docs/staging/README.md](docs/staging/README.md)
-- [docs/staging/SETUP_GUIDE.md](docs/staging/SETUP_GUIDE.md)
-- [docs/staging/VALIDATION_PLAN.md](docs/staging/VALIDATION_PLAN.md)
-- [docs/PRODUCTION-READINESS-CHECKLIST.md](docs/PRODUCTION-READINESS-CHECKLIST.md)
-- [docs/agent-runtime-parity.md](docs/agent-runtime-parity.md)
-- [docs/agent-transcript-repro.md](docs/agent-transcript-repro.md)
-- [docs/agent-route-stress.md](docs/agent-route-stress.md)
-
-### Developer Rules
-
-- [docs/developer-rules/README.md](docs/developer-rules/README.md)
-- [docs/developer-rules/API_CONVENTIONS.md](docs/developer-rules/API_CONVENTIONS.md)
-- [docs/developer-rules/CODE_STYLE.md](docs/developer-rules/CODE_STYLE.md)
-- [docs/developer-rules/QUALITY_BASELINE.md](docs/developer-rules/QUALITY_BASELINE.md)
-- [docs/developer-rules/ERROR_HANDLING.md](docs/developer-rules/ERROR_HANDLING.md)
-- [docs/developer-rules/TESTING.md](docs/developer-rules/TESTING.md)
+- [CLAUDE.md](CLAUDE.md) - Current architecture and engineering invariants.
+- [docs/architecture-overview.md](docs/architecture-overview.md) - System-level map of the monolith.
+- [docs/architecture/route-policy-boundaries.md](docs/architecture/route-policy-boundaries.md) - When critical routes should use `context` / `policy` / `decision` / `response`.
+- [docs/architecture/components-boundaries.md](docs/architecture/components-boundaries.md) - Feature-local versus shared component placement rules.
+- [docs/architecture/architecture-scorecard.md](docs/architecture/architecture-scorecard.md) - Current governance status for route thinness, hotspots, and chokepoints.
 
 ## Core Stack
 
@@ -134,13 +98,14 @@ Current OpenAI routing is controlled in `src/lib/agent/config.ts`. The default r
 
 ```text
 src/
-  app/                  Public, authenticated, and API routes
-  components/           Product UI, dashboard UI, shared sections
+  app/                  App Router pages plus route adapters
+  components/           UI surface; keep feature UI local before promoting shared pieces
   lib/
     agent/              AI runtime and tool loop
     asaas/              Billing, webhooks, checkout, and quota logic
     auth/               Internal app-user resolution
     db/                 Session, version, and target persistence
+    routes/             Thin critical-route seams for semantically dense handlers
     templates/          Resume generation helpers
 docs/                   Technical, billing, OpenAI, staging, and ops docs
 prisma/                 Prisma schema and SQL migrations
@@ -148,34 +113,13 @@ scripts/                Operational validation and engineering helpers
 .claude/                Internal rules, commands, agents, and archived notes
 ```
 
-## Important Routes
+## Route Topology
 
-### UI routes
-
-- `/`
-- `/pricing`
-- `/login`
-- `/signup`
-- `/dashboard`
-- `/dashboard/resumes`
-- `/dashboard/sessions`
-- `/settings`
-- `/chat/[sessionId]`
-
-### API routes
-
-- `POST /api/agent`
-- `GET /api/session`
-- `GET /api/session/[id]/messages`
-- `GET /api/session/[id]/versions`
-- `GET /api/session/[id]/targets`
-- `POST /api/session/[id]/targets`
-- `POST /api/session/[id]/manual-edit`
-- `GET /api/file/[sessionId]`
-- `POST /api/checkout`
-- `POST /api/webhook/asaas`
-- `POST /api/webhook/clerk`
-- `GET /api/cron/cleanup`
+- Keep most routes simple: thin validation plus direct domain calls is enough for ordinary CRUD and settings paths.
+- Use `src/lib/routes/*` only for semantically dense routes where auth, preview access, billing safety, replay behavior, or sensitive availability rules can drift.
+- `POST /api/session/[id]/compare` is the canonical compare seam.
+- `GET /api/session/[id]/comparison` remains a compatibility/dashboard surface with its own thin route-layer extraction; do not repoint consumers casually.
+- See [docs/architecture/route-policy-boundaries.md](docs/architecture/route-policy-boundaries.md) for the contract and [docs/architecture/approved-chokepoints.md](docs/architecture/approved-chokepoints.md) for the small set of monitored route decision seams.
 
 ## Useful Commands
 
