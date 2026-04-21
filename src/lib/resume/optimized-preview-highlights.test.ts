@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest"
 import type { CVState } from "@/types/cv"
 
 import {
+  type ExperienceBulletHighlightResult,
   buildOptimizedPreviewHighlights,
   buildRelevantHighlightLine,
   normalizePreviewSummaryText,
+  selectVisibleExperienceHighlightsForEntry,
 } from "./optimized-preview-highlights"
 
 function buildCvState(input: Partial<CVState>): CVState {
@@ -24,7 +26,170 @@ function buildCvState(input: Partial<CVState>): CVState {
   }
 }
 
+function buildExperienceBulletHighlightResult(
+  overrides: Partial<ExperienceBulletHighlightResult> & Pick<ExperienceBulletHighlightResult, "bullet" | "bulletIndex">,
+): ExperienceBulletHighlightResult {
+  const highlightTier = overrides.highlightTier ?? "strong"
+  const highlightCategory = overrides.highlightCategory ?? "metric"
+  const renderable = overrides.renderable ?? true
+
+  return {
+    bullet: overrides.bullet,
+    bulletIndex: overrides.bulletIndex,
+    line: renderable
+      ? {
+          segments: [
+            {
+              text: overrides.bullet,
+              highlighted: true,
+              evidenceTier: highlightTier,
+              evidenceCategory: highlightCategory,
+            },
+          ],
+          highlightWholeLine: false,
+          highlightTier,
+          highlightCategory,
+        }
+      : {
+          segments: [{ text: overrides.bullet, highlighted: false }],
+          highlightWholeLine: false,
+        },
+    eligible: overrides.eligible ?? true,
+    hasVisibleHighlightCandidate: overrides.hasVisibleHighlightCandidate ?? renderable,
+    renderable,
+    improvementScore: overrides.improvementScore ?? 0,
+    winnerScore: overrides.winnerScore ?? 0,
+    highlightTier: renderable ? highlightTier : overrides.highlightTier,
+    highlightCategory: renderable ? highlightCategory : overrides.highlightCategory,
+  }
+}
+
 describe("optimized preview highlights", () => {
+  describe("experience-entry surfacing policy", () => {
+    it("prioritizes a Tier 1 metric bullet over a same-entry contextual stack bullet", () => {
+      const selected = selectVisibleExperienceHighlightsForEntry([
+        buildExperienceBulletHighlightResult({
+          bullet: "Estruturei ETL, SQL e Power BI para governanca analitica.",
+          bulletIndex: 0,
+          highlightTier: "secondary",
+          highlightCategory: "contextual_stack",
+          improvementScore: 11,
+          winnerScore: 10,
+        }),
+        buildExperienceBulletHighlightResult({
+          bullet: "Reduzi o tempo de processamento em 18%.",
+          bulletIndex: 1,
+          highlightTier: "strong",
+          highlightCategory: "metric",
+          improvementScore: 6,
+          winnerScore: 4,
+        }),
+      ])
+
+      expect(selected).toHaveLength(2)
+      expect(selected[0]?.highlightCategory).toBe("metric")
+      expect(selected[1]?.highlightCategory).toBe("contextual_stack")
+    })
+
+    it("keeps two Tier 1 bullets ahead of Tier 2 under the entry cap", () => {
+      const selected = selectVisibleExperienceHighlightsForEntry([
+        buildExperienceBulletHighlightResult({
+          bullet: "Estruturei ETL, SQL e Power BI para governanca analitica.",
+          bulletIndex: 0,
+          highlightTier: "secondary",
+          highlightCategory: "contextual_stack",
+          improvementScore: 14,
+          winnerScore: 12,
+        }),
+        buildExperienceBulletHighlightResult({
+          bullet: "Reduzi o tempo de processamento em 32%.",
+          bulletIndex: 1,
+          highlightTier: "strong",
+          highlightCategory: "metric",
+          improvementScore: 9,
+          winnerScore: 8,
+        }),
+        buildExperienceBulletHighlightResult({
+          bullet: "Gerenciei carteira regional com mais de 120 contas ativas.",
+          bulletIndex: 2,
+          highlightTier: "strong",
+          highlightCategory: "scope_scale",
+          improvementScore: 8,
+          winnerScore: 7,
+        }),
+      ], 2)
+
+      expect(selected).toHaveLength(2)
+      expect(selected.map((entry) => entry.highlightCategory)).toEqual(["metric", "scope_scale"])
+    })
+
+    it("allows Tier 2 bullets to surface when Tier 1 evidence is absent", () => {
+      const selected = selectVisibleExperienceHighlightsForEntry([
+        buildExperienceBulletHighlightResult({
+          bullet: "Estruturei ETL, SQL e Power BI para governanca analitica.",
+          bulletIndex: 0,
+          highlightTier: "secondary",
+          highlightCategory: "contextual_stack",
+          improvementScore: 8,
+          winnerScore: 7,
+        }),
+        buildExperienceBulletHighlightResult({
+          bullet: "Liderei a frente analitica para o time comercial.",
+          bulletIndex: 1,
+          highlightTier: "secondary",
+          highlightCategory: "anchored_leadership",
+          improvementScore: 9,
+          winnerScore: 6,
+        }),
+      ], 1)
+
+      expect(selected).toHaveLength(1)
+      expect(selected[0]?.highlightCategory).toBe("contextual_stack")
+    })
+
+    it("does not force weak or non-renderable secondary bullets into empty capacity", () => {
+      const selected = selectVisibleExperienceHighlightsForEntry([
+        buildExperienceBulletHighlightResult({
+          bullet: "Atuei com apoio analitico recorrente.",
+          bulletIndex: 0,
+          highlightTier: "secondary",
+          highlightCategory: "anchored_outcome",
+          eligible: true,
+          renderable: false,
+          hasVisibleHighlightCandidate: false,
+          improvementScore: 4,
+          winnerScore: 0,
+        }),
+      ])
+
+      expect(selected).toHaveLength(0)
+    })
+
+    it("breaks same-rank ties deterministically by stable bullet order after score parity", () => {
+      const selected = selectVisibleExperienceHighlightsForEntry([
+        buildExperienceBulletHighlightResult({
+          bullet: "Reduzi o tempo de processamento em 18%.",
+          bulletIndex: 0,
+          highlightTier: "strong",
+          highlightCategory: "metric",
+          improvementScore: 6,
+          winnerScore: 5,
+        }),
+        buildExperienceBulletHighlightResult({
+          bullet: "Reduzi o tempo de atendimento em 18%.",
+          bulletIndex: 1,
+          highlightTier: "strong",
+          highlightCategory: "metric",
+          improvementScore: 6,
+          winnerScore: 5,
+        }),
+      ])
+
+      expect(selected).toHaveLength(2)
+      expect(selected.map((entry) => entry.bulletIndex)).toEqual([0, 1])
+    })
+  })
+
   it("does not highlight minor punctuation-only changes", () => {
     const result = buildRelevantHighlightLine(
       "Engenheiro de dados com foco em BI",
@@ -409,5 +574,49 @@ describe("optimized preview highlights", () => {
     ) ?? []
 
     expect(highlightedBullets.length).toBeLessThanOrEqual(2)
+  })
+
+  it("surfaces two same-entry Tier 1 bullets before a Tier 2 bullet in the real preview pipeline", () => {
+    const original = buildCvState({
+      experience: [
+        {
+          title: "Senior Business Intelligence",
+          company: "Grupo Positivo",
+          location: "Curitiba",
+          startDate: "01/2025",
+          endDate: "04/2026",
+          bullets: [
+            "Criei dashboards para a operacao.",
+            "Monitorei indicadores da area.",
+            "Apoiei analises pontuais para o time.",
+          ],
+        },
+      ],
+    })
+    const optimized = buildCvState({
+      experience: [
+        {
+          title: "Senior Business Intelligence",
+          company: "Grupo Positivo",
+          location: "Curitiba",
+          startDate: "01/2025",
+          endDate: "04/2026",
+          bullets: [
+            "Estruturei ETL, SQL e Power BI para governanca analitica.",
+            "Reduzi o tempo de processamento em 32%.",
+            "Gerenciei carteira regional com mais de 120 contas ativas.",
+          ],
+        },
+      ],
+    })
+
+    const result = buildOptimizedPreviewHighlights(original, optimized)
+    const bullets = result.experience[0]?.bullets ?? []
+
+    expect(bullets[0]?.segments.some((segment) => segment.highlighted)).toBe(false)
+    expect(bullets[1]?.highlightTier).toBe("strong")
+    expect(bullets[1]?.highlightCategory).toBe("metric")
+    expect(bullets[2]?.highlightTier).toBe("strong")
+    expect(bullets[2]?.highlightCategory).toBe("scope_scale")
   })
 })

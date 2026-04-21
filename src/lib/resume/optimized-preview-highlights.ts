@@ -66,6 +66,19 @@ type ExperienceBulletImprovement = {
   score: number
 }
 
+export type ExperienceBulletHighlightResult = {
+  bullet: string
+  bulletIndex: number
+  line: HighlightedLine
+  eligible: boolean
+  hasVisibleHighlightCandidate: boolean
+  renderable: boolean
+  improvementScore: number
+  winnerScore: number
+  highlightTier?: "strong" | "secondary"
+  highlightCategory?: ExperienceHighlightCategory
+}
+
 const STRONG_VERB_PREFIXES = [
   "lider",
   "otimiz",
@@ -455,6 +468,14 @@ function tierForExperienceCategory(category: ExperienceHighlightCategory): "stro
   return category === "metric" || category === "scope_scale"
     ? "strong"
     : "secondary"
+}
+
+const EXPERIENCE_HIGHLIGHT_CATEGORY_PRIORITY: Record<ExperienceHighlightCategory, number> = {
+  metric: 0,
+  scope_scale: 1,
+  contextual_stack: 2,
+  anchored_leadership: 3,
+  anchored_outcome: 4,
 }
 
 function countTechTerms(text: string): number {
@@ -1501,22 +1522,70 @@ function findClosestOriginalBullet(originalBullets: string[], optimizedBullet: s
 function buildBulletHighlight(
   originalEntry: ExperienceEntry | undefined,
   optimizedBullet: string,
-): {
-  line: HighlightedLine
-  score: number
-} {
+  bulletIndex: number,
+): ExperienceBulletHighlightResult {
   const originalBullets = originalEntry?.bullets ?? []
   const closestOriginalBullet = findClosestOriginalBullet(originalBullets, optimizedBullet) ?? ""
   const improvement = evaluateExperienceBulletImprovement(closestOriginalBullet, optimizedBullet)
   const bestCandidate = collectRankedExperienceHighlightCandidates(optimizedBullet)[0] ?? null
   const canRenderHighlight = improvement.eligible && bestCandidate !== null
+  const highlightTier = bestCandidate ? tierForExperienceCategory(bestCandidate.category) : undefined
 
   return {
+    bullet: optimizedBullet,
+    bulletIndex,
     line: canRenderHighlight
       ? buildExperienceHighlightLine(optimizedBullet, bestCandidate)
       : createNonHighlightedLine(optimizedBullet),
-    score: canRenderHighlight ? improvement.score : 0,
+    eligible: improvement.eligible,
+    hasVisibleHighlightCandidate: bestCandidate !== null,
+    renderable: canRenderHighlight,
+    improvementScore: improvement.score,
+    winnerScore: bestCandidate?.score ?? 0,
+    highlightTier,
+    highlightCategory: bestCandidate?.category,
   }
+}
+
+function hasRenderedExperienceHighlight(result: ExperienceBulletHighlightResult): boolean {
+  return result.renderable
+    && result.line.segments.some((segment) => segment.highlighted)
+    && result.highlightTier !== undefined
+    && result.highlightCategory !== undefined
+}
+
+function getExperienceHighlightTierPriority(result: ExperienceBulletHighlightResult): number {
+  if (result.highlightTier === "strong") {
+    return 0
+  }
+
+  if (result.highlightTier === "secondary") {
+    return 1
+  }
+
+  return Number.MAX_SAFE_INTEGER
+}
+
+function getExperienceHighlightCategoryPriority(result: ExperienceBulletHighlightResult): number {
+  return result.highlightCategory
+    ? EXPERIENCE_HIGHLIGHT_CATEGORY_PRIORITY[result.highlightCategory]
+    : Number.MAX_SAFE_INTEGER
+}
+
+export function selectVisibleExperienceHighlightsForEntry(
+  bulletResults: ExperienceBulletHighlightResult[],
+  maxVisibleHighlights = MAX_HIGHLIGHTED_BULLETS_PER_EXPERIENCE_ENTRY,
+): ExperienceBulletHighlightResult[] {
+  return bulletResults
+    .filter((result) => result.eligible && hasRenderedExperienceHighlight(result))
+    .sort((left, right) =>
+      getExperienceHighlightTierPriority(left) - getExperienceHighlightTierPriority(right)
+      || getExperienceHighlightCategoryPriority(left) - getExperienceHighlightCategoryPriority(right)
+      || right.winnerScore - left.winnerScore
+      || right.improvementScore - left.improvementScore
+      || left.bulletIndex - right.bulletIndex,
+    )
+    .slice(0, maxVisibleHighlights)
 }
 
 function findMatchingExperienceEntry(
@@ -1540,19 +1609,17 @@ export function buildOptimizedPreviewHighlights(
     summary: createNonHighlightedLine(normalizePreviewSummaryText(optimizedCvState.summary)),
     experience: optimizedCvState.experience.map((optimizedEntry) => {
       const originalEntry = findMatchingExperienceEntry(originalCvState.experience, optimizedEntry)
-      const scoredBullets = optimizedEntry.bullets.map((bullet) => buildBulletHighlight(originalEntry, bullet))
+      const bulletResults = optimizedEntry.bullets.map((bullet, bulletIndex) =>
+        buildBulletHighlight(originalEntry, bullet, bulletIndex),
+      )
       const highlightedBulletIndexes = new Set(
-        scoredBullets
-          .map((entry, index) => ({ index, score: entry.score }))
-          .filter((entry) => entry.score > 0)
-          .sort((left, right) => right.score - left.score)
-          .slice(0, MAX_HIGHLIGHTED_BULLETS_PER_EXPERIENCE_ENTRY)
-          .map((entry) => entry.index),
+        selectVisibleExperienceHighlightsForEntry(bulletResults)
+          .map((entry) => entry.bulletIndex),
       )
 
       return {
         title: createNonHighlightedLine(optimizedEntry.title),
-        bullets: scoredBullets.map((entry, index) =>
+        bullets: bulletResults.map((entry, index) =>
           highlightedBulletIndexes.has(index)
             ? entry.line
             : createNonHighlightedLine(optimizedEntry.bullets[index] ?? ""),
