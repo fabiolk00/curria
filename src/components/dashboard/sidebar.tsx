@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
 import { AnimatePresence, motion } from "motion/react"
 import {
-  BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -90,12 +89,6 @@ const navItems: NavItem[] = [
       pathname.startsWith("/dashboard/resumes/new/") ||
       pathname === "/profile" ||
       pathname.startsWith("/profile/"),
-  },
-  {
-    label: "Gerenciamento",
-    href: "/resumes",
-    icon: BriefcaseBusiness,
-    isActive: (pathname) => pathname === "/resumes" || pathname.startsWith("/resumes/"),
   },
   {
     label: "Sessões",

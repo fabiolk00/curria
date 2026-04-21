@@ -5,9 +5,9 @@ export const DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH = "/dashboard/sessions"
 
 export const dashboardWelcomeGuideTargets = {
   profileNav: "profile-nav",
-  newConversation: "new-conversation",
-  chatPanel: "chat-panel",
+  profileAtsCta: "profile-ats-cta",
   sessionsNav: "sessions-nav",
+  newConversation: "new-conversation",
 } as const
 
 export type DashboardWelcomeGuideTargetId =
@@ -35,22 +35,12 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
     requiresSidebar: true,
   },
   {
-    id: "new-conversation",
-    title: "Nova conversa",
+    id: "profile-ats-cta",
+    title: "Melhorar para ATS",
     description:
-      "Comece uma nova conversa para analisar, otimizar ou adaptar seu currículo com ajuda da IA.",
-    targetId: dashboardWelcomeGuideTargets.newConversation,
+      "Quando seu perfil estiver revisado, use este botão para gerar sua primeira versão ATS com base nas informações salvas.",
+    targetId: dashboardWelcomeGuideTargets.profileAtsCta,
     path: DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
-    preferredSide: "right",
-    requiresSidebar: true,
-  },
-  {
-    id: "chat",
-    title: "Seu chat com a IA",
-    description:
-      "É aqui que você conversa com a IA para analisar, otimizar e adaptar seu currículo conforme o objetivo da vaga.",
-    targetId: dashboardWelcomeGuideTargets.chatPanel,
-    path: DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
     preferredSide: "left",
   },
   {
@@ -60,6 +50,16 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
       "Aqui ficam suas conversas anteriores para retomar versões, revisar o histórico e continuar de onde parou.",
     targetId: dashboardWelcomeGuideTargets.sessionsNav,
     path: DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
+    preferredSide: "right",
+    requiresSidebar: true,
+  },
+  {
+    id: "new-conversation",
+    title: "Nova conversa",
+    description:
+      "Comece uma nova conversa para analisar, otimizar ou adaptar seu currículo com ajuda da IA.",
+    targetId: dashboardWelcomeGuideTargets.newConversation,
+    path: DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
     preferredSide: "right",
     requiresSidebar: true,
   },

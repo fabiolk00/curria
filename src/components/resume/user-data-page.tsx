@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { dashboardWelcomeGuideTargets, getDashboardGuideTargetProps } from "@/lib/dashboard/welcome-guide"
 import { assessAtsEnhancementReadiness, getAtsEnhancementBlockingItems } from "@/lib/profile/ats-enhancement"
 import { cvStateToTemplateData } from "@/lib/templates/cv-state-to-template-data"
 import { cn } from "@/lib/utils"
@@ -999,6 +1000,7 @@ export default function UserDataPage({
                 type="button"
                 disabled={setupGenerationButtonDisabled}
                 onClick={() => void handleSetupGeneration()}
+                {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.profileAtsCta)}
                 className="h-12 w-full gap-2 rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700 disabled:bg-emerald-600/60"
                 size="lg"
                 data-testid="ats-panel-cta"

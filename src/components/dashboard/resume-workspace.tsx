@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { usePreviewPanel } from "@/context/preview-panel-context"
 import { usePreviewPanelOverlay } from "@/hooks/use-preview-panel-overlay"
-import { dashboardWelcomeGuideTargets, getDashboardGuideTargetProps } from "@/lib/dashboard/welcome-guide"
 import {
   generateResume,
   getSessionWorkspace,
@@ -471,10 +470,7 @@ export function ResumeWorkspace({
   }
 
   const chatPane = (
-    <div
-      className="flex h-full min-h-[72svh] min-w-0 flex-col overflow-hidden bg-[#faf9f5] lg:min-h-0"
-      {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.chatPanel)}
-    >
+    <div className="flex h-full min-h-[72svh] min-w-0 flex-col overflow-hidden bg-[#faf9f5] lg:min-h-0">
       <ChatInterface
         sessionId={sessionId}
         userName={userName}
