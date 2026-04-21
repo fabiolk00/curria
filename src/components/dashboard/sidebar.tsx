@@ -44,6 +44,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSidebarContext } from "@/context/sidebar-context"
 import { useIsMobile } from "@/hooks/use-mobile"
+import {
+  dashboardWelcomeGuideTargets,
+  getDashboardGuideTargetProps,
+  type DashboardWelcomeGuideTargetId,
+} from "@/lib/dashboard/welcome-guide"
 import { PLANS, PlanSlug } from "@/lib/plans"
 import { cn } from "@/lib/utils"
 import { NEW_CONVERSATION_EVENT } from "./events"
@@ -125,11 +130,13 @@ function SidebarNavItem({
   isOpen,
   isMobile,
   onNavigate,
+  guideTargetId,
 }: {
   item: NavItem
   isOpen: boolean
   isMobile: boolean
   onNavigate?: () => void
+  guideTargetId?: DashboardWelcomeGuideTargetId
 }) {
   const pathname = usePathname()
   const isActive = item.isActive(pathname)
@@ -138,6 +145,7 @@ function SidebarNavItem({
     <Link
       href={item.href}
       onClick={onNavigate}
+      {...(guideTargetId ? getDashboardGuideTargetProps(guideTargetId) : {})}
       className={cn(
         "flex items-center rounded-lg text-sm font-medium transition-colors",
         isOpen || isMobile
@@ -358,6 +366,7 @@ function SidebarContent({
                 isOpen={isOpen}
                 isMobile={isMobile}
                 onNavigate={onCloseMobile}
+                guideTargetId={item.label === "Perfil" ? dashboardWelcomeGuideTargets.profileNav : undefined}
               />
             ))}
           </nav>
@@ -370,6 +379,7 @@ function SidebarContent({
                 router.replace("/dashboard")
                 onCloseMobile?.()
               }}
+              {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.newConversation)}
               className={cn(
                 'flex items-center rounded-lg text-sm font-medium transition-colors w-full',
                 isOpen || isMobile
