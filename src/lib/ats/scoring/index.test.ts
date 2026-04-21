@@ -8,7 +8,7 @@ const BASE_CV = {
   fullName: 'Ana Silva',
   email: 'ana@example.com',
   phone: '555-0100',
-  summary: 'Analista de dados com experiencia em SQL.',
+  summary: 'Analista de dados com experiência em SQL.',
   experience: [{
     title: 'Analista de Dados',
     company: 'Acme',
@@ -45,7 +45,7 @@ describe('ATS readiness scoring contract', () => {
     const contract = buildAtsReadinessContractForEnhancement({
       originalCvState: {
         ...BASE_CV,
-        summary: 'Analista de dados com experiencia em SQL e ETL para analytics com foco em resultados de negocio.',
+        summary: 'Analista de dados com experiência em SQL e ETL para analytics com foco em resultados de negócio.',
         experience: [{
           ...BASE_CV.experience[0],
           bullets: ['Implementei pipelines SQL e reduzi o tempo de fechamento em 30%.'],
@@ -68,7 +68,7 @@ describe('ATS readiness scoring contract', () => {
         ...buildBaselineAtsReadinessContract({
           cvState: {
             ...BASE_CV,
-            summary: 'Analista de dados com experiencia em SQL e ETL para analytics com foco em resultados de negocio.',
+        summary: 'Analista de dados com experiência em SQL e ETL para analytics com foco em resultados de negócio.',
             experience: [{
               ...BASE_CV.experience[0],
               bullets: ['Implementei pipelines SQL e reduzi o tempo de fechamento em 30%.'],
@@ -165,7 +165,7 @@ describe('ATS readiness scoring contract', () => {
     const contract = buildAtsReadinessContractForEnhancement({
       originalCvState: {
         ...BASE_CV,
-        summary: 'Analista de dados com experiencia em SQL, BI, ETL e comunicacao com liderancas para decisao.',
+        summary: 'Analista de dados com experiência em SQL, BI, ETL e comunicação com lideranças para decisão.',
         experience: [{
           ...BASE_CV.experience[0],
           bullets: ['Implementei dashboards em Power BI e reduzi o tempo de reporte em 25%.'],

@@ -24,7 +24,7 @@ const BASE_CV = {
   fullName: 'Ana Silva',
   email: 'ana@example.com',
   phone: '555-0100',
-  summary: 'Analista de dados com experiencia em SQL.',
+  summary: 'Analista de dados com experiência em SQL.',
   experience: [{
     title: 'Analista de Dados',
     company: 'Acme',

@@ -298,7 +298,7 @@ describe('session comparison route', () => {
         },
         optimizationSummary: {
           changedSections: ['summary', 'experience', 'skills'],
-          notes: ['Resumo e experiencia reforcados para ATS.'],
+          notes: ['Resumo e experiência reforçados para ATS.'],
           keywordCoverageImprovement: ['SQL'],
         },
         optimizedCvState: {
