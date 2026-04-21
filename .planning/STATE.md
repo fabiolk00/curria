@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 80
-current_phase_name: repeated query fingerprinting for stronger n+1 detection
+current_phase: 87
+current_phase_name: formalize experience-entry highlight surfacing policy as an explicit code layer
 current_plan: 01
-status: executing
-stopped_at: Completed 77-01-PLAN.md
-last_updated: "2026-04-21T22:59:24.672Z"
-last_activity: 2026-04-21 -- Phase 87 planning complete
+status: complete
+stopped_at: Completed 87-01-PLAN.md
+last_updated: "2026-04-21T23:07:12.271Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 50
   completed_phases: 6
@@ -24,19 +24,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** PDF export now renders pt-BR and technical strings without broken glyphs, experience headers place dates on the right beside the role title, and the `Estimado` badge help cue is lighter and more compact.
+**Current focus:** Experience highlight previews now formalize same-entry visible-slot selection with explicit editorial priority, keeping Tier 1 evidence ahead of Tier 2 without changing summary, ATS gates, or export behavior.
 
 ## Current Position
 
-Phase: 80 (repeated query fingerprinting for stronger n+1 detection) - COMPLETE
+Phase: 87 (formalize experience-entry highlight surfacing policy as an explicit code layer) - COMPLETE
 Plan: 01 complete
-Current Phase: 80
-Current Phase Name: repeated query fingerprinting for stronger n+1 detection
-Current Plan: 01
+Current Phase: 87
+Current Phase Name: formalize experience-entry highlight surfacing policy as an explicit code layer
+Current Plan: 01 complete
 Total Plans in Phase: 1
-Status: Ready to execute
-Last activity: 2026-04-21 -- Phase 87 planning complete
-Last Activity Description: Phase 87 planning complete — 1 plans ready
+Status: Phase complete - verified locally
+Last activity: 2026-04-21
+Last Activity Description: Phase 87 complete
 
 Progress: [##########] 100%
 
@@ -44,7 +44,7 @@ Progress: [##########] 100%
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 81
+- Total plans completed: 82
 - Milestones archived: 5
 
 ## Accumulated Context
@@ -122,7 +122,9 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 80 added: Repeated query fingerprinting for stronger N+1 detection
 - [Phase 80]: Repeated-pattern diagnostics now sit on top of the existing Phase 78 tracking architecture; the live seam remains Supabase/PostgREST descriptor tracking rather than SQL parsing or Prisma-only instrumentation.
 - [Phase 80]: Fingerprinting is conservative by design: UUIDs, numbers, opaque ids, and list shapes normalize, but semantic string filters such as status-like values should stay distinct when possible.
-- Phase 87 added: Formalize experience-entry highlight surfacing policy as an explicit code layer
+- [Phase 87]: Experience highlight surfacing now has an explicit same-entry Layer 3 selector that ranks finalized bullet results by editorial tier/category priority instead of raw improvement score alone.
+- [Phase 87]: Tier 1 same-entry evidence now consumes visible slots before Tier 2, while existing caps, zero-highlight safety, and renderer tier/category contracts remain unchanged.
+- Phase 87 completed: same-entry experience highlight surfacing is now an explicit Layer 3 selector with editorial Tier 1 dominance ahead of Tier 2.
 
 ### Pending Todos
 

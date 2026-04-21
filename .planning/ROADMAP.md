@@ -590,7 +590,7 @@ Plans:
 **Goal:** Formalize an explicit, testable experience-entry surfacing layer so visible optimized-preview highlights follow editorial evidence priority within each experience entry instead of relying on incidental bullet order or generic score side effects.
 **Requirements**: [EXP-HILITE-SURFACING-01, EXP-HILITE-SURFACING-PRIORITY-01, EXP-HILITE-SURFACING-TEST-01]
 **Depends on:** Phase 86
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 87 to break down)
+- [x] 87-01-PLAN.md - Formalize the same-entry visible highlight selector as explicit Layer 3, preserve caps/contracts, and add focused editorial surfacing regressions (completed 2026-04-21)

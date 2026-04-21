@@ -155,9 +155,9 @@
 
 ### Experience Highlight Entry Surfacing Policy
 
-- [ ] **EXP-HILITE-SURFACING-01**: Experience highlight rendering now uses a dedicated entry-level surfacing selector that consumes finalized bullet highlight results for a single experience entry and decides which bullets receive the limited visible highlight slots without re-running parsing, completion, or winner selection.
-- [ ] **EXP-HILITE-SURFACING-PRIORITY-01**: Within a single experience entry, visible highlight slots explicitly prioritize `strong` evidence ahead of `secondary`, with category ordering that prefers `metric`, then `scope_scale`, before Tier 2 contextual categories can consume remaining capacity.
-- [ ] **EXP-HILITE-SURFACING-TEST-01**: Focused unit coverage verifies tier dominance, cap preservation, zero-highlight safety, deterministic tie-breaking, and renderer-contract propagation for the entry-level surfacing policy.
+- [x] **EXP-HILITE-SURFACING-01**: Experience highlight rendering now uses a dedicated entry-level surfacing selector that consumes finalized bullet highlight results for a single experience entry and decides which bullets receive the limited visible highlight slots without re-running parsing, completion, or winner selection.
+- [x] **EXP-HILITE-SURFACING-PRIORITY-01**: Within a single experience entry, visible highlight slots explicitly prioritize `strong` evidence ahead of `secondary`, with category ordering that prefers `metric`, then `scope_scale`, before Tier 2 contextual categories can consume remaining capacity.
+- [x] **EXP-HILITE-SURFACING-TEST-01**: Focused unit coverage verifies tier dominance, cap preservation, zero-highlight safety, deterministic tie-breaking, and renderer-contract propagation for the entry-level surfacing policy.
 
 ## Future Requirements
 
@@ -277,9 +277,9 @@
 | OPT-PREVIEW-HILITE-CALIBRATION-01 | Phase 73 | Complete |
 | OPT-PREVIEW-HILITE-CALIBRATION-STYLE-01 | Phase 73 | Complete |
 | OPT-PREVIEW-HILITE-CALIBRATION-TEST-01 | Phase 73 | Complete |
-| EXP-HILITE-SURFACING-01 | Phase 87 | Planned |
-| EXP-HILITE-SURFACING-PRIORITY-01 | Phase 87 | Planned |
-| EXP-HILITE-SURFACING-TEST-01 | Phase 87 | Planned |
+| EXP-HILITE-SURFACING-01 | Phase 87 | Complete |
+| EXP-HILITE-SURFACING-PRIORITY-01 | Phase 87 | Complete |
+| EXP-HILITE-SURFACING-TEST-01 | Phase 87 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 77 total
