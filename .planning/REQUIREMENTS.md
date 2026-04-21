@@ -167,9 +167,9 @@
 
 ### Experience Highlight Surfacing Safety Validation
 
-- [ ] **EXP-HILITE-SAFETY-SSR-01**: The real execution path into `buildOptimizedPreviewHighlights(...)` and `selectVisibleExperienceHighlightsForEntry(...)` is traced and documented so SSR/debug-flag assumptions are explicit, and `shouldTraceExperienceHighlightSurfacing()` is either hardened or explicitly documented as safe for that context.
-- [ ] **EXP-HILITE-SAFETY-COUPLING-01**: Tests and shared test helpers are audited for fixture coupling to `EXPERIENCE_HIGHLIGHT_CATEGORY_PRIORITY`, and any constant-internals assertions are replaced with observable-behavior assertions.
-- [ ] **EXP-HILITE-SAFETY-VALIDATION-01**: The phase produces a validation note confirming whether the debug flag is server-only/test-only or mixed-context, whether any coupling was found, and whether the correct outcome was targeted fixes or validation-only with no editorial behavior changes.
+- [x] **EXP-HILITE-SAFETY-SSR-01**: The real execution path into `buildOptimizedPreviewHighlights(...)` and `selectVisibleExperienceHighlightsForEntry(...)` is traced and documented so SSR/debug-flag assumptions are explicit, and `shouldTraceExperienceHighlightSurfacing()` is either hardened or explicitly documented as safe for that context.
+- [x] **EXP-HILITE-SAFETY-COUPLING-01**: Tests and shared test helpers are audited for fixture coupling to `EXPERIENCE_HIGHLIGHT_CATEGORY_PRIORITY`, and any constant-internals assertions are replaced with observable-behavior assertions.
+- [x] **EXP-HILITE-SAFETY-VALIDATION-01**: The phase produces a validation note confirming whether the debug flag is server-only/test-only or mixed-context, whether any coupling was found, and whether the correct outcome was targeted fixes or validation-only with no editorial behavior changes.
 
 ## Future Requirements
 
@@ -295,9 +295,9 @@
 | EXP-HILITE-SURFACING-HARDEN-01 | Phase 88 | Complete |
 | EXP-HILITE-SURFACING-HARDEN-TEST-01 | Phase 88 | Complete |
 | EXP-HILITE-SURFACING-HARDEN-OBS-01 | Phase 88 | Complete |
-| EXP-HILITE-SAFETY-SSR-01 | Phase 89 | Planned |
-| EXP-HILITE-SAFETY-COUPLING-01 | Phase 89 | Planned |
-| EXP-HILITE-SAFETY-VALIDATION-01 | Phase 89 | Planned |
+| EXP-HILITE-SAFETY-SSR-01 | Phase 89 | Complete |
+| EXP-HILITE-SAFETY-COUPLING-01 | Phase 89 | Complete |
+| EXP-HILITE-SAFETY-VALIDATION-01 | Phase 89 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 83 total

@@ -1579,12 +1579,25 @@ function getExperienceHighlightCategoryPriority(result: ExperienceBulletHighligh
 }
 
 function shouldTraceExperienceHighlightSurfacing(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false
+  }
+
+  /**
+   * This selector is reached from ResumeComparisonView, a Client Component that Next.js App Router
+   * may prerender on the server during the initial page load and run again on the client after hydration.
+   * The debug flag is therefore runtime-local: set it in the current non-production runtime where you
+   * want the trace (Node/test or browser). It is not a supported browser-to-SSR control switch.
+   */
+  if (typeof globalThis === "undefined") {
+    return false
+  }
+
   const debugGlobal = globalThis as typeof globalThis & {
     [EXPERIENCE_HIGHLIGHT_SURFACING_DEBUG_FLAG]?: boolean
   }
 
-  return process.env.NODE_ENV !== "production"
-    && debugGlobal[EXPERIENCE_HIGHLIGHT_SURFACING_DEBUG_FLAG] === true
+  return debugGlobal[EXPERIENCE_HIGHLIGHT_SURFACING_DEBUG_FLAG] === true
 }
 
 function traceExperienceHighlightSurfacingDecision(
