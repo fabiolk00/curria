@@ -174,4 +174,15 @@ describe('cvStateToTemplateData', () => {
       'Engenheiro de Dados com foco em ETL e modelagem. Experiencia com Databricks, SQL e Power BI.',
     )
   })
+
+  it('sanitizes structured summary payloads that store the text under profile', () => {
+    const result = cvStateToTemplateData({
+      ...buildCvState(),
+      summary: '{"section":"summary","profile":"Profissional de Business Intelligence e Engenharia de Dados com mais de 5 anos de experiencia em ambientes corporativos."}',
+    })
+
+    expect(result.summary).toBe(
+      'Profissional de Business Intelligence e Engenharia de Dados com mais de 5 anos de experiencia em ambientes corporativos.',
+    )
+  })
 })

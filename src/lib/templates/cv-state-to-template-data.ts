@@ -457,6 +457,10 @@ function extractStructuredSummary(summary: string): string {
     if (typeof parsed.content === 'string' && parsed.content.trim()) {
       return parsed.content.replace(/\s+/g, ' ').trim()
     }
+
+    if (typeof parsed.profile === 'string' && parsed.profile.trim()) {
+      return parsed.profile.replace(/\s+/g, ' ').trim()
+    }
   } catch {
     return trimmed
   }
