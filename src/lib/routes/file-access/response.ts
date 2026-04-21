@@ -29,6 +29,15 @@ export async function toFileAccessResponse(
 
   switch (decision.kind) {
     case 'artifact_unavailable':
+      logInfo('resume_export.download_unavailable_state', {
+        sessionId: context.session.id,
+        targetId: context.targetId,
+        resumeTargetId: context.target?.id ?? null,
+        generationStatus: decision.log.generationStatus,
+        lifecycleStatus: decision.log.lifecycleStatus,
+        stage: decision.log.stage,
+        jobId: decision.log.jobId,
+      })
       logInfo('api.file.download_urls_unavailable', {
         requestMethod: context.request.method,
         requestPath: context.requestPath,

@@ -454,3 +454,13 @@ Plans:
 
 Plans:
 - [x] 73-01-PLAN.md - Raise highlight thresholds, group meaningful additions into short semantic chunks, preserve premium whole-line bullet cases, soften the visual treatment, and add regression coverage against noisy single-word highlights
+
+### Phase 74: Corrigir bloqueio indevido de edição manual por exportação e restaurar confiabilidade do download do arquivo
+
+**Goal:** Ensure manual resume edits no longer fall into an export deadlock by narrowing real export conflicts, preserving a still-valid artifact while a same-scope export is active, and keeping save/download states actionable instead of leaving the user unable to save or download.
+**Requirements**: [MANUAL-EXPORT-LOCK-01, MANUAL-EXPORT-UX-01, MANUAL-EXPORT-TEST-01]
+**Depends on:** Phase 73
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 74-01-PLAN.md - Narrow export conflict policy to the current session scope, keep the previous artifact available when a real same-scope export is already active during manual save, treat post-save export conflicts as saved-but-deferred in the editor UX, add observability for save/download conflict states, and cover the real deadlock regression with route and modal tests

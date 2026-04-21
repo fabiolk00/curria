@@ -19,7 +19,11 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useSessionCvState } from '@/hooks/use-session-cv-state'
-import { generateResume, saveEditedResume } from '@/lib/dashboard/workspace-client'
+import {
+  generateResume,
+  isExportAlreadyProcessingError,
+  saveEditedResume,
+} from '@/lib/dashboard/workspace-client'
 import type { CVState } from '@/types/cv'
 
 type Props = {
@@ -135,16 +139,28 @@ export function ResumeEditorModal({
           : { scope: 'base' as const, cvState: draft }
       await saveEditedResume(sessionId, saveInput)
 
-      await generateResume(
-        sessionId,
-        effectiveScope === 'target'
-          ? { scope: 'target', targetId: targetId as string }
-          : { scope: 'base' },
-      )
+      let generationDeferredByActiveExport = false
+      try {
+        await generateResume(
+          sessionId,
+          effectiveScope === 'target'
+            ? { scope: 'target', targetId: targetId as string }
+            : { scope: 'base' },
+        )
+      } catch (err) {
+        if (!isExportAlreadyProcessingError(err)) {
+          throw err
+        }
+
+        generationDeferredByActiveExport = true
+      }
 
       close()
       onSaved(structuredClone(draft))
-      toast.success('Edição salva. Atualizando o PDF.')
+      const successMessage = generationDeferredByActiveExport
+        ? 'Sua edição foi salva. A exportação atual precisa terminar antes de atualizar o PDF.'
+        : 'Edição salva. Atualizando o PDF.'
+      toast.success(successMessage)
     } catch (err) {
       setSaveError(
         err instanceof Error
@@ -304,3 +320,4 @@ export function ResumeEditorModal({
     </Dialog>
   )
 }
+

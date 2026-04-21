@@ -16,6 +16,7 @@ vi.mock('@/hooks/use-session-cv-state', () => ({
 vi.mock('@/lib/dashboard/workspace-client', () => ({
   saveEditedResume: vi.fn(),
   generateResume: vi.fn(),
+  isExportAlreadyProcessingError: (error: unknown) => error instanceof Error && error.message === 'EXPORT_ALREADY_PROCESSING',
 }))
 
 vi.mock('sonner', () => ({
@@ -205,5 +206,40 @@ describe('ResumeEditorModal', () => {
     await waitFor(() => {
       expect(screen.getByText('save failed')).toBeInTheDocument()
     })
+  })
+
+  it('persists the edit and closes the modal when generation is deferred by an active export', async () => {
+    const onSaved = vi.fn()
+    const onOpenChange = vi.fn()
+
+    vi.mocked(generateResume).mockRejectedValue(new Error('EXPORT_ALREADY_PROCESSING'))
+
+    render(
+      <ResumeEditorModal
+        sessionId="sess_123"
+        open
+        onOpenChange={onOpenChange}
+        onSaved={onSaved}
+      />,
+    )
+
+    const summary = screen.getByDisplayValue('Base summary')
+    await userEvent.clear(summary)
+    await userEvent.type(summary, 'Saved while another export is still running')
+    await userEvent.click(screen.getByRole('button', { name: /salvar e atualizar pdf/i }))
+
+    await waitFor(() => {
+      expect(saveEditedResume).toHaveBeenCalled()
+      expect(generateResume).toHaveBeenCalled()
+      expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({
+        summary: 'Saved while another export is still running',
+      }))
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+
+    expect(screen.queryByText('EXPORT_ALREADY_PROCESSING')).not.toBeInTheDocument()
+    expect(toast.success).toHaveBeenCalledWith(
+      'Sua edição foi salva. A exportação atual precisa terminar antes de atualizar o PDF.',
+    )
   })
 })

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 70
-current_phase_name: corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export
+current_phase: 74
+current_phase_name: corrigir bloqueio indevido de edicao manual por exportacao e restaurar confiabilidade do download do arquivo
 current_plan: 01
 status: complete
-stopped_at: Completed 70-01-PLAN.md
-last_updated: "2026-04-21T09:00:00.000Z"
+stopped_at: Completed 74-01-PLAN.md
+last_updated: "2026-04-21T11:10:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 24
@@ -24,19 +24,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** Manual resume edits now persist through the same canonical owner used by preview and export, with stale artifacts invalidated and regenerated from the edited source instead of silently serving older snapshots.
+**Current focus:** Manual resume edits now survive real export conflicts without falling into a dead zone: unrelated exports no longer block regeneration, same-scope active exports keep the last valid artifact usable, and the editor now reports saved-but-deferred PDF refreshes clearly.
 
 ## Current Position
 
-Phase: 70 (corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export) - COMPLETE
+Phase: 74 (corrigir bloqueio indevido de edicao manual por exportacao e restaurar confiabilidade do download do arquivo) - COMPLETE
 Plan: 01 complete
-Current Phase: 70
-Current Phase Name: corrigir persistencia da edicao manual no preview do curriculo e alinhar preview reedicao e export
+Current Phase: 74
+Current Phase Name: corrigir bloqueio indevido de edicao manual por exportacao e restaurar confiabilidade do download do arquivo
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-21
-Last Activity Description: Manual resume edits now update the canonical edited source, rehydrate correctly across subsequent edits, and force preview/export regeneration instead of serving stale artifacts
+Last Activity Description: Manual resume edits now persist even when a real export is already running, unrelated exports no longer block regeneration, and the editor keeps users out of the save/download dead zone with deferred-refresh messaging
 
 Progress: [##########] 100%
 
@@ -109,6 +109,8 @@ Baseline carried forward from earlier shipped milestones:
 - [Phase 72.1]: The PDF resume template remains ATS-safe and single-column, but now uses a calmer executive hierarchy with softer separators, stronger top-of-page hierarchy, and more breathable experience and skills spacing.
 - [Phase 73]: Optimized preview highlights now operate on short semantic chunks with explicit density limits instead of permissive token-by-token additions, which removes most isolated word highlights from the summary.
 - [Phase 73]: Premium highlight behavior remains intact for materially improved high-value bullets such as quantified metric/scope cases, while the inline green treatment is now visually softer and less diff-like.
+- [Phase 74]: Session-generate export conflicts are now scoped to the current session/target instead of any active artifact job owned by the user, so unrelated exports no longer block manual-edit regeneration.
+- [Phase 74]: When a real same-scope export is already in progress, manual save now persists the edited resume without immediately invalidating the last valid artifact, and the editor surfaces the PDF refresh as deferred instead of failing the save.
 - [Phase 59]: The remaining opaque post-preflight failure path is now localized inside `generateBillableResume(...)` with explicit billable stages, stage-aware logs, and stage-failure metrics.
 - [Phase 59]: Known billable state failures such as missing latest version, missing pending generation, reservation failures, render throws, and persistence failures now preserve stable typed codes or stage-tagged exceptions instead of collapsing into an unqualified opaque throw.
 

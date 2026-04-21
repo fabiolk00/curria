@@ -11,6 +11,7 @@ import {
   updateResumeTargetCvStateWithVersion,
 } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession } from '@/lib/db/sessions'
+import { listJobsForSession } from '@/lib/jobs/repository'
 
 import { POST } from './route'
 
@@ -40,6 +41,10 @@ vi.mock('@/lib/db/sessions', () => ({
     ...session,
     cvState: patch.cvState ? { ...session.cvState, ...patch.cvState } : session.cvState,
   })),
+}))
+
+vi.mock('@/lib/jobs/repository', () => ({
+  listJobsForSession: vi.fn(),
 }))
 
 function buildAppUser(id: string) {
@@ -143,6 +148,7 @@ describe('manual edit route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getResumeTargetForSession).mockResolvedValue(null)
+    vi.mocked(listJobsForSession).mockResolvedValue([])
   })
 
   it('creates a manual version for a successful canonical edit', async () => {
@@ -454,6 +460,77 @@ describe('manual edit route', () => {
           previewAccess: undefined,
         },
       },
+    )
+  })
+
+  it('keeps the previous optimized artifact available when a same-scope export is already in progress', async () => {
+    const session = buildSession()
+    session.agentState.optimizedCvState = buildOptimizedCvState()
+    session.generatedOutput = {
+      status: 'ready',
+      pdfPath: 'usr_123/sess_123/resume.pdf',
+      generatedAt: '2026-04-21T00:00:00.000Z',
+    }
+
+    vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
+    vi.mocked(getSession).mockResolvedValue(session)
+    vi.mocked(listJobsForSession).mockResolvedValue([
+      {
+        jobId: 'job_active_123',
+        userId: 'usr_123',
+        sessionId: 'sess_123',
+        idempotencyKey: 'artifact:sess_123:optimized',
+        type: 'artifact_generation',
+        status: 'running',
+        stage: 'rendering',
+        dispatchInputRef: {
+          kind: 'session_cv_state',
+          sessionId: 'sess_123',
+          snapshotSource: 'optimized',
+        },
+        createdAt: '2026-04-21T00:00:00.000Z',
+        updatedAt: '2026-04-21T00:01:00.000Z',
+      },
+    ] as never)
+
+    const response = await POST(
+      new NextRequest('https://example.com/api/session/sess_123/manual-edit', {
+        method: 'POST',
+        headers: buildTrustedHeaders(),
+        body: JSON.stringify({
+          scope: 'optimized',
+          cvState: {
+            ...buildOptimizedCvState(),
+            summary: 'Updated optimized summary while export runs.',
+          },
+        }),
+      }),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      scope: 'optimized',
+      changed: true,
+    })
+    expect(applyToolPatchWithVersion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sess_123' }),
+      {
+        agentState: expect.objectContaining({
+          optimizedCvState: expect.objectContaining({
+            summary: 'Updated optimized summary while export runs.',
+          }),
+          rewriteStatus: 'completed',
+        }),
+      },
+    )
+    expect(applyToolPatchWithVersion).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        generatedOutput: expect.anything(),
+      }),
+      expect.anything(),
     )
   })
 

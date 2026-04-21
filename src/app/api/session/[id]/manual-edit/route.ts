@@ -12,9 +12,11 @@ import {
 } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, getSession, mergeToolPatch } from '@/lib/db/sessions'
 import { isLockedPreview } from '@/lib/generated-preview/locked-preview'
+import { listJobsForSession } from '@/lib/jobs/repository'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import { validateTrustedMutationRequest } from '@/lib/security/request-trust'
 import type { GeneratedOutput, ToolPatch } from '@/types/agent'
+import type { JobStatusSnapshot } from '@/types/jobs'
 
 function didCanonicalStateChange(previous: string, next: string): boolean {
   return previous !== next
@@ -65,6 +67,49 @@ function createManualEditPersistenceLogFields(input: {
     changed: input.changed,
     invalidatedArtifact: input.invalidatedArtifact,
   }
+}
+
+function isActiveArtifactJob(job: JobStatusSnapshot): boolean {
+  return job.type === 'artifact_generation' && (job.status === 'queued' || job.status === 'running')
+}
+
+async function getActiveArtifactJobForScope(input: {
+  userId: string
+  sessionId: string
+  targetId?: string
+}): Promise<JobStatusSnapshot | null> {
+  const jobs = await listJobsForSession({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    type: 'artifact_generation',
+    resumeTargetId: input.targetId ?? null,
+    limit: 5,
+  })
+
+  return jobs.find(isActiveArtifactJob) ?? null
+}
+
+function logManualSaveWithActiveExport(input: {
+  sessionId: string
+  scope: 'base' | 'optimized' | 'target'
+  targetId?: string
+  activeJob: JobStatusSnapshot
+}) {
+  logInfo('resume_export.lock_detected_on_manual_save', {
+    sessionId: input.sessionId,
+    scope: input.scope,
+    targetId: input.targetId,
+    jobId: input.activeJob.jobId,
+    stage: input.activeJob.stage,
+  })
+
+  logInfo('resume_manual_save_allowed_after_lock_resolution', {
+    sessionId: input.sessionId,
+    scope: input.scope,
+    targetId: input.targetId,
+    resolution: 'kept_existing_artifact_until_export_finishes',
+    jobId: input.activeJob.jobId,
+  })
 }
 
 export async function POST(
@@ -119,6 +164,13 @@ export async function POST(
           JSON.stringify(target.derivedCvState),
           JSON.stringify(body.data.cvState),
         )
+        const activeArtifactJob = changed
+          ? await getActiveArtifactJobForScope({
+            userId: appUser.id,
+            sessionId: session.id,
+            targetId: body.data.targetId,
+          })
+          : null
 
         if (!changed) {
           logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
@@ -142,23 +194,32 @@ export async function POST(
           userId: appUser.id,
           derivedCvState: body.data.cvState,
         })
-        await updateResumeTargetGeneratedOutput(
-          session.id,
-          body.data.targetId,
-          createInvalidatedGeneratedOutputPatch() as GeneratedOutput,
-        )
-        logInfo('resume_export.stale_artifact_invalidated', {
-          sessionId: session.id,
-          targetId: body.data.targetId,
-          scope: 'target',
-        })
+        if (activeArtifactJob) {
+          logManualSaveWithActiveExport({
+            sessionId: session.id,
+            targetId: body.data.targetId,
+            scope: 'target',
+            activeJob: activeArtifactJob,
+          })
+        } else {
+          await updateResumeTargetGeneratedOutput(
+            session.id,
+            body.data.targetId,
+            createInvalidatedGeneratedOutputPatch() as GeneratedOutput,
+          )
+          logInfo('resume_export.stale_artifact_invalidated', {
+            sessionId: session.id,
+            targetId: body.data.targetId,
+            scope: 'target',
+          })
+        }
 
         logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
           sessionId: session.id,
           targetId: body.data.targetId,
           scope: 'target',
           changed: true,
-          invalidatedArtifact: true,
+          invalidatedArtifact: !activeArtifactJob,
         }))
 
         return NextResponse.json({
@@ -185,6 +246,12 @@ export async function POST(
           JSON.stringify(currentOptimizedCvState),
           JSON.stringify(body.data.cvState),
         )
+        const activeArtifactJob = changed
+          ? await getActiveArtifactJobForScope({
+            userId: appUser.id,
+            sessionId: session.id,
+          })
+          : null
 
         if (!changed) {
           logInfo('resume_manual_edit.saved', createManualEditPersistenceLogFields({
@@ -200,24 +267,36 @@ export async function POST(
           })
         }
 
-        await applyToolPatchWithVersion(session, {
+        const patch: ToolPatch = {
           agentState: {
             optimizedCvState: body.data.cvState,
             optimizedAt: new Date().toISOString(),
             rewriteStatus: 'completed',
           },
-          generatedOutput: createInvalidatedGeneratedOutputPatch(),
-        })
-        logInfo('resume_export.stale_artifact_invalidated', {
-          sessionId: session.id,
-          scope: 'optimized',
-        })
+        }
+        if (!activeArtifactJob) {
+          patch.generatedOutput = createInvalidatedGeneratedOutputPatch()
+        }
+
+        await applyToolPatchWithVersion(session, patch)
+        if (activeArtifactJob) {
+          logManualSaveWithActiveExport({
+            sessionId: session.id,
+            scope: 'optimized',
+            activeJob: activeArtifactJob,
+          })
+        } else {
+          logInfo('resume_export.stale_artifact_invalidated', {
+            sessionId: session.id,
+            scope: 'optimized',
+          })
+        }
 
         logInfo('resume_manual_edit.persisted', createManualEditPersistenceLogFields({
           sessionId: session.id,
           scope: 'optimized',
           changed: true,
-          invalidatedArtifact: true,
+          invalidatedArtifact: !activeArtifactJob,
         }))
 
         return NextResponse.json({
@@ -246,14 +325,26 @@ export async function POST(
         })
       }
 
-      const shouldInvalidateArtifact = !session.agentState.optimizedCvState
+      const activeArtifactJob = !session.agentState.optimizedCvState
+        ? await getActiveArtifactJobForScope({
+          userId: appUser.id,
+          sessionId: session.id,
+        })
+        : null
+      const shouldInvalidateArtifact = !session.agentState.optimizedCvState && !activeArtifactJob
       const patch: ToolPatch = { cvState: body.data.cvState }
       if (shouldInvalidateArtifact) {
         patch.generatedOutput = createInvalidatedGeneratedOutputPatch()
       }
 
       await applyToolPatchWithVersion(session, patch, 'manual')
-      if (shouldInvalidateArtifact) {
+      if (activeArtifactJob) {
+        logManualSaveWithActiveExport({
+          sessionId: session.id,
+          scope: 'base',
+          activeJob: activeArtifactJob,
+        })
+      } else if (shouldInvalidateArtifact) {
         logInfo('resume_export.stale_artifact_invalidated', {
           sessionId: session.id,
           scope: 'base',
@@ -290,7 +381,13 @@ export async function POST(
     )
 
     if (changed && result.patch) {
-      const shouldInvalidateArtifact = !session.agentState.optimizedCvState
+      const activeArtifactJob = !session.agentState.optimizedCvState
+        ? await getActiveArtifactJobForScope({
+          userId: appUser.id,
+          sessionId: session.id,
+        })
+        : null
+      const shouldInvalidateArtifact = !session.agentState.optimizedCvState && !activeArtifactJob
       const patch: ToolPatch = {
         ...result.patch,
         generatedOutput: shouldInvalidateArtifact
@@ -299,7 +396,13 @@ export async function POST(
       }
 
       await applyToolPatchWithVersion(session, patch, 'manual')
-      if (shouldInvalidateArtifact) {
+      if (activeArtifactJob) {
+        logManualSaveWithActiveExport({
+          sessionId: session.id,
+          scope: 'base',
+          activeJob: activeArtifactJob,
+        })
+      } else if (shouldInvalidateArtifact) {
         logInfo('resume_export.stale_artifact_invalidated', {
           sessionId: session.id,
           scope: 'base',

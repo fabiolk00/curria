@@ -14,11 +14,15 @@ import type {
 
 class DashboardApiError extends Error {
   status: number
+  code?: string
+  payload?: unknown
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, options?: { code?: string; payload?: unknown }) {
     super(message)
     this.name = 'DashboardApiError'
     this.status = status
+    this.code = options?.code
+    this.payload = options?.payload
   }
 }
 
@@ -30,10 +34,20 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit): Promise<T
     const message = typeof payload === 'object' && payload !== null && 'error' in payload
       ? String((payload as { error: unknown }).error)
       : 'Request failed.'
-    throw new DashboardApiError(message, response.status)
+    const code = typeof payload === 'object' && payload !== null && 'code' in payload
+      ? String((payload as { code: unknown }).code)
+      : undefined
+    throw new DashboardApiError(message, response.status, {
+      code,
+      payload,
+    })
   }
 
   return payload as T
+}
+
+export function isExportAlreadyProcessingError(error: unknown): error is DashboardApiError {
+  return error instanceof DashboardApiError && error.code === 'EXPORT_ALREADY_PROCESSING'
 }
 
 export async function getSessionWorkspace(sessionId: string): Promise<SessionWorkspace> {

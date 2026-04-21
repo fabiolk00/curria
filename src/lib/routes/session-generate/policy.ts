@@ -5,6 +5,25 @@ import { listActiveJobsForUser } from '@/lib/jobs/repository'
 
 import type { SessionGenerateContext, SessionGeneratePolicyDecision } from './types'
 
+function isActiveArtifactJob(job: JobStatusSnapshot): boolean {
+  return job.status === 'queued' || job.status === 'running'
+}
+
+function isSameArtifactScope(
+  context: SessionGenerateContext,
+  job: JobStatusSnapshot,
+): boolean {
+  if (job.sessionId !== context.session.id) {
+    return false
+  }
+
+  if (context.target?.id) {
+    return job.resumeTargetId === context.target.id
+  }
+
+  return job.resumeTargetId == null
+}
+
 export function isBillingReconciliationPending(job: JobStatusSnapshot): boolean {
   return (
     (job.status === 'failed' || job.status === 'cancelled')
@@ -26,8 +45,9 @@ export async function evaluateSessionGeneratePolicy(
   })
 
   const conflictingActiveJob = activeArtifactJobs.find((job) => (
-    job.idempotencyKey !== context.primaryIdempotencyKey
-    && (job.status === 'queued' || job.status === 'running')
+    isSameArtifactScope(context, job)
+    && job.idempotencyKey !== context.primaryIdempotencyKey
+    && isActiveArtifactJob(job)
   ))
 
   if (conflictingActiveJob) {

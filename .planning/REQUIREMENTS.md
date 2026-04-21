@@ -78,6 +78,12 @@
 ### Repository Hygiene and Documentation Cleanup
 
 - [x] **REPO-HYGIENE-01**: Temporary planning/debug artifacts are removed or ignored, while real historical phase records stay preserved as canonical project memory.
+
+### Manual Edit vs Export Reliability
+
+- [x] **MANUAL-EXPORT-LOCK-01**: Manual resume edits only treat an export as blocking when it belongs to the same session scope, and a real same-scope in-flight export no longer forces the current valid artifact into an unusable dead zone.
+- [x] **MANUAL-EXPORT-UX-01**: When a manual save lands during a real active export, the edit is still persisted canonically and the UI reports the export update as deferred instead of presenting a generic save failure.
+- [x] **MANUAL-EXPORT-TEST-01**: Regression coverage proves stale or unrelated export flags no longer block manual save, same-scope active exports preserve a usable artifact while edits persist, and download availability continues to reflect the actual artifact state.
 - [x] **REPO-HYGIENE-DOC-01**: Architecture and planning docs expose clear canonical entry points so contributors can find current source-of-truth guidance quickly.
 - [x] **REPO-HYGIENE-GUARD-01**: Lightweight hygiene guardrails explain what belongs in `.planning/` and keep local scratch outputs out of version control.
 
