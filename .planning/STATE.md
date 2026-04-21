@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 56
-current_phase_name: governance enforcement alignment
+current_phase: 57
+current_phase_name: repository hygiene and documentation cleanup
 current_plan: 01
 status: complete
-stopped_at: Completed 56-01-PLAN.md
-last_updated: "2026-04-21T01:25:00.000Z"
+stopped_at: Completed 57-01-PLAN.md
+last_updated: "2026-04-21T01:50:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 17
@@ -28,15 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 56 (governance enforcement alignment) - COMPLETE
+Phase: 57 (repository hygiene and documentation cleanup) - COMPLETE
 Plan: 01 complete
-Current Phase: 56
-Current Phase Name: governance enforcement alignment
+Current Phase: 57
+Current Phase Name: repository hygiene and documentation cleanup
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-21
-Last Activity Description: CI, audit scope, proof pack membership, and governance docs now align with the documented critical-route architecture
+Last Activity Description: Temporary planning debris is removed or ignored, architecture docs now have a curated index, and planning hygiene guidance is explicit
 
 Progress: [##########] 100%
 
@@ -44,7 +44,7 @@ Progress: [##########] 100%
 
 Baseline carried forward from earlier shipped milestones:
 
-- Total plans completed: 80
+- Total plans completed: 81
 - Milestones archived: 5
 
 ## Accumulated Context
@@ -61,6 +61,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 54 completed: a curated architecture proof pack, scorecard, and approved chokepoint map now gate sensitive route behavior.
 - Phase 55 completed: compare ownership is canonicalized, comparison is extracted into route layers, and repo-topology docs now match the current architecture.
 - Phase 56 completed: CI now runs the architecture proof pack, the audit enforces compare/comparison/versions seams, and governance docs reflect the enforced critical-route surface.
+- Phase 57 completed: temporary planning/debug leftovers are cleaned up, architecture docs have a canonical index, and planning hygiene rules are now documented.
 
 ### Decisions
 
@@ -76,6 +77,8 @@ Baseline carried forward from earlier shipped milestones:
 - [Phase 56]: CI enforcement must match the PR checklist for critical-route changes.
 - [Phase 56]: The route-architecture audit must enforce `compare`, `comparison`, and `versions` alongside the previously audited critical surfaces.
 - [Phase 56]: The architecture proof pack now includes the `comparison` route plus its seam tests.
+- [Phase 57]: `.planning/.tmp-copy-audit.json` and `.planning/debug/` are local-only artifacts and must stay ignored.
+- [Phase 57]: Historical phase directories remain canonical project memory when they explain real decisions, even if they are old.
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ Baseline carried forward from earlier shipped milestones:
 
 ## Session Continuity
 
-Last session: 2026-04-21T01:25:00.000Z
-Stopped at: Completed 56-01-PLAN.md
+Last session: 2026-04-21T01:50:00.000Z
+Stopped at: Completed 57-01-PLAN.md
 Resume file: None

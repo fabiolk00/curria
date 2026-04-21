@@ -25,6 +25,7 @@ This index is the main directory for the active documentation set.
 
 ## Architecture and Runtime
 
+- [architecture/README.md](./architecture/README.md)
 - [architecture-overview.md](./architecture-overview.md)
 - [session-persistence-boundaries.md](./session-persistence-boundaries.md)
 - [agent-runtime-parity.md](./agent-runtime-parity.md)

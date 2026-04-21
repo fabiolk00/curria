@@ -76,6 +76,7 @@ Current OpenAI routing is controlled in `src/lib/agent/config.ts`. The default r
 ## Architecture Entry Points
 
 - [CLAUDE.md](CLAUDE.md) - Current architecture and engineering invariants.
+- [docs/architecture/README.md](docs/architecture/README.md) - Curated index for the current architecture source-of-truth docs.
 - [docs/architecture-overview.md](docs/architecture-overview.md) - System-level map of the monolith.
 - [docs/architecture/route-policy-boundaries.md](docs/architecture/route-policy-boundaries.md) - When critical routes should use `context` / `policy` / `decision` / `response`.
 - [docs/architecture/components-boundaries.md](docs/architecture/components-boundaries.md) - Feature-local versus shared component placement rules.

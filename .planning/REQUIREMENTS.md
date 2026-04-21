@@ -75,6 +75,12 @@
 - [x] **ROUTE-GOV-ALIGN-TEST-01**: The curated architecture proof pack includes the migrated `comparison` surface and stays green alongside the route-architecture audit and typecheck commands.
 - [x] **ROUTE-GOV-ALIGN-DOC-01**: Review docs, scorecards, and architecture checklists describe the current automation truth and use repo-portable links.
 
+### Repository Hygiene and Documentation Cleanup
+
+- [x] **REPO-HYGIENE-01**: Temporary planning/debug artifacts are removed or ignored, while real historical phase records stay preserved as canonical project memory.
+- [x] **REPO-HYGIENE-DOC-01**: Architecture and planning docs expose clear canonical entry points so contributors can find current source-of-truth guidance quickly.
+- [x] **REPO-HYGIENE-GUARD-01**: Lightweight hygiene guardrails explain what belongs in `.planning/` and keep local scratch outputs out of version control.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -130,10 +136,13 @@
 | ROUTE-GOV-ALIGN-01 | Phase 56 | Complete |
 | ROUTE-GOV-ALIGN-TEST-01 | Phase 56 | Complete |
 | ROUTE-GOV-ALIGN-DOC-01 | Phase 56 | Complete |
+| REPO-HYGIENE-01 | Phase 57 | Complete |
+| REPO-HYGIENE-DOC-01 | Phase 57 | Complete |
+| REPO-HYGIENE-GUARD-01 | Phase 57 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 32 total
-- Mapped to phases: 32
+- v1.6 requirements: 35 total
+- Mapped to phases: 35
 - Unmapped: 0
 
 ---

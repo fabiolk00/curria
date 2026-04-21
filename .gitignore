@@ -53,3 +53,7 @@ Modernize Design Files.zip
 # Generated OpenAI evaluation artifacts
 docs/openai-baselines/20*/
 docs/openai-model-selection-runs/20*/
+
+# Local planning scratch and debug artifacts
+.planning/.tmp-copy-audit.json
+.planning/debug/

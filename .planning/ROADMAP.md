@@ -274,3 +274,13 @@ Plans:
 
 Plans:
 - [x] 56-01-PLAN.md — Align CI, audit scope, proof pack membership, and governance docs with the documented critical-route architecture
+
+### Phase 57: Repository Hygiene And Documentation Cleanup
+
+**Goal:** Remove leftover repo debris, clarify canonical documentation entry points, and keep `.planning/` trustworthy without changing runtime behavior.
+**Requirements**: [REPO-HYGIENE-01, REPO-HYGIENE-DOC-01, REPO-HYGIENE-GUARD-01]
+**Depends on:** Phase 56
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 57-01-PLAN.md — Remove local planning debris, add narrow hygiene guardrails, and curate architecture/planning doc entry points
