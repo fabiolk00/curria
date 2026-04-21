@@ -1,4 +1,3 @@
-import { isHighValueMetricBullet, scoreMetricImpactBulletPriority } from "@/lib/agent/tools/metric-impact-guard"
 import type { CVState, ExperienceEntry } from "@/types/cv"
 
 export type HighlightSegment = {
@@ -21,11 +20,25 @@ export type OptimizedPreviewHighlights = {
   experience: HighlightedExperienceEntry[]
 }
 
-type HighlightDensityMode = "summary" | "inline"
+type HighlightDensityMode = "summary" | "experience" | "inline"
 
 type PhraseUnit = {
   content: string
   trailing: string
+}
+
+type HighlightPolicy = {
+  maxHighlights: number
+  minScore: number
+  maxWordsPerSegment: number
+  maxCharactersPerSegment: number
+  maxCoverageRatio: number
+}
+
+type HighlightMatch = {
+  text: string
+  start: number
+  end: number
 }
 
 const STRONG_VERB_PREFIXES = [
@@ -130,6 +143,49 @@ const STOPWORDS = new Set([
 
 const WORD_PATTERN = /[\p{L}\p{N}%./+-]+/u
 
+const STRUCTURAL_LABEL_PATTERNS = [
+  /^resumo profissional[:\-\s]*$/i,
+  /^professional summary[:\-\s]*$/i,
+  /^summary[:\-\s]*$/i,
+]
+
+const HIGHLIGHT_POLICIES: Record<HighlightDensityMode, HighlightPolicy> = {
+  summary: {
+    maxHighlights: 2,
+    minScore: 3,
+    maxWordsPerSegment: 8,
+    maxCharactersPerSegment: 72,
+    maxCoverageRatio: 0.56,
+  },
+  experience: {
+    maxHighlights: 2,
+    minScore: 2,
+    maxWordsPerSegment: 8,
+    maxCharactersPerSegment: 88,
+    maxCoverageRatio: 0.4,
+  },
+  inline: {
+    maxHighlights: 1,
+    minScore: 4,
+    maxWordsPerSegment: 4,
+    maxCharactersPerSegment: 34,
+    maxCoverageRatio: 0.4,
+  },
+}
+
+const SUMMARY_FALLBACK_PATTERNS = [
+  /\b(?:senior|lead|principal|especialista|consultor|staff)(?:\s+[\p{L}\p{N}]+){0,3}/giu,
+  /\b(?:[\p{L}\p{N}]+\s+){0,2}business intelligence\b/giu,
+  /\b(?:[\p{L}\p{N}]+\s+){0,2}(?:analytics|sql|power bi|python|dbt|databricks)\b/giu,
+  /\b(?:[\p{L}\p{N}]+\s+){0,2}(?:operacional|estrategicas?|executivas?)\b/giu,
+]
+
+const EXPERIENCE_FALLBACK_PATTERNS = [
+  /\b(?:lider\w*|otimiz\w*|reduz\w*|aument\w*|melhor\w*|implement\w*|estrutur\w*)(?:\s+[\p{L}\p{N}%]+){0,6}/giu,
+  /\b(?:escopo\s+)?(?:latam|global|regional)\b/giu,
+  /\b\d+(?:[.,]\d+)?%?(?:\s+[\p{L}\p{N}]+){0,4}/giu,
+]
+
 function normalizeText(value: string | undefined): string {
   return (value ?? "")
     .normalize("NFD")
@@ -228,6 +284,123 @@ function splitIntoPhraseUnits(text: string): PhraseUnit[] {
   })).filter((unit) => unit.content.length > 0 || unit.trailing.length > 0)
 
   return units.length > 0 ? units : [{ content: text, trailing: "" }]
+}
+
+function getWordCount(text: string): number {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length
+}
+
+function isStructuralPhraseUnit(content: string): boolean {
+  const normalized = normalizeText(content).replace(/\s+/g, " ").trim()
+  return STRUCTURAL_LABEL_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
+function createNonHighlightedLine(text: string): HighlightedLine {
+  return { segments: [{ text, highlighted: false }], highlightWholeLine: false }
+}
+
+function collectRegexMatches(
+  text: string,
+  pattern: RegExp,
+  originalNormalized: string,
+  policy: HighlightPolicy,
+): HighlightMatch[] {
+  const matches: HighlightMatch[] = []
+  const activePattern = new RegExp(pattern.source, pattern.flags)
+
+  for (const match of text.matchAll(activePattern)) {
+    const candidate = match[0]?.trim()
+    const start = match.index ?? -1
+    if (!candidate || start < 0) {
+      continue
+    }
+
+    const normalizedCandidate = normalizeText(candidate)
+    if (
+      !normalizedCandidate
+      || originalNormalized.includes(normalizedCandidate)
+      || isStructuralPhraseUnit(candidate)
+      || getWordCount(candidate) > policy.maxWordsPerSegment
+      || candidate.length > policy.maxCharactersPerSegment
+    ) {
+      continue
+    }
+
+    matches.push({
+      text: candidate,
+      start,
+      end: start + match[0].length,
+    })
+  }
+
+  return matches
+}
+
+function buildFallbackHighlightLine(
+  original: string,
+  optimized: string,
+  mode: HighlightDensityMode,
+): HighlightedLine | null {
+  const policy = HIGHLIGHT_POLICIES[mode]
+  const originalNormalized = normalizeText(original)
+  const patterns = mode === "experience" ? EXPERIENCE_FALLBACK_PATTERNS : SUMMARY_FALLBACK_PATTERNS
+  const candidates = patterns
+    .flatMap((pattern) => collectRegexMatches(optimized, pattern, originalNormalized, policy))
+    .sort((left, right) => left.start - right.start)
+
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const chosen: HighlightMatch[] = []
+  let coverage = 0
+
+  for (const candidate of candidates) {
+    if (chosen.length >= policy.maxHighlights) {
+      break
+    }
+
+    if (chosen.some((item) => !(candidate.end <= item.start || candidate.start >= item.end))) {
+      continue
+    }
+
+    const nextCoverage = (coverage + candidate.text.length) / (optimized.trim().length || 1)
+    if (nextCoverage > policy.maxCoverageRatio) {
+      continue
+    }
+
+    chosen.push(candidate)
+    coverage += candidate.text.length
+  }
+
+  if (chosen.length === 0) {
+    return null
+  }
+
+  const segments: HighlightSegment[] = []
+  let cursor = 0
+
+  for (const match of chosen) {
+    if (cursor < match.start) {
+      segments.push({ text: optimized.slice(cursor, match.start), highlighted: false })
+    }
+
+    segments.push({ text: optimized.slice(match.start, match.end), highlighted: true })
+    cursor = match.end
+  }
+
+  if (cursor < optimized.length) {
+    segments.push({ text: optimized.slice(cursor), highlighted: false })
+  }
+
+  return {
+    segments: collapseSegments(segments),
+    highlightWholeLine: false,
+  }
 }
 
 function scorePhraseUnit(
@@ -329,8 +502,14 @@ function shouldHighlightPhraseUnit(
   score: number
 } {
   const analysis = scorePhraseUnit(content, originalCounts)
+  const policy = HIGHLIGHT_POLICIES[mode]
+  const trimmedContent = content.trim()
 
   if (analysis.addedRelevantCount === 0) {
+    return { highlighted: false, score: 0 }
+  }
+
+  if (!trimmedContent || isStructuralPhraseUnit(trimmedContent)) {
     return { highlighted: false, score: 0 }
   }
 
@@ -342,15 +521,21 @@ function shouldHighlightPhraseUnit(
     return { highlighted: false, score: 0 }
   }
 
-  if (mode === "summary") {
-    const highlighted = (
-      analysis.score >= 4
-      || analysis.significantWordCount >= 3
-    ) && (analysis.significantWordCount >= 2 || analysis.hasMetric)
-    return { highlighted, score: highlighted ? analysis.score : 0 }
+  if (
+    getWordCount(trimmedContent) > policy.maxWordsPerSegment
+    || trimmedContent.length > policy.maxCharactersPerSegment
+  ) {
+    return { highlighted: false, score: 0 }
   }
 
-  const highlighted = analysis.score >= 3 && (analysis.significantWordCount >= 2 || analysis.hasMetric || analysis.hasScope)
+  const highlighted = (
+    analysis.score >= policy.minScore
+    || analysis.significantWordCount >= 3
+  ) && (
+    analysis.significantWordCount >= 2
+    || analysis.hasMetric
+    || analysis.hasScope
+  )
   return { highlighted, score: highlighted ? analysis.score : 0 }
 }
 
@@ -361,20 +546,38 @@ function buildChunkedHighlightLine(
 ): HighlightedLine {
   const units = splitIntoPhraseUnits(optimized)
   const originalCounts = buildTokenCounts(original)
+  const policy = HIGHLIGHT_POLICIES[mode]
+  const totalCharacters = optimized.trim().length || 1
   const evaluations = units.map((unit) => ({
     unit,
     ...shouldHighlightPhraseUnit(unit.content, originalCounts, mode),
   }))
 
-  const maxHighlights = mode === "summary" ? 3 : 2
-  const allowedIndexes = new Set(
-    evaluations
-      .map((evaluation, index) => ({ index, score: evaluation.score }))
-      .filter((evaluation) => evaluation.score > 0)
-      .sort((left, right) => right.score - left.score)
-      .slice(0, maxHighlights)
-      .map((evaluation) => evaluation.index),
-  )
+  const rankedCandidates = evaluations
+    .map((evaluation, index) => ({
+      index,
+      score: evaluation.score,
+      text: `${evaluation.unit.content}${evaluation.unit.trailing}`,
+    }))
+    .filter((evaluation) => evaluation.score > 0)
+    .sort((left, right) => right.score - left.score)
+
+  const allowedIndexes = new Set<number>()
+  let highlightedCharacters = 0
+
+  for (const candidate of rankedCandidates) {
+    if (allowedIndexes.size >= policy.maxHighlights) {
+      break
+    }
+
+    const nextCoverage = (highlightedCharacters + candidate.text.trim().length) / totalCharacters
+    if (nextCoverage > policy.maxCoverageRatio) {
+      continue
+    }
+
+    allowedIndexes.add(candidate.index)
+    highlightedCharacters += candidate.text.trim().length
+  }
 
   const segments = evaluations.map((evaluation, index) => ({
     text: `${evaluation.unit.content}${evaluation.unit.trailing}`,
@@ -393,14 +596,19 @@ export function buildRelevantHighlightLine(
   mode: HighlightDensityMode = "inline",
 ): HighlightedLine {
   if (!optimized.trim()) {
-    return { segments: [{ text: optimized, highlighted: false }], highlightWholeLine: false }
+    return createNonHighlightedLine(optimized)
   }
 
   if (!original.trim() || isMinorFormattingOnlyChange(original, optimized)) {
-    return { segments: [{ text: optimized, highlighted: false }], highlightWholeLine: false }
+    return createNonHighlightedLine(optimized)
   }
 
-  return buildChunkedHighlightLine(original, optimized, mode)
+  const chunked = buildChunkedHighlightLine(original, optimized, mode)
+  if (chunked.segments.some((segment) => segment.highlighted)) {
+    return chunked
+  }
+
+  return buildFallbackHighlightLine(original, optimized, mode) ?? chunked
 }
 
 function calculateTextSimilarity(original: string, optimized: string): number {
@@ -450,17 +658,8 @@ function buildBulletHighlight(
 ): HighlightedLine {
   const originalBullets = originalEntry?.bullets ?? []
   const closestOriginalBullet = findClosestOriginalBullet(originalBullets, optimizedBullet) ?? ""
-  const relevanceScore = scoreMetricImpactBulletPriority(optimizedBullet)
-  const substantialChange = calculateTextSimilarity(closestOriginalBullet, optimizedBullet) < 0.72
 
-  if ((isHighValueMetricBullet(optimizedBullet) || relevanceScore >= 5) && substantialChange) {
-    return {
-      segments: [{ text: optimizedBullet, highlighted: true }],
-      highlightWholeLine: true,
-    }
-  }
-
-  return buildRelevantHighlightLine(closestOriginalBullet, optimizedBullet)
+  return buildRelevantHighlightLine(closestOriginalBullet, optimizedBullet, "experience")
 }
 
 function findMatchingExperienceEntry(
@@ -486,7 +685,7 @@ export function buildOptimizedPreviewHighlights(
       const originalEntry = findMatchingExperienceEntry(originalCvState.experience, optimizedEntry)
 
       return {
-        title: buildRelevantHighlightLine(originalEntry?.title ?? "", optimizedEntry.title),
+        title: buildRelevantHighlightLine(originalEntry?.title ?? "", optimizedEntry.title, "inline"),
         bullets: optimizedEntry.bullets.map((bullet) => buildBulletHighlight(originalEntry, bullet)),
       }
     }),

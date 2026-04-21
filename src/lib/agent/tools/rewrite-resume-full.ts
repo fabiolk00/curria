@@ -140,6 +140,8 @@ function buildSectionInstructions(
         ...shared,
         'Rewrite only the professional summary.',
         'Use 4 to 6 concise lines that clarify professional positioning, seniority, core stack, domain context, and type of business impact.',
+        'Do not include internal section labels such as "Resumo Profissional:" or "Professional Summary:" inside the summary text.',
+        'Keep an executive tone: concise, specific, and free of keyword stuffing or repeated role/domain phrases.',
         'Preserve grounded technical scope, business context, and supported achievements that strengthen positioning; do not flatten the profile into generic claims.',
         'If the original resume contains quantified impact, keep the number, scope, and business result visible whenever they are truthful and relevant.',
         'Avoid empty cliches and preserve factual truth.',
@@ -152,6 +154,7 @@ function buildSectionInstructions(
         'Keep or clarify every grounded tool, system, responsibility, stakeholder scope, and metric already present in the original experience.',
         'Treat quantified bullets as premium evidence. Do not replace percentages, efficiency gains, SLA improvements, savings, volumes, or regional impact with generic wording.',
         'Every bullet must start with a strong action verb in pt-BR and follow action + what was done + result, impact, or purpose when available.',
+        'Keep bullets concise and executive; prefer dense factual writing over long explanatory sentences.',
         'Do not merge, trim, or generalize bullets when that would remove relevant technical detail or business context.',
       ].join('\n\n')
     case 'skills':
@@ -303,6 +306,54 @@ function calculateTokenSimilarity(left: string, right: string): number {
   return (2 * overlap) / (leftTokens.length + rightTokens.length)
 }
 
+function hasSummarySectionLabel(summary: string): boolean {
+  return /^(?:resumo profissional|professional summary|summary|resumo)\s*[:\-–]/i.test(summary.trim())
+}
+
+function countSummaryWords(summary: string): number {
+  return summary
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length
+}
+
+function countRepeatedSummaryPhrases(summary: string): number {
+  const phrases = summary
+    .split(/[.!?;]+|,(?=\s+[A-ZÀ-Ý])/u)
+    .map((phrase) => normalizeForVisibilityCheck(phrase))
+    .filter((phrase) => phrase.split(' ').length >= 3)
+
+  const counts = new Map<string, number>()
+  phrases.forEach((phrase) => {
+    counts.set(phrase, (counts.get(phrase) ?? 0) + 1)
+  })
+
+  return Array.from(counts.values()).filter((count) => count > 1).length
+}
+
+function isAtsSummaryStructurallyNoisy(summary: string): boolean {
+  const normalized = normalizeForVisibilityCheck(summary)
+
+  if (!normalized) {
+    return false
+  }
+
+  if (hasSummarySectionLabel(summary)) {
+    return true
+  }
+
+  if (countSummaryWords(summary) > 48) {
+    return true
+  }
+
+  if (countRepeatedSummaryPhrases(summary) > 0) {
+    return true
+  }
+
+  return /(business intelligence|engenheiro de dados|analytics engineer|analista de dados)(?:\s+\S+){0,3}\s+\1/i.test(normalized)
+}
+
 function isVisibleRewriteTooClose(
   section: RewriteSectionName,
   currentCvState: CVState,
@@ -317,6 +368,7 @@ function isVisibleRewriteTooClose(
         && nextSummary
         && (
           currentSummary === nextSummary
+          || isAtsSummaryStructurallyNoisy(nextSectionData as string)
           || calculateTokenSimilarity(currentSummary, nextSummary) >= 0.88
         ),
       )
@@ -345,7 +397,7 @@ function isVisibleRewriteTooClose(
 function buildAssertiveRewriteInstructions(section: RewriteSectionName): string {
   switch (section) {
     case 'summary':
-      return 'The previous rewrite stayed too close to the original wording. Rewrite the summary again with clearly different sentence structure, stronger positioning, and tighter language while preserving the exact facts.'
+      return 'The previous rewrite stayed too close to the original wording or still feels noisy. Rewrite the summary again with clearly different sentence structure, stronger positioning, tighter executive language, no internal section labels, and no repetitive role/domain phrasing while preserving the exact facts.'
     case 'experience':
       return 'The previous rewrite stayed too close to the original wording. Rewrite every bullet more assertively with stronger action verbs and clearer business context while preserving the exact facts and dates.'
     case 'skills':

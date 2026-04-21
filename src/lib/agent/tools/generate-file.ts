@@ -874,11 +874,20 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
   const typography = {
     nameSize: 22,
     sectionSize: 11,
+    emphasizedSectionSize: 12.25,
     bodySize: 10,
     metaSize: 9.25,
     experienceTitleSize: 11,
     companySize: 10.1,
   }
+
+  const emphasizedSectionHeadings = new Set<string>([
+    ATS_SECTION_HEADINGS.summary,
+    ATS_SECTION_HEADINGS.experience,
+    ATS_SECTION_HEADINGS.certifications,
+    ATS_SECTION_HEADINGS.education,
+    ATS_SECTION_HEADINGS.skills,
+  ])
 
   let currentY = PAGE_HEIGHT - MARGIN
 
@@ -931,13 +940,16 @@ async function generatePDF(source: ResumeTemplateSource): Promise<Buffer> {
 
   function drawSectionHeading(activePage: typeof page, title: string, y: number): number {
     const headingText = title.toUpperCase()
+    const headingSize = emphasizedSectionHeadings.has(title)
+      ? typography.emphasizedSectionSize
+      : typography.sectionSize
     const nextY = y - 16
-    const headingWidth = fontBold.widthOfTextAtSize(headingText, typography.sectionSize)
+    const headingWidth = fontBold.widthOfTextAtSize(headingText, headingSize)
 
     activePage.drawText(headingText, {
       x: MARGIN,
       y: nextY,
-      size: typography.sectionSize,
+      size: headingSize,
       font: fontBold,
       color: palette.heading,
     })

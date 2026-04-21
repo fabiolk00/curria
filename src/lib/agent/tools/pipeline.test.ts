@@ -352,6 +352,58 @@ describe('ATS enhancement reliability hardening', () => {
     expect(result.diagnostics?.retriedSections).toContain('summary')
   })
 
+  it('forces an assertive second pass when the ATS summary still contains labels and repetitive phrasing', async () => {
+    const cvState = buildCvState()
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => {
+      if (section === 'summary') {
+        const summaryCalls = mockRewriteSection.mock.calls.filter(([input]: [{ section: string }]) => input.section === 'summary').length
+
+        return {
+          output: {
+            success: true,
+            rewritten_content: summaryCalls === 1
+              ? 'Resumo Profissional: Analytics Engineer com foco em SQL e Power BI. Analytics Engineer com foco em SQL e Power BI para analytics.'
+              : 'Analytics Engineer com foco em SQL, Power BI e governanca analitica para decisoes executivas.',
+            section_data: summaryCalls === 1
+              ? 'Resumo Profissional: Analytics Engineer com foco em SQL e Power BI. Analytics Engineer com foco em SQL e Power BI para analytics.'
+              : 'Analytics Engineer com foco em SQL, Power BI e governanca analitica para decisoes executivas.',
+            keywords_added: ['SQL', 'Power BI'],
+            changes_made: ['Resumo consolidado'],
+          },
+        }
+      }
+
+      return {
+        output: buildSuccessfulRewriteOutput(cvState, section),
+      }
+    })
+
+    const result = await rewriteResumeFull({
+      mode: 'ats_enhancement',
+      cvState,
+      atsAnalysis: {
+        overallScore: 78,
+        structureScore: 80,
+        clarityScore: 77,
+        impactScore: 74,
+        keywordCoverageScore: 79,
+        atsReadabilityScore: 82,
+        issues: [],
+        recommendations: ['Clareza', 'Power BI', 'SQL'],
+      },
+      userId: 'usr_123',
+      sessionId: 'sess_ats_123',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.optimizedCvState?.summary).toBe(
+      'Analytics Engineer com foco em SQL, Power BI e governanca analitica para decisoes executivas.',
+    )
+    expect(result.diagnostics?.sectionAttempts.summary).toBe(2)
+    expect(result.diagnostics?.retriedSections).toContain('summary')
+  })
+
   it('passes deeper ATS rewrite instructions that preserve detail instead of over-compressing the resume', async () => {
     const cvState = buildCvState()
 

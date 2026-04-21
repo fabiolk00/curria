@@ -83,6 +83,54 @@ function normalizeStringValue(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
+function normalizeSummaryComparisonText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function stripSummarySectionLabel(value: string): string {
+  return value.replace(
+    /^(?:[-*•\s]*)(?:resumo profissional|professional summary|summary|resumo)\s*[:\-–]\s*/iu,
+    '',
+  )
+}
+
+function sanitizeSummaryText(value: string): string {
+  const stripped = stripSummarySectionLabel(value.trim())
+
+  if (!stripped) {
+    return ''
+  }
+
+  const sentences = stripped
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+
+  if (sentences.length === 0) {
+    return stripped.replace(/\s+/g, ' ').trim()
+  }
+
+  const seen = new Set<string>()
+  const deduped = sentences.filter((sentence) => {
+    const normalized = normalizeSummaryComparisonText(sentence)
+
+    if (!normalized || seen.has(normalized)) {
+      return false
+    }
+
+    seen.add(normalized)
+    return true
+  })
+
+  return deduped.join(' ').replace(/\s+/g, ' ').trim()
+}
+
 function normalizeBullets(value: unknown): string[] {
   if (typeof value === 'string') {
     return value
@@ -389,6 +437,8 @@ function normalizeRewritePayload(
       if (normalizedSummary) {
         record.section_data = normalizedSummary
       }
+
+      record.section_data = sanitizeSummaryText(record.section_data as string)
     }
 
     if (typeof record.rewritten_content === 'string') {
@@ -396,6 +446,8 @@ function normalizeRewritePayload(
       if (normalizedRewrittenContent) {
         record.rewritten_content = normalizedRewrittenContent
       }
+
+      record.rewritten_content = sanitizeSummaryText(record.rewritten_content as string)
     }
   }
 

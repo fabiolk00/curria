@@ -39,7 +39,6 @@ describe("optimized preview highlights", () => {
 
     const highlightedSegments = result.segments.filter((segment) => segment.highlighted)
     expect(highlightedSegments.some((segment) => segment.text.includes("Senior Business Intelligence"))).toBe(true)
-    expect(highlightedSegments.some((segment) => segment.text.includes("Desenvolvedor de Business Intelligence"))).toBe(true)
     expect(highlightedSegments.every((segment) => segment.text.trim().split(/\s+/).length >= 3)).toBe(true)
   })
 
@@ -75,7 +74,10 @@ describe("optimized preview highlights", () => {
 
     const result = buildOptimizedPreviewHighlights(original, optimized)
 
-    expect(result.experience[0]?.bullets[0]?.highlightWholeLine).toBe(true)
+    expect(result.experience[0]?.bullets[0]?.highlightWholeLine).toBe(false)
+    const highlightedSegments = result.experience[0]?.bullets[0]?.segments.filter((segment) => segment.highlighted) ?? []
+    expect(highlightedSegments.length).toBeGreaterThan(0)
+    expect(highlightedSegments.every((segment) => segment.text.trim().length < optimized.experience[0].bullets[0].length)).toBe(true)
   })
 
   it("suppresses isolated single-word highlights with low standalone value", () => {
@@ -116,10 +118,45 @@ describe("optimized preview highlights", () => {
     )
 
     const highlightedSegments = result.segments.filter((segment) => segment.highlighted)
-    expect(highlightedSegments.length).toBeLessThanOrEqual(3)
+    expect(highlightedSegments.length).toBeLessThanOrEqual(2)
     expect(highlightedSegments.some((segment) => segment.text.includes("Senior Business Intelligence"))).toBe(true)
     expect(highlightedSegments.some((segment) => segment.text.includes("continuidade operacional"))).toBe(true)
     expect(highlightedSegments.some((segment) => segment.text.trim() === "cliente")).toBe(false)
     expect(highlightedSegments.some((segment) => segment.text.trim() === "consultoria")).toBe(false)
+  })
+
+  it("never highlights an entire summary sentence or paragraph", () => {
+    const optimized =
+      "Senior Analytics Engineer com experiÃªncia em SQL, Power BI e Databricks para governanÃ§a analÃ­tica, eficiÃªncia operacional e reporting executivo em contexto LATAM."
+    const result = buildRelevantHighlightLine(
+      "Analista com experiÃªncia em BI e dashboards.",
+      optimized,
+      "summary",
+    )
+
+    const highlightedSegments = result.segments.filter((segment) => segment.highlighted)
+    const highlightedCharacters = highlightedSegments.reduce((total, segment) => total + segment.text.trim().length, 0)
+
+    expect(highlightedSegments.length).toBeLessThanOrEqual(2)
+    expect(highlightedSegments.every((segment) => segment.text.trim().length < optimized.length)).toBe(true)
+    expect(highlightedCharacters / optimized.length).toBeLessThan(0.57)
+  })
+
+  it("caps experience highlight coverage and keeps it span-based even for strong bullets", () => {
+    const bullet =
+      "Liderei a reestruturaÃ§Ã£o da governanÃ§a analÃ­tica em escopo LATAM, reduzindo em 32% o tempo de publicaÃ§Ã£o de dashboards e elevando a confiabilidade dos dados para operaÃ§Ãµes executivas."
+    const result = buildRelevantHighlightLine(
+      "Criei dashboards e acompanhei indicadores da operaÃ§Ã£o.",
+      bullet,
+      "experience",
+    )
+
+    const highlightedSegments = result.segments.filter((segment) => segment.highlighted)
+    const highlightedCharacters = highlightedSegments.reduce((total, segment) => total + segment.text.trim().length, 0)
+
+    expect(result.highlightWholeLine).toBe(false)
+    expect(highlightedSegments.length).toBeGreaterThan(0)
+    expect(highlightedSegments.length).toBeLessThanOrEqual(2)
+    expect(highlightedCharacters / bullet.length).toBeLessThan(0.41)
   })
 })
