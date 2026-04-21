@@ -444,3 +444,13 @@ Plans:
 
 Plans:
 - [x] 72.1-01-PLAN.md - Embed the preview font in the PDF export, refine hierarchy/spacing in the single-column template, and update export tests so the PDF stays ATS-safe while looking more premium
+
+### Phase 73: Recalibrar o highlight verde do preview otimizado para reduzir ruido visual e destacar apenas melhorias com sentido completo
+
+**Goal:** Recalibrate optimized-preview highlights so the green emphasis favors short semantic chunks and materially improved premium bullets instead of fragmented single-word token diffs, keeping the preview cleaner and more persuasive without touching export or persistence.
+**Requirements**: [OPT-PREVIEW-HILITE-CALIBRATION-01, OPT-PREVIEW-HILITE-CALIBRATION-STYLE-01, OPT-PREVIEW-HILITE-CALIBRATION-TEST-01]
+**Depends on:** Phase 72
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 73-01-PLAN.md - Raise highlight thresholds, group meaningful additions into short semantic chunks, preserve premium whole-line bullet cases, soften the visual treatment, and add regression coverage against noisy single-word highlights

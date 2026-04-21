@@ -80,7 +80,7 @@ function HighlightText({
           data-highlighted={enabled && segment.highlighted ? "true" : "false"}
           className={cn(
             enabled && segment.highlighted
-              ? "rounded-[0.4rem] bg-emerald-100/80 px-1 py-0.5 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)] dark:bg-emerald-500/15 dark:text-emerald-100"
+              ? "rounded-md bg-emerald-100/65 px-0.5 py-px text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.10)] dark:bg-emerald-500/12 dark:text-emerald-100"
               : undefined,
           )}
         >
@@ -271,7 +271,7 @@ function ResumeDocument({
                             <span
                               className={cn(
                                 showHighlights && highlights?.experience[index]?.bullets[bulletIndex]?.highlightWholeLine
-                                  ? "rounded-lg bg-emerald-50/90 px-2 py-1 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)] dark:bg-emerald-500/10 dark:text-emerald-100"
+                                  ? "rounded-xl bg-emerald-50/85 px-2 py-1 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.10)] dark:bg-emerald-500/8 dark:text-emerald-100"
                                   : undefined,
                               )}
                             >

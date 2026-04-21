@@ -123,6 +123,12 @@
 - [x] **PDF-TEMPLATE-FONT-01**: The exported PDF reuses the same Inter font family used by the in-product preview so the document feels visually consistent with the product while remaining readable and text-selectable.
 - [x] **PDF-TEMPLATE-TEST-01**: Export regression tests continue to verify that the PDF keeps essential sections, content order, and artifact behavior intact after the visual template refinement.
 
+### Optimized Preview Highlight Recalibration
+
+- [x] **OPT-PREVIEW-HILITE-CALIBRATION-01**: Optimized preview highlights now favor short semantic chunks and materially improved premium bullets instead of isolated single-word token highlights, especially inside the summary block.
+- [x] **OPT-PREVIEW-HILITE-CALIBRATION-STYLE-01**: The optimized-column highlight style is softer and more editorial so the preview feels premium rather than like a raw technical diff.
+- [x] **OPT-PREVIEW-HILITE-CALIBRATION-TEST-01**: Highlight regression tests now cover suppression of isolated words/technology tokens, bounded summary density, and preservation of strong premium cases such as `15%` plus `LATAM`.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -229,10 +235,13 @@
 | PDF-TEMPLATE-PREMIUM-01 | Phase 72.1 | Complete |
 | PDF-TEMPLATE-FONT-01 | Phase 72.1 | Complete |
 | PDF-TEMPLATE-TEST-01 | Phase 72.1 | Complete |
+| OPT-PREVIEW-HILITE-CALIBRATION-01 | Phase 73 | Complete |
+| OPT-PREVIEW-HILITE-CALIBRATION-STYLE-01 | Phase 73 | Complete |
+| OPT-PREVIEW-HILITE-CALIBRATION-TEST-01 | Phase 73 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 71 total
-- Mapped to phases: 71
+- v1.6 requirements: 74 total
+- Mapped to phases: 74
 - Unmapped: 0
 
 ---

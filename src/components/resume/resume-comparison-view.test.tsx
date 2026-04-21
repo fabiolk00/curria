@@ -248,10 +248,33 @@ describe('ResumeComparisonView', () => {
 
     const summaryHighlight = screen.getByTestId('optimized-summary-highlight')
     expect(summaryHighlight.querySelector('[data-highlighted="true"]')).not.toBeNull()
+    expect(summaryHighlight.querySelectorAll('[data-highlighted="true"]').length).toBeLessThanOrEqual(3)
 
     const bulletHighlight = screen.getByTestId('optimized-bullet-highlight-0-0')
     expect(bulletHighlight.closest('span')).toBeInTheDocument()
     expect(screen.getAllByText(/15%/)).toHaveLength(2)
+  })
+
+  it('suppresses noisy single-word summary highlights while preserving stronger chunks', () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Consultor de BI com dashboards e apoio a clientes.')}
+        optimizedCvState={buildCvState('Consultor de BI com dashboards, apoio, cliente, consultoria, Senior Business Intelligence e continuidade operacional.')}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_123"
+        onContinue={vi.fn()}
+      />,
+    )
+
+    const summaryHighlight = screen.getByTestId('optimized-summary-highlight')
+    const highlightedSegments = Array.from(summaryHighlight.querySelectorAll('[data-highlighted="true"]'))
+      .map((element) => element.textContent?.trim() ?? '')
+
+    expect(highlightedSegments.length).toBeLessThanOrEqual(3)
+    expect(highlightedSegments.some((text) => text.includes('Senior Business Intelligence'))).toBe(true)
+    expect(highlightedSegments.some((text) => text.includes('continuidade operacional'))).toBe(true)
+    expect(highlightedSegments).not.toContain('cliente')
+    expect(highlightedSegments).not.toContain('consultoria')
   })
 
   it('lets the user hide visual highlights without changing the content', async () => {

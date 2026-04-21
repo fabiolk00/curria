@@ -21,6 +21,13 @@ export type OptimizedPreviewHighlights = {
   experience: HighlightedExperienceEntry[]
 }
 
+type HighlightDensityMode = "summary" | "inline"
+
+type PhraseUnit = {
+  content: string
+  trailing: string
+}
+
 const STRONG_VERB_PREFIXES = [
   "lider",
   "otimiz",
@@ -73,6 +80,22 @@ const TARGET_KEYWORD_TERMS = [
   "producao",
   "throughput",
   "sla",
+]
+
+const TECHNOLOGY_TERMS = [
+  "microsoft",
+  "qlikview",
+  "qlik",
+  "bigquery",
+  "databricks",
+  "dbt",
+  "sql",
+  "python",
+  "power",
+  "bi",
+  "aws",
+  "azure",
+  "gcp",
 ]
 
 const STOPWORDS = new Set([
@@ -197,7 +220,178 @@ function collapseSegments(segments: HighlightSegment[]): HighlightSegment[] {
   return collapsed
 }
 
-export function buildRelevantHighlightLine(original: string, optimized: string): HighlightedLine {
+function splitIntoPhraseUnits(text: string): PhraseUnit[] {
+  const matches = text.matchAll(/([^,;:.!?]+)([,:;.!?]*\s*)/g)
+  const units = Array.from(matches, (match) => ({
+    content: match[1] ?? "",
+    trailing: match[2] ?? "",
+  })).filter((unit) => unit.content.length > 0 || unit.trailing.length > 0)
+
+  return units.length > 0 ? units : [{ content: text, trailing: "" }]
+}
+
+function scorePhraseUnit(
+  content: string,
+  originalCounts: Map<string, number>,
+): {
+  score: number
+  addedRelevantCount: number
+  significantWordCount: number
+  hasMetric: boolean
+  hasScope: boolean
+  hasSeniority: boolean
+  hasStrongVerb: boolean
+  technologyOnly: boolean
+} {
+  const significantWords = new Set<string>()
+  const technologyWords = new Set<string>()
+  let addedRelevantCount = 0
+  let hasMetric = false
+  let hasScope = false
+  let hasSeniority = false
+  let hasStrongVerb = false
+
+  tokenizePreservingWhitespace(content).forEach((token) => {
+    if (!isWordToken(token)) {
+      return
+    }
+
+    const normalized = normalizeToken(token)
+    if (!normalized) {
+      return
+    }
+
+    const remaining = originalCounts.get(normalized) ?? 0
+    if (remaining > 0) {
+      originalCounts.set(normalized, remaining - 1)
+      return
+    }
+
+    if (!isRelevantAddedToken(token)) {
+      return
+    }
+
+    addedRelevantCount += 1
+
+    if (!STOPWORDS.has(normalized)) {
+      significantWords.add(normalized)
+    }
+
+    if (/\d/.test(normalized)) {
+      hasMetric = true
+    }
+
+    if (["latam", "global", "regional"].includes(normalized)) {
+      hasScope = true
+    }
+
+    if (SENIORITY_TERMS.includes(normalized)) {
+      hasSeniority = true
+    }
+
+    if (STRONG_VERB_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+      hasStrongVerb = true
+    }
+
+    if (TECHNOLOGY_TERMS.includes(normalized)) {
+      technologyWords.add(normalized)
+    }
+  })
+
+  const significantWordCount = significantWords.size
+  const technologyOnly = significantWordCount > 0 && technologyWords.size === significantWordCount
+
+  let score = 0
+  if (hasMetric) score += 5
+  if (hasScope) score += 3
+  if (hasSeniority) score += 2
+  if (hasStrongVerb) score += 2
+  score += Math.min(significantWordCount, 4)
+
+  return {
+    score,
+    addedRelevantCount,
+    significantWordCount,
+    hasMetric,
+    hasScope,
+    hasSeniority,
+    hasStrongVerb,
+    technologyOnly,
+  }
+}
+
+function shouldHighlightPhraseUnit(
+  content: string,
+  originalCounts: Map<string, number>,
+  mode: HighlightDensityMode,
+): {
+  highlighted: boolean
+  score: number
+} {
+  const analysis = scorePhraseUnit(content, originalCounts)
+
+  if (analysis.addedRelevantCount === 0) {
+    return { highlighted: false, score: 0 }
+  }
+
+  if (analysis.technologyOnly && !analysis.hasMetric && !analysis.hasScope && !analysis.hasStrongVerb) {
+    return { highlighted: false, score: 0 }
+  }
+
+  if (!analysis.hasMetric && analysis.significantWordCount < 2) {
+    return { highlighted: false, score: 0 }
+  }
+
+  if (mode === "summary") {
+    const highlighted = (
+      analysis.score >= 4
+      || analysis.significantWordCount >= 3
+    ) && (analysis.significantWordCount >= 2 || analysis.hasMetric)
+    return { highlighted, score: highlighted ? analysis.score : 0 }
+  }
+
+  const highlighted = analysis.score >= 3 && (analysis.significantWordCount >= 2 || analysis.hasMetric || analysis.hasScope)
+  return { highlighted, score: highlighted ? analysis.score : 0 }
+}
+
+function buildChunkedHighlightLine(
+  original: string,
+  optimized: string,
+  mode: HighlightDensityMode,
+): HighlightedLine {
+  const units = splitIntoPhraseUnits(optimized)
+  const originalCounts = buildTokenCounts(original)
+  const evaluations = units.map((unit) => ({
+    unit,
+    ...shouldHighlightPhraseUnit(unit.content, originalCounts, mode),
+  }))
+
+  const maxHighlights = mode === "summary" ? 3 : 2
+  const allowedIndexes = new Set(
+    evaluations
+      .map((evaluation, index) => ({ index, score: evaluation.score }))
+      .filter((evaluation) => evaluation.score > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, maxHighlights)
+      .map((evaluation) => evaluation.index),
+  )
+
+  const segments = evaluations.map((evaluation, index) => ({
+    text: `${evaluation.unit.content}${evaluation.unit.trailing}`,
+    highlighted: allowedIndexes.has(index),
+  }))
+
+  return {
+    segments: collapseSegments(segments),
+    highlightWholeLine: false,
+  }
+}
+
+export function buildRelevantHighlightLine(
+  original: string,
+  optimized: string,
+  mode: HighlightDensityMode = "inline",
+): HighlightedLine {
   if (!optimized.trim()) {
     return { segments: [{ text: optimized, highlighted: false }], highlightWholeLine: false }
   }
@@ -206,58 +400,7 @@ export function buildRelevantHighlightLine(original: string, optimized: string):
     return { segments: [{ text: optimized, highlighted: false }], highlightWholeLine: false }
   }
 
-  const originalCounts = buildTokenCounts(original)
-  const optimizedTokens = tokenizePreservingWhitespace(optimized)
-  const relevantAddedCount = optimizedTokens.reduce((count, token) => {
-    if (!isWordToken(token)) {
-      return count
-    }
-
-    const normalized = normalizeToken(token)
-    if (!normalized) {
-      return count
-    }
-
-    const remaining = originalCounts.get(normalized) ?? 0
-    if (remaining > 0) {
-      originalCounts.set(normalized, remaining - 1)
-      return count
-    }
-
-    return isRelevantAddedToken(token) ? count + 1 : count
-  }, 0)
-
-  if (relevantAddedCount === 0) {
-    return { segments: [{ text: optimized, highlighted: false }], highlightWholeLine: false }
-  }
-
-  const freshCounts = buildTokenCounts(original)
-  const segments = optimizedTokens.map((token) => {
-    if (!isWordToken(token)) {
-      return { text: token, highlighted: false }
-    }
-
-    const normalized = normalizeToken(token)
-    if (!normalized) {
-      return { text: token, highlighted: false }
-    }
-
-    const remaining = freshCounts.get(normalized) ?? 0
-    if (remaining > 0) {
-      freshCounts.set(normalized, remaining - 1)
-      return { text: token, highlighted: false }
-    }
-
-    return {
-      text: token,
-      highlighted: isRelevantAddedToken(token),
-    }
-  })
-
-  return {
-    segments: collapseSegments(segments),
-    highlightWholeLine: false,
-  }
+  return buildChunkedHighlightLine(original, optimized, mode)
 }
 
 function calculateTextSimilarity(original: string, optimized: string): number {
@@ -338,7 +481,7 @@ export function buildOptimizedPreviewHighlights(
   optimizedCvState: CVState,
 ): OptimizedPreviewHighlights {
   return {
-    summary: buildRelevantHighlightLine(originalCvState.summary, optimizedCvState.summary),
+    summary: buildRelevantHighlightLine(originalCvState.summary, optimizedCvState.summary, "summary"),
     experience: optimizedCvState.experience.map((optimizedEntry) => {
       const originalEntry = findMatchingExperienceEntry(originalCvState.experience, optimizedEntry)
 
