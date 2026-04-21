@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 54
 current_phase_name: architecture proof pack
 current_plan: 01
-status: complete
-stopped_at: Completed 54-01-PLAN.md
-last_updated: "2026-04-20T23:58:00.000Z"
-last_activity: 2026-04-20
+status: verifying
+stopped_at: Completed 55-01-PLAN.md
+last_updated: "2026-04-21T00:52:15.232Z"
+last_activity: 2026-04-21
 progress:
-  total_phases: 14
-  completed_phases: 14
-  total_plans: 14
-  completed_plans: 14
+  total_phases: 17
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -34,8 +34,8 @@ Current Phase: 54
 Current Phase Name: architecture proof pack
 Current Plan: 01
 Total Plans in Phase: 1
-Status: Architecture hardening waves 50-54 complete and validated
-Last activity: 2026-04-20
+Status: Phase complete — ready for verification
+Last activity: 2026-04-21
 Last Activity Description: Hotspot decomposition, invariants, governance automation, operational telemetry, and architecture proof pack all completed and validated
 
 Progress: [##########] 100%
@@ -59,6 +59,7 @@ Baseline carried forward from earlier shipped milestones:
 - Phase 52 completed: route architecture anti-patterns are enforced by CI audit and PR checklist prompts.
 - Phase 53 completed: architecture telemetry counters and incident drill docs now cover locked and artifact-available flows.
 - Phase 54 completed: a curated architecture proof pack, scorecard, and approved chokepoint map now gate sensitive route behavior.
+- Phase 55 added: Brownfield Route Consolidation And Repo Topology Alignment.
 
 ### Decisions
 
@@ -67,6 +68,8 @@ Baseline carried forward from earlier shipped milestones:
 - Treat preview-lock, replay, compare, versions, and file-access contracts as executable invariants.
 - Enforce obvious route anti-patterns in CI instead of relying on review memory.
 - Use a curated proof pack rather than the entire test suite as the release-facing architecture gate.
+- [Phase 55]: Keep POST /api/session/[id]/compare as the canonical compare seam; keep GET /api/session/[id]/comparison compatibility-only.
+- [Phase 55]: Preserve preview-lock sanitization in the comparison decision layer before resume text generation or scoring.
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ Baseline carried forward from earlier shipped milestones:
 
 ## Session Continuity
 
-Last session: 2026-04-20T23:58:00.000Z
-Stopped at: Completed 54-01-PLAN.md
+Last session: 2026-04-21T00:52:15.228Z
+Stopped at: Completed 55-01-PLAN.md
 Resume file: None
