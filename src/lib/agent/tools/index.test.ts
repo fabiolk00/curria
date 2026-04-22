@@ -759,6 +759,7 @@ describe('agent tool dispatch', () => {
       idempotencyKey: undefined,
       templateTargetSource: session.agentState,
       latestVersionId: 'ver_123',
+      latestVersionSource: 'ats-enhancement',
       sourceScope: 'optimized',
     })
     expect(execution.patch).toEqual({
@@ -943,6 +944,7 @@ describe('agent tool dispatch', () => {
       idempotencyKey: undefined,
       templateTargetSource: 'AWS backend role',
       latestVersionId: 'ver_123',
+      latestVersionSource: 'ats-enhancement',
       sourceScope: 'target',
     })
     expect(updateResumeTargetGeneratedOutput).toHaveBeenCalledWith(

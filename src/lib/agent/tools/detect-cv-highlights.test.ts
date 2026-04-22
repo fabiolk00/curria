@@ -153,20 +153,72 @@ describe('detectCvHighlights', () => {
   })
 
   it('warns and records a metric for invalid payload shapes while failing closed', async () => {
-    createCompletion.mockResolvedValue(buildOpenAIResponse('{"invalid":true}'))
+    createCompletion.mockResolvedValue(buildOpenAIResponse('{"data":[]}'))
 
     await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).resolves.toEqual([])
 
     expect(mockLogWarn).toHaveBeenCalledWith('agent.highlight_detection.invalid_payload', expect.objectContaining({
       failureType: 'invalid_model_payload',
-      parseFailureReason: 'invalid_shape',
+      parseFailureReason: 'invalid_shape_wrapper',
     }))
     expect(mockRecordMetricCounter).toHaveBeenCalledWith(
       'architecture.highlight_detection.invalid_payload',
       expect.objectContaining({
-        parseFailureReason: 'invalid_shape',
+        parseFailureReason: 'invalid_shape_wrapper',
       }),
     )
+  })
+
+  it('classifies prose before the JSON payload and logs a truncated sample', async () => {
+    const invalidResponse = `Here is the highlight payload:\n${'x'.repeat(450)}\n{"items":[]}`
+    createCompletion.mockResolvedValue(buildOpenAIResponse(invalidResponse))
+
+    await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()), {
+      sessionId: 'sess_abc',
+      workflowMode: 'ats_enhancement',
+    })).resolves.toEqual([])
+
+    expect(mockLogWarn).toHaveBeenCalledWith('agent.highlight_detection.invalid_payload', expect.objectContaining({
+      sessionId: 'sess_abc',
+      parseFailureReason: 'invalid_shape_text_before_json',
+      responseSample: expect.stringMatching(/^Here is the highlight payload:/),
+    }))
+    const logFields = mockLogWarn.mock.calls[0][1]
+    expect(logFields.responseSample.length).toBeLessThanOrEqual(403)
+    expect(logFields.responseSample.endsWith('...')).toBe(true)
+  })
+
+  it('classifies markdown-wrapped payloads as invalid model output', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse('```json\n{"items":[]}\n```'))
+
+    await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).resolves.toEqual([])
+
+    expect(mockLogWarn).toHaveBeenCalledWith('agent.highlight_detection.invalid_payload', expect.objectContaining({
+      parseFailureReason: 'invalid_shape_markdown_wrapper',
+    }))
+  })
+
+  it('classifies malformed range objects as invalid range shape', async () => {
+    const itemId = createExperienceBulletHighlightItemId(
+      buildCvState().experience[0],
+      buildCvState().experience[0].bullets[0],
+    )
+
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      items: [
+        {
+          itemId,
+          ranges: [{ startOffset: 0, end: 10, reason: 'ats_strength' }],
+        },
+      ],
+    })))
+
+    await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).resolves.toEqual([])
+
+    expect(mockLogWarn).toHaveBeenCalledWith('agent.highlight_detection.invalid_payload', expect.objectContaining({
+      parseFailureReason: 'invalid_shape_ranges',
+      payloadShapeDetails: expect.stringContaining('"rangeIndex":0'),
+    }))
   })
 
   it('treats a valid empty payload as a normal no-highlight result without warning', async () => {

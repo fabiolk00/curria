@@ -11,7 +11,7 @@ import {
   checkUserQuota,
   consumeCreditForGeneration,
   finalizeCreditReservation,
-  getUserBillingInfo,
+  getUserBillingPlan,
   releaseCreditReservation,
   reserveCreditForGenerationIntent,
 } from '@/lib/asaas/quota'
@@ -36,6 +36,7 @@ import {
 import { getSession } from '@/lib/db/sessions'
 import { resolveExportGenerationConfig } from '@/lib/jobs/config'
 import { recordMetricCounter } from '@/lib/observability/metric-events'
+import { getRequestQueryContext } from '@/lib/observability/request-query-context'
 import { logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import { withTimedOperation } from '@/lib/observability/timed-operation'
 import type {
@@ -105,6 +106,11 @@ type BillableStageContext = {
   sessionId: string
   targetId?: string
   generationType: ResumeGenerationType
+}
+
+type BillableStageQuerySnapshot = {
+  requestId?: string
+  queryCount: number
 }
 
 type BillableResumeErrorInput = {
@@ -199,6 +205,34 @@ function buildBillableStageLogFields(
     generationIntentKey: state.generationIntentKey,
     resumeGenerationId: state.resumeGenerationId,
     stage,
+  }
+}
+
+function captureBillableStageQuerySnapshot(): BillableStageQuerySnapshot {
+  const requestQueryContext = getRequestQueryContext()
+
+  return {
+    requestId: requestQueryContext?.requestId,
+    queryCount: requestQueryContext?.queryCount ?? 0,
+  }
+}
+
+function buildBillableStageQueryLogFields(
+  started: BillableStageQuerySnapshot,
+): {
+  requestId?: string
+  stageQueryCount?: number
+  requestQueryCount?: number
+} {
+  const requestQueryContext = getRequestQueryContext()
+  if (!requestQueryContext) {
+    return {}
+  }
+
+  return {
+    requestId: requestQueryContext.requestId,
+    stageQueryCount: Math.max(0, requestQueryContext.queryCount - started.queryCount),
+    requestQueryCount: requestQueryContext.queryCount,
   }
 }
 
@@ -303,6 +337,7 @@ async function runBillableStage<T>(
 ): Promise<T> {
   state.currentStage = stage
   const startedAt = Date.now()
+  const stageQuerySnapshot = captureBillableStageQuerySnapshot()
 
   logInfo('resume_generation.stage.started', buildBillableStageLogFields(context, state, stage))
 
@@ -312,6 +347,7 @@ async function runBillableStage<T>(
     logInfo('resume_generation.stage.completed', {
       ...buildBillableStageLogFields(context, state, stage),
       latencyMs: Date.now() - startedAt,
+      ...buildBillableStageQueryLogFields(stageQuerySnapshot),
     })
 
     return result
@@ -330,6 +366,7 @@ async function runBillableStage<T>(
       ...buildBillableStageLogFields(context, state, effectiveStage),
       latencyMs: Date.now() - startedAt,
       failureCode: wrapped.code,
+      ...buildBillableStageQueryLogFields(stageQuerySnapshot),
       ...serializeError(wrapped),
     })
     recordBillableStageFailure(context, state, effectiveStage, wrapped.code)
@@ -549,9 +586,9 @@ function resolveGenerationIntentKey(input: {
 async function resolvePreviewAccessForCompletedGeneration(
   userId: string,
 ): Promise<GeneratedOutput['previewAccess'] | undefined> {
-  const billingInfo = await getUserBillingInfo(userId)
+  const billingPlan = await getUserBillingPlan(userId)
 
-  if (billingInfo?.plan === 'free') {
+  if (billingPlan === 'free') {
     return buildLockedPreviewAccess()
   }
 
@@ -583,8 +620,8 @@ async function resolveReplayPreviewAccess(input: {
   const persistedPreviewAccess = await resolvePersistedReplayPreviewAccess(input)
 
   if (persistedPreviewAccess) {
-    const billingInfo = await getUserBillingInfo(input.userId)
-    if (persistedPreviewAccess.locked && billingInfo?.plan && billingInfo.plan !== 'free') {
+    const billingPlan = await getUserBillingPlan(input.userId)
+    if (persistedPreviewAccess.locked && billingPlan && billingPlan !== 'free') {
       recordMetricCounter('architecture.smart_generation.replay_locked_after_upgrade', {
         userId: input.userId,
         sessionId: input.sessionId,
@@ -725,6 +762,7 @@ export async function generateBillableResume(input: {
   templateTargetSource?: Parameters<typeof generateFile>[4]
   resumePendingGeneration?: boolean
   latestVersionId?: string
+  latestVersionSource?: string
   sourceScope?: string
 }): Promise<BillableGenerationResult> {
   const scope: ArtifactScope = input.targetId
@@ -891,11 +929,22 @@ export async function generateBillableResume(input: {
     }
   }
 
+  const trustedLatestCvVersion = (
+    input.latestVersionId
+    && input.latestVersionSource
+    && BILLABLE_CV_VERSION_SOURCES.has(input.latestVersionSource)
+  )
+    ? {
+        id: input.latestVersionId,
+        source: input.latestVersionSource,
+      }
+    : null
+
   const latestCvVersion = await runBillableStage(
     stageContext,
     stageState,
     'lookup_latest_version',
-    () => getLatestCvVersionForScope(input.sessionId, input.targetId),
+    async () => trustedLatestCvVersion ?? getLatestCvVersionForScope(input.sessionId, input.targetId),
     {
       failureCode: TOOL_ERROR_CODES.GENERATE_RESUME_PERSISTENCE_FAILED,
       failureMessage: 'Failed to look up the latest billable CV version.',

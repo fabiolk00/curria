@@ -489,6 +489,7 @@ export async function executeTool(
         idempotencyKey: intake.context.idempotencyKey,
         templateTargetSource: intake.context.templateTargetSource,
         latestVersionId: intake.context.latestAllowedVersionId ?? undefined,
+        latestVersionSource: intake.diagnostics.latestVersionSource ?? undefined,
         sourceScope: intake.context.sourceScope,
       })
 

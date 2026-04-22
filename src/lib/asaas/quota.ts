@@ -44,6 +44,21 @@ type ActiveRecurringSubscription = {
   renewsAt: string | null
 }
 
+export async function getUserBillingPlan(appUserId: string): Promise<PlanSlug | null> {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('user_quotas')
+    .select('plan')
+    .eq('user_id', appUserId)
+    .maybeSingle<Pick<UserQuotaBillingRow, 'plan'>>()
+
+  if (error) {
+    throw new Error(`Failed to load billing plan: ${error.message}`)
+  }
+
+  return resolvePlanSlug(data?.plan ?? null)
+}
+
 function buildCreditAccountId(appUserId: string): string {
   return `cred_${appUserId}`
 }

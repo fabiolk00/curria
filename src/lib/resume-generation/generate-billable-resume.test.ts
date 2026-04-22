@@ -2,6 +2,7 @@ import { createHash } from 'crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { generateBillableResume } from './generate-billable-resume'
+import { getRequestQueryContext, recordQuery, runWithRequestQueryContext } from '@/lib/observability/request-query-context'
 
 const {
   mockGenerateFile,
@@ -12,7 +13,7 @@ const {
   mockReserveCreditForGenerationIntent,
   mockFinalizeCreditReservation,
   mockReleaseCreditReservation,
-  mockGetUserBillingInfo,
+  mockGetUserBillingPlan,
   mockGetLatestCvVersionForScope,
   mockMarkCreditReservationReconciliation,
   mockCreatePendingResumeGeneration,
@@ -33,7 +34,7 @@ const {
   mockReserveCreditForGenerationIntent: vi.fn(),
   mockFinalizeCreditReservation: vi.fn(),
   mockReleaseCreditReservation: vi.fn(),
-  mockGetUserBillingInfo: vi.fn(),
+  mockGetUserBillingPlan: vi.fn(),
   mockGetLatestCvVersionForScope: vi.fn(),
   mockMarkCreditReservationReconciliation: vi.fn(),
   mockCreatePendingResumeGeneration: vi.fn(),
@@ -83,7 +84,7 @@ vi.mock('@/lib/asaas/quota', () => ({
   reserveCreditForGenerationIntent: mockReserveCreditForGenerationIntent,
   finalizeCreditReservation: mockFinalizeCreditReservation,
   releaseCreditReservation: mockReleaseCreditReservation,
-  getUserBillingInfo: mockGetUserBillingInfo,
+  getUserBillingPlan: mockGetUserBillingPlan,
 }))
 
 vi.mock('@/lib/db/cv-versions', () => ({
@@ -203,9 +204,7 @@ describe('generateBillableResume', () => {
       status: 'finalized',
       finalizedAt: new Date('2026-04-12T12:01:00.000Z'),
     }))
-    mockGetUserBillingInfo.mockResolvedValue({
-      plan: 'monthly',
-    })
+    mockGetUserBillingPlan.mockResolvedValue('monthly')
     mockReleaseCreditReservation.mockResolvedValue(buildReservation({
       status: 'released',
       releasedAt: new Date('2026-04-12T12:01:00.000Z'),
@@ -275,9 +274,7 @@ describe('generateBillableResume', () => {
 
   it('keeps completed replay locked for free viewers and never signs a real artifact url', async () => {
     const cvState = buildCvState()
-    mockGetUserBillingInfo.mockResolvedValue({
-      plan: 'free',
-    })
+    mockGetUserBillingPlan.mockResolvedValue('free')
     mockGetLatestCompletedResumeGenerationForScope.mockResolvedValue({
       id: 'gen_existing_locked',
       userId: 'usr_123',
@@ -370,7 +367,111 @@ describe('generateBillableResume', () => {
       locked: true,
       requiresRegenerationAfterUnlock: true,
     }))
+    expect(mockGetUserBillingPlan).toHaveBeenCalledWith('usr_123')
     expect(mockCreateSignedResumeArtifactUrls).not.toHaveBeenCalled()
+  })
+
+  it('skips latest-version lookup when trusted preflight metadata is already available in the same request', async () => {
+    const cvState = buildCvState()
+    mockCheckUserQuota.mockResolvedValue(true)
+    mockCreatePendingResumeGeneration.mockResolvedValue({
+      generation: buildPendingGeneration(cvState, { id: 'gen_pending_trusted' }),
+      wasCreated: true,
+    })
+    mockGenerateFile.mockResolvedValue({
+      output: {
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        docxUrl: null,
+      },
+      generatedOutput: {
+        status: 'ready',
+        pdfPath: 'usr_123/sess_123/resume.pdf',
+        docxPath: null,
+        generatedAt: '2026-04-12T12:01:00.000Z',
+      },
+    })
+    mockUpdateResumeGeneration.mockResolvedValue({
+      ...buildPendingGeneration(cvState, { id: 'gen_pending_trusted', status: 'completed' }),
+      generatedCvState: cvState,
+      outputPdfPath: 'usr_123/sess_123/resume.pdf',
+      outputDocxPath: null,
+      updatedAt: new Date('2026-04-12T12:01:00.000Z'),
+    })
+
+    const observedQueryCount = await runWithRequestQueryContext(
+      {
+        requestId: 'req_generate_file',
+        requestMethod: 'POST',
+        requestPath: '/api/agent',
+      },
+      async () => {
+        mockGetLatestCompletedResumeGenerationForScope.mockImplementation(async () => {
+          recordQuery('GET /rest/v1/resume_generations?status=eq.completed')
+          return null
+        })
+        mockCheckUserQuota.mockImplementation(async () => {
+          recordQuery('GET /rest/v1/credit_accounts?user_id=eq.usr_123')
+          return true
+        })
+        mockCreatePendingResumeGeneration.mockImplementation(async () => {
+          recordQuery('POST /rest/v1/resume_generations')
+          return {
+            generation: buildPendingGeneration(cvState, { id: 'gen_pending_trusted' }),
+            wasCreated: true,
+          }
+        })
+        mockReserveCreditForGenerationIntent.mockImplementation(async () => {
+          recordQuery('POST /rest/v1/rpc/reserve_credit_for_generation_intent')
+          return buildReservation()
+        })
+        mockFinalizeCreditReservation.mockImplementation(async () => {
+          recordQuery('POST /rest/v1/rpc/finalize_credit_reservation')
+          return buildReservation({
+            status: 'finalized',
+            finalizedAt: new Date('2026-04-12T12:01:00.000Z'),
+          })
+        })
+        mockUpdateResumeGeneration.mockImplementation(async () => {
+          recordQuery('PATCH /rest/v1/resume_generations?id=eq.gen_pending_trusted')
+          return {
+            ...buildPendingGeneration(cvState, { id: 'gen_pending_trusted', status: 'completed' }),
+            generatedCvState: cvState,
+            outputPdfPath: 'usr_123/sess_123/resume.pdf',
+            outputDocxPath: null,
+            updatedAt: new Date('2026-04-12T12:01:00.000Z'),
+          }
+        })
+        mockGetUserBillingPlan.mockImplementation(async () => {
+          recordQuery('GET /rest/v1/user_quotas?user_id=eq.usr_123&select=plan')
+          return 'monthly'
+        })
+
+        await generateBillableResume({
+          userId: 'usr_123',
+          sessionId: 'sess_123',
+          sourceCvState: cvState,
+          idempotencyKey: 'dup_key',
+          latestVersionId: 'ver_trusted',
+          latestVersionSource: 'rewrite',
+          sourceScope: 'optimized',
+        })
+
+        return getRequestQueryContext()?.queryCount
+      },
+    )
+
+    expect(mockGetLatestCvVersionForScope).not.toHaveBeenCalled()
+    expect(observedQueryCount).toBe(7)
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      'resume_generation.stage.completed',
+      expect.objectContaining({
+        stage: 'lookup_latest_version',
+        requestId: 'req_generate_file',
+        stageQueryCount: 0,
+        requestQueryCount: 1,
+      }),
+    )
   })
 
   it('returns an in-progress response when the idempotency key already points to a pending generation', async () => {
@@ -550,9 +651,7 @@ describe('generateBillableResume', () => {
       createdAt: new Date('2026-04-12T12:00:00.000Z'),
     })
     mockCheckUserQuota.mockResolvedValue(true)
-    mockGetUserBillingInfo.mockResolvedValue({
-      plan: 'free',
-    })
+    mockGetUserBillingPlan.mockResolvedValue('free')
     mockCreatePendingResumeGeneration.mockResolvedValue({
       generation: buildPendingGeneration(cvState, { id: 'gen_pending_free' }),
       wasCreated: true,
