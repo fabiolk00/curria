@@ -514,17 +514,16 @@ function renderHighlightedText(text: string, ranges: CvHighlightRange[] | undefi
 | A3 | All deployed environments will keep `MODEL_CONFIG.structuredModel` on a model that supports strict `json_schema`, or the implementation will need a `json_object` fallback. | Standard Stack / Pattern 2 | If false, the detector transport choice needs one compatibility branch. |
 | A4 | Highlight detector failures should not fail ATS/job-targeting pipelines. | Common Pitfalls | If product wants hard failure, planner must add explicit UX and retry behavior for missing highlights. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should locked-preview responses omit `highlightState` or return an empty artifact?**  
-   What we know: locked routes already sanitize optimized content, and leaking resolved highlight ranges is unnecessary. [VERIFIED: local code]  
-   What's unclear: whether consumer code prefers `undefined` or a stable empty object. [ASSUMED]  
-   Recommendation: omit `highlightState` entirely on locked responses so client code cannot accidentally treat placeholder content as highlightable. [ASSUMED]
+1. **Locked-preview responses will omit `highlightState` entirely.**  
+   Locked routes already sanitize optimized content, and leaking resolved highlight ranges is unnecessary. Returning `undefined` keeps the preview-lock boundary simple and prevents the client from treating placeholder content as highlightable. [VERIFIED: local code][ASSUMED]
 
-2. **Should the detector persist `reason` strings if the current UI does not render them?**  
-   What we know: the phase requires `CvHighlightReason`, but the current compare UI styling can be implemented without tier/category-specific rendering. [VERIFIED: local code][ASSUMED]  
-   What's unclear: whether product wants future analytics or differentiated highlight visuals. [ASSUMED]  
-   Recommendation: persist `reason` because it is cheap and stable, but keep the renderer reason-agnostic in this phase. [ASSUMED]
+2. **The detector will persist `reason` strings even if the first renderer revision does not style by reason.**  
+   The phase requires `CvHighlightReason`, and persisting it now keeps the artifact forward-compatible for future analytics or differentiated UI without forcing another detector migration. The initial renderer can remain reason-agnostic. [VERIFIED: local code][ASSUMED]
+
+3. **The detector will prefer strict `json_schema`, but the implementation must keep a `json_object` fallback path.**  
+   The repo already uses Chat Completions structured output, and deployed model overrides may not be perfectly uniform. Keeping a compatibility branch avoids blocking the phase on environment-specific model support. [VERIFIED: local code][ASSUMED]
 
 ## Environment Availability
 

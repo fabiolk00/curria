@@ -1,6 +1,5 @@
 import type { RewriteSectionInput } from '@/types/agent'
 import type { CVState } from '@/types/cv'
-import { isHighValueMetricBullet } from '@/lib/agent/tools/metric-impact-guard'
 
 export const MAX_ATS_STAGE_RETRIES = 2
 export const MAX_REWRITE_SECTION_CHARS = 5_500
@@ -21,23 +20,7 @@ function prioritizeExperienceBullets(bullets: string[]): string[] {
     return bullets
   }
 
-  const indexedBullets = bullets.map((bullet, index) => ({
-    bullet,
-    index,
-    premium: isHighValueMetricBullet(bullet),
-  }))
-  const premiumBullets = indexedBullets.filter((entry) => entry.premium)
-  const regularBullets = indexedBullets.filter((entry) => !entry.premium)
-  const selected = premiumBullets.length >= MAX_REWRITE_BULLETS_PER_EXPERIENCE
-    ? premiumBullets.slice(0, MAX_REWRITE_BULLETS_PER_EXPERIENCE)
-    : [
-        ...premiumBullets,
-        ...regularBullets.slice(0, MAX_REWRITE_BULLETS_PER_EXPERIENCE - premiumBullets.length),
-      ]
-
-  return selected
-    .sort((left, right) => left.index - right.index)
-    .map((entry) => entry.bullet)
+  return bullets.slice(0, MAX_REWRITE_BULLETS_PER_EXPERIENCE)
 }
 
 export function shapeRewriteCurrentContent(

@@ -1392,17 +1392,10 @@ async function* handleConfirmedGeneration(params: {
       : (refreshedAtsTotal !== null
         ? `Diagnostico ATS interno atual: ${refreshedAtsTotal}.`
         : null)
-    const preservedMetricImpact = params.session.agentState.optimizationSummary?.notes.includes(
-      'Preservei métricas reais de impacto enquanto reforcei a aderência ATS.',
-    )
-      ? 'Preservei métricas reais de impacto enquanto reforcei a aderência ATS.'
-      : null
-
     if (generationWarnings.length > 0) {
       return [
         'Seu currículo ATS-otimizado em PDF está pronto.',
         atsSummary,
-        preservedMetricImpact,
         `Mantive avisos claros nos campos pendentes do perfil: ${generationWarnings.join(', ')}.`,
         'Confira o download e a pré-visualização acima.',
       ].filter(Boolean).join(' ')
@@ -1411,7 +1404,6 @@ async function* handleConfirmedGeneration(params: {
     return [
       'Seu currículo ATS-otimizado em PDF está pronto.',
       atsSummary,
-      preservedMetricImpact,
       'Confira o download e a pré-visualização acima.',
     ].filter(Boolean).join(' ')
   }

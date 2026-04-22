@@ -8,10 +8,13 @@ import Logo from "@/components/logo"
 import { AtsReadinessStatusBadge } from "@/components/ats-readiness-status-badge"
 import { Button } from "@/components/ui/button"
 import {
-  buildOptimizedPreviewHighlights,
-  normalizePreviewSummaryText,
-  type HighlightedLine,
-} from "@/lib/resume/optimized-preview-highlights"
+  buildExperienceBulletHighlightItemIds,
+  createSummaryHighlightItemId,
+  getHighlightRangesForItem,
+  segmentTextByHighlightRanges,
+  type CvHighlightState,
+  type CvHighlightTextSegment,
+} from "@/lib/resume/cv-highlight-artifact"
 import { getDownloadUrls } from "@/lib/dashboard/workspace-client"
 import { cn } from "@/lib/utils"
 import type { AtsReadinessScoreContract } from "@/lib/ats/scoring/types"
@@ -30,6 +33,7 @@ type ResumeComparisonViewProps = {
   optimizedScore?: number | null
   scoreLabel?: string
   atsReadiness?: AtsReadinessScoreContract
+  highlightState?: CvHighlightState
   optimizationNotes?: string[]
   backHref?: string
   onContinue: () => void
@@ -69,28 +73,24 @@ function ChangeIndicator({ show }: { show: boolean }) {
 }
 
 function HighlightText({
-  line,
+  segments,
   enabled,
   testId,
 }: {
-  line: HighlightedLine
+  segments: CvHighlightTextSegment[]
   enabled: boolean
   testId?: string
 }) {
   return (
     <span data-testid={testId}>
-      {line.segments.map((segment, index) => (
+      {segments.map((segment, index) => (
         <span
           key={`${segment.text}-${index}`}
           data-highlighted={enabled && segment.highlighted ? "true" : "false"}
-          data-highlight-tier={enabled && segment.highlighted ? (segment.evidenceTier ?? "strong") : "none"}
-          data-highlight-category={enabled && segment.highlighted ? (segment.evidenceCategory ?? "unknown") : "none"}
+          data-highlight-reason={enabled && segment.highlighted ? (segment.reason ?? "unknown") : "none"}
           className={cn(
-            enabled && segment.highlighted && segment.evidenceTier !== "secondary"
-              ? "rounded-md bg-emerald-100/65 px-0.5 py-px text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.10)] dark:bg-emerald-500/12 dark:text-emerald-100"
-              : undefined,
-            enabled && segment.highlighted && segment.evidenceTier === "secondary"
-              ? "rounded-sm bg-emerald-50/45 px-0.5 py-px text-emerald-900/90 underline decoration-dotted decoration-emerald-500/60 decoration-2 underline-offset-2 dark:bg-emerald-500/5 dark:text-emerald-200 dark:decoration-emerald-400/55"
+            enabled && segment.highlighted
+              ? "text-emerald-900 underline decoration-emerald-500/70 decoration-2 underline-offset-2 dark:text-emerald-200 dark:decoration-emerald-400/60"
               : undefined,
           )}
         >
@@ -110,6 +110,7 @@ function ResumeDocument({
   isDownloading,
   previewLock,
   showHighlights = false,
+  highlightState,
 }: {
   cvState: CVState
   variant: "original" | "optimized"
@@ -119,18 +120,20 @@ function ResumeDocument({
   isDownloading?: boolean
   previewLock?: PreviewLockSummary
   showHighlights?: boolean
+  highlightState?: CvHighlightState
 }) {
   const isOptimized = variant === "optimized"
   const compare = originalCvState || cvState
   const isLockedPreview = isOptimized && previewLock?.locked === true
-  const displaySummary = normalizePreviewSummaryText(cvState.summary)
-  const compareSummary = normalizePreviewSummaryText(compare.summary)
-  const highlights = useMemo(
-    () => isOptimized && originalCvState
-      ? buildOptimizedPreviewHighlights(originalCvState, cvState)
-      : null,
-    [cvState, isOptimized, originalCvState],
-  )
+  const displaySummary = cvState.summary
+  const compareSummary = compare.summary
+  const resolvedHighlights = isOptimized ? highlightState?.resolvedHighlights : undefined
+  const summarySegments = isOptimized
+    ? segmentTextByHighlightRanges(
+        displaySummary,
+        getHighlightRangesForItem(resolvedHighlights, createSummaryHighlightItemId()),
+      )
+    : [{ text: displaySummary, highlighted: false }]
 
   return (
     <div
@@ -215,9 +218,15 @@ function ResumeDocument({
             ) : null}
           </h3>
           <p className="text-xs leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-sm">
-            <span data-testid={isOptimized ? "optimized-summary-highlight" : undefined}>
-              {displaySummary}
-            </span>
+            {isOptimized ? (
+              <HighlightText
+                segments={summarySegments}
+                enabled={showHighlights}
+                testId="optimized-summary-highlight"
+              />
+            ) : (
+              <span>{displaySummary}</span>
+            )}
           </p>
         </div>
       ) : null}
@@ -236,6 +245,7 @@ function ResumeDocument({
               const experienceChanged = isOptimized
                 && originalExperience
                 && JSON.stringify(originalExperience) !== JSON.stringify(experience)
+              const bulletItemIds = buildExperienceBulletHighlightItemIds(experience)
 
               return (
                 <div key={`${experience.title}-${index}`}>
@@ -264,36 +274,39 @@ function ResumeDocument({
                             key={bulletIndex}
                             className="flex items-start gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 sm:gap-2 sm:text-sm"
                           >
+                            {(() => {
+                              const itemId = bulletItemIds[bulletIndex]
+                              const highlightRanges = itemId
+                                ? getHighlightRangesForItem(resolvedHighlights, itemId)
+                                : []
+                              const bulletSegments = segmentTextByHighlightRanges(bullet, highlightRanges)
+
+                              return (
+                                <>
                             <span
                               className={cn(
                                 "mt-1.5 h-1 w-1 shrink-0 rounded-full sm:mt-2",
-                                showHighlights && highlights?.experience[index]?.bullets[bulletIndex]?.highlightWholeLine
+                                showHighlights && highlightRanges.length > 0
                                   ? "bg-emerald-500"
                                   : bulletChanged
                                   ? "bg-emerald-500"
                                   : "bg-zinc-400 dark:bg-zinc-600",
                               )}
                             />
-                            <span
-                              className={cn(
-                                showHighlights && highlights?.experience[index]?.bullets[bulletIndex]?.highlightWholeLine
-                                  ? "rounded-xl bg-emerald-50/85 px-2 py-1 text-emerald-950 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.10)] dark:bg-emerald-500/8 dark:text-emerald-100"
-                                  : undefined,
-                              )}
-                            >
-                              {highlights ? (
+                            <span>
+                              {isOptimized ? (
                                 <HighlightText
-                                  line={highlights.experience[index]?.bullets[bulletIndex] ?? {
-                                    segments: [{ text: bullet, highlighted: false }],
-                                    highlightWholeLine: false,
-                                  }}
-                                  enabled={showHighlights && !highlights.experience[index]?.bullets[bulletIndex]?.highlightWholeLine}
+                                  segments={bulletSegments}
+                                  enabled={showHighlights}
                                   testId={isOptimized ? `optimized-bullet-highlight-${index}-${bulletIndex}` : undefined}
                                 />
                               ) : (
                                 bullet
                               )}
                             </span>
+                                </>
+                              )
+                            })()}
                           </li>
                         )
                       })}
@@ -394,6 +407,7 @@ export function ResumeComparisonView({
   optimizedScore,
   scoreLabel = "ATS Readiness Score",
   atsReadiness,
+  highlightState,
   optimizationNotes = [],
   backHref = "/dashboard/resume/new",
   onContinue,
@@ -404,11 +418,16 @@ export function ResumeComparisonView({
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [currentOptimizedCvState, setCurrentOptimizedCvState] = useState(optimizedCvState)
+  const [currentHighlightState, setCurrentHighlightState] = useState(highlightState)
   const [showHighlights, setShowHighlights] = useState(true)
 
   useEffect(() => {
     setCurrentOptimizedCvState(optimizedCvState)
   }, [optimizedCvState])
+
+  useEffect(() => {
+    setCurrentHighlightState(highlightState)
+  }, [highlightState])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsVisible(true), 50)
@@ -458,6 +477,7 @@ export function ResumeComparisonView({
 
   const handleEditorSaved = (nextCvState: CVState) => {
     setCurrentOptimizedCvState(nextCvState)
+    setCurrentHighlightState(undefined)
     onCvStateUpdate?.(nextCvState)
   }
 
@@ -584,6 +604,7 @@ export function ResumeComparisonView({
               isDownloading={isDownloading}
               previewLock={previewLock}
               showHighlights={showHighlights}
+              highlightState={currentHighlightState}
             />
           </div>
         </div>

@@ -424,6 +424,16 @@ describe('manual edit route', () => {
   it('saves the optimized cvState without overwriting the canonical base cvState', async () => {
     const session = buildSession()
     session.agentState.optimizedCvState = buildOptimizedCvState()
+    session.agentState.highlightState = {
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [{
+        itemId: 'summary_0',
+        section: 'summary',
+        ranges: [{ start: 0, end: 6, reason: 'ats_strength' }],
+      }],
+    }
     vi.mocked(getCurrentAppUser).mockResolvedValue(buildAppUser('usr_123'))
     vi.mocked(getSession).mockResolvedValue(session)
 
@@ -457,6 +467,7 @@ describe('manual edit route', () => {
           optimizedCvState: expect.objectContaining({
             summary: 'Updated optimized summary.',
           }),
+          highlightState: undefined,
           rewriteStatus: 'completed',
         }),
         generatedOutput: {

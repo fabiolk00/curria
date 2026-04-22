@@ -84,6 +84,7 @@ export function ResumeComparisonPage({ sessionId }: { sessionId: string }) {
       originalScore={comparison.originalScore.total}
       optimizedScore={comparison.optimizedScore.total}
       atsReadiness={comparison.atsReadiness}
+      highlightState={comparison.highlightState}
       scoreLabel={comparison.originalScore.label}
       optimizationNotes={comparison.optimizationSummary?.notes ?? []}
       backHref="/dashboard/resume/new"

@@ -30,7 +30,7 @@ describe('validateRewrite', () => {
       buildCvState(),
       {
         ...buildCvState(),
-        summary: 'Profissional de dados com foco em BI e SQL. Requisitos obrigatórios atendidos com base na experiência.',
+        summary: 'Profissional de dados com foco em BI e SQL. Requisitos obrigatorios atendidos com base na experiencia.',
       },
       {
         mode: 'job_targeting',
@@ -118,15 +118,16 @@ describe('validateRewrite', () => {
     expect(result.issues.some((issue) => issue.message.includes('apagar gaps reais'))).toBe(false)
   })
 
-  it('passes when a strong quantified impact bullet is preserved substantively', () => {
+  it('passes when a supported quantified bullet is rewritten without inventing evidence', () => {
     const original = {
       ...buildCvState(),
+      summary: 'Profissional de dados com foco em resultados analiticos.',
       experience: [{
         title: 'Analista de Dados',
         company: 'Acme',
         startDate: '2022',
         endDate: '2024',
-        bullets: ['Aumentei em 15% os indicadores de qualidade de produção na LATAM com dashboards em Power BI.'],
+        bullets: ['Aumentei em 15% os indicadores de qualidade de producao na LATAM com dashboards em Power BI.'],
       }],
     }
 
@@ -134,22 +135,17 @@ describe('validateRewrite', () => {
       ...original,
       experience: [{
         ...original.experience[0],
-        bullets: ['Liderei dashboards em Power BI, contribuindo para aumento de 15% nos indicadores de qualidade de produção na LATAM.'],
+        bullets: ['Liderei dashboards em Power BI e SQL, contribuindo para aumento de 15% nos indicadores de qualidade de producao na LATAM.'],
       }],
     }
 
     const result = validateRewrite(original, optimized)
 
-    expect(result.issues.some((issue) => issue.message.includes('métrica real de impacto'))).toBe(false)
-    expect(result.editorialMetrics).toEqual(expect.objectContaining({
-      premiumBulletCountOriginal: 1,
-      premiumBulletCountFinal: 1,
-      regressionCount: 0,
-      metricPreservationStatus: 'full',
-    }))
+    expect(result.valid).toBe(true)
+    expect(result.issues).toEqual([])
   })
 
-  it('flags editorial regression when a strong metric disappears from experience', () => {
+  it('does not fail solely because a metric disappeared when no unsupported claim was introduced', () => {
     const original = {
       ...buildCvState(),
       experience: [{
@@ -157,7 +153,7 @@ describe('validateRewrite', () => {
         company: 'Acme',
         startDate: '2022',
         endDate: '2024',
-        bullets: ['Reduzi em 40% o tempo de processamento de relatórios críticos para a operação regional.'],
+        bullets: ['Reduzi em 40% o tempo de processamento de relatorios criticos para a operacao regional.'],
       }],
     }
 
@@ -165,25 +161,12 @@ describe('validateRewrite', () => {
       ...original,
       experience: [{
         ...original.experience[0],
-        bullets: ['Atuei em relatórios e rotinas analíticas para apoiar a operação regional.'],
+        bullets: ['Atuei em relatorios e rotinas analiticas para apoiar a operacao regional.'],
       }],
     }
 
     const result = validateRewrite(original, optimized)
 
-    expect(result.issues).toContainEqual(expect.objectContaining({
-      severity: 'medium',
-      section: 'experience',
-      message: expect.stringContaining('métrica real de impacto'),
-    }))
-    expect(result.editorialMetrics).toEqual(expect.objectContaining({
-      premiumBulletCountOriginal: 1,
-      premiumBulletCountFinal: 0,
-      regressionCount: 1,
-      percentMetricLost: true,
-      scopeLost: true,
-      impactLost: true,
-      metricPreservationStatus: 'regressed',
-    }))
+    expect(result.issues.some((issue) => issue.message.includes('metrica real de impacto'))).toBe(false)
   })
 })

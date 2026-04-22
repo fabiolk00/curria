@@ -1,5 +1,6 @@
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
+import { generateCvHighlightState } from '@/lib/agent/tools/detect-cv-highlights'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { validateRewrite } from '@/lib/agent/tools/validate-rewrite'
 import { createCvVersion } from '@/lib/db/cv-versions'
@@ -44,6 +45,9 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
 }> {
   const previousOptimizedCvState = session.agentState.optimizedCvState
     ? structuredClone(session.agentState.optimizedCvState)
+    : undefined
+  const previousHighlightState = session.agentState.highlightState
+    ? structuredClone(session.agentState.highlightState)
     : undefined
   const previousOptimizedAt = session.agentState.optimizedAt
   const previousOptimizationSummary = session.agentState.optimizationSummary
@@ -239,6 +243,27 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   const optimizedAt = new Date().toISOString()
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
+  let nextHighlightState = previousHighlightState
+
+  if (validation.valid) {
+    try {
+      nextHighlightState = await generateCvHighlightState(rewriteResult.optimizedCvState, {
+        userId: session.userId,
+        sessionId: session.id,
+        workflowMode: 'job_targeting',
+      })
+    } catch (error) {
+      nextHighlightState = undefined
+      logWarn('agent.job_targeting.highlight_detection_failed', {
+        sessionId: session.id,
+        userId: session.userId,
+        workflowMode: 'job_targeting',
+        stage: 'highlight_detection',
+        success: false,
+        ...serializeError(error),
+      })
+    }
+  }
 
   const nextAgentState: Session['agentState'] = {
     ...session.agentState,
@@ -248,6 +273,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     targetingPlan,
     rewriteStatus: validation.valid ? 'completed' : 'failed',
     optimizedCvState: validation.valid ? rewriteResult.optimizedCvState : previousOptimizedCvState,
+    highlightState: validation.valid ? nextHighlightState : previousHighlightState,
     optimizedAt: validation.valid ? optimizedAt : previousOptimizedAt,
     optimizationSummary: validation.valid ? rewriteResult.summary : previousOptimizationSummary,
     lastRewriteMode: validation.valid ? 'job_targeting' : previousLastRewriteMode,
@@ -323,6 +349,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       ...session.agentState,
       rewriteStatus: 'failed',
       optimizedCvState: previousOptimizedCvState,
+      highlightState: previousHighlightState,
       optimizedAt: previousOptimizedAt,
       optimizationSummary: previousOptimizationSummary,
       lastRewriteMode: previousLastRewriteMode,

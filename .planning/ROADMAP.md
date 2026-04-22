@@ -678,3 +678,13 @@ Plans:
 
 Plans:
 - [ ] 95-01-PLAN.md — Add persisted highlight contracts, single-call detector lifecycle, thin route serialization, renderer migration, and legacy preview cleanup
+
+### Phase 96: Harden highlight artifact safety, observability, and semantic stability
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 95
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 96 to break down)

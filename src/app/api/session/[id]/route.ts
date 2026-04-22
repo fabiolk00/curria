@@ -8,6 +8,7 @@ import {
 import { getResumeTargetsForSession } from '@/lib/db/resume-targets'
 import { getSession } from '@/lib/db/sessions'
 import {
+  isLockedPreview,
   sanitizeGeneratedCvStateForClient,
   sanitizeGeneratedOutputForClient,
 } from '@/lib/generated-preview/locked-preview'
@@ -75,6 +76,9 @@ export async function GET(
               session.generatedOutput,
               'optimized',
             ),
+            highlightState: isLockedPreview(session.generatedOutput)
+              ? undefined
+              : session.agentState.highlightState,
             optimizedAt: session.agentState.optimizedAt,
             optimizationSummary: session.agentState.optimizationSummary,
             lastRewriteMode: session.agentState.lastRewriteMode,

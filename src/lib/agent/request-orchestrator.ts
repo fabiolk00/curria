@@ -125,6 +125,7 @@ function buildDetectedTargetJobAgentState(
     targetingPlan: undefined,
     rewriteStatus: 'pending',
     optimizedCvState: undefined,
+    highlightState: undefined,
     optimizedAt: undefined,
     optimizationSummary: undefined,
     rewriteValidation: undefined,

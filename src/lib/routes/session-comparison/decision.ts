@@ -4,6 +4,7 @@ import {
 } from '@/lib/ats/scoring'
 import { recordMetricCounter } from '@/lib/observability/metric-events'
 import {
+  isLockedPreview,
   getPreviewLockSummary,
   sanitizeGeneratedCvStateForClient,
 } from '@/lib/generated-preview/locked-preview'
@@ -81,6 +82,9 @@ export async function decideSessionComparison(
         targetJobDescription,
         originalCvState: context.session.cvState,
         optimizedCvState,
+        highlightState: isLockedPreview(context.session.generatedOutput)
+          ? undefined
+          : context.session.agentState.highlightState,
         previewLock: getPreviewLockSummary(context.session.generatedOutput),
         optimizationSummary: context.session.agentState.optimizationSummary,
         atsReadiness,

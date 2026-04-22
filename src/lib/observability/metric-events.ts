@@ -54,6 +54,7 @@ export type MetricCounterEventName =
   | 'architecture.ats_editorial.metric_preservation_full'
   | 'architecture.ats_editorial.metric_preservation_partial'
   | 'architecture.ats_editorial.metric_preservation_regressed'
+  | 'architecture.highlight_detection.invalid_payload'
 
 export function recordMetricCounter(
   metric: MetricCounterEventName,

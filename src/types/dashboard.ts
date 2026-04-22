@@ -19,6 +19,7 @@ import type {
 } from '@/types/cv'
 import type { BillingHistoryResponse as SerializedBillingHistoryResponse } from '@/types/billing'
 import type { AtsReadinessScoreContract } from '@/lib/ats/scoring/types'
+import type { CvHighlightState } from '@/lib/resume/cv-highlight-artifact'
 
 export type PreviewLockSummary = {
   locked: true
@@ -167,6 +168,7 @@ export type SessionWorkspace = {
       atsWorkflowRun?: AtsWorkflowRun
       rewriteStatus?: RewriteStatus
       optimizedCvState?: CVState
+      highlightState?: CvHighlightState
       optimizedAt?: string
       optimizationSummary?: {
         changedSections: Array<'summary' | 'experience' | 'skills' | 'education' | 'certifications'>
@@ -251,6 +253,7 @@ export type ResumeComparisonResponse = {
   targetJobDescription?: string
   originalCvState: CVState
   optimizedCvState: CVState
+  highlightState?: CvHighlightState
   previewLock?: PreviewLockSummary
   optimizationSummary?: {
     changedSections: Array<'summary' | 'experience' | 'skills' | 'education' | 'certifications'>

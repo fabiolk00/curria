@@ -67,6 +67,16 @@ describe('session-comparison decision', () => {
         agentState: {
           workflowMode: 'ats_enhancement',
           lastRewriteMode: 'ats_enhancement',
+          highlightState: {
+            source: 'rewritten_cv_state',
+            version: 2,
+            generatedAt: '2026-04-22T12:00:00.000Z',
+            resolvedHighlights: [{
+              itemId: 'summary_0',
+              section: 'summary',
+              ranges: [{ start: 0, end: 6, reason: 'ats_strength' }],
+            }],
+          },
           rewriteValidation: {
             valid: true,
             issues: [],
@@ -123,6 +133,7 @@ describe('session-comparison decision', () => {
       locked: true,
       reason: 'free_trial_locked',
     })
+    expect(decision.body.highlightState).toBeUndefined()
     expect(decision.body.originalScore.label).toBe('ATS Readiness Score')
     expect(decision.body.optimizedScore.label).toBe('ATS Readiness Score')
     expect(decision.body.atsReadiness?.scoreStatus).toBe('final')

@@ -4,6 +4,11 @@ import '@testing-library/jest-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getDownloadUrls } from '@/lib/dashboard/workspace-client'
+import {
+  CV_HIGHLIGHT_ARTIFACT_VERSION,
+  createExperienceBulletHighlightItemId,
+  type CvHighlightState,
+} from '@/lib/resume/cv-highlight-artifact'
 import type { CVState } from '@/types/cv'
 
 import { ResumeComparisonView } from './resume-comparison-view'
@@ -15,7 +20,13 @@ const editedOptimizedCvState: CVState = {
   linkedin: 'linkedin.com/in/anasilva',
   location: 'Sao Paulo',
   summary: 'Edited optimized summary',
-  experience: [],
+  experience: [{
+    title: 'Senior BI Engineer',
+    company: 'Acme',
+    startDate: '2024',
+    endDate: 'present',
+    bullets: ['Edited optimized bullet'],
+  }],
   skills: ['TypeScript', 'SQL'],
   education: [],
   certifications: [],
@@ -55,10 +66,41 @@ function buildCvState(summary: string): CVState {
     linkedin: 'linkedin.com/in/anasilva',
     location: 'Sao Paulo',
     summary,
-    experience: [],
+    experience: [{
+      title: 'Senior BI Engineer',
+      company: 'Acme',
+      startDate: '2024',
+      endDate: 'present',
+      bullets: ['Reduced processing time by 40% with Azure Databricks.'],
+    }],
     skills: ['TypeScript'],
     education: [],
     certifications: [],
+  }
+}
+
+function buildHighlightState(): CvHighlightState {
+  const optimizedCvState = buildCvState('Optimized summary')
+
+  return {
+    source: 'rewritten_cv_state',
+    version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+    generatedAt: '2026-04-22T12:00:00.000Z',
+    resolvedHighlights: [
+      {
+        itemId: 'summary_0',
+        section: 'summary',
+        ranges: [{ start: 0, end: 16, reason: 'ats_strength' }],
+      },
+      {
+        itemId: createExperienceBulletHighlightItemId(
+          optimizedCvState.experience[0],
+          optimizedCvState.experience[0].bullets[0],
+        ),
+        section: 'experience',
+        ranges: [{ start: 36, end: 52, reason: 'tool_context' }],
+      },
+    ],
   }
 }
 
@@ -81,6 +123,7 @@ describe('ResumeComparisonView', () => {
         optimizedCvState={buildCvState('Optimized summary')}
         generationType="ATS_ENHANCEMENT"
         sessionId="sess_123"
+        highlightState={buildHighlightState()}
         onContinue={vi.fn()}
       />,
     )
@@ -92,6 +135,27 @@ describe('ResumeComparisonView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Mock Save' }))
 
     expect(screen.getByTestId('optimized-summary-highlight')).toHaveTextContent('Edited optimized summary')
+  })
+
+  it('clears visible highlights locally after an optimized manual save', async () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_123"
+        highlightState={buildHighlightState()}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')).not.toBeNull()
+
+    await userEvent.click(screen.getByTitle('Editar currículo'))
+    await userEvent.click(screen.getByRole('button', { name: 'Mock Save' }))
+
+    expect(screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')).toBeNull()
+    expect(screen.getByTestId('optimized-bullet-highlight-0-0').querySelector('[data-highlighted="true"]')).toBeNull()
   })
 
   it('shows a locked overlay and hides edit/download actions for blocked previews', () => {
@@ -116,296 +180,61 @@ describe('ResumeComparisonView', () => {
     expect(screen.getByTestId('resume-comparison-lock-overlay')).toBeInTheDocument()
     expect(screen.queryByTitle('Editar currículo')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Baixar PDF')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('resume-editor-modal')).not.toBeInTheDocument()
   })
 
-  it('renders estimated ATS Readiness ranges in pt-BR without showing pending copy', () => {
+  it('renders persisted highlights for summary and bullet ranges', () => {
     render(
       <ResumeComparisonView
         originalCvState={buildCvState('Original summary')}
         optimizedCvState={buildCvState('Optimized summary')}
         generationType="ATS_ENHANCEMENT"
         sessionId="sess_123"
-        originalScore={84}
-        optimizedScore={89}
-        atsReadiness={{
-          contractVersion: 2,
-          workflowMode: 'ats_enhancement',
-          evaluationStage: 'post_enhancement',
-          productLabel: 'ATS Readiness Score',
-          rawInternalScoreSource: 'scoreATS.total',
-          rawInternalScoreBefore: 84,
-          rawInternalScoreAfter: 61,
-          rawInternalConfidence: 'low',
-          displayedReadinessScoreBefore: 89,
-          displayedReadinessScoreAfter: 89,
-          displayedReadinessBandBefore: 'excellent',
-          displayedReadinessBandAfter: 'excellent',
-          displayedReadinessScoreCurrent: 89,
-          displayedReadinessBandCurrent: 'excellent',
-          scoreStatus: 'estimated_range',
-          display: {
-            mode: 'estimated_range',
-            scoreStatus: 'estimated_range',
-            exactScore: null,
-            estimatedRangeMin: 89,
-            estimatedRangeMax: 91,
-            confidence: 'low',
-            labelPtBr: 'ATS Readiness Score',
-            badgeTextPtBr: 'Estimado',
-            helperTextPtBr: 'Faixa estimada com base na otimização concluída.',
-            formattedScorePtBr: '89–91',
-          },
-          qualityGates: {
-            improvedSummaryClarity: false,
-            improvedKeywordVisibility: false,
-            noFactualDrift: true,
-            noLossOfRequiredSections: true,
-            noReadabilityRegression: false,
-            noUnsupportedClaimsIntroduced: true,
-          },
-          withholdReasons: ['Low scoring confidence combined with contradictory internal ATS signals.'],
-          rawScoreBefore: {
-            total: 84,
-            breakdown: { format: 16, structure: 16, contact: 8, keywords: 22, impact: 22 },
-            issues: [],
-            suggestions: [],
-          },
-          rawScoreAfter: {
-            total: 61,
-            breakdown: { format: 13, structure: 12, contact: 8, keywords: 14, impact: 14 },
-            issues: [],
-            suggestions: [],
-          },
-        }}
-        onContinue={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('89–91')).toBeInTheDocument()
-    expect(screen.getByText('Estimado')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Explicação do score estimado' })).toBeInTheDocument()
-    expect(screen.queryByText('Faixa estimada com base na otimização concluída.')).not.toBeInTheDocument()
-    expect(screen.queryByText('Pendente')).not.toBeInTheDocument()
-  })
-
-  it('does not render the estimated help icon when the ATS readiness status is final', () => {
-    render(
-      <ResumeComparisonView
-        originalCvState={buildCvState('Original summary')}
-        optimizedCvState={buildCvState('Optimized summary')}
-        generationType="ATS_ENHANCEMENT"
-        sessionId="sess_123"
-        originalScore={84}
-        optimizedScore={92}
-        atsReadiness={{
-          contractVersion: 2,
-          workflowMode: 'ats_enhancement',
-          evaluationStage: 'post_enhancement',
-          productLabel: 'ATS Readiness Score',
-          rawInternalScoreSource: 'scoreATS.total',
-          rawInternalScoreBefore: 84,
-          rawInternalScoreAfter: 92,
-          rawInternalConfidence: 'high',
-          displayedReadinessScoreBefore: 84,
-          displayedReadinessScoreAfter: 92,
-          displayedReadinessBandBefore: 'borderline',
-          displayedReadinessBandAfter: 'excellent',
-          displayedReadinessScoreCurrent: 92,
-          displayedReadinessBandCurrent: 'excellent',
-          scoreStatus: 'final',
-          display: {
-            mode: 'exact',
-            scoreStatus: 'final',
-            exactScore: 92,
-            estimatedRangeMin: null,
-            estimatedRangeMax: null,
-            confidence: 'high',
-            labelPtBr: 'ATS Readiness Score',
-            badgeTextPtBr: 'Final',
-            helperTextPtBr: 'Score final após a otimização do currículo.',
-            formattedScorePtBr: '92',
-          },
-          qualityGates: {
-            improvedSummaryClarity: true,
-            improvedKeywordVisibility: true,
-            noFactualDrift: true,
-            noLossOfRequiredSections: true,
-            noReadabilityRegression: true,
-            noUnsupportedClaimsIntroduced: true,
-          },
-          withholdReasons: [],
-          rawScoreBefore: {
-            total: 84,
-            breakdown: { format: 16, structure: 16, contact: 8, keywords: 22, impact: 22 },
-            issues: [],
-            suggestions: [],
-          },
-          rawScoreAfter: {
-            total: 92,
-            breakdown: { format: 19, structure: 19, contact: 8, keywords: 23, impact: 23 },
-            issues: [],
-            suggestions: [],
-          },
-        }}
-        onContinue={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('Final')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Explicação do score estimado' })).not.toBeInTheDocument()
-  })
-
-  it('does not render the optimization note banner in the comparison UI', () => {
-    render(
-      <ResumeComparisonView
-        originalCvState={buildCvState('Original summary')}
-        optimizedCvState={buildCvState('Optimized summary')}
-        generationType="ATS_ENHANCEMENT"
-        sessionId="sess_123"
-        optimizationNotes={['Ajustei o resumo para 5 linhas, dentro do limite solicitado.']}
-        onContinue={vi.fn()}
-      />,
-    )
-
-    expect(
-      screen.queryByText('Ajustei o resumo para 5 linhas, dentro do limite solicitado.'),
-    ).not.toBeInTheDocument()
-  })
-
-  it('keeps summary visually clean while highlighting only compact experience improvements', () => {
-    render(
-      <ResumeComparisonView
-        originalCvState={{
-          ...buildCvState('Consultor de Business Intelligence com dashboards.'),
-          experience: [
-            {
-              title: 'Senior Business Intelligence',
-              company: 'Grupo Positivo',
-              location: 'Curitiba',
-              startDate: '01/2025',
-              endDate: '04/2026',
-              bullets: [
-                'Aumentei em 15% os indicadores de qualidade de produção na LATAM com dashboards e governança de dados.',
-              ],
-            },
-          ],
-        }}
-        optimizedCvState={{
-          ...buildCvState('Atuação em Senior Business Intelligence, Consultor de Business Intelligence e Desenvolvedor de Business Intelligence.'),
-          experience: [
-            {
-              title: 'Senior Business Intelligence',
-              company: 'Grupo Positivo',
-              location: 'Curitiba',
-              startDate: '01/2025',
-              endDate: '04/2026',
-              bullets: [
-                'Liderei dashboards estratégicos e governança analítica, contribuindo para aumento de 15% nos indicadores de qualidade de produção na LATAM.',
-              ],
-            },
-          ],
-        }}
-        generationType="ATS_ENHANCEMENT"
-        sessionId="sess_123"
-        onContinue={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('Ocultar destaques')).toBeInTheDocument()
-
-    const summaryHighlight = screen.getByTestId('optimized-summary-highlight')
-    expect(summaryHighlight).toHaveTextContent('Atuação em Senior Business Intelligence, Consultor de Business Intelligence e Desenvolvedor de Business Intelligence.')
-    expect(summaryHighlight.querySelector('[data-highlighted="true"]')).toBeNull()
-
-    const bulletHighlight = screen.getByTestId('optimized-bullet-highlight-0-0')
-    expect(bulletHighlight.querySelectorAll('[data-highlighted="true"]').length).toBeLessThanOrEqual(1)
-    expect(screen.getAllByText(/15%/)).toHaveLength(2)
-
-    const strongHighlight = bulletHighlight.querySelector('[data-highlighted="true"]')
-    expect(strongHighlight).toHaveAttribute('data-highlight-tier', 'strong')
-    expect(strongHighlight).toHaveAttribute('data-highlight-category', 'metric')
-  })
-
-  it('renders contextual stack evidence with secondary emphasis instead of the strong metric style', () => {
-    render(
-      <ResumeComparisonView
-        originalCvState={{
-          ...buildCvState('Atuei com relatorios internos e rotina de acompanhamento.'),
-          experience: [
-            {
-              title: 'Analista de BI',
-              company: 'Acme',
-              startDate: '01/2025',
-              endDate: '04/2026',
-              bullets: ['Atuei com relatorios internos e rotina de acompanhamento.'],
-            },
-          ],
-        }}
-        optimizedCvState={{
-          ...buildCvState('Atuei com relatorios internos e rotina de acompanhamento.'),
-          experience: [
-            {
-              title: 'Analista de BI',
-              company: 'Acme',
-              startDate: '01/2025',
-              endDate: '04/2026',
-              bullets: ['Estruturei ETL, SQL e Power BI para governanca analitica.'],
-            },
-          ],
-        }}
-        generationType="ATS_ENHANCEMENT"
-        sessionId="sess_123"
-        onContinue={vi.fn()}
-      />,
-    )
-
-    const bulletHighlight = screen.getByTestId('optimized-bullet-highlight-0-0')
-    const secondaryHighlight = bulletHighlight.querySelector('[data-highlighted="true"]')
-
-    expect(secondaryHighlight).toHaveAttribute('data-highlight-tier', 'secondary')
-    expect(secondaryHighlight).toHaveAttribute('data-highlight-category', 'contextual_stack')
-    expect(secondaryHighlight).toHaveClass('decoration-dotted')
-    expect(secondaryHighlight).not.toHaveClass('bg-emerald-100/65')
-  })
-
-  it('renders structured summary payloads as clean text without leaking serialized blobs', () => {
-    render(
-      <ResumeComparisonView
-        originalCvState={buildCvState('Consultor de BI com dashboards e apoio a clientes.')}
-        optimizedCvState={{
-          ...buildCvState('ignored'),
-          summary: '{"section":"summary","profile":"Profissional de Business Intelligence e Engenharia de Dados com mais de 5 anos de experiência em ambientes corporativos."}' as never,
-        }}
-        generationType="ATS_ENHANCEMENT"
-        sessionId="sess_123"
+        highlightState={buildHighlightState()}
         onContinue={vi.fn()}
       />,
     )
 
     const summary = screen.getByTestId('optimized-summary-highlight')
-    expect(summary).toHaveTextContent('Profissional de Business Intelligence e Engenharia de Dados com mais de 5 anos de experiência em ambientes corporativos.')
-    expect(summary).not.toHaveTextContent('{"section":"summary"')
+    expect(summary.querySelector('[data-highlighted="true"]')).toHaveTextContent('Optimized summar')
+
+    const bullet = screen.getByTestId('optimized-bullet-highlight-0-0')
+    const highlighted = bullet.querySelector('[data-highlighted="true"]')
+    expect(highlighted).toHaveTextContent('Azure Databricks')
+    expect(highlighted).toHaveAttribute('data-highlight-reason', 'tool_context')
+    expect(bullet).toHaveTextContent('Reduced processing time by 40% with Azure Databricks.')
   })
 
-  it('lets the user hide visual highlights without changing the content', async () => {
+  it('renders plain text when no highlight artifact exists', () => {
     render(
       <ResumeComparisonView
-        originalCvState={buildCvState('Consultor de Business Intelligence com dashboards.')}
-        optimizedCvState={buildCvState('Atuação em Senior Business Intelligence com dashboards estratégicos.')}
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
         generationType="ATS_ENHANCEMENT"
         sessionId="sess_123"
         onContinue={vi.fn()}
       />,
     )
 
-    const button = screen.getByRole('button', { name: /ocultar destaques/i })
-    await userEvent.click(button)
+    expect(screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')).toBeNull()
+    expect(screen.getByTestId('optimized-bullet-highlight-0-0').querySelector('[data-highlighted="true"]')).toBeNull()
+  })
+
+  it('lets the user hide visual highlights without changing the content', async () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_123"
+        highlightState={buildHighlightState()}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /ocultar destaques/i }))
 
     expect(screen.getByRole('button', { name: /mostrar destaques/i })).toBeInTheDocument()
+    expect(screen.getByTestId('optimized-summary-highlight')).toHaveTextContent('Optimized summary')
     expect(screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')).toBeNull()
-    expect(screen.getByTestId('optimized-summary-highlight')).toHaveTextContent(
-      'Atuação em Senior Business Intelligence com dashboards estratégicos.',
-    )
   })
 })

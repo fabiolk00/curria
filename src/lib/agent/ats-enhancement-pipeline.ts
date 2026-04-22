@@ -1,14 +1,8 @@
 import { executeWithStageRetry } from '@/lib/agent/ats-enhancement-retry'
+import { generateCvHighlightState } from '@/lib/agent/tools/detect-cv-highlights'
 import { createCvVersion } from '@/lib/db/cv-versions'
 import { updateSession } from '@/lib/db/sessions'
 import { analyzeAtsGeneral } from '@/lib/agent/tools/ats-analysis'
-import {
-  recordFinalMetricPreservationResult,
-  recordMetricRegressionDetected,
-  recordPremiumBulletsDetected,
-  recordRecoveryPathSelected,
-} from '@/lib/agent/tools/metric-impact-observability'
-import { compareMetricImpactPreservation, summarizePremiumMetricBullets } from '@/lib/agent/tools/metric-impact-guard'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { validateRewrite } from '@/lib/agent/tools/validate-rewrite'
 import { buildAtsReadinessContractForEnhancement, recordAtsSummaryClarityOutcome } from '@/lib/ats/scoring'
@@ -69,6 +63,10 @@ function buildEvidenceText(cvState: CVState): string {
     cvState.skills.join(' '),
     ...cvState.experience.flatMap((entry) => [entry.title, entry.company, ...entry.bullets]),
   ].join(' ').toLowerCase()
+}
+
+function cvStatesMatch(left: CVState, right: CVState): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 function extractNumbers(text: string): string[] {
@@ -230,6 +228,9 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   const previousOptimizedCvState = session.agentState.optimizedCvState
     ? structuredClone(session.agentState.optimizedCvState)
     : undefined
+  const previousHighlightState = session.agentState.highlightState
+    ? structuredClone(session.agentState.highlightState)
+    : undefined
   const previousOptimizedAt = session.agentState.optimizedAt
   const previousOptimizationSummary = session.agentState.optimizationSummary
     ? structuredClone(session.agentState.optimizationSummary)
@@ -258,12 +259,6 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     sessionId: session.id,
     userId: session.userId,
     stage: 'analysis',
-  })
-
-  recordPremiumBulletsDetected({
-    workflowMode: 'ats_enhancement',
-    sessionId: session.id,
-    ...summarizePremiumMetricBullets(session.cvState),
   })
 
   const atsAnalysisResult = await executeWithStageRetry(
@@ -385,19 +380,10 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   const optimizedAt = new Date().toISOString()
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
-  const initialEditorialMetrics = validation.editorialMetrics
-    ?? compareMetricImpactPreservation(session.cvState, rewriteResult.optimizedCvState)
   let finalOptimizedCvState = rewriteResult.optimizedCvState
   let finalValidation = validation
   let finalOptimizationSummary = rewriteResult.summary
-  let editorialRecoveryPath: 'none' | 'smart_repair' | 'conservative_fallback' | 'revert' = 'none'
   let validationRecoveryKind: AtsSummaryRecoveryKind | null = null
-
-  recordMetricRegressionDetected({
-    workflowMode: 'ats_enhancement',
-    sessionId: session.id,
-    ...initialEditorialMetrics,
-  })
 
   if (!validation.valid) {
     const smartRepair = buildSmartAtsRepairCvState(
@@ -430,16 +416,6 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
         originalIssueSections: validationIssueSections.join(', ') || undefined,
       })
       validationRecoveryKind = 'smart_repair'
-      if (initialEditorialMetrics.regressionCount > 0) {
-        editorialRecoveryPath = 'smart_repair'
-        recordRecoveryPathSelected({
-          workflowMode: 'ats_enhancement',
-          sessionId: session.id,
-          path: 'smart_repair',
-          regressionCount: initialEditorialMetrics.regressionCount,
-          premiumBulletCount: initialEditorialMetrics.premiumBulletCountOriginal,
-        })
-      }
     } else {
       const conservativeFallback = buildSmartAtsRepairCvState(
         session.cvState,
@@ -472,16 +448,6 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
           originalIssueSections: validationIssueSections.join(', ') || undefined,
         })
         validationRecoveryKind = 'conservative_fallback'
-        if (initialEditorialMetrics.regressionCount > 0) {
-          editorialRecoveryPath = 'conservative_fallback'
-          recordRecoveryPathSelected({
-            workflowMode: 'ats_enhancement',
-            sessionId: session.id,
-            path: 'conservative_fallback',
-            regressionCount: initialEditorialMetrics.regressionCount,
-            premiumBulletCount: initialEditorialMetrics.premiumBulletCountOriginal,
-          })
-        }
       } else {
         finalOptimizedCvState = structuredClone(session.cvState)
         finalValidation = validateRewrite(session.cvState, finalOptimizedCvState)
@@ -504,29 +470,30 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
           originalIssueSections: validationIssueSections.join(', ') || undefined,
         })
         validationRecoveryKind = 'original_cv_fallback'
-        if (initialEditorialMetrics.regressionCount > 0) {
-          editorialRecoveryPath = 'revert'
-          recordRecoveryPathSelected({
-            workflowMode: 'ats_enhancement',
-            sessionId: session.id,
-            path: 'revert',
-            regressionCount: initialEditorialMetrics.regressionCount,
-            premiumBulletCount: initialEditorialMetrics.premiumBulletCountOriginal,
-          })
-        }
       }
     }
   }
 
-  const finalEditorialMetrics = finalValidation.editorialMetrics
-    ?? compareMetricImpactPreservation(session.cvState, finalOptimizedCvState)
-
-  recordFinalMetricPreservationResult({
-    workflowMode: 'ats_enhancement',
-    sessionId: session.id,
-    recoveryPath: editorialRecoveryPath,
-    ...finalEditorialMetrics,
-  })
+  const shouldGenerateHighlights = finalValidation.valid && !cvStatesMatch(finalOptimizedCvState, session.cvState)
+  let nextHighlightState = shouldGenerateHighlights ? previousHighlightState : undefined
+  if (shouldGenerateHighlights) {
+    try {
+      nextHighlightState = await generateCvHighlightState(finalOptimizedCvState, {
+        userId: session.userId,
+        sessionId: session.id,
+        workflowMode: 'ats_enhancement',
+      })
+    } catch (error) {
+      nextHighlightState = undefined
+      logWarn('agent.ats_enhancement.highlight_detection_failed', {
+        workflowMode: 'ats_enhancement',
+        sessionId: session.id,
+        userId: session.userId,
+        stage: 'highlight_detection',
+        ...serializeError(error),
+      })
+    }
+  }
 
   const atsReadiness = buildAtsReadinessContractForEnhancement({
     originalCvState: session.cvState,
@@ -556,6 +523,7 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     atsReadiness,
     rewriteStatus: finalValidation.valid ? 'completed' : 'failed',
     optimizedCvState: finalValidation.valid ? finalOptimizedCvState : previousOptimizedCvState,
+    highlightState: finalValidation.valid ? nextHighlightState : previousHighlightState,
     optimizedAt: finalValidation.valid ? optimizedAt : previousOptimizedAt,
     optimizationSummary: finalValidation.valid ? finalOptimizationSummary : previousOptimizationSummary,
     lastRewriteMode: finalValidation.valid ? 'ats_enhancement' : previousLastRewriteMode,
@@ -640,6 +608,7 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
       ...session.agentState,
       rewriteStatus: 'failed',
       optimizedCvState: previousOptimizedCvState,
+      highlightState: previousHighlightState,
       optimizedAt: previousOptimizedAt,
       optimizationSummary: previousOptimizationSummary,
       lastRewriteMode: previousLastRewriteMode,

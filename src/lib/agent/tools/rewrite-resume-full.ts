@@ -12,7 +12,6 @@ import { buildWorkflowContext } from '@/lib/agent/context/workflows/build-workfl
 import { buildRewritePlan } from '@/lib/agent/tools/build-rewrite-plan'
 import { formatResumeRewriteGuardrails } from '@/lib/agent/tools/resume-rewrite-guidelines'
 import { buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
-import { countPreservedMetricImpactBullets } from '@/lib/agent/tools/metric-impact-guard'
 import { rewriteSection } from '@/lib/agent/tools/rewrite-section'
 import type { AtsAnalysisResult, RewriteSectionInput, TargetingPlan } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
@@ -759,11 +758,6 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
       if (result.output.success) {
         notes.push(...result.output.changes_made)
       }
-    }
-
-    const preservedMetricImpactCount = countPreservedMetricImpactBullets(params.cvState, optimizedCvState)
-    if (preservedMetricImpactCount > 0) {
-      notes.push('Preservei métricas reais de impacto enquanto reforcei a aderência ATS.')
     }
 
     const keywordCoverageImprovement = params.mode === 'job_targeting'

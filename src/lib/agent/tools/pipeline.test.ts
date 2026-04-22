@@ -12,29 +12,23 @@ const {
   mockAnalyzeGap,
   mockRewriteSection,
   mockValidateRewrite,
+  mockGenerateCvHighlightState,
   mockCreateCvVersion,
   mockUpdateSession,
   mockLogInfo,
   mockLogWarn,
   mockLogError,
-  mockRecordPremiumBulletsDetected,
-  mockRecordMetricRegressionDetected,
-  mockRecordRecoveryPathSelected,
-  mockRecordFinalMetricPreservationResult,
 } = vi.hoisted(() => ({
   mockAnalyzeAtsGeneral: vi.fn(),
   mockAnalyzeGap: vi.fn(),
   mockRewriteSection: vi.fn(),
   mockValidateRewrite: vi.fn(),
+  mockGenerateCvHighlightState: vi.fn(),
   mockCreateCvVersion: vi.fn(),
   mockUpdateSession: vi.fn(),
   mockLogInfo: vi.fn(),
   mockLogWarn: vi.fn(),
   mockLogError: vi.fn(),
-  mockRecordPremiumBulletsDetected: vi.fn(),
-  mockRecordMetricRegressionDetected: vi.fn(),
-  mockRecordRecoveryPathSelected: vi.fn(),
-  mockRecordFinalMetricPreservationResult: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/tools/ats-analysis', () => ({
@@ -61,11 +55,8 @@ vi.mock('@/lib/db/sessions', () => ({
   updateSession: mockUpdateSession,
 }))
 
-vi.mock('@/lib/agent/tools/metric-impact-observability', () => ({
-  recordPremiumBulletsDetected: mockRecordPremiumBulletsDetected,
-  recordMetricRegressionDetected: mockRecordMetricRegressionDetected,
-  recordRecoveryPathSelected: mockRecordRecoveryPathSelected,
-  recordFinalMetricPreservationResult: mockRecordFinalMetricPreservationResult,
+vi.mock('@/lib/agent/tools/detect-cv-highlights', () => ({
+  generateCvHighlightState: mockGenerateCvHighlightState,
 }))
 
 vi.mock('@/lib/observability/structured-log', () => ({
@@ -174,6 +165,12 @@ describe('ATS enhancement reliability hardening', () => {
     vi.clearAllMocks()
     mockUpdateSession.mockResolvedValue(undefined)
     mockCreateCvVersion.mockResolvedValue(undefined)
+    mockGenerateCvHighlightState.mockResolvedValue({
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+    })
     mockValidateRewrite.mockReturnValue({ valid: true, issues: [] })
     mockAnalyzeGap.mockResolvedValue({
       output: {
@@ -778,18 +775,22 @@ describe('ATS enhancement reliability hardening', () => {
       currentStage: 'persist_version',
     })
     expect(mockCreateCvVersion).toHaveBeenCalledTimes(1)
-    expect(mockRecordPremiumBulletsDetected).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      sessionId: session.id,
-    }))
-    expect(mockRecordMetricRegressionDetected).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      regressionCount: 0,
-    }))
-    expect(mockRecordFinalMetricPreservationResult).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      recoveryPath: 'none',
-    }))
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: expect.stringContaining('Analista de dados com foco em BI'),
+      }),
+      expect.objectContaining({
+        userId: session.userId,
+        sessionId: session.id,
+        workflowMode: 'ats_enhancement',
+      }),
+    )
+    expect(session.agentState.highlightState).toEqual({
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+    })
     expect(mockLogInfo).toHaveBeenCalledWith('agent.ats_enhancement.started', expect.any(Object))
     const summaryOutcomeCalls = mockLogInfo.mock.calls.filter(([event]) => event === 'agent.ats_enhancement.summary_clarity_outcome')
     expect(summaryOutcomeCalls).toHaveLength(1)
@@ -877,7 +878,7 @@ describe('ATS enhancement reliability hardening', () => {
       workflowMode: 'ats_enhancement',
       recoveryKind: 'smart_repair',
     }))
-    expect(mockRecordRecoveryPathSelected).not.toHaveBeenCalled()
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledTimes(1)
     const summaryOutcomeCalls = mockLogInfo.mock.calls.filter(([event]) => event === 'agent.ats_enhancement.summary_clarity_outcome')
     expect(summaryOutcomeCalls).toHaveLength(1)
     expect(summaryOutcomeCalls[0]?.[1]).toMatchObject({
@@ -1034,7 +1035,66 @@ describe('ATS enhancement reliability hardening', () => {
     expect(mockCreateCvVersion).not.toHaveBeenCalled()
   })
 
-  it('reverts generic ATS experience rewrites that drop a strong 15% LATAM quality metric', async () => {
+  it('does not generate highlight artifacts when ATS recovery falls back to the original cvState', async () => {
+    const session = buildSession()
+
+    mockAnalyzeAtsGeneral.mockResolvedValue({
+      success: true,
+      result: {
+        overallScore: 80,
+        structureScore: 82,
+        clarityScore: 78,
+        impactScore: 76,
+        keywordCoverageScore: 81,
+        atsReadabilityScore: 84,
+        issues: [],
+        recommendations: ['SQL', 'Power BI'],
+      },
+    })
+
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: section === 'summary'
+        ? {
+            success: true,
+            rewritten_content: 'Resumo com claims sem suporte.',
+            section_data: 'Resumo com claims sem suporte.',
+            keywords_added: [],
+            changes_made: ['Resumo ajustado'],
+          }
+        : buildSuccessfulRewriteOutput(buildCvState(), section),
+    }))
+
+    mockValidateRewrite
+      .mockReturnValueOnce({
+        valid: false,
+        issues: [{ severity: 'medium', message: 'Resumo sem suporte.', section: 'summary' }],
+      })
+      .mockReturnValueOnce({
+        valid: false,
+        issues: [{ severity: 'medium', message: 'Resumo ainda sem suporte.', section: 'summary' }],
+      })
+      .mockReturnValueOnce({
+        valid: false,
+        issues: [{ severity: 'medium', message: 'Fallback conservador insuficiente.', section: 'summary' }],
+      })
+      .mockReturnValueOnce({
+        valid: true,
+        issues: [],
+      })
+
+    const result = await runAtsEnhancementPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(session.agentState.optimizedCvState).toEqual(session.cvState)
+    expect(session.agentState.highlightState).toBeUndefined()
+    expect(mockGenerateCvHighlightState).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.ats_enhancement.validation_recovered', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      recoveryKind: 'original_cv_fallback',
+    }))
+  })
+
+  it('persists a separate highlight artifact after a successful ATS rewrite', async () => {
     const session = buildSession()
     session.cvState.experience = [{
       title: 'Senior Business Intelligence',
@@ -1043,10 +1103,6 @@ describe('ATS enhancement reliability hardening', () => {
       endDate: 'present',
       bullets: ['Aumentei em 15% os indicadores de qualidade de produção na LATAM com dashboards e governança analítica.'],
     }]
-
-    const { validateRewrite: actualValidateRewrite } = await vi.importActual<typeof import('@/lib/agent/tools/validate-rewrite')>(
-      '@/lib/agent/tools/validate-rewrite',
-    )
 
     mockAnalyzeAtsGeneral.mockResolvedValue({
       success: true,
@@ -1080,42 +1136,37 @@ describe('ATS enhancement reliability hardening', () => {
         : buildSuccessfulRewriteOutput(buildCvState(), section),
     }))
 
-    mockValidateRewrite.mockImplementation(actualValidateRewrite)
-
     const result = await runAtsEnhancementPipeline(session)
 
     expect(result.success).toBe(true)
-    expect(session.agentState.optimizedCvState?.experience).toEqual(session.cvState.experience)
-    expect(mockRecordMetricRegressionDetected).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      regressionCount: 1,
-      percentMetricLost: true,
-      scopeLost: true,
-    }))
-    expect(mockRecordRecoveryPathSelected).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      path: 'smart_repair',
-      regressionCount: 1,
-    }))
-    expect(mockRecordFinalMetricPreservationResult).toHaveBeenCalledWith(expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      recoveryPath: 'smart_repair',
-      premiumBulletCountOriginal: 1,
-      premiumBulletCountFinal: 1,
-      metricPreservationStatus: 'full',
-    }))
-    const serializedObservabilityCalls = JSON.stringify(mockRecordMetricRegressionDetected.mock.calls)
-      + JSON.stringify(mockRecordRecoveryPathSelected.mock.calls)
-      + JSON.stringify(mockRecordFinalMetricPreservationResult.mock.calls)
-    expect(serializedObservabilityCalls).not.toContain('Aumentei em 15%')
-    expect(serializedObservabilityCalls).not.toContain('LATAM com dashboards')
-    expect(session.agentState.optimizationSummary?.notes).toContain(
-      'Experiência revertida para a versão original após validação conservadora.',
+    expect(session.agentState.optimizedCvState?.experience).toEqual([{
+      title: 'Senior Business Intelligence',
+      company: 'Grupo Positivo',
+      startDate: '2025',
+      endDate: 'present',
+      bullets: ['Atuei em dashboards estratégicos para qualidade e acompanhamento operacional.'],
+    }])
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledTimes(1)
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        experience: expect.arrayContaining([
+          expect.objectContaining({
+            company: 'Grupo Positivo',
+          }),
+        ]),
+      }),
+      expect.objectContaining({
+        sessionId: session.id,
+        userId: session.userId,
+        workflowMode: 'ats_enhancement',
+      }),
     )
-    expect(mockLogInfo).toHaveBeenCalledWith('agent.ats_enhancement.validation_recovered', expect.objectContaining({
-      workflowMode: 'ats_enhancement',
-      recoveryKind: 'smart_repair',
-    }))
+    expect(session.agentState.highlightState).toEqual({
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+    })
   })
 
   it('builds a full job_targeting rewrite with plan-driven keyword emphasis', async () => {

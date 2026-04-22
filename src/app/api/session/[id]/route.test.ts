@@ -179,6 +179,75 @@ describe('session route', () => {
     )
   })
 
+  it('omits highlightState when the optimized preview is locked', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({ id: 'usr_123' } as never)
+    vi.mocked(getSession).mockResolvedValue({
+      id: 'sess_locked',
+      userId: 'usr_123',
+      phase: 'dialog',
+      stateVersion: 1,
+      cvState: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '555-0100',
+        summary: 'Resumo base com SQL e BI.',
+        experience: [],
+        skills: ['SQL'],
+        education: [],
+      },
+      agentState: {
+        workflowMode: 'ats_enhancement',
+        optimizedCvState: {
+          fullName: 'Ana Silva',
+          email: 'ana@example.com',
+          phone: '555-0100',
+          summary: 'Resumo otimizado real.',
+          experience: [],
+          skills: ['SQL'],
+          education: [],
+        },
+        highlightState: {
+          source: 'rewritten_cv_state',
+          version: 2,
+          generatedAt: '2026-04-22T12:00:00.000Z',
+          resolvedHighlights: [{
+            itemId: 'summary_0',
+            section: 'summary',
+            ranges: [{ start: 0, end: 6, reason: 'ats_strength' }],
+          }],
+        },
+      },
+      generatedOutput: {
+        status: 'ready',
+        previewAccess: {
+          locked: true,
+          blurred: true,
+          canViewRealContent: false,
+          requiresUpgrade: true,
+          requiresRegenerationAfterUnlock: true,
+          reason: 'free_trial_locked',
+          message: 'locked',
+        },
+      },
+      messageCount: 1,
+      creditConsumed: false,
+      createdAt: '2026-04-21T00:00:00.000Z',
+      updatedAt: '2026-04-21T00:00:00.000Z',
+    } as never)
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/session/sess_locked'),
+      { params: { id: 'sess_locked' } },
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.session.agentState.optimizedCvState).toMatchObject({
+      fullName: 'Preview bloqueado',
+    })
+    expect(body.session.agentState.highlightState).toBeUndefined()
+  })
+
   it('derives a canonical ATS Readiness fallback for legacy ATS sessions without persisted atsReadiness', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({ id: 'usr_123' } as never)
     vi.mocked(getSession).mockResolvedValue({

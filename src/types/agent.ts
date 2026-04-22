@@ -8,6 +8,7 @@ import type {
   Phase,
 } from './cv'
 import type { AtsReadinessScoreContract } from '@/lib/ats/scoring/types'
+import type { CvHighlightState } from '@/lib/resume/cv-highlight-artifact'
 import type { ToolErrorCode, ToolFailure } from '@/lib/agent/tool-errors'
 
 export type { Phase }
@@ -92,20 +93,6 @@ export type RewriteValidationResult = {
     message: string
     section?: string
   }>
-  editorialMetrics?: {
-    premiumBulletCountOriginal: number
-    premiumBulletCountFinal: number
-    premiumBulletCount: number
-    premiumPercentBulletCount: number
-    premiumScopeBulletCount: number
-    premiumTechnologyImpactBulletCount: number
-    regressionCount: number
-    percentMetricLost: boolean
-    scopeLost: boolean
-    impactLost: boolean
-    section: 'experience'
-    metricPreservationStatus: 'none' | 'full' | 'partial' | 'regressed'
-  }
 }
 
 export type TargetingPlan = {
@@ -158,6 +145,7 @@ export type AgentState = {
   rewriteStatus?: RewriteStatus
   atsWorkflowRun?: AtsWorkflowRun
   optimizedCvState?: CVState
+  highlightState?: CvHighlightState
   optimizedAt?: string
   optimizationSummary?: {
     changedSections: RewriteSectionInput['section'][]

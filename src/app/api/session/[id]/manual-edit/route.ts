@@ -314,6 +314,7 @@ export async function POST(
         const patch: ToolPatch = {
           agentState: {
             optimizedCvState: body.data.cvState,
+            highlightState: undefined,
             optimizedAt: new Date().toISOString(),
             rewriteStatus: 'completed',
           },

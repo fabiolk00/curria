@@ -7,10 +7,11 @@ import type {
   ToolPatch,
 } from '@/types/agent'
 import { CVStateSchema } from '@/lib/cv/schema'
+import { normalizeCvHighlightState } from '@/lib/resume/cv-highlight-artifact'
 import type { ATSScoreResult, CVState } from '@/types/cv'
 
 // Increment only when the top-level session state bundle shape or interpretation changes.
-export const CURRENT_SESSION_STATE_VERSION = 1
+export const CURRENT_SESSION_STATE_VERSION = 2
 
 const EMPTY_CV_STATE: CVState = {
   fullName: '',
@@ -77,6 +78,7 @@ export function normalizeAgentState(value: unknown): AgentState {
   return {
     ...EMPTY_AGENT_STATE,
     ...(value as Partial<AgentState>),
+    highlightState: normalizeCvHighlightState((value as Partial<AgentState>).highlightState),
     rewriteHistory: {
       ...EMPTY_AGENT_STATE.rewriteHistory,
       ...((value as Partial<AgentState>).rewriteHistory ?? {}),

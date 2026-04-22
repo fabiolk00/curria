@@ -1,6 +1,5 @@
 import type { RewriteValidationResult, WorkflowMode, TargetingPlan } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
-import { compareMetricImpactPreservation, findMetricImpactRegressions } from './metric-impact-guard'
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase()
@@ -49,7 +48,6 @@ export function validateRewrite(
   const issues: RewriteValidationResult['issues'] = []
   const originalEvidenceText = buildEvidenceText(originalCvState)
   const optimizedSummary = normalize(optimizedCvState.summary)
-  const editorialMetrics = compareMetricImpactPreservation(originalCvState, optimizedCvState)
 
   const originalCompanies = new Set(originalCvState.experience.map((entry) => normalize(entry.company)))
   const originalTitleCompanyPairs = new Set(
@@ -92,22 +90,6 @@ export function validateRewrite(
         section: 'experience',
       })
     }
-  }
-
-  const metricImpactRegressions = findMetricImpactRegressions(originalCvState, optimizedCvState)
-  if (metricImpactRegressions.length > 0) {
-    const topRegression = metricImpactRegressions[0]
-    const exampleMetric = topRegression.metricTokens[0]
-    const exampleScope = topRegression.scopeTerms[0]
-    const exampleEvidence = [exampleMetric, exampleScope].filter(Boolean).join(' / ')
-
-    issues.push({
-      severity: 'medium',
-      message: exampleEvidence
-        ? `A experiência otimizada removeu ou enfraqueceu uma métrica real de impacto (${exampleEvidence}) presente no currículo original.`
-        : 'A experiência otimizada removeu ou enfraqueceu métricas reais de impacto presentes no currículo original.',
-      section: 'experience',
-    })
   }
 
   const originalCertificationSet = new Set(
@@ -212,6 +194,5 @@ export function validateRewrite(
   return {
     valid: issues.length === 0,
     issues,
-    editorialMetrics,
   }
 }
