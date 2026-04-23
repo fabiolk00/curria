@@ -14,10 +14,8 @@ const COMPACT_EXPERIENCE_HIGHLIGHT_MAX_LENGTH = 90
 const HIGHLIGHT_STACK_SEPARATOR_CHAR = '|'
 const HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS = 72
 const HIGHLIGHT_MAX_CONTINUATION_WORDS = 10
+const HIGHLIGHT_MAX_CANDIDATE_ENDS = 8
 
-// CHANGE #5 — adaptive coverage threshold replaces the single constant for
-// experience bullets. Short bullets (< 60 chars) get a higher ceiling so
-// legitimate dense highlights are not rejected by the fixed 55 % threshold.
 function adaptiveCoverageThreshold(textLength: number): number {
   if (textLength < 60) return 0.75
   if (textLength < 100) return 0.65
@@ -79,7 +77,7 @@ const HIGHLIGHT_STRONG_CLAUSE_START_PATTERN =
   /^(?:and|but|while|however|whereas|mas|por(?:e|é)m|enquanto|because|porque)\b/i
 
 const HIGHLIGHT_VERB_HINT_PATTERN =
-  /\b(?:led|built|created|designed|developed|implemented|managed|reduced|increased|improved|optimized|automated|scaled|delivered|owned|migrated|supported|analyzed|organized|reinforced|maintained|provided|served|coordinated|atendi|atuei|organizei|reforcei|mantive|prestei|coordenei|garanti|contribui|suportei|aumentei|reduzi|melhorei|otimizei|automatizei|liderei|criei|desenvolvi|implementei|gerenciei|entreguei|migrei|apoiei|analisei)\b/i
+  /\b(?:led|built|created|designed|developed|implemented|managed|reduced|increased|improved|optimized|automated|scaled|delivered|owned|migrated|supported|analyzed|organised|organized|reinforced|maintained|provided|served|coordinated|generated|boosted|cut|saved|grew|elevated|expanded|accelerated|atendi|atuei|organizei|reforcei|mantive|prestei|coordenei|garanti|contribui|suportei|aumentei|reduzi|melhorei|otimizei|automatizei|liderei|criei|desenvolvi|implementei|gerenciei|entreguei|migrei|apoiei|analisei|gerei|ampliei|acelerei|expandi|elevei)\b/i
 
 const HIGHLIGHT_GERUND_CONTINUATION_PATTERN =
   /^(?:contributing|reinforcing|ensuring|supporting|maintaining|reducing|increasing|driving|improving|enabling|closing|strengthening|contribuindo|reforcando|reforçando|garantindo|apoiando|mantendo|reduzindo|aumentando|impulsionando|melhorando|viabilizando|fortalecendo)\b/i
@@ -93,11 +91,17 @@ const HIGHLIGHT_DIRECT_CLOSURE_PREPOSITION_PATTERN =
 const HIGHLIGHT_SEMANTIC_DESCRIPTOR_HINT_PATTERN =
   /\b(?:focused|specialized|oriented|dedicated|responsible|experienced|especializado|focado|orientado|dedicado|responsavel|responsável|experiente)\b/i
 
-// CHANGE #6 — pattern used by the local fallback to identify action verbs
-// at the start of a bullet, enabling synthetic highlight generation when
-// the model returns no ranges for a measurably strong bullet.
 const HIGHLIGHT_FALLBACK_ACTION_VERB_PATTERN =
   /\b(?:led|built|created|designed|developed|implemented|managed|reduced|increased|improved|optimized|automated|scaled|delivered|owned|migrated|supported|analyzed|organized|reinforced|maintained|provided|served|coordinated|generated|boosted|cut|saved|grew|elevated|expanded|accelerated|atendi|atuei|organizei|reforcei|mantive|prestei|coordenei|garanti|contribui|suportei|aumentei|reduzi|melhorei|otimizei|automatizei|liderei|criei|desenvolvi|implementei|gerenciei|entreguei|migrei|apoiei|analisei|gerei|ampliei|acelerei|expandi|elevei)\b/i
+
+const HIGHLIGHT_WEAK_ENDING_PATTERN =
+  /\b(?:for|with|by|via|through|across|in|on|to|during|com|para|em|no|na|nos|nas|ao|aos|a|à|as|às|and|e|the|a|an|o|os|a|as)\s*$/i
+
+const HIGHLIGHT_METRIC_COMPLEMENT_START_PATTERN =
+  /^(?:by|with|for|em|com|para)\b/i
+
+const HIGHLIGHT_ZERO_METRIC_PATTERN =
+  /\b(?:zero|0)\b/i
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -135,7 +139,6 @@ export type CvHighlightState = {
   version: typeof CV_HIGHLIGHT_ARTIFACT_VERSION
   resolvedHighlights: CvResolvedHighlight[]
   generatedAt: string
-  /** CHANGE #4 — fingerprint of the rewrittenCvState used to detect reuse */
   cvStateFingerprint?: string
 }
 
@@ -263,10 +266,7 @@ export function buildExperienceBulletHighlightItemIds(
 }
 
 // ---------------------------------------------------------------------------
-// CHANGE #4 — CVState fingerprinting
-// Allows callers to detect when a highlightState was generated for the exact
-// same rewrittenCvState and therefore can be safely reused without a new
-// model call, eliminating non-determinism between equivalent executions.
+// CVState fingerprinting
 // ---------------------------------------------------------------------------
 
 export function computeCvStateFingerprint(cvState: CVState): string {
@@ -419,6 +419,19 @@ function isInlineDecimalOrAbbreviationBoundary(text: string, index: number): boo
   )
 }
 
+function trimTrailingSentencePunctuation(value: string): string {
+  return value.replace(/[.,;:!?]\s*$/u, '').trimEnd()
+}
+
+function countBalancedPairDelta(value: string, openChar: string, closeChar: string): number {
+  let delta = 0
+  for (const char of value) {
+    if (char === openChar) delta += 1
+    if (char === closeChar) delta -= 1
+  }
+  return delta
+}
+
 // ---------------------------------------------------------------------------
 // Continuation helpers
 // ---------------------------------------------------------------------------
@@ -505,6 +518,67 @@ function isLikelyTightSemanticComplementClosure(value: string): boolean {
       normalized,
     ) || isLikelyNounPhraseContinuation(normalized)
   )
+}
+
+function isMetricComplement(value: string): boolean {
+  const normalized = normalizeLeadingContinuationText(value)
+  if (!normalized) return false
+
+  return (
+    HIGHLIGHT_METRIC_COMPLEMENT_START_PATTERN.test(normalized)
+    && (/\d|[$%]/u.test(normalized) || HIGHLIGHT_ZERO_METRIC_PATTERN.test(normalized))
+  )
+}
+
+function isLongBroadTail(value: string): boolean {
+  const normalized = normalizeLeadingContinuationText(value)
+  if (!normalized) return false
+
+  return (
+    countHighlightWords(normalized) > HIGHLIGHT_MAX_CONTINUATION_WORDS
+    || normalized.length > HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS
+  )
+}
+
+function endsWithWeakClosure(fragment: string): boolean {
+  const trimmed = trimTrailingSentencePunctuation(fragment)
+  if (!trimmed) return true
+
+  if (HIGHLIGHT_WEAK_ENDING_PATTERN.test(trimmed)) return true
+  if (/[(/[-–—]\s*$/u.test(trimmed)) return true
+  if (/\b\d+\s*$/u.test(trimmed) && !/%\s*$/u.test(trimmed)) return true
+
+  const parenDelta = countBalancedPairDelta(trimmed, '(', ')')
+  const bracketDelta = countBalancedPairDelta(trimmed, '[', ']')
+  if (parenDelta > 0 || bracketDelta > 0) return true
+
+  return false
+}
+
+function computeSemanticClosureBonus(fragment: string): number {
+  const trimmed = trimTrailingSentencePunctuation(fragment)
+  if (!trimmed) return 0
+
+  let score = 0
+
+  if (HIGHLIGHT_VERB_HINT_PATTERN.test(trimmed)) score += 4
+  if (/[$\d%]/u.test(trimmed)) score += 3
+  if (/\b(?:by|with|for|em|com|para)\b/i.test(trimmed) && /\d|[$%]/u.test(trimmed)) score += 3
+  if (/\b(?:zero|downtime|clients|savings|latency|throughput|processing|cost|costs|tempo|clientes|economia|redução|reducao)\b/i.test(trimmed)) {
+    score += 2
+  }
+  if (
+    HIGHLIGHT_GERUND_CONTINUATION_PATTERN.test(normalizeLeadingContinuationText(trimmed))
+    || HIGHLIGHT_COORDINATED_CONTINUATION_PATTERN.test(normalizeLeadingContinuationText(trimmed))
+  ) {
+    score += 1
+  }
+  if (!endsWithWeakClosure(trimmed)) score += 3
+  if (countBalancedPairDelta(trimmed, '(', ')') === 0 && countBalancedPairDelta(trimmed, '[', ']') === 0) {
+    score += 1
+  }
+
+  return score
 }
 
 // ---------------------------------------------------------------------------
@@ -637,9 +711,7 @@ function expandRangeAcrossInlineCompositeTerms(
 }
 
 // ---------------------------------------------------------------------------
-// CHANGE #2 — readShortContinuationEnd no longer stops at '(' when there is
-// a matching ')' within the look-ahead window. This allows metric annotations
-// like "reduced latency (by 40%)" to be absorbed as part of the span.
+// Candidate end collection
 // ---------------------------------------------------------------------------
 
 function readShortContinuationEnd(text: string, start: number): number | null {
@@ -658,7 +730,6 @@ function readShortContinuationEnd(text: string, start: number): number | null {
       break
     }
 
-    // CHANGE #2: only break on '(' when there is no matching ')' ahead.
     if (char === '(' || char === '[') {
       const closeChar = char === '(' ? ')' : ']'
       const remainingWindow = text.slice(
@@ -668,7 +739,6 @@ function readShortContinuationEnd(text: string, start: number): number | null {
       if (!remainingWindow.includes(closeChar)) {
         break
       }
-      // has matching close — let the cursor continue through the parenthetical
       cursor += 1
       continue
     }
@@ -692,93 +762,109 @@ function readShortContinuationEnd(text: string, start: number): number | null {
   return cursor
 }
 
-// ---------------------------------------------------------------------------
-// Expansion decision functions
-// ---------------------------------------------------------------------------
+function readSentenceBoundaryEnd(text: string, start: number): number | null {
+  let cursor = start
+  const hardLimit = Math.min(text.length, start + HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS)
 
-function shouldExpandAcrossBoundary(
-  separatorChar: string,
-  continuationText: string,
-): boolean {
-  const trimmed = continuationText.trim()
-  const normalized = normalizeLeadingContinuationText(continuationText)
-  const attachedContinuation = startsWithAttachedContinuation(normalized)
+  while (cursor < hardLimit) {
+    const char = text[cursor]
 
-  if (!trimmed || !hasMeaningfulHighlightContent(trimmed)) return false
-  if (trimmed.length > HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS) return false
+    if (
+      char === HIGHLIGHT_STACK_SEPARATOR_CHAR
+      || (/[.!?]/u.test(char) && !isInlineDecimalOrAbbreviationBoundary(text, cursor))
+    ) {
+      break
+    }
 
-  if (
-    countHighlightWords(normalized || trimmed)
-    > (attachedContinuation
-      ? HIGHLIGHT_MAX_CONTINUATION_WORDS + 4
-      : HIGHLIGHT_MAX_CONTINUATION_WORDS)
-  ) {
-    return false
+    cursor += 1
   }
 
-  if (HIGHLIGHT_STRONG_CLAUSE_START_PATTERN.test(normalized || trimmed)) return false
-
-  if (separatorChar === ':' || separatorChar === ';') {
-    return /^[$\d\p{Lu}]/u.test(normalized || trimmed)
+  while (cursor > start && isWhitespaceLike(text[cursor - 1])) {
+    cursor -= 1
   }
 
-  if (separatorChar === ',') {
-    return (
-      attachedContinuation
-      || isLikelyNounPhraseContinuation(normalized)
-      || /^[$\d]/u.test(normalized || trimmed)
-    )
+  if (cursor <= start) return null
+  return cursor
+}
+
+function collectCandidateContinuationEnds(
+  text: string,
+  start: number,
+): number[] {
+  const candidateEnds = new Set<number>()
+
+  const shortEnd = readShortContinuationEnd(text, start)
+  if (shortEnd !== null) {
+    candidateEnds.add(shortEnd)
   }
 
-  return true
+  const sentenceEnd = readSentenceBoundaryEnd(text, start)
+  if (sentenceEnd !== null) {
+    candidateEnds.add(sentenceEnd)
+  }
+
+  const searchWindowEnd = Math.min(text.length, start + HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS)
+
+  for (let index = start; index < searchWindowEnd; index += 1) {
+    const char = text[index]
+
+    if (
+      char === ','
+      || char === ';'
+      || char === ':'
+      || char === ')'
+      || char === ']'
+    ) {
+      let candidateEnd = index
+      while (candidateEnd > start && isWhitespaceLike(text[candidateEnd - 1])) {
+        candidateEnd -= 1
+      }
+      if (candidateEnd > start) {
+        candidateEnds.add(candidateEnd)
+      }
+    }
+
+    if (
+      /[.!?]/u.test(char)
+      && !isInlineDecimalOrAbbreviationBoundary(text, index)
+    ) {
+      let candidateEnd = index
+      while (candidateEnd > start && isWhitespaceLike(text[candidateEnd - 1])) {
+        candidateEnd -= 1
+      }
+      if (candidateEnd > start) {
+        candidateEnds.add(candidateEnd)
+      }
+      break
+    }
+  }
+
+  return [...candidateEnds]
+    .filter((end) => end > start)
+    .sort((left, right) => left - right)
+    .slice(0, HIGHLIGHT_MAX_CANDIDATE_ENDS)
 }
 
 // ---------------------------------------------------------------------------
-// CHANGE #3 — shouldPreferPhraseClosure no longer unconditionally blocks
-// continuations starting with "by", "for", "with", etc. Those prepositions
-// are only blocked when the current fragment lacks a semantic closure lead
-// (i.e., no action verb, metric, or descriptor). This lets spans like
-// "reduced latency by 40%" or "built for 3 enterprise clients" close fully.
+// Candidate scoring
 // ---------------------------------------------------------------------------
 
-function shouldPreferPhraseClosure(
+function isCandidateEditoriallyPlausible(
   text: string,
-  range: CvHighlightRange,
+  baseRange: CvHighlightRange,
   candidateEnd: number,
 ): boolean {
-  if (candidateEnd <= range.end) return false
+  if (candidateEnd <= baseRange.end) return false
 
-  const addition = text.slice(range.end, candidateEnd).trim()
+  const addition = text.slice(baseRange.end, candidateEnd).trim()
   const normalizedAddition = normalizeLeadingContinuationText(addition)
-  const currentFragment = text.slice(range.start, range.end).trim()
+  const currentFragment = text.slice(baseRange.start, baseRange.end).trim()
 
   if (!addition || !hasMeaningfulHighlightContent(addition)) return false
-  if (addition.length > HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS) return false
-
-  if (
-    countHighlightWords(normalizedAddition || addition)
-    > (startsWithAttachedContinuation(normalizedAddition)
-      ? HIGHLIGHT_MAX_CONTINUATION_WORDS + 2
-      : HIGHLIGHT_MAX_CONTINUATION_WORDS)
-  ) {
-    return false
-  }
-
+  if (isLongBroadTail(addition)) return false
   if (HIGHLIGHT_STRONG_CLAUSE_START_PATTERN.test(normalizedAddition || addition)) return false
 
-  // CHANGE #3: block metric-valued prepositions only when the current
-  // fragment does not already carry semantic weight.
-  if (
-    /^(?:for|with|by|via|through|across)\b/i.test(normalizedAddition)
-    && !hasSemanticClosureLead(currentFragment)
-  ) {
-    return false
-  }
-
-  const attachedContinuation =
-    HIGHLIGHT_GERUND_CONTINUATION_PATTERN.test(normalizedAddition)
-    || HIGHLIGHT_COORDINATED_CONTINUATION_PATTERN.test(normalizedAddition)
-
+  const attachedContinuation = startsWithAttachedContinuation(normalizedAddition)
   const nounPhraseClosure =
     isLikelyNounPhraseContinuation(normalizedAddition)
     && (/[$\d%]/u.test(currentFragment) || hasSemanticClosureLead(currentFragment))
@@ -791,82 +877,106 @@ function shouldPreferPhraseClosure(
     isLikelyTightSemanticComplementClosure(normalizedAddition)
     && hasSemanticClosureLead(currentFragment)
 
-  // CHANGE #3: also allow the continuation when it starts with a metric
-  // preposition ("by 40%", "with zero downtime") and the fragment has a
-  // semantic closure lead — catches the common "verb + metric complement" pattern.
   const metricPrepositionClosure =
-    /^(?:by|with|for)\b/i.test(normalizedAddition)
+    isMetricComplement(normalizedAddition)
     && hasSemanticClosureLead(currentFragment)
-    && /\d|[$%]/u.test(addition)
-
-  if (
-    !attachedContinuation
-    && !nounPhraseClosure
-    && !prepositionalClosure
-    && !semanticComplementClosure
-    && !metricPrepositionClosure
-  ) {
-    return false
-  }
-
-  const mergedText = text.slice(range.start, candidateEnd).trim()
-  if (mergedText.includes(HIGHLIGHT_STACK_SEPARATOR_CHAR)) return false
 
   return (
-    mergedText.length <= HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS * 2
-    && countHighlightWords(mergedText) <= HIGHLIGHT_MAX_CONTINUATION_WORDS + 5
+    attachedContinuation
+    || nounPhraseClosure
+    || prepositionalClosure
+    || semanticComplementClosure
+    || metricPrepositionClosure
   )
 }
 
-// ---------------------------------------------------------------------------
-// Expansion functions
-// ---------------------------------------------------------------------------
-
-function expandRangeRightAcrossSeparator(
+function scoreHighlightCandidate(
   text: string,
-  range: CvHighlightRange,
-): CvHighlightRange {
-  let separatorIndex = range.end
-  while (separatorIndex < text.length && isWhitespaceLike(text[separatorIndex])) {
-    separatorIndex += 1
-  }
+  candidate: CvHighlightRange,
+  baseRange: CvHighlightRange,
+): number {
+  const fragment = text.slice(candidate.start, candidate.end).trim()
+  const addition = text.slice(baseRange.end, candidate.end).trim()
 
-  const separatorChar = text[separatorIndex]
-  if (!separatorChar || !HIGHLIGHT_BRIDGEABLE_BOUNDARY_CHARS.has(separatorChar)) {
-    return range
-  }
+  let score = 0
 
-  let continuationStart = separatorIndex + 1
-  while (continuationStart < text.length && isWhitespaceLike(text[continuationStart])) {
-    continuationStart += 1
-  }
+  score += computeSemanticClosureBonus(fragment) * 10
 
-  const continuationEnd = readShortContinuationEnd(text, continuationStart)
-  if (continuationEnd === null) return range
+  if (isMetricComplement(addition)) score += 30
+  if (startsWithAttachedContinuation(addition)) score += 16
+  if (isLikelyTightPrepositionalClosure(addition)) score += 10
+  if (isLikelyTightSemanticComplementClosure(addition)) score += 10
 
-  const continuationText = text.slice(continuationStart, continuationEnd)
-  if (!shouldExpandAcrossBoundary(separatorChar, continuationText)) return range
+  if (endsWithWeakClosure(fragment)) score -= 35
 
-  return { start: range.start, end: continuationEnd, reason: range.reason }
+  const extraLength = Math.max(0, fragment.length - text.slice(baseRange.start, baseRange.end).trim().length)
+  score -= Math.floor(extraLength / 8)
+
+  const extraWords = Math.max(
+    0,
+    countHighlightWords(fragment) - countHighlightWords(text.slice(baseRange.start, baseRange.end)),
+  )
+  score -= extraWords > 8 ? (extraWords - 8) * 4 : 0
+
+  if (fragment.includes(HIGHLIGHT_STACK_SEPARATOR_CHAR)) score -= 40
+
+  return score
 }
 
-function expandRangeRightForPhraseClosure(
+function selectBestCandidateRange(
   text: string,
-  range: CvHighlightRange,
+  baseRange: CvHighlightRange,
 ): CvHighlightRange {
-  let continuationStart = range.end
-  while (continuationStart < text.length && isWhitespaceLike(text[continuationStart])) {
-    continuationStart += 1
+  const continuationStart = (() => {
+    let cursor = baseRange.end
+    while (cursor < text.length && isWhitespaceLike(text[cursor])) {
+      cursor += 1
+    }
+    return cursor
+  })()
+
+  if (continuationStart >= text.length) {
+    return baseRange
   }
 
-  if (continuationStart >= text.length) return range
+  const candidateEnds = collectCandidateContinuationEnds(text, continuationStart)
 
-  const continuationEnd = readShortContinuationEnd(text, continuationStart)
-  if (continuationEnd === null) return range
+  let bestRange = baseRange
+  let bestScore = Number.NEGATIVE_INFINITY
 
-  if (!shouldPreferPhraseClosure(text, range, continuationEnd)) return range
+  for (const candidateEnd of candidateEnds) {
+    if (!isCandidateEditoriallyPlausible(text, baseRange, candidateEnd)) {
+      continue
+    }
 
-  return { start: range.start, end: continuationEnd, reason: range.reason }
+    const candidateRange: CvHighlightRange = {
+      start: baseRange.start,
+      end: candidateEnd,
+      reason: baseRange.reason,
+    }
+
+    const score = scoreHighlightCandidate(text, candidateRange, baseRange)
+
+    const shouldReplace =
+      score > bestScore
+      || (
+        score === bestScore
+        && (
+          candidateRange.end > bestRange.end
+          || (
+            candidateRange.end === bestRange.end
+            && candidateRange.start < bestRange.start
+          )
+        )
+      )
+
+    if (shouldReplace) {
+      bestRange = candidateRange
+      bestScore = score
+    }
+  }
+
+  return bestRange
 }
 
 // ---------------------------------------------------------------------------
@@ -967,14 +1077,8 @@ function shouldMergeAcrossIgnorableGap(
 }
 
 // ---------------------------------------------------------------------------
-// CHANGE #1 — normalizeHighlightSpanBoundaries runs the expansion loop until
-// the range stabilizes (up to MAX_EXPANSION_ITERATIONS iterations) instead of
-// calling each expansion function exactly once. This handles bullets where two
-// consecutive boundary steps are required to close the semantic unit, e.g.:
-//   "reduced latency, by 40%" → needs separator expansion then phrase closure.
+// Boundary normalization
 // ---------------------------------------------------------------------------
-
-const MAX_EXPANSION_ITERATIONS = 3
 
 export function normalizeHighlightSpanBoundaries(
   text: string,
@@ -996,22 +1100,12 @@ export function normalizeHighlightSpanBoundaries(
     reason: range.reason,
   }
 
-  // CHANGE #1: stabilising expansion loop.
   normalizedRange = normalizeRangeToWordBoundaries(text, normalizedRange)
   normalizedRange = expandRangeLeftForCurrencyPrefix(text, normalizedRange)
   normalizedRange = expandRangeAcrossInlineCompositeTerms(text, normalizedRange)
 
-  let previousEnd = -1
-  let iterations = 0
-
-  while (normalizedRange.end !== previousEnd && iterations < MAX_EXPANSION_ITERATIONS) {
-    previousEnd = normalizedRange.end
-    normalizedRange = expandRangeRightAcrossSeparator(text, normalizedRange)
-    normalizedRange = expandRangeRightForPhraseClosure(text, normalizedRange)
-    iterations += 1
-  }
-
-  normalizedRange = normalizeRangeToWordBoundaries(text, normalizedRange)
+  const bestCandidateRange = selectBestCandidateRange(text, normalizedRange)
+  normalizedRange = normalizeRangeToWordBoundaries(text, bestCandidateRange)
   normalizedRange = expandRangeLeftForCurrencyPrefix(text, normalizedRange)
   normalizedRange = expandRangeAcrossInlineCompositeTerms(text, normalizedRange)
 
@@ -1091,9 +1185,6 @@ export function normalizeHighlightRangesForSegmentation(
 
 // ---------------------------------------------------------------------------
 // Editorial acceptance
-// CHANGE #5 — isEditoriallyAcceptableHighlightRange now uses
-// adaptiveCoverageThreshold() instead of the fixed constant, so short
-// bullets are not unfairly penalised by the 55 % ceiling.
 // ---------------------------------------------------------------------------
 
 function isCompactMeasurableExperienceHighlight(text: string): boolean {
@@ -1119,7 +1210,14 @@ export function isEditoriallyAcceptableHighlightRange(
     return coverage <= SUMMARY_MAX_HIGHLIGHT_COVERAGE
   }
 
-  // CHANGE #5: adaptive ceiling based on bullet length.
+  const fragment = text.slice(range.start, range.end)
+
+  const semanticOverride =
+    computeSemanticClosureBonus(fragment) >= 10
+    && coverage <= Math.max(adaptiveCoverageThreshold(textLength), 0.82)
+
+  if (semanticOverride) return true
+
   const ceiling = adaptiveCoverageThreshold(textLength)
   if (coverage <= ceiling) return true
 
@@ -1131,37 +1229,26 @@ export function isEditoriallyAcceptableHighlightRange(
 }
 
 // ---------------------------------------------------------------------------
-// CHANGE #6 — local fallback highlight generator
-// When the model returns no ranges for a bullet that clearly carries an
-// action verb followed by (or adjacent to) a metric, this function
-// synthesises a minimal span covering the action-verb–metric sequence.
-// This is intentionally conservative: it only fires when the bullet passes
-// isCompactMeasurableExperienceHighlight() AND the model produced zero ranges,
-// and the resulting span must still pass editorial acceptance.
+// Local fallback
 // ---------------------------------------------------------------------------
 
 function buildFallbackHighlightRange(
   text: string,
 ): CvHighlightRange | null {
-  // Locate the first action verb.
   const verbMatch = HIGHLIGHT_FALLBACK_ACTION_VERB_PATTERN.exec(text)
   if (!verbMatch) return null
 
-  // Locate the first digit/metric in the text.
   const metricMatch = /\d/.exec(text)
   if (!metricMatch) return null
 
-  // Span from verb start to a point shortly after the metric.
   const spanStart = verbMatch.index
-  // Extend end to the first natural stop after the metric.
-  const metricEnd = readShortContinuationEnd(text, metricMatch.index)
-  if (metricEnd === null) return null
+  const seedRange: CvHighlightRange = {
+    start: spanStart,
+    end: Math.max(metricMatch.index + 1, spanStart + 1),
+    reason: 'metric_impact',
+  }
 
-  const spanEnd = Math.min(metricEnd, text.length)
-  if (spanEnd <= spanStart) return null
-
-  const candidate: CvHighlightRange = { start: spanStart, end: spanEnd, reason: 'metric_impact' }
-  return normalizeHighlightSpanBoundaries(text, candidate)
+  return normalizeHighlightSpanBoundaries(text, seedRange)
 }
 
 function applyFallbackHighlightsForUnmarkedItems(
@@ -1233,8 +1320,6 @@ export function validateAndResolveHighlights(
     resolved.push({ itemId, section: item.section, ranges: validRanges })
   })
 
-  // CHANGE #6: apply local fallback for experience bullets that the model
-  // left completely unmarked but that clearly contain measurable impact.
   return applyFallbackHighlightsForUnmarkedItems(items, resolved)
 }
 
