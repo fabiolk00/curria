@@ -61,13 +61,7 @@ const HIGHLIGHT_STRONG_CLAUSE_START_PATTERN =
   /^(?:and|but|while|however|whereas|mas|por(?:e|é)m|enquanto|because|porque)\b/i
 
 const HIGHLIGHT_VERB_HINT_PATTERN =
-  /\b(?:led|built|created|designed|developed|implemented|managed|reduced|increased|improved|optimized|automated|scaled|delivered|owned|migrated|supported|analyzed|organized|reinforced|maintained|provided|served|coordinated|generated|boosted|cut|saved|grew|elevated|expanded|accelerated|defined|designed|projected|projetei|atendi|atuei|organizei|reforcei|mantive|prestei|coordenei|garanti|contribui|suportei|aumentei|reduzi|melhorei|otimizei|automatizei|liderei|criei|desenvolvi|implementei|gerenciei|entreguei|migrei|apoiei|analisei|gerei|ampliei|acelerei|expandi|elevei|defini)\b/i
-
-const HIGHLIGHT_GERUND_CONTINUATION_PATTERN =
-  /^(?:contributing|reinforcing|ensuring|supporting|maintaining|reducing|increasing|driving|improving|enabling|closing|strengthening|contribuindo|reforcando|reforçando|garantindo|apoiando|mantendo|reduzindo|aumentando|impulsionando|melhorando|viabilizando|fortalecendo|atuando|definindo)\b/i
-
-const HIGHLIGHT_COORDINATED_CONTINUATION_PATTERN =
-  /^(?:and|e)\s+(?:with|for|in|on|during|com|para|em|no|na|nos|nas|ao|aos|a|à|support|supporting|apoio|apoiando|atendimento|rotinas|processo|processos|disponibilidade|estabilidade|satisfacao|satisfação)\b/i
+  /\b(?:led|built|created|designed|developed|implemented|managed|reduced|increased|improved|optimized|automated|scaled|delivered|owned|migrated|supported|analyzed|organized|reinforced|maintained|provided|served|coordinated|generated|boosted|cut|saved|grew|elevated|expanded|accelerated|defined|projetei|atendi|atuei|organizei|reforcei|mantive|prestei|coordenei|garanti|contribui|suportei|aumentei|reduzi|melhorei|otimizei|automatizei|liderei|criei|desenvolvi|implementei|gerenciei|entreguei|migrei|apoiei|analisei|gerei|ampliei|acelerei|expandi|elevei|defini)\b/i
 
 const HIGHLIGHT_SEMANTIC_DESCRIPTOR_HINT_PATTERN =
   /\b(?:focused|specialized|oriented|dedicated|responsible|experienced|especializado|focado|orientado|dedicado|responsavel|responsável|experiente)\b/i
@@ -85,7 +79,7 @@ const HIGHLIGHT_METRIC_PATTERN =
   /\b(?:\d+(?:[.,]\d+)?%|\$\s?\d|\d+\s?(?:x|k|m|b|mil|milh(?:ão|ao|ões|oes))|\bzero downtime\b|\b0 downtime\b|\bmais de \d+\b|\bmore than \d+\b)\b/i
 
 const HIGHLIGHT_TOOL_CONTEXT_PATTERN =
-  /\b(?:azure databricks|databricks|pyspark|spark|python|sql|power bi|qlik|bigquery|gcp|etl)\b/i
+  /\b(?:azure databricks|databricks|pyspark|spark|python|sql|power bi|qlik|bigquery|gcp|etl|api|apis|sharepoint|dynamics crm|rest)\b/i
 
 const HIGHLIGHT_WEAK_GENERIC_LEAD_PATTERN =
   /^(?:led|built|created|developed|implemented|desenvolvi|liderei|criei|implementei|atuei)\b/i
@@ -347,19 +341,6 @@ function hasMeaningfulHighlightContent(value: string): boolean {
   return /[\p{L}\p{N}]/u.test(value) || /\$\s*\d/u.test(value)
 }
 
-function normalizeLeadingContinuationText(value: string): string {
-  let cursor = 0
-
-  while (
-    cursor < value.length
-    && (isWhitespaceLike(value[cursor]) || HIGHLIGHT_IGNORABLE_BOUNDARY_CHARS.has(value[cursor]!))
-  ) {
-    cursor += 1
-  }
-
-  return value.slice(cursor).trim()
-}
-
 function trimHighlightEdgeNoiseBounds(
   text: string,
   start: number,
@@ -521,13 +502,12 @@ function scoreFragment(fragment: string, reason: CvHighlightReason): number {
   if (HIGHLIGHT_BUSINESS_IMPACT_PATTERN.test(trimmed)) score += 20
   if (HIGHLIGHT_TOOL_CONTEXT_PATTERN.test(trimmed)) score += 6
   if (HIGHLIGHT_VERB_HINT_PATTERN.test(trimmed)) score += 8
+  if (HIGHLIGHT_SEMANTIC_DESCRIPTOR_HINT_PATTERN.test(trimmed)) score += 6
 
   if (reason === 'metric_impact') score += 8
   if (reason === 'business_impact') score += 6
 
   if (HIGHLIGHT_WEAK_GENERIC_LEAD_PATTERN.test(trimmed)) score -= 10
-  if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\s+\|/.test(trimmed)) score -= 30
-
   if (countHighlightWords(trimmed) <= 2) score -= 12
   if (countHighlightWords(trimmed) >= 18) score -= 12
 
@@ -546,21 +526,13 @@ function buildCandidateRanges(text: string, range: CvHighlightRange): CvHighligh
     .filter((end) => end >= Math.max(range.end, range.start + 1) && end <= Math.min(range.end + HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS, text.length))
     .slice(0, HIGHLIGHT_MAX_CANDIDATE_ENDS)
 
-  const candidates: CvHighlightRange[] = []
-
-  candidates.push(range)
+  const candidates: CvHighlightRange[] = [range]
 
   for (const start of candidateStarts) {
     for (const end of candidateEnds) {
       if (end <= start) continue
 
-      const candidate: CvHighlightRange = {
-        start,
-        end,
-        reason: range.reason,
-      }
-
-      const trimmed = trimHighlightEdgeNoiseBounds(text, candidate.start, candidate.end)
+      const trimmed = trimHighlightEdgeNoiseBounds(text, start, end)
       if (!trimmed) continue
 
       candidates.push({
