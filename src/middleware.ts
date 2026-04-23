@@ -20,13 +20,9 @@ const isPublicRoute = createRouteMatcher([
   '/privacidade(.*)',
   '/termos(.*)',
   '/finalizar-compra(.*)',
-  '/login(.*)',
   '/signup(.*)',
   '/pricing(.*)',
-  '/what-is-ats(.*)',
   '/privacy(.*)',
-  '/terms(.*)',
-  '/checkout(.*)',
   '/curriculo-(.*)-ats(.*)',
   '/sso-callback(.*)',
   '/api/webhook/asaas(.*)',
@@ -158,7 +154,7 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|txt|xml|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
 }

@@ -674,17 +674,27 @@ Plans:
   1. ATS enhancement and job-targeting persist a separate `highlightState` artifact for the finalized optimized resume, and exactly one detector call is made per successful rewrite payload.
   2. Invalid highlight ranges fail closed locally, rollback/reset flows restore or clear `highlightState` with `optimizedCvState`, and locked previews do not leak highlight metadata.
   3. Session/comparison responses and the resume comparison renderer consume persisted highlights directly, while the deterministic preview helper and legacy metric-preservation preview code are removed with regression proof.
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 95-01-PLAN.md — Add persisted highlight contracts, single-call detector lifecycle, thin route serialization, renderer migration, and legacy preview cleanup
+- [x] 95-01-PLAN.md — Add persisted highlight contracts, single-call detector lifecycle, thin route serialization, renderer migration, and legacy preview cleanup (completed 2026-04-22)
 
 ### Phase 96: Harden highlight artifact safety, observability, and semantic stability
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Harden persisted highlight artifacts around segmentation safety, invalid-payload observability, and stable item identity so preview consumers stay deterministic and fail closed.
+**Requirements**: [HILITE-SAFETY-01, HILITE-OBS-01, HILITE-STABILITY-01]
 **Depends on:** Phase 95
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 96 to break down)
+- [x] 96-01-PLAN.md - Harden highlight segmentation safety, invalid-payload observability, and stable highlight identity contracts without reopening renderer architecture (completed 2026-04-22)
+
+### Phase 97: Close CV highlight logic with hybrid editorial resolver
+
+**Goal:** Close the remaining CV highlight span gap by hardening detector editorial guidance first and only adding minimal artifact-side resolver logic for prompt-proven residual weak-start or under-closure cases.
+**Requirements**: [CV-HILITE-EDITORIAL-01, CV-HILITE-RESOLVER-01, CV-HILITE-SHARED-SMOKE-01]
+**Depends on:** Phase 95
+**Plans:** 1 plan
+
+Plans:
+- [ ] 97-01-PLAN.md — Harden prompt-first highlight selection, add minimal deterministic resolver only if residual gaps remain, and prove shared persisted-highlight seams stay unchanged

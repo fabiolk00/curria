@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import WhatIsAtsPageClient from "@/components/landing/what-is-ats-page"
+import OQueEAtsPageClient from "@/components/landing/o-que-e-ats-page"
 import { buildPublicPageMetadata } from "@/lib/seo/public-metadata"
 
 export const metadata: Metadata = buildPublicPageMetadata({
@@ -11,5 +11,5 @@ export const metadata: Metadata = buildPublicPageMetadata({
 })
 
 export default function OQueEAtsPage() {
-  return <WhatIsAtsPageClient />
+  return <OQueEAtsPageClient />
 }

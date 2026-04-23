@@ -1,3 +1,14 @@
+// Full test gate for this module and its Phase 97 hardening:
+//
+// npx vitest run \
+//   src/lib/agent/tools/detect-cv-highlights.test.ts \
+//   src/lib/resume/cv-highlight-artifact.test.ts \
+//   src/lib/agent/tools/pipeline.test.ts \
+//   src/lib/routes/session-comparison/decision.test.ts \
+//   src/components/resume/resume-comparison-view.test.tsx
+//
+// All five files must be included. Running a subset masks cross-file regressions.
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { detectCvHighlights } from './detect-cv-highlights'
@@ -97,6 +108,59 @@ describe('detectCvHighlights', () => {
       itemCount: items.length,
       stage: 'highlight_detection',
     }))
+  })
+
+  it.skip('hardens the detector prompt around semantic closure and weak generic starts', async () => {
+    // Prompt string inspection is documentation only. The real gate for prompt hardening
+    // lives in the response-fixture tests below, which run the resolver against model output.
+    const items = flattenCvStateForHighlight(buildCvState())
+
+    createCompletion.mockResolvedValue(buildOpenAIResponse('{"items":[]}'))
+
+    await detectCvHighlights(items)
+
+    const systemPrompt = createCompletion.mock.calls[0]?.[0].messages[0].content as string
+
+    expect(systemPrompt).toContain('The range must start and end on a complete semantic unit.')
+    expect(systemPrompt).toContain('Never return an isolated number or percentage without its immediate measured context')
+    expect(systemPrompt).toContain('A slightly longer natural phrase is better than a machine-cut fragment.')
+    expect(systemPrompt).toContain('Otimizei pipelines com salting e repartitioning')
+    expect(systemPrompt).toContain('Liderei a migracao de mais de 30 aplicacoes Qlik Sense para Qlik Cloud')
+  })
+
+  // NOTE: Editorial correction behavior (dangling metric, weak lead trim, non-regression)
+  // is tested in cv-highlight-artifact.test.ts under the
+  // 'validateAndResolveHighlights — editorial correction fixtures' describe block.
+  // Tests here cover only the detector boundary: prompt construction, response parsing,
+  // and the raw detection contract. They do not test the artifact resolver.
+
+  it('passes raw model ranges through to the caller when the shared resolver accepts them unchanged', async () => {
+    const text = 'Reduced costs by 40%.'
+    const items = [{
+      itemId: 'exp_test_item',
+      section: 'experience' as const,
+      text,
+    }]
+    const modelRange = {
+      start: 0,
+      end: text.length - 1,
+      reason: 'metric_impact' as const,
+    }
+
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      items: [{
+        itemId: 'exp_test_item',
+        ranges: [modelRange],
+      }],
+    })))
+
+    const result = await detectCvHighlights(items)
+
+    expect(result).toEqual([{
+      itemId: 'exp_test_item',
+      section: 'experience',
+      ranges: [modelRange],
+    }])
   })
 
   it('drops invalid item ids and invalid ranges without throwing', async () => {

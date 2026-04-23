@@ -51,6 +51,7 @@ Baseline carried forward from earlier shipped milestones:
 
 ### Roadmap Evolution
 
+- Phase 97 added: Close CV highlight logic with hybrid editorial resolver.
 - Phase 95 added: Replace deterministic preview highlights with persisted single-call LLM highlight artifacts.
 - Phase 93 added: Summary editorial hardening to reduce repetition and increase information density in ATS enhancement preview.
 - Phase 94 added: Promote core contextual stack evidence in preview highlights without reopening Phase 92.

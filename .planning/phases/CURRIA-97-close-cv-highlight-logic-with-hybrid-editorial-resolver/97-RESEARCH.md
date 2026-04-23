@@ -343,17 +343,13 @@ const bulletSegments = segmentTextByHighlightRanges(
 | A2 | The temptation to expand deterministic normalization because it is local and easy is a likely engineering failure mode here. [ASSUMED] | Common Pitfalls | Low; it affects planning emphasis, not runtime behavior. |
 | A3 | Route/render regressions from normalization-only changes are more likely to come from edit sprawl than from the existing contracts themselves. [ASSUMED] | Common Pitfalls | Medium; if false, the plan may under-scope route checks. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Phase 97 explicitly update both ATS and job-targeting regression fixtures, or only ATS fixtures plus one shared smoke test?**
-   What we know: `generateCvHighlightState()` is called by both ATS and job-targeting pipelines. [VERIFIED: codebase grep]
-   What's unclear: The context names ATS seams most strongly, but the detector/artifact modules are shared. [VERIFIED: 97-CONTEXT.md]
-   Recommendation: Plan ATS-focused fixture expansion plus one job-targeting pipeline regression so the shared seam stays proven without broadening scope unnecessarily. [VERIFIED: src/lib/agent/tools/pipeline.test.ts]
+   Resolution: ATS-focused fixture expansion plus one mandatory shared job-targeting pipeline regression is the required proof shape, because `generateCvHighlightState()` is shared across both flows and the phase scope explicitly allows one shared seam regression without broadening the architecture surface.
 
 2. **Should short, compact measurable bullets now be allowed to highlight the full bullet more often?**
-   What we know: The context explicitly permits whole-bullet highlights for short complete semantic bullets, and the current artifact already allows full-bullet experience highlights only when the bullet is compact and measurable. [VERIFIED: 97-CONTEXT.md] [VERIFIED: src/lib/resume/cv-highlight-artifact.ts]
-   What's unclear: The exact threshold for "short complete semantic bullets" may need one or two concrete fixture examples before changing helper logic. [VERIFIED: src/lib/resume/cv-highlight-artifact.ts]
-   Recommendation: Add fixture-led proof first, then make the full-bullet vs nucleus rule explicit in code only if the existing `isCompactMeasurableExperienceHighlight()` logic is insufficient. [VERIFIED: 97-CONTEXT.md] [VERIFIED: src/lib/resume/cv-highlight-artifact.ts]
+   Resolution: No broad allowance is added up front. The current compact measurable whole-bullet rule remains the baseline, and any further change must be introduced only if fixture-led prompt-first validation proves the existing helper is still insufficient for the accepted short semantic-unit cases.
 
 ## Environment Availability
 

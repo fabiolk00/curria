@@ -69,6 +69,11 @@ const HIGHLIGHT_COORDINATED_CONTINUATION_PATTERN = /^(?:and|e)\s+(?:with|for|in|
 const HIGHLIGHT_DIRECT_CLOSURE_PREPOSITION_PATTERN = /^(?:during|in|on|to|com|para|em|no|na|nos|nas|durante|ao|aos|a|à|as|às)\b/i
 const HIGHLIGHT_SEMANTIC_DESCRIPTOR_HINT_PATTERN = /\b(?:focused|specialized|oriented|dedicated|responsible|experienced|especializado|focado|orientado|dedicado|responsavel|responsável|experiente)\b/i
 
+const HIGHLIGHT_WEAK_LEAD_VERB_PATTERN = /^(?:realizei|desenvolvi|auxiliei|trabalhei|atuei|fiz|fui|participei|otimizei|built|developed|worked|acted|created|implemented)\b/i
+const HIGHLIGHT_EDITORIAL_REENTRY_PATTERN = /^(?:reducing|reduced|increasing|increased|improving|improved|generating|generated|driving|delivering|delivered|reduzindo|aumentando|melhorando|gerando|conduzindo|mais de \d+|more than \d+|zero downtime|migracao de|migration of)\b/i
+const HIGHLIGHT_EDITORIAL_REENTRY_SEARCH_PATTERN = /(?<!\p{L})(?<!\p{N})(?:reducing|reduced|increasing|increased|improving|improved|generating|generated|driving|delivering|delivered|reduzindo|aumentando|melhorando|gerando|conduzindo|mais de \d+|more than \d+|zero downtime|migracao de|migration of)(?!\p{L})(?!\p{N})/iu
+const HIGHLIGHT_REENTRY_BOUNDARY_CHARS = new Set([',', ';', ':', '-', 'â€“', 'â€”'])
+
 export type CvHighlightInputItem = {
   itemId: string
   section: 'summary' | 'experience'
@@ -367,6 +372,14 @@ function normalizeLeadingContinuationText(value: string): string {
   }
 
   return value.slice(cursor).trim()
+}
+
+function startsWithWeakLeadVerb(value: string): boolean {
+  return HIGHLIGHT_WEAK_LEAD_VERB_PATTERN.test(value.trim())
+}
+
+function startsWithPrepositionOrConjunction(value: string): boolean {
+  return /^(?:and|or|but|e|ou|mas|para|com|de|do|da|dos|das|em|no|na|nos|nas|ao|aos|a|Ã )\b/i.test(value.trim())
 }
 
 function hasActionOrMetricLead(value: string): boolean {
@@ -924,6 +937,275 @@ function shouldMergeAcrossIgnorableGap(
     && mergedText.length <= HIGHLIGHT_MAX_BOUNDARY_REFINEMENT_CHARS * 2
 }
 
+function hasMetricWithContext(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return false
+  }
+
+  return /\bby\s+\d+(?:[.,]\d+)?%/iu.test(trimmed)
+    || /\bem\s+ate\s+\d+(?:[.,]\d+)?%/iu.test(trimmed)
+    || /\d+(?:[.,]\d+)?%\s+\S+/u.test(trimmed)
+    || /\b(?:mais de|more than)\s+\d+\s+\S+/i.test(trimmed)
+}
+
+function endsWithDanglingMetric(value: string): boolean {
+  return /\d+(?:[.,]\d+)?%?\.?$/u.test(value.trim())
+}
+
+function buildCompactClosureCandidate(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  let continuationStart = range.end
+  while (continuationStart < text.length && isWhitespaceLike(text[continuationStart])) {
+    continuationStart += 1
+  }
+
+  if (continuationStart >= text.length) {
+    return null
+  }
+
+  const continuationText = text.slice(continuationStart)
+  const compactClosureMatch = continuationText.match(
+    /^(?:by\s+\d+(?:[.,]\d+)?%|with\s+zero downtime|for\s+\d+\s+\p{L}+(?:\s+\p{L}+){0,1})/iu,
+  )
+  if (!compactClosureMatch) {
+    return null
+  }
+
+  return {
+    start: range.start,
+    end: continuationStart + compactClosureMatch[0].length,
+    reason: range.reason,
+  }
+}
+
+export function buildSeparatorTrimLeftCandidate(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  const fragment = text.slice(range.start, range.end)
+  if (!startsWithWeakLeadVerb(fragment)) {
+    return null
+  }
+
+  for (let cursor = range.start + 1; cursor < range.end; cursor += 1) {
+    if (isWordLikeChar(text[cursor - 1]) || !isWordLikeChar(text[cursor])) {
+      continue
+    }
+
+    let boundaryCursor = cursor - 1
+    while (boundaryCursor >= range.start && isWhitespaceLike(text[boundaryCursor])) {
+      boundaryCursor -= 1
+    }
+
+    if (boundaryCursor < range.start || !HIGHLIGHT_REENTRY_BOUNDARY_CHARS.has(text[boundaryCursor]!)) {
+      continue
+    }
+
+    const candidateText = text.slice(cursor, range.end).trim()
+    if (
+      candidateText.length < 15
+      || startsWithPrepositionOrConjunction(candidateText)
+      || !HIGHLIGHT_EDITORIAL_REENTRY_PATTERN.test(candidateText)
+    ) {
+      continue
+    }
+
+    const wordsBeforeReentry = countHighlightWords(text.slice(range.start, cursor))
+    if (wordsBeforeReentry <= 2) {
+      return null
+    }
+
+    return {
+      start: cursor,
+      end: range.end,
+      reason: range.reason,
+    }
+  }
+
+  return null
+}
+
+export function buildPatternTrimLeftCandidate(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  const fragment = text.slice(range.start, range.end)
+  if (!startsWithWeakLeadVerb(fragment)) {
+    return null
+  }
+
+  const searchOffset = fragment.slice(1).search(HIGHLIGHT_EDITORIAL_REENTRY_SEARCH_PATTERN)
+  if (searchOffset === -1) {
+    return null
+  }
+
+  const candidateStart = range.start + 1 + searchOffset
+  if (candidateStart <= range.start || candidateStart >= range.end) {
+    return null
+  }
+
+  // Guard: belt-and-suspenders for Unicode boundary. The pattern already uses
+  // Unicode-aware lookbehind/lookahead, but this check catches any edge case where
+  // the regex engine and the isWordLikeChar definition diverge.
+  const prevChar = candidateStart > 0 ? text[candidateStart - 1] : undefined
+  if (prevChar !== undefined && isWordLikeChar(prevChar)) {
+    return null
+  }
+
+  const wordsBeforeReentry = countHighlightWords(text.slice(range.start, candidateStart))
+  if (wordsBeforeReentry <= 2) {
+    return null
+  }
+
+  const candidateText = text.slice(candidateStart, range.end).trim()
+  if (
+    candidateText.length >= fragment.trim().length
+    || !hasMeaningfulHighlightContent(candidateText)
+  ) {
+    return null
+  }
+
+  return {
+    start: candidateStart,
+    end: range.end,
+    reason: range.reason,
+  }
+}
+
+export function buildTrimLeftCandidate(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  const fragment = text.slice(range.start, range.end)
+  if (!startsWithWeakLeadVerb(fragment)) {
+    return null
+  }
+
+  const separatorCandidate = buildSeparatorTrimLeftCandidate(text, range)
+  if (separatorCandidate) {
+    return separatorCandidate
+  }
+
+  return buildPatternTrimLeftCandidate(text, range)
+}
+
+function refineCandidateRange(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  let nextRange = normalizeRangeToWordBoundaries(text, range)
+  nextRange = expandRangeRightForPhraseClosure(text, nextRange)
+  nextRange = normalizeRangeToWordBoundaries(text, nextRange)
+
+  const trimmedBounds = trimHighlightEdgeNoiseBounds(text, nextRange.start, nextRange.end)
+  if (!trimmedBounds) {
+    return null
+  }
+
+  return {
+    start: trimmedBounds.start,
+    end: trimmedBounds.end,
+    reason: nextRange.reason,
+  }
+}
+
+function normalizeCandidateBoundsOnly(
+  text: string,
+  range: CvHighlightRange,
+): CvHighlightRange | null {
+  const nextRange = normalizeRangeToWordBoundaries(text, range)
+  const trimmedBounds = trimHighlightEdgeNoiseBounds(text, nextRange.start, nextRange.end)
+  if (!trimmedBounds) {
+    return null
+  }
+
+  return {
+    start: trimmedBounds.start,
+    end: trimmedBounds.end,
+    reason: nextRange.reason,
+  }
+}
+
+export function scoreHighlightCandidatePromotion(
+  text: string,
+  currentRange: CvHighlightRange,
+  candidateRange: CvHighlightRange,
+): number {
+  const currentText = text.slice(currentRange.start, currentRange.end).trim()
+  const candidateText = text.slice(candidateRange.start, candidateRange.end).trim()
+  if (!candidateText || candidateText === currentText) {
+    return 0
+  }
+
+  let score = 0
+
+  if (startsWithWeakLeadVerb(currentText) && !startsWithWeakLeadVerb(candidateText)) {
+    score += 2
+  }
+
+  if (!hasMetricWithContext(currentText) && hasMetricWithContext(candidateText)) {
+    score += 3
+  }
+
+  if (endsWithDanglingMetric(currentText) && !endsWithDanglingMetric(candidateText)) {
+    score += 3
+  }
+
+  if (candidateText.length < currentText.length) {
+    score += 1
+  }
+
+  if (isEditoriallyAcceptableHighlightRange(text, candidateRange, 'experience')) {
+    score += 1
+  }
+
+  return score
+}
+
+export function shouldPromoteHighlightCandidate(
+  text: string,
+  currentRange: CvHighlightRange,
+  candidateRange: CvHighlightRange,
+): boolean {
+  return scoreHighlightCandidatePromotion(text, currentRange, candidateRange) >= 3
+}
+
+function choosePreferredHighlightCandidate(
+  text: string,
+  baseRange: CvHighlightRange,
+): CvHighlightRange {
+  let preferredRange = baseRange
+
+  const compactClosureCandidate = buildCompactClosureCandidate(text, baseRange)
+  if (compactClosureCandidate) {
+    const refinedClosureCandidate = normalizeCandidateBoundsOnly(text, compactClosureCandidate)
+    if (
+      refinedClosureCandidate
+      && !hasMetricWithContext(text.slice(preferredRange.start, preferredRange.end))
+      && (
+        hasMetricWithContext(text.slice(refinedClosureCandidate.start, refinedClosureCandidate.end))
+        || text.slice(refinedClosureCandidate.start, refinedClosureCandidate.end).includes('zero downtime')
+        || /\bfor\s+\d+\b/i.test(text.slice(refinedClosureCandidate.start, refinedClosureCandidate.end))
+      )
+    ) {
+      preferredRange = refinedClosureCandidate
+    }
+  }
+
+  const trimLeftCandidate = buildTrimLeftCandidate(text, baseRange)
+  if (trimLeftCandidate) {
+    const refinedTrimCandidate = refineCandidateRange(text, trimLeftCandidate)
+    if (refinedTrimCandidate && shouldPromoteHighlightCandidate(text, preferredRange, refinedTrimCandidate)) {
+      preferredRange = refinedTrimCandidate
+    }
+  }
+
+  return preferredRange
+}
+
 export function normalizeHighlightSpanBoundaries(
   text: string,
   range: CvHighlightRange,
@@ -956,6 +1238,7 @@ export function normalizeHighlightSpanBoundaries(
   normalizedRange = normalizeRangeToWordBoundaries(text, normalizedRange)
   normalizedRange = expandRangeLeftForCurrencyPrefix(text, normalizedRange)
   normalizedRange = expandRangeAcrossInlineCompositeTerms(text, normalizedRange)
+  normalizedRange = choosePreferredHighlightCandidate(text, normalizedRange)
 
   if (text.includes(HIGHLIGHT_STACK_SEPARATOR_CHAR)) {
     const constrainedRange = constrainRangeToPipeSegment(text, normalizedRange)
@@ -1038,6 +1321,18 @@ function isCompactMeasurableExperienceHighlight(text: string): boolean {
   return /\d/.test(text) && /\b(reduced|increased|improved|grew|cut|saved|boosted|generated|delivered|optimized|accelerated|elevated|expanded|aumentei|reduzi|elevei|melhorei|otimizei|ampliei|gerei|entreguei|acelerei|expandi)\b/i.test(text)
 }
 
+function matchesWholeBulletIntent(
+  text: string,
+  range: CvHighlightRange,
+): boolean {
+  const trimmedBounds = trimHighlightEdgeNoiseBounds(text, 0, text.length)
+  if (!trimmedBounds) {
+    return false
+  }
+
+  return range.start === trimmedBounds.start && range.end === trimmedBounds.end
+}
+
 export function isEditoriallyAcceptableHighlightRange(
   text: string,
   range: CvHighlightRange,
@@ -1054,8 +1349,7 @@ export function isEditoriallyAcceptableHighlightRange(
     return true
   }
 
-  return range.start === 0
-    && range.end === text.length
+  return matchesWholeBulletIntent(text, range)
     && isCompactMeasurableExperienceHighlight(text)
 }
 

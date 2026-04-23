@@ -1,3 +1,14 @@
+// Full test gate for this module and its Phase 97 hardening:
+//
+// npx vitest run \
+//   src/lib/agent/tools/detect-cv-highlights.test.ts \
+//   src/lib/resume/cv-highlight-artifact.test.ts \
+//   src/lib/agent/tools/pipeline.test.ts \
+//   src/lib/routes/session-comparison/decision.test.ts \
+//   src/components/resume/resume-comparison-view.test.tsx
+//
+// All five files must be included. Running a subset masks cross-file regressions.
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Session } from '@/types/agent'
@@ -6,6 +17,8 @@ import type { CVState } from '@/types/cv'
 import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
 import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
+import { createExperienceBulletHighlightItemId } from '@/lib/resume/cv-highlight-artifact'
+import { resetOpenAICircuitBreakerForTest } from '@/lib/openai/chat'
 
 const {
   mockAnalyzeAtsGeneral,
@@ -18,6 +31,8 @@ const {
   mockLogInfo,
   mockLogWarn,
   mockLogError,
+  createCompletion,
+  mockRecordMetricCounter,
 } = vi.hoisted(() => ({
   mockAnalyzeAtsGeneral: vi.fn(),
   mockAnalyzeGap: vi.fn(),
@@ -29,6 +44,8 @@ const {
   mockLogInfo: vi.fn(),
   mockLogWarn: vi.fn(),
   mockLogError: vi.fn(),
+  createCompletion: vi.fn(),
+  mockRecordMetricCounter: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/tools/ats-analysis', () => ({
@@ -57,6 +74,24 @@ vi.mock('@/lib/db/sessions', () => ({
 
 vi.mock('@/lib/agent/tools/detect-cv-highlights', () => ({
   generateCvHighlightState: mockGenerateCvHighlightState,
+}))
+
+vi.mock('@/lib/openai/client', () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: createCompletion,
+      },
+    },
+  },
+}))
+
+vi.mock('@/lib/agent/usage-tracker', () => ({
+  trackApiUsage: vi.fn(() => Promise.resolve(undefined)),
+}))
+
+vi.mock('@/lib/observability/metric-events', () => ({
+  recordMetricCounter: mockRecordMetricCounter,
 }))
 
 vi.mock('@/lib/observability/structured-log', () => ({
@@ -179,9 +214,20 @@ function buildHighlightDetectionOutcome(overrides: Partial<{
   }
 }
 
+function buildOpenAIResponse(text: string) {
+  return {
+    choices: [{ message: { content: text } }],
+    usage: {
+      prompt_tokens: 10,
+      completion_tokens: 20,
+    },
+  }
+}
+
 describe('ATS enhancement reliability hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetOpenAICircuitBreakerForTest()
     mockUpdateSession.mockResolvedValue(undefined)
     mockCreateCvVersion.mockResolvedValue(undefined)
     mockGenerateCvHighlightState.mockImplementation(async (_cvState, context) => {
@@ -1369,6 +1415,25 @@ describe('ATS enhancement reliability hardening', () => {
         summary: 'Analytics engineer com foco em SQL, Power BI e automacao orientada a negocio.',
       }, section),
     }))
+    mockGenerateCvHighlightState.mockImplementation(async (_cvState, context) => {
+      context?.onCompleted?.(buildHighlightDetectionOutcome({
+        resultKind: 'valid_non_empty',
+        rawModelItemCount: 1,
+        rawModelRangeCount: 1,
+        validatedItemCount: 1,
+        validatedRangeCount: 1,
+      }))
+      return {
+        source: 'rewritten_cv_state',
+        version: 2,
+        generatedAt: '2026-04-23T12:00:00.000Z',
+        resolvedHighlights: [{
+          itemId: 'summary_0',
+          section: 'summary',
+          ranges: [{ start: 0, end: 29, reason: 'ats_strength' }],
+        }],
+      }
+    })
 
     const result = await runJobTargetingPipeline(session)
 
@@ -1379,14 +1444,161 @@ describe('ATS enhancement reliability hardening', () => {
       targetRoleConfidence: expect.any(String),
     })
     expect(session.agentState.lastRewriteMode).toBe('job_targeting')
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledTimes(1)
+    expect(session.agentState.highlightState).toEqual({
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-23T12:00:00.000Z',
+      resolvedHighlights: [{
+        itemId: 'summary_0',
+        section: 'summary',
+        ranges: [{ start: 0, end: 29, reason: 'ats_strength' }],
+      }],
+    })
     expect(mockCreateCvVersion).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: session.id,
       source: 'job-targeting',
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'job_targeting',
+      highlightStatePersistedReason: 'generated',
+      highlightStateResultKind: 'valid_non_empty',
+      highlightStateResolvedItemCount: 1,
+      highlightStateResolvedRangeCount: 1,
     }))
     expect(mockLogInfo).toHaveBeenCalledWith('agent.job_targeting.completed', expect.objectContaining({
       workflowMode: 'job_targeting',
       success: true,
     }))
+  })
+
+  describe('job_targeting highlight seam isolation', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      resetOpenAICircuitBreakerForTest()
+    })
+
+    it('job_targeting: editorial correction propagates through real resolver', async () => {
+      const session = buildSession()
+      session.agentState.workflowMode = 'job_targeting'
+      session.agentState.targetJobDescription = [
+        'Cargo: Analytics Engineer',
+        'Responsabilidades: otimizar pipelines e dashboards.',
+        'Requisitos: SQL, Power BI, Databricks.',
+      ].join('\n')
+      session.agentState.rewriteStatus = 'pending'
+      session.agentState.optimizedCvState = undefined
+
+      const bulletText = 'Otimizei fluxos internos reduzindo em 40%'
+      const rewrittenExperience = {
+        title: 'Senior BI Engineer',
+        company: 'ACME',
+        startDate: '2022',
+        endDate: 'present',
+        bullets: [bulletText],
+      }
+      const expectedItemId = createExperienceBulletHighlightItemId(
+        rewrittenExperience,
+        rewrittenExperience.bullets[0],
+      )
+
+      mockUpdateSession.mockResolvedValue(undefined)
+      mockCreateCvVersion.mockResolvedValue(undefined)
+      mockValidateRewrite.mockReturnValue({ valid: true, issues: [] })
+      mockAnalyzeGap.mockResolvedValue({
+        output: {
+          success: true,
+          result: {
+            matchScore: 68,
+            missingSkills: ['Databricks'],
+            weakAreas: ['experience'],
+            improvementSuggestions: ['Aproxime os bullets de impacto.'],
+          },
+        },
+        result: {
+          matchScore: 68,
+          missingSkills: ['Databricks'],
+          weakAreas: ['experience'],
+          improvementSuggestions: ['Aproxime os bullets de impacto.'],
+        },
+      })
+
+      mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => {
+        if (section === 'summary') {
+          return {
+            output: {
+              success: true,
+              rewritten_content: 'Analytics engineer com foco em SQL, Power BI e eficiencia operacional.',
+              section_data: 'Analytics engineer com foco em SQL, Power BI e eficiencia operacional.',
+              keywords_added: ['SQL', 'Power BI'],
+              changes_made: ['Resumo targetizado'],
+            },
+          }
+        }
+
+        if (section === 'experience') {
+          return {
+            output: {
+              success: true,
+              rewritten_content: 'Experiencia reestruturada.',
+              section_data: [rewrittenExperience],
+              keywords_added: ['Databricks'],
+              changes_made: ['Bullets alinhados a impacto'],
+            },
+          }
+        }
+
+        return {
+          output: buildSuccessfulRewriteOutput(buildCvState(), section),
+        }
+      })
+
+      createCompletion.mockImplementationOnce(async () => buildOpenAIResponse(JSON.stringify({
+        items: [
+          {
+            itemId: expectedItemId,
+            ranges: [{
+              start: 0,
+              end: bulletText.indexOf('40%') + 3,
+              reason: 'metric_impact',
+            }],
+          },
+        ],
+      })))
+
+      mockGenerateCvHighlightState.mockImplementationOnce(async (cvState, context) => {
+        const actual = await vi.importActual<typeof import('@/lib/agent/tools/detect-cv-highlights')>('@/lib/agent/tools/detect-cv-highlights')
+        if (typeof actual.generateCvHighlightState !== 'function') {
+          throw new Error(
+            '[pipeline.test] vi.importActual did not return generateCvHighlightState as a function. '
+            + 'The module path or export name may have changed. Update the import path in this mock.',
+          )
+        }
+        return actual.generateCvHighlightState(cvState, context)
+      })
+
+      const result = await runJobTargetingPipeline(session)
+
+      expect(result.success).toBe(true)
+      expect(createCompletion).toHaveBeenCalledTimes(1)
+
+      const resolvedRanges = session.agentState.highlightState?.resolvedHighlights
+        .find((highlight) => highlight.itemId === expectedItemId)?.ranges ?? []
+
+      expect(resolvedRanges.length).toBeGreaterThan(0)
+
+      const correctedRange = resolvedRanges[0]!
+      expect(bulletText.slice(correctedRange.start, correctedRange.end)).toContain('reduzindo')
+      expect(correctedRange.start).toBeGreaterThan(0)
+
+      expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+        workflowMode: 'job_targeting',
+        highlightStatePersistedReason: 'generated',
+        highlightStateResultKind: 'valid_non_empty',
+        highlightStateResolvedItemCount: 1,
+        highlightStateResolvedRangeCount: 1,
+      }))
+    })
   })
 
   it('skips highlight generation for unchanged job_targeting rewrites and logs the unchanged-state reason', async () => {

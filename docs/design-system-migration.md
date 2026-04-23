@@ -34,7 +34,7 @@ CurrIA is migrating its public and authenticated UI to the imported Figma design
 | Experience | Current Route | Status | Notes |
 |-----------|---------------|--------|-------|
 | Landing page | `/` | In progress | Core sections migrated; final parity pass still open |
-| ATS guide | `/what-is-ats` | Complete | Public route using imported design language |
+| ATS guide | `/o-que-e-ats` | Complete | Public route using imported design language |
 | Dashboard workspace | `/dashboard` | In progress | Real product logic preserved; visual parity still ongoing |
 | Resume library | `/dashboard/resumes` | Complete | Figma-style route restored |
 | Resume library alias | `/resumes` | Complete | Redirects to `/dashboard/resumes` |

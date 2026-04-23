@@ -62,7 +62,7 @@ export default function AuthShell({
         </div>
       </section>
 
-      <section className="flex flex-1 items-start justify-center bg-muted/30 px-6 py-8 lg:w-1/2 lg:px-12 lg:py-14">
+      <section className="flex flex-1 items-center justify-center bg-muted/30 px-6 py-8 lg:w-1/2 lg:px-12 lg:py-14">
         <div className="w-full max-w-lg rounded-xl border border-border/50 bg-card shadow-xl">
           <div className="p-8">
             <div className="mb-8 flex items-center justify-center">
