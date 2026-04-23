@@ -458,7 +458,7 @@ describe('cv highlight artifact helpers', () => {
   })
 
   it('keeps phrase closure compact through validateAndResolveHighlights on long bullets', () => {
-    const text = 'Atuei no suporte operacional da loja ao longo da semana, reforÃ§ando o atendimento ao cliente, contribuindo para uma experiÃªncia de compra mais Ã¡gil e organizada, enquanto apoiava inventÃ¡rios, alinhamentos internos e rotinas administrativas do fechamento semanal.'
+    const text = 'Atuei no suporte operacional da loja ao longo da semana, reforçando o atendimento ao cliente, contribuindo para uma experiência de compra mais ágil e organizada, enquanto apoiava inventários, alinhamentos internos e rotinas administrativas do fechamento semanal.'
     const items = [{
       itemId: 'exp_phrase_closure_long',
       section: 'experience' as const,
@@ -467,14 +467,14 @@ describe('cv highlight artifact helpers', () => {
 
     expect(validateAndResolveHighlights(items, [{
       itemId: 'exp_phrase_closure_long',
-      ranges: [buildRange(text, 'reforÃ§ando o atendimento ao cliente')],
+      ranges: [buildRange(text, 'reforçando o atendimento ao cliente')],
     }])).toEqual([{
       itemId: 'exp_phrase_closure_long',
       section: 'experience',
       ranges: [
         buildRange(
           text,
-          'reforÃ§ando o atendimento ao cliente, contribuindo para uma experiÃªncia de compra mais Ã¡gil e organizada',
+          'reforçando o atendimento ao cliente, contribuindo para uma experiência de compra mais ágil e organizada',
         ),
       ],
     }])
@@ -587,5 +587,44 @@ describe('cv highlight artifact helpers', () => {
 
     expect(range).not.toBeNull()
     expect(text.slice(range!.start, range!.end)).toBe('Mantive a organização do estoque')
+  })
+
+  it('extends a compact semantic complement closure without metric lead', () => {
+    const text = 'Focused on Business Intelligence for the Intelbras project.'
+    const range = normalizeHighlightSpanBoundaries(
+      text,
+      buildRange(text, 'Focused on Business Intelligence'),
+    )
+
+    expect(range).not.toBeNull()
+    expect(text.slice(range!.start, range!.end)).toBe(
+      'Focused on Business Intelligence for the Intelbras project',
+    )
+  })
+
+  it('extends a focused semantic closure with technical noun phrase continuation', () => {
+    const text = 'Built BI solutions with focus on SQL, Data Modeling and Data Architecture.'
+    const range = normalizeHighlightSpanBoundaries(
+      text,
+      buildRange(text, 'Built BI solutions with focus on SQL'),
+    )
+
+    expect(range).not.toBeNull()
+    expect(text.slice(range!.start, range!.end)).toBe(
+      'Built BI solutions with focus on SQL, Data Modeling and Data Architecture',
+    )
+  })
+
+  it('extends a compact Portuguese semantic closure without metric lead', () => {
+    const text = 'Atuei com foco em Business Intelligence para o projeto Intelbras.'
+    const range = normalizeHighlightSpanBoundaries(
+      text,
+      buildRange(text, 'Atuei com foco em Business Intelligence'),
+    )
+
+    expect(range).not.toBeNull()
+    expect(text.slice(range!.start, range!.end)).toBe(
+      'Atuei com foco em Business Intelligence para o projeto Intelbras',
+    )
   })
 })
