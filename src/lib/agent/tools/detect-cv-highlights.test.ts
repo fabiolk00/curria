@@ -7,8 +7,9 @@ import {
 } from '@/lib/resume/cv-highlight-artifact'
 import type { CVState } from '@/types/cv'
 
-const { createCompletion, mockLogWarn, mockRecordMetricCounter } = vi.hoisted(() => ({
+const { createCompletion, mockLogInfo, mockLogWarn, mockRecordMetricCounter } = vi.hoisted(() => ({
   createCompletion: vi.fn(),
+  mockLogInfo: vi.fn(),
   mockLogWarn: vi.fn(),
   mockRecordMetricCounter: vi.fn(),
 }))
@@ -28,6 +29,7 @@ vi.mock('@/lib/agent/usage-tracker', () => ({
 }))
 
 vi.mock('@/lib/observability/structured-log', () => ({
+  logInfo: mockLogInfo,
   logWarn: mockLogWarn,
 }))
 
@@ -91,6 +93,10 @@ describe('detectCvHighlights', () => {
     expect(JSON.parse(createCompletion.mock.calls[0][0].messages[1].content as string)).toEqual({
       items,
     })
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.started', expect.objectContaining({
+      itemCount: items.length,
+      stage: 'highlight_detection',
+    }))
   })
 
   it('drops invalid item ids and invalid ranges without throwing', async () => {
@@ -150,6 +156,12 @@ describe('detectCvHighlights', () => {
         parseFailureReason: 'invalid_json',
       }),
     )
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'invalid_payload',
+      parseFailureReason: 'invalid_json',
+      rawModelRangeCount: 0,
+      validatedRangeCount: 0,
+    }))
   })
 
   it('warns and records a metric for invalid payload shapes while failing closed', async () => {
@@ -253,7 +265,11 @@ describe('detectCvHighlights', () => {
     ])
 
     expect(mockLogWarn).not.toHaveBeenCalled()
-    expect(mockRecordMetricCounter).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'valid_non_empty',
+      rawModelRangeCount: 1,
+      validatedRangeCount: 1,
+    }))
   })
 
   it('preserves valid enum reasons unchanged', async () => {
@@ -304,6 +320,10 @@ describe('detectCvHighlights', () => {
       parseFailureReason: 'invalid_shape_ranges',
       payloadShapeDetails: expect.stringContaining('"reasonValue":"custom_reason"'),
     }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'invalid_payload',
+      parseFailureReason: 'invalid_shape_ranges',
+    }))
   })
 
   it('treats a valid empty payload as a normal no-highlight result without warning', async () => {
@@ -312,7 +332,44 @@ describe('detectCvHighlights', () => {
     await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).resolves.toEqual([])
 
     expect(mockLogWarn).not.toHaveBeenCalled()
-    expect(mockRecordMetricCounter).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'valid_empty',
+      rawModelItemCount: 0,
+      rawModelRangeCount: 0,
+      validatedItemCount: 0,
+      validatedRangeCount: 0,
+    }))
+  })
+
+  it('distinguishes model candidates that are fully filtered out after validation', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      items: [
+        {
+          itemId: 'missing_item',
+          ranges: [{ start: 0, end: 12, reason: 'ats_strength' }],
+        },
+      ],
+    })))
+
+    await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).resolves.toEqual([])
+
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'all_filtered_out',
+      rawModelItemCount: 1,
+      rawModelRangeCount: 1,
+      validatedItemCount: 0,
+      validatedRangeCount: 0,
+    }))
+  })
+
+  it('classifies empty detector invocation as not_invoked', async () => {
+    await expect(detectCvHighlights([])).resolves.toEqual([])
+
+    expect(createCompletion).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'not_invoked',
+      itemCount: 0,
+    }))
   })
 
   it('surfaces thrown detection errors separately from invalid-payload handling', async () => {
@@ -321,6 +378,9 @@ describe('detectCvHighlights', () => {
     await expect(detectCvHighlights(flattenCvStateForHighlight(buildCvState()))).rejects.toThrow('model offline')
 
     expect(mockLogWarn).not.toHaveBeenCalled()
-    expect(mockRecordMetricCounter).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.completed', expect.objectContaining({
+      resultKind: 'thrown_error',
+      errorMessage: 'model offline',
+    }))
   })
 })

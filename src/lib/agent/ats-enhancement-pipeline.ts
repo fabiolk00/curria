@@ -1,5 +1,9 @@
 import { executeWithStageRetry } from '@/lib/agent/ats-enhancement-retry'
-import { generateCvHighlightState } from '@/lib/agent/tools/detect-cv-highlights'
+import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
+import {
+  generateCvHighlightState,
+  type HighlightDetectionOutcome,
+} from '@/lib/agent/tools/detect-cv-highlights'
 import { createCvVersion } from '@/lib/db/cv-versions'
 import { updateSession } from '@/lib/db/sessions'
 import { analyzeAtsGeneral } from '@/lib/agent/tools/ats-analysis'
@@ -34,6 +38,36 @@ async function persistAgentState(session: Session, agentState: Session['agentSta
     agentState,
   })
   session.agentState = agentState
+}
+
+function logHighlightStatePersistence(params: {
+  session: Session
+  highlightState: Session['agentState']['highlightState']
+  highlightDetectionInvoked: boolean
+  highlightStateGenerated: boolean
+  highlightStatePersisted: boolean
+  highlightStatePersistedReason: string
+  highlightDetectionOutcome?: HighlightDetectionOutcome
+}): void {
+  const summary = summarizeHighlightState(params.highlightState)
+
+  logInfo('agent.highlight_state.persisted', {
+    workflowMode: 'ats_enhancement',
+    sessionId: params.session.id,
+    userId: params.session.userId,
+    stage: 'highlight_persistence',
+    highlightDetectionInvoked: params.highlightDetectionInvoked,
+    highlightStateGenerated: params.highlightStateGenerated,
+    highlightStatePersisted: params.highlightStatePersisted,
+    highlightStatePersistedReason: params.highlightStatePersistedReason,
+    highlightStateResultKind: params.highlightDetectionOutcome?.resultKind,
+    highlightStateResolvedItemCount: summary.highlightStateResolvedItemCount,
+    highlightStateResolvedRangeCount: summary.highlightStateResolvedRangeCount,
+    rawModelItemCount: params.highlightDetectionOutcome?.rawModelItemCount,
+    rawModelRangeCount: params.highlightDetectionOutcome?.rawModelRangeCount,
+    validatedItemCount: params.highlightDetectionOutcome?.validatedItemCount,
+    validatedRangeCount: params.highlightDetectionOutcome?.validatedRangeCount,
+  })
 }
 
 function uniqueSections(
@@ -476,12 +510,16 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
 
   const shouldGenerateHighlights = finalValidation.valid && !cvStatesMatch(finalOptimizedCvState, session.cvState)
   let nextHighlightState = shouldGenerateHighlights ? previousHighlightState : undefined
+  let highlightDetectionOutcome: HighlightDetectionOutcome | undefined
   if (shouldGenerateHighlights) {
     try {
       nextHighlightState = await generateCvHighlightState(finalOptimizedCvState, {
         userId: session.userId,
         sessionId: session.id,
         workflowMode: 'ats_enhancement',
+        onCompleted: (outcome) => {
+          highlightDetectionOutcome = outcome
+        },
       })
     } catch (error) {
       nextHighlightState = undefined
@@ -549,6 +587,31 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
   }
 
   await persistAgentState(session, nextAgentState)
+  const highlightStatePersistedReason = !finalValidation.valid
+    ? 'validation_failed'
+    : !shouldGenerateHighlights
+      ? validationRecoveryKind === 'original_cv_fallback'
+        ? 'not_generated_for_original_fallback'
+        : 'not_generated_for_unchanged_cv_state'
+      : highlightDetectionOutcome?.resultKind === 'valid_empty'
+        ? 'empty_valid_result'
+        : highlightDetectionOutcome?.resultKind === 'all_filtered_out'
+          ? 'all_filtered_out'
+          : highlightDetectionOutcome?.resultKind === 'invalid_payload'
+            ? 'invalid_payload'
+            : highlightDetectionOutcome?.resultKind === 'thrown_error'
+              ? 'thrown_error'
+              : 'generated'
+
+  logHighlightStatePersistence({
+    session,
+    highlightState: nextAgentState.highlightState,
+    highlightDetectionInvoked: shouldGenerateHighlights,
+    highlightStateGenerated: shouldGenerateHighlights && Boolean(nextHighlightState),
+    highlightStatePersisted: Boolean(nextAgentState.highlightState),
+    highlightStatePersistedReason,
+    highlightDetectionOutcome,
+  })
 
   if (!finalValidation.valid) {
     logWarn('agent.ats_enhancement.validation_failed', {
@@ -620,6 +683,15 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
       }),
     }
     await persistAgentState(session, failedAgentState)
+    logHighlightStatePersistence({
+      session,
+      highlightState: failedAgentState.highlightState,
+      highlightDetectionInvoked: shouldGenerateHighlights,
+      highlightStateGenerated: false,
+      highlightStatePersisted: Boolean(failedAgentState.highlightState),
+      highlightStatePersistedReason: 'persist_version_rollback',
+      highlightDetectionOutcome,
+    })
     logError('agent.ats_enhancement.failed', {
       workflowMode: 'ats_enhancement',
       sessionId: session.id,

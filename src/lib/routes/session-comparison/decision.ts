@@ -1,8 +1,10 @@
 import { scoreATS } from '@/lib/ats/score'
+import { buildHighlightStateResponseOutcome } from '@/lib/agent/highlight-observability'
 import {
   resolveSessionAtsReadiness,
 } from '@/lib/ats/scoring'
 import { recordMetricCounter } from '@/lib/observability/metric-events'
+import { logInfo } from '@/lib/observability/structured-log'
 import {
   isLockedPreview,
   getPreviewLockSummary,
@@ -73,6 +75,30 @@ export async function decideSessionComparison(
       })
     }
 
+    const previewLocked = isLockedPreview(context.session.generatedOutput)
+    const highlightStateResponse = buildHighlightStateResponseOutcome({
+      previewLocked,
+      highlightState: context.session.agentState.highlightState,
+      optimizedCvState,
+    })
+
+    logInfo('agent.highlight_state.response_evaluated', {
+      sessionId: context.session.id,
+      userId: context.session.userId,
+      workflowMode: context.session.agentState.workflowMode,
+      surface: 'session_comparison',
+      previewLocked,
+      highlightStateResponseKind: highlightStateResponse.highlightStateResponseKind,
+      highlightStateAvailable: highlightStateResponse.highlightStateAvailable,
+      highlightStateReturned: highlightStateResponse.highlightStateReturned,
+      highlightStateOmittedReason: highlightStateResponse.highlightStateOmittedReason,
+      highlightStateResolvedItemCount: highlightStateResponse.highlightStateResolvedItemCount,
+      highlightStateResolvedRangeCount: highlightStateResponse.highlightStateResolvedRangeCount,
+      highlightStateVisibleItemCount: highlightStateResponse.highlightStateVisibleItemCount,
+      highlightStateVisibleRangeCount: highlightStateResponse.highlightStateVisibleRangeCount,
+      highlightStateRendererMismatch: highlightStateResponse.highlightStateRendererMismatch,
+    })
+
     return {
       kind: 'success',
       body: {
@@ -82,9 +108,9 @@ export async function decideSessionComparison(
         targetJobDescription,
         originalCvState: context.session.cvState,
         optimizedCvState,
-        highlightState: isLockedPreview(context.session.generatedOutput)
-          ? undefined
-          : context.session.agentState.highlightState,
+        highlightState: highlightStateResponse.highlightStateReturned
+          ? context.session.agentState.highlightState
+          : undefined,
         previewLock: getPreviewLockSummary(context.session.generatedOutput),
         optimizationSummary: context.session.agentState.optimizationSummary,
         atsReadiness,

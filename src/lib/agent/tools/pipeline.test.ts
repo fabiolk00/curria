@@ -160,16 +160,38 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
   }
 }
 
+function buildHighlightDetectionOutcome(overrides: Partial<{
+  resultKind: string
+  itemCount: number
+  rawModelItemCount: number
+  rawModelRangeCount: number
+  validatedItemCount: number
+  validatedRangeCount: number
+}> = {}) {
+  return {
+    resultKind: 'valid_empty',
+    itemCount: 3,
+    rawModelItemCount: 0,
+    rawModelRangeCount: 0,
+    validatedItemCount: 0,
+    validatedRangeCount: 0,
+    ...overrides,
+  }
+}
+
 describe('ATS enhancement reliability hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUpdateSession.mockResolvedValue(undefined)
     mockCreateCvVersion.mockResolvedValue(undefined)
-    mockGenerateCvHighlightState.mockResolvedValue({
-      source: 'rewritten_cv_state',
-      version: 2,
-      generatedAt: '2026-04-22T12:00:00.000Z',
-      resolvedHighlights: [],
+    mockGenerateCvHighlightState.mockImplementation(async (_cvState, context) => {
+      context?.onCompleted?.(buildHighlightDetectionOutcome())
+      return {
+        source: 'rewritten_cv_state',
+        version: 2,
+        generatedAt: '2026-04-22T12:00:00.000Z',
+        resolvedHighlights: [],
+      }
     })
     mockValidateRewrite.mockReturnValue({ valid: true, issues: [] })
     mockAnalyzeGap.mockResolvedValue({
@@ -806,6 +828,15 @@ describe('ATS enhancement reliability hardening', () => {
       estimatedRangeOutcome: expect.any(Boolean),
       usedExactScore: expect.any(Boolean),
     })
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      highlightDetectionInvoked: true,
+      highlightStateGenerated: true,
+      highlightStatePersisted: true,
+      highlightStatePersistedReason: 'empty_valid_result',
+      highlightStateResultKind: 'valid_empty',
+      highlightStateResolvedRangeCount: 0,
+    }))
     expect(mockLogInfo).toHaveBeenCalledWith('agent.ats_enhancement.completed', expect.objectContaining({
       workflowMode: 'ats_enhancement',
       success: true,
@@ -1033,6 +1064,13 @@ describe('ATS enhancement reliability hardening', () => {
       lastFailureStage: 'validation',
     })
     expect(mockCreateCvVersion).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      highlightDetectionInvoked: false,
+      highlightStateGenerated: false,
+      highlightStatePersisted: false,
+      highlightStatePersistedReason: 'validation_failed',
+    }))
   })
 
   it('does not generate highlight artifacts when ATS recovery falls back to the original cvState', async () => {
@@ -1092,6 +1130,13 @@ describe('ATS enhancement reliability hardening', () => {
       workflowMode: 'ats_enhancement',
       recoveryKind: 'original_cv_fallback',
     }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      highlightDetectionInvoked: false,
+      highlightStateGenerated: false,
+      highlightStatePersisted: false,
+      highlightStatePersistedReason: 'not_generated_for_original_fallback',
+    }))
   })
 
   it('persists a separate highlight artifact after a successful ATS rewrite', async () => {
@@ -1135,6 +1180,25 @@ describe('ATS enhancement reliability hardening', () => {
           }
         : buildSuccessfulRewriteOutput(buildCvState(), section),
     }))
+    mockGenerateCvHighlightState.mockImplementation(async (_cvState, context) => {
+      context?.onCompleted?.(buildHighlightDetectionOutcome({
+        resultKind: 'valid_non_empty',
+        rawModelItemCount: 1,
+        rawModelRangeCount: 1,
+        validatedItemCount: 1,
+        validatedRangeCount: 1,
+      }))
+      return {
+        source: 'rewritten_cv_state',
+        version: 2,
+        generatedAt: '2026-04-22T12:00:00.000Z',
+        resolvedHighlights: [{
+          itemId: 'summary_0',
+          section: 'summary',
+          ranges: [{ start: 0, end: 18, reason: 'metric_impact' }],
+        }],
+      }
+    })
 
     const result = await runAtsEnhancementPipeline(session)
 
@@ -1165,8 +1229,19 @@ describe('ATS enhancement reliability hardening', () => {
       source: 'rewritten_cv_state',
       version: 2,
       generatedAt: '2026-04-22T12:00:00.000Z',
-      resolvedHighlights: [],
+      resolvedHighlights: [{
+        itemId: 'summary_0',
+        section: 'summary',
+        ranges: [{ start: 0, end: 18, reason: 'metric_impact' }],
+      }],
     })
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'ats_enhancement',
+      highlightStatePersistedReason: 'generated',
+      highlightStateResultKind: 'valid_non_empty',
+      highlightStateResolvedItemCount: 1,
+      highlightStateResolvedRangeCount: 1,
+    }))
   })
 
   it('builds a full job_targeting rewrite with plan-driven keyword emphasis', async () => {
@@ -1314,6 +1389,92 @@ describe('ATS enhancement reliability hardening', () => {
     }))
   })
 
+  it('skips highlight generation for unchanged job_targeting rewrites and logs the unchanged-state reason', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Analytics Engineer',
+      'Responsabilidades: construir dashboards e automacoes de dados.',
+      'Requisitos: SQL, Power BI, BigQuery.',
+    ].join('\n')
+    session.agentState.rewriteStatus = 'pending'
+    session.agentState.optimizedCvState = undefined
+
+    const originalCvState = buildCvState()
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => {
+      if (section === 'summary') {
+        return {
+          output: {
+            success: true,
+            rewritten_content: originalCvState.summary,
+            section_data: originalCvState.summary,
+            keywords_added: [],
+            changes_made: [],
+          },
+        }
+      }
+
+      if (section === 'experience') {
+        return {
+          output: {
+            success: true,
+            rewritten_content: 'Experiencia original mantida.',
+            section_data: originalCvState.experience,
+            keywords_added: [],
+            changes_made: [],
+          },
+        }
+      }
+
+      if (section === 'skills') {
+        return {
+          output: {
+            success: true,
+            rewritten_content: originalCvState.skills.join(', '),
+            section_data: originalCvState.skills,
+            keywords_added: [],
+            changes_made: [],
+          },
+        }
+      }
+
+      if (section === 'education') {
+        return {
+          output: {
+            success: true,
+            rewritten_content: 'Educacao original mantida.',
+            section_data: originalCvState.education,
+            keywords_added: [],
+            changes_made: [],
+          },
+        }
+      }
+
+      return {
+        output: {
+          success: true,
+          rewritten_content: 'Certificacoes originais mantidas.',
+          section_data: originalCvState.certifications ?? [],
+          keywords_added: [],
+          changes_made: [],
+        },
+      }
+    })
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(session.agentState.highlightState).toBeUndefined()
+    expect(mockGenerateCvHighlightState).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'job_targeting',
+      highlightDetectionInvoked: false,
+      highlightStateGenerated: false,
+      highlightStatePersisted: false,
+      highlightStatePersistedReason: 'not_generated_for_unchanged_cv_state',
+    }))
+  })
+
   it('logs the exact validation issues when job_targeting validation fails', async () => {
     const session = buildSession()
     session.agentState.workflowMode = 'job_targeting'
@@ -1407,6 +1568,11 @@ describe('ATS enhancement reliability hardening', () => {
       lastFailureStage: 'persist_version',
       lastFailureReason: 'persist version failed',
     })
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'job_targeting',
+      highlightStatePersistedReason: 'persist_version_rollback',
+      highlightStatePersisted: false,
+    }))
   })
 
   it('builds a low-confidence target role plan from freeform vacancy text while keeping the flow usable', async () => {

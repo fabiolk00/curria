@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { buildHighlightStateResponseOutcome } from '@/lib/agent/highlight-observability'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import {
   recordAtsReadinessCompatFieldEmission,
@@ -13,6 +14,7 @@ import {
   sanitizeGeneratedOutputForClient,
 } from '@/lib/generated-preview/locked-preview'
 import { listJobsForSession } from '@/lib/jobs/repository'
+import { logInfo } from '@/lib/observability/structured-log'
 import { withRequestQueryTracking } from '@/lib/observability/request-query-tracking'
 
 export async function GET(
@@ -52,6 +54,35 @@ export async function GET(
         })
       }
 
+      const optimizedCvState = sanitizeGeneratedCvStateForClient(
+        session.agentState.optimizedCvState,
+        session.generatedOutput,
+        'optimized',
+      )
+      const previewLocked = isLockedPreview(session.generatedOutput)
+      const highlightStateResponse = buildHighlightStateResponseOutcome({
+        previewLocked,
+        highlightState: session.agentState.highlightState,
+        optimizedCvState,
+      })
+
+      logInfo('agent.highlight_state.response_evaluated', {
+        sessionId: session.id,
+        userId: appUser.id,
+        workflowMode: session.agentState.workflowMode,
+        surface: 'session_route',
+        previewLocked,
+        highlightStateResponseKind: highlightStateResponse.highlightStateResponseKind,
+        highlightStateAvailable: highlightStateResponse.highlightStateAvailable,
+        highlightStateReturned: highlightStateResponse.highlightStateReturned,
+        highlightStateOmittedReason: highlightStateResponse.highlightStateOmittedReason,
+        highlightStateResolvedItemCount: highlightStateResponse.highlightStateResolvedItemCount,
+        highlightStateResolvedRangeCount: highlightStateResponse.highlightStateResolvedRangeCount,
+        highlightStateVisibleItemCount: highlightStateResponse.highlightStateVisibleItemCount,
+        highlightStateVisibleRangeCount: highlightStateResponse.highlightStateVisibleRangeCount,
+        highlightStateRendererMismatch: highlightStateResponse.highlightStateRendererMismatch,
+      })
+
       return NextResponse.json({
         session: {
           id: session.id,
@@ -71,14 +102,10 @@ export async function GET(
             atsReadiness,
             atsWorkflowRun: session.agentState.atsWorkflowRun,
             rewriteStatus: session.agentState.rewriteStatus,
-            optimizedCvState: sanitizeGeneratedCvStateForClient(
-              session.agentState.optimizedCvState,
-              session.generatedOutput,
-              'optimized',
-            ),
-            highlightState: isLockedPreview(session.generatedOutput)
-              ? undefined
-              : session.agentState.highlightState,
+            optimizedCvState,
+            highlightState: highlightStateResponse.highlightStateReturned
+              ? session.agentState.highlightState
+              : undefined,
             optimizedAt: session.agentState.optimizedAt,
             optimizationSummary: session.agentState.optimizationSummary,
             lastRewriteMode: session.agentState.lastRewriteMode,

@@ -1,6 +1,10 @@
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
-import { generateCvHighlightState } from '@/lib/agent/tools/detect-cv-highlights'
+import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
+import {
+  generateCvHighlightState,
+  type HighlightDetectionOutcome,
+} from '@/lib/agent/tools/detect-cv-highlights'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { validateRewrite } from '@/lib/agent/tools/validate-rewrite'
 import { createCvVersion } from '@/lib/db/cv-versions'
@@ -34,6 +38,40 @@ async function persistAgentState(session: Session, agentState: Session['agentSta
     agentState,
   })
   session.agentState = agentState
+}
+
+function cvStatesMatch(left: Session['cvState'], right: Session['cvState']): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function logHighlightStatePersistence(params: {
+  session: Session
+  highlightState: Session['agentState']['highlightState']
+  highlightDetectionInvoked: boolean
+  highlightStateGenerated: boolean
+  highlightStatePersisted: boolean
+  highlightStatePersistedReason: string
+  highlightDetectionOutcome?: HighlightDetectionOutcome
+}): void {
+  const summary = summarizeHighlightState(params.highlightState)
+
+  logInfo('agent.highlight_state.persisted', {
+    workflowMode: 'job_targeting',
+    sessionId: params.session.id,
+    userId: params.session.userId,
+    stage: 'highlight_persistence',
+    highlightDetectionInvoked: params.highlightDetectionInvoked,
+    highlightStateGenerated: params.highlightStateGenerated,
+    highlightStatePersisted: params.highlightStatePersisted,
+    highlightStatePersistedReason: params.highlightStatePersistedReason,
+    highlightStateResultKind: params.highlightDetectionOutcome?.resultKind,
+    highlightStateResolvedItemCount: summary.highlightStateResolvedItemCount,
+    highlightStateResolvedRangeCount: summary.highlightStateResolvedRangeCount,
+    rawModelItemCount: params.highlightDetectionOutcome?.rawModelItemCount,
+    rawModelRangeCount: params.highlightDetectionOutcome?.rawModelRangeCount,
+    validatedItemCount: params.highlightDetectionOutcome?.validatedItemCount,
+    validatedRangeCount: params.highlightDetectionOutcome?.validatedRangeCount,
+  })
 }
 
 export async function runJobTargetingPipeline(session: Session): Promise<{
@@ -243,14 +281,19 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   const optimizedAt = new Date().toISOString()
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
-  let nextHighlightState = previousHighlightState
+  const shouldGenerateHighlights = validation.valid && !cvStatesMatch(rewriteResult.optimizedCvState, session.cvState)
+  let nextHighlightState = shouldGenerateHighlights ? previousHighlightState : undefined
+  let highlightDetectionOutcome: HighlightDetectionOutcome | undefined
 
-  if (validation.valid) {
+  if (shouldGenerateHighlights) {
     try {
       nextHighlightState = await generateCvHighlightState(rewriteResult.optimizedCvState, {
         userId: session.userId,
         sessionId: session.id,
         workflowMode: 'job_targeting',
+        onCompleted: (outcome) => {
+          highlightDetectionOutcome = outcome
+        },
       })
     } catch (error) {
       nextHighlightState = undefined
@@ -298,6 +341,29 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     }),
   }
   await persistAgentState(session, nextAgentState)
+  const highlightStatePersistedReason = !validation.valid
+    ? 'validation_failed'
+    : !shouldGenerateHighlights
+      ? 'not_generated_for_unchanged_cv_state'
+    : highlightDetectionOutcome?.resultKind === 'valid_empty'
+      ? 'empty_valid_result'
+      : highlightDetectionOutcome?.resultKind === 'all_filtered_out'
+        ? 'all_filtered_out'
+        : highlightDetectionOutcome?.resultKind === 'invalid_payload'
+          ? 'invalid_payload'
+          : highlightDetectionOutcome?.resultKind === 'thrown_error'
+            ? 'thrown_error'
+            : 'generated'
+
+  logHighlightStatePersistence({
+    session,
+    highlightState: nextAgentState.highlightState,
+    highlightDetectionInvoked: shouldGenerateHighlights,
+    highlightStateGenerated: shouldGenerateHighlights && Boolean(nextHighlightState),
+    highlightStatePersisted: Boolean(nextAgentState.highlightState),
+    highlightStatePersistedReason,
+    highlightDetectionOutcome,
+  })
 
   if (!validation.valid) {
     logWarn(
@@ -361,6 +427,15 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       }),
     }
     await persistAgentState(session, failedAgentState)
+    logHighlightStatePersistence({
+      session,
+      highlightState: failedAgentState.highlightState,
+      highlightDetectionInvoked: shouldGenerateHighlights,
+      highlightStateGenerated: false,
+      highlightStatePersisted: Boolean(failedAgentState.highlightState),
+      highlightStatePersistedReason: 'persist_version_rollback',
+      highlightDetectionOutcome,
+    })
     logError(
       'agent.job_targeting.failed',
       createJobTargetingLogContext(session, 'persist_version', {

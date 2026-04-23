@@ -5,7 +5,7 @@ import { trackApiUsage } from '@/lib/agent/usage-tracker'
 import { callOpenAIWithRetry, getChatCompletionText, getChatCompletionUsage } from '@/lib/openai/chat'
 import { openai } from '@/lib/openai/client'
 import { recordMetricCounter } from '@/lib/observability/metric-events'
-import { logWarn } from '@/lib/observability/structured-log'
+import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import {
   CV_HIGHLIGHT_ARTIFACT_VERSION,
   type CvHighlightState,
@@ -134,6 +134,88 @@ function truncateInvalidPayloadSample(rawText: string): string {
   }
 
   return `${trimmed.slice(0, MAX_INVALID_HIGHLIGHT_PAYLOAD_SAMPLE_LENGTH)}...`
+}
+
+export type HighlightDetectionResultKind =
+  | 'valid_non_empty'
+  | 'valid_empty'
+  | 'all_filtered_out'
+  | 'invalid_payload'
+  | 'thrown_error'
+  | 'not_invoked'
+
+export type HighlightDetectionOutcome = {
+  resultKind: HighlightDetectionResultKind
+  itemCount: number
+  rawModelItemCount: number
+  rawModelRangeCount: number
+  validatedItemCount: number
+  validatedRangeCount: number
+  parseFailureReason?: InvalidHighlightPayloadReason
+  errorMessage?: string
+}
+
+export type CvHighlightDetectionContext = {
+  userId?: string
+  sessionId?: string
+  workflowMode?: string
+  onCompleted?: (outcome: HighlightDetectionOutcome) => void
+}
+
+function countModelHighlights(
+  payload: { items: CvHighlightDetectionResult },
+): {
+  rawModelItemCount: number
+  rawModelRangeCount: number
+} {
+  return {
+    rawModelItemCount: payload.items.length,
+    rawModelRangeCount: payload.items.reduce((total, item) => total + item.ranges.length, 0),
+  }
+}
+
+function countResolvedHighlightRanges(
+  highlights: CvResolvedHighlight[],
+): {
+  validatedItemCount: number
+  validatedRangeCount: number
+} {
+  return {
+    validatedItemCount: highlights.length,
+    validatedRangeCount: highlights.reduce((total, highlight) => total + highlight.ranges.length, 0),
+  }
+}
+
+function emitHighlightDetectionCompleted(
+  outcome: HighlightDetectionOutcome,
+  context?: CvHighlightDetectionContext,
+): void {
+  logInfo('agent.highlight_detection.completed', {
+    sessionId: context?.sessionId,
+    userId: context?.userId,
+    workflowMode: context?.workflowMode,
+    stage: 'highlight_detection',
+    itemCount: outcome.itemCount,
+    rawModelItemCount: outcome.rawModelItemCount,
+    rawModelRangeCount: outcome.rawModelRangeCount,
+    modelReturnedItemCount: outcome.rawModelItemCount,
+    modelReturnedRangeCount: outcome.rawModelRangeCount,
+    validatedItemCount: outcome.validatedItemCount,
+    validatedRangeCount: outcome.validatedRangeCount,
+    resolvedItemCount: outcome.validatedItemCount,
+    resolvedHighlightCount: outcome.validatedRangeCount,
+    resultKind: outcome.resultKind,
+    parseFailureReason: outcome.parseFailureReason,
+    errorMessage: outcome.errorMessage,
+  })
+  recordMetricCounter('architecture.highlight_detection.outcome', {
+    workflowMode: context?.workflowMode,
+    resultKind: outcome.resultKind,
+  })
+
+  try {
+    context?.onCompleted?.(outcome)
+  } catch {}
 }
 
 function normalizeHighlightReason(rawReason: unknown): CvHighlightReason | null {
@@ -299,47 +381,60 @@ function parseHighlightPayload(rawText: string): ParsedHighlightPayloadResult {
 
 export async function detectCvHighlights(
   items: CvHighlightInputItem[],
-  context?: {
-    userId?: string
-    sessionId?: string
-    workflowMode?: string
-  },
+  context?: CvHighlightDetectionContext,
 ): Promise<CvResolvedHighlight[]> {
+  logInfo('agent.highlight_detection.started', {
+    sessionId: context?.sessionId,
+    userId: context?.userId,
+    workflowMode: context?.workflowMode,
+    stage: 'highlight_detection',
+    itemCount: items.length,
+  })
+
   if (items.length === 0) {
+    emitHighlightDetectionCompleted({
+      resultKind: 'not_invoked',
+      itemCount: 0,
+      rawModelItemCount: 0,
+      rawModelRangeCount: 0,
+      validatedItemCount: 0,
+      validatedRangeCount: 0,
+    }, context)
     return []
   }
 
-  const response = await callOpenAIWithRetry(
-    (signal) => openai.chat.completions.create({
-      model: MODEL_CONFIG.structuredModel,
-      max_completion_tokens: AGENT_CONFIG.rewriterMaxTokens,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: buildHighlightSystemPrompt(),
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({ items }),
-        },
-      ],
-    }, { signal }),
-    3,
-    AGENT_CONFIG.timeout,
-    undefined,
-    {
-      operation: 'detect_cv_highlights',
-      stage: 'highlight_detection',
-      model: MODEL_CONFIG.structuredModel,
-      sessionId: context?.sessionId,
-      userId: context?.userId,
-    },
-  )
+  try {
+    const response = await callOpenAIWithRetry(
+      (signal) => openai.chat.completions.create({
+        model: MODEL_CONFIG.structuredModel,
+        max_completion_tokens: AGENT_CONFIG.rewriterMaxTokens,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: buildHighlightSystemPrompt(),
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({ items }),
+          },
+        ],
+      }, { signal }),
+      3,
+      AGENT_CONFIG.timeout,
+      undefined,
+      {
+        operation: 'detect_cv_highlights',
+        stage: 'highlight_detection',
+        model: MODEL_CONFIG.structuredModel,
+        sessionId: context?.sessionId,
+        userId: context?.userId,
+      },
+    )
 
-  const usage = getChatCompletionUsage(response)
-  if (context?.userId && context?.sessionId) {
+    const usage = getChatCompletionUsage(response)
+    if (context?.userId && context?.sessionId) {
       trackApiUsage({
         userId: context.userId,
         sessionId: context.sessionId,
@@ -348,40 +443,75 @@ export async function detectCvHighlights(
         outputTokens: usage.outputTokens,
         endpoint: 'rewriter',
       }).catch(() => {})
-  }
+    }
 
-  const text = getChatCompletionText(response)
-  const parsedPayload = parseHighlightPayload(text)
-  if (parsedPayload.kind === 'invalid_payload') {
-    logWarn('agent.highlight_detection.invalid_payload', {
-      sessionId: context?.sessionId,
-      userId: context?.userId,
-      workflowMode: context?.workflowMode,
-      stage: 'highlight_detection',
-      failureType: 'invalid_model_payload',
-      parseFailureReason: parsedPayload.reason,
+    const text = getChatCompletionText(response)
+    const parsedPayload = parseHighlightPayload(text)
+    if (parsedPayload.kind === 'invalid_payload') {
+      logWarn('agent.highlight_detection.invalid_payload', {
+        sessionId: context?.sessionId,
+        userId: context?.userId,
+        workflowMode: context?.workflowMode,
+        stage: 'highlight_detection',
+        failureType: 'invalid_model_payload',
+        parseFailureReason: parsedPayload.reason,
+        itemCount: items.length,
+        responseTextLength: text.length,
+        responseSample: truncateInvalidPayloadSample(text),
+        payloadShapeDetails: parsedPayload.details ? JSON.stringify(parsedPayload.details) : undefined,
+      })
+      recordMetricCounter('architecture.highlight_detection.invalid_payload', {
+        workflowMode: context?.workflowMode,
+        parseFailureReason: parsedPayload.reason,
+      })
+      emitHighlightDetectionCompleted({
+        resultKind: 'invalid_payload',
+        itemCount: items.length,
+        rawModelItemCount: 0,
+        rawModelRangeCount: 0,
+        validatedItemCount: 0,
+        validatedRangeCount: 0,
+        parseFailureReason: parsedPayload.reason,
+      }, context)
+      return []
+    }
+
+    const rawCounts = countModelHighlights(parsedPayload.value)
+    const resolvedHighlights = validateAndResolveHighlights(items, parsedPayload.value)
+    const validatedCounts = countResolvedHighlightRanges(resolvedHighlights)
+    const resultKind: HighlightDetectionResultKind = rawCounts.rawModelRangeCount === 0
+      ? 'valid_empty'
+      : validatedCounts.validatedRangeCount === 0
+        ? 'all_filtered_out'
+        : 'valid_non_empty'
+
+    emitHighlightDetectionCompleted({
+      resultKind,
       itemCount: items.length,
-      responseTextLength: text.length,
-      responseSample: truncateInvalidPayloadSample(text),
-      payloadShapeDetails: parsedPayload.details ? JSON.stringify(parsedPayload.details) : undefined,
-    })
-    recordMetricCounter('architecture.highlight_detection.invalid_payload', {
-      workflowMode: context?.workflowMode,
-      parseFailureReason: parsedPayload.reason,
-    })
-    return []
-  }
+      rawModelItemCount: rawCounts.rawModelItemCount,
+      rawModelRangeCount: rawCounts.rawModelRangeCount,
+      validatedItemCount: validatedCounts.validatedItemCount,
+      validatedRangeCount: validatedCounts.validatedRangeCount,
+    }, context)
 
-  return validateAndResolveHighlights(items, parsedPayload.value)
+    return resolvedHighlights
+  } catch (error) {
+    emitHighlightDetectionCompleted({
+      resultKind: 'thrown_error',
+      itemCount: items.length,
+      rawModelItemCount: 0,
+      rawModelRangeCount: 0,
+      validatedItemCount: 0,
+      validatedRangeCount: 0,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    }, context)
+    throw error
+  }
 }
 
 export async function generateCvHighlightState(
   cvState: CVState,
-  context?: {
-    userId?: string
-    sessionId?: string
-    workflowMode?: string
-  },
+  context?: CvHighlightDetectionContext,
 ): Promise<CvHighlightState> {
   return {
     source: 'rewritten_cv_state',
