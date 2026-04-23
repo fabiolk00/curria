@@ -2,6 +2,8 @@
 
 CurrIA is an AI-powered resume optimization platform for Brazilian job seekers. It combines ATS analysis, guided rewriting, job-targeted resume variants, versioned resume history, DOCX/PDF generation, and credit-based billing powered by Asaas.
 
+This repository is actively maintained and validated through automated quality gates and release-critical E2E coverage.
+
 ## Why this repo exists
 
 CurrIA helps users:
