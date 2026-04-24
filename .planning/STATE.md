@@ -7,7 +7,7 @@ current_phase_name: promote core contextual stack evidence in preview highlights
 current_plan: 01 complete
 status: phase_complete
 stopped_at: Completed 94-01-PLAN.md
-last_updated: "2026-04-24T09:43:42.5113578-03:00"
+last_updated: "2026-04-24T09:54:10.0000000-03:00"
 last_activity: 2026-04-24
 progress:
   total_phases: 57
@@ -36,7 +36,7 @@ Current Plan: 01 complete
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-24
-Last Activity Description: Quick task 260424-d2p renamed auth and dashboard endpoints to the new canonical profile setup, chat, and resumes history routes
+Last Activity Description: Quick task 260424-dpi fixed the production build type mismatch between /chat and the optional billing surface contract
 
 Progress: [##########] 100%
 
@@ -165,6 +165,7 @@ Baseline carried forward from earlier shipped milestones:
 | 260422-vlo | Add end-to-end highlight outcome observability for silent zero-highlight cases | 2026-04-22 | working-tree | Validated | [260422-vlo-add-end-to-end-highlight-outcome-observa](./quick/260422-vlo-add-end-to-end-highlight-outcome-observa/) |
 | 260424-c9m | Alinhar user-data-page.tsx ao layout do zip de referência com fidelidade visual máxima sem regredir os fluxos existentes | 2026-04-24 | working-tree | Validated | [260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-](./quick/260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-/) |
 | 260424-d2p | Renomear endpoints de auth/dashboard para `/profile-setup`, `/chat` e `/dashboard/resumes-history`, atualizando redirects, redirect_to e cobertura de testes | 2026-04-24 | working-tree | Validated | [260424-d2p-rename-auth-dashboard-endpoints-dashboar](./quick/260424-d2p-rename-auth-dashboard-endpoints-dashboar/) |
+| 260424-dpi | Fix production build type error by aligning `/chat` with the optional billing surface contract | 2026-04-24 | working-tree | Validated | [260424-dpi-fix-production-build-type-error-chat-pag](./quick/260424-dpi-fix-production-build-type-error-chat-pag/) |
 
 ## Session Continuity
 
