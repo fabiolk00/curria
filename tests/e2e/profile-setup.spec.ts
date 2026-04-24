@@ -491,7 +491,7 @@ test.describe("manual profile setup", () => {
     await openEnhancement(page)
     await page.getByTestId("enhancement-intent-target-job").click()
     await page.getByTestId("target-job-description-input").fill(targetJobDescription)
-    await expect(page.getByText(/Adapte seu curr/i)).toBeVisible()
+    await expect(page.getByText(/Cole a descrição completa da vaga/i)).toBeVisible()
     await page.getByTestId("ats-panel-cta").click()
 
     await expect(page).toHaveURL(new RegExp(`/dashboard/resume/compare/${sessionId}$`))

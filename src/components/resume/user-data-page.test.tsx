@@ -680,7 +680,7 @@ describe("UserDataPage", () => {
           valid: false,
           issues: [{
             severity: "high",
-            message: "O resumo otimizado menciona skills sem alinhamento com a experiencia reescrita.",
+            message: "O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.",
             section: "summary",
           }],
         },

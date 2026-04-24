@@ -285,12 +285,12 @@ const targetJobFeatures: AtsFeature[] = [
 ]
 
 const enhancementValueItems = [
-  "CurrÃ­culo mais claro e compatÃ­vel com ATS",
+  "Currículo mais claro e compatível com ATS",
   "Resumo profissional mais direto",
-  "ExperiÃªncias reescritas em bullets fortes",
+  "Experiências reescritas em bullets fortes",
   "Keywords alinhadas ao modo escolhido",
-  "VersÃ£o pronta para comparar e exportar",
-  "Seu currÃ­culo base continua preservado",
+  "Versão pronta para comparar e exportar",
+  "Seu currículo base continua preservado",
 ]
 
 function getGenerationCopy(mode: SetupGenerationMode): SetupGenerationCopy {
@@ -1538,21 +1538,22 @@ export default function UserDataPage({
   )
 
   const renderEnhancementView = () => (
-    <main className="min-h-screen bg-white text-slate-900 lg:h-screen lg:overflow-hidden">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:py-5">
-        <header className="shrink-0 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(241,245,249,0.8),transparent_32%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-900 lg:h-screen lg:overflow-hidden">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:py-6">
+        <header className="shrink-0 border-b border-slate-200/80 pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <Button
               type="button"
               variant="ghost"
-              className="-ml-3 h-8 px-3 text-slate-500 hover:bg-transparent hover:text-slate-900"
+              aria-label="Voltar ao perfil"
+              className="-ml-3 h-9 px-3 text-slate-500 hover:bg-transparent hover:text-slate-900"
               onClick={() => setActiveView("profile")}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao perfil
             </Button>
 
-            <div className="text-sm text-slate-500 lg:text-right">
+            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 shadow-sm lg:text-right">
               <span className="font-medium text-slate-900">Modo: {selectedModeLabel}</span>
               <span className="mx-2 text-slate-300">·</span>
               <span>{currentCredits} créditos disponíveis</span>
@@ -1560,26 +1561,23 @@ export default function UserDataPage({
           </div>
         </header>
 
-        <div className="mt-5 flex-1 overflow-y-auto lg:min-h-0">
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.82fr)]">
-            <Card className="rounded-3xl border border-slate-200 bg-white p-0 shadow-sm">
-              <div className="space-y-6 p-6">
+        <div className="mt-6 flex-1 overflow-y-auto lg:min-h-0">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.78fr)]">
+            <Card className="rounded-[28px] border border-slate-200 bg-white p-0 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.28)]">
+              <div className="space-y-7 p-6 sm:p-7">
                 <div className="space-y-3">
-                  <Badge
+                  <p
                     data-testid="ats-panel-badge"
-                    className="bg-black px-3 py-1 text-xs font-medium text-white hover:bg-black/90"
+                    className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400"
                   >
-                    {displayGenerationCopy.badge}
-                  </Badge>
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
-                    {enhancementIntent === "target_job"
-                      ? "Adapte seu currículo para a vaga certa."
-                      : "Melhore seu currículo para ATS com mais clareza."}
+                    Escolha o tipo de otimização
+                  </p>
+                  <h1 className="max-w-3xl text-[2rem] font-semibold tracking-tight text-slate-950">
+                    Escolha como quer otimizar seu currículo
                   </h1>
                   <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                    {enhancementIntent === "target_job"
-                      ? "Escolha a adaptação por vaga quando você já tiver a descrição do cargo e quiser priorizar requisitos, keywords e experiências mais relevantes."
-                      : "Escolha a melhoria ATS geral quando quiser fortalecer estrutura, clareza e legibilidade sem depender de uma vaga específica."}
+                    Há duas ações diferentes aqui: uma melhoria ATS geral, sem vaga específica,
+                    ou uma adaptação orientada pela descrição real de uma vaga.
                   </p>
                 </div>
 
@@ -1591,7 +1589,7 @@ export default function UserDataPage({
                     onClick={handleSelectAtsIntent}
                     disabled={isBusy}
                     className={cn(
-                      "rounded-2xl border p-4 text-left transition",
+                      "rounded-2xl border p-5 text-left transition",
                       enhancementIntent === "ats"
                         ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900"
                         : "border-slate-200 bg-white hover:border-slate-300",
@@ -1620,7 +1618,7 @@ export default function UserDataPage({
                     onClick={handleSelectTargetJobIntent}
                     disabled={isBusy}
                     className={cn(
-                      "rounded-2xl border p-4 text-left transition",
+                      "rounded-2xl border p-5 text-left transition",
                       enhancementIntent === "target_job"
                         ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900"
                         : "border-slate-200 bg-white hover:border-slate-300",
@@ -1644,24 +1642,26 @@ export default function UserDataPage({
                 </div>
 
                 {enhancementIntent === "ats" ? (
-                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="space-y-4 rounded-[24px] border border-slate-200 bg-slate-50/90 p-5">
                     <div>
                       <h2 className="text-sm font-semibold text-slate-950">Melhoria ATS geral</h2>
                       <p className="mt-2 text-sm leading-6 text-slate-600">
-                        Ideal quando você ainda não tem uma vaga específica. A IA melhora estrutura, clareza, resumo,
-                        bullets e compatibilidade com sistemas ATS.
+                        Ideal quando você ainda não tem uma vaga específica.
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        A IA melhora estrutura, clareza, resumo, bullets e compatibilidade com sistemas ATS.
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-sm font-medium text-emerald-900">Seguro para testar</p>
+                      <p className="text-sm font-medium text-emerald-900">Seu currículo base continua preservado</p>
                       <p className="mt-1 text-xs leading-5 text-emerald-700">
-                        Seu currículo base continua preservado. A IA cria uma nova versão para você comparar antes de exportar.
+                        A IA cria uma nova versão para você comparar antes de exportar.
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50/70 p-5">
                     <label
                       htmlFor="target-job-description"
                       className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
@@ -1681,7 +1681,7 @@ export default function UserDataPage({
                         ? "target-job-description-helper target-job-description-error"
                         : "target-job-description-helper"}
                       placeholder="Cole aqui responsabilidades, requisitos, qualificações, stack, senioridade e qualquer detalhe importante da vaga..."
-                      className="min-h-[260px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus-visible:ring-black"
+                      className="min-h-[260px] resize-none rounded-2xl border-slate-200 bg-white text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus-visible:ring-black"
                     />
                     <p id="target-job-description-helper" className="text-xs leading-5 text-slate-500">
                       Cole a descrição completa da vaga para a IA adaptar seu currículo com base nos requisitos reais.
@@ -1707,7 +1707,7 @@ export default function UserDataPage({
                   {atsReadiness.reasons.length > 0 ? (
                     <div className="space-y-1 text-xs text-slate-500">
                       {atsReadiness.reasons.map((reason) => (
-                        <p key={reason}>â€¢ {reason}</p>
+                        <p key={reason}>• {reason}</p>
                       ))}
                     </div>
                   ) : null}
@@ -1723,7 +1723,7 @@ export default function UserDataPage({
                   disabled={setupGenerationButtonDisabled}
                   onClick={handleEnhancementSubmit}
                   {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.profileAtsCta)}
-                  className="h-11 w-full gap-2 rounded-xl bg-black px-5 text-sm font-medium text-white hover:bg-black/90"
+                  className="h-11 w-full gap-2 rounded-xl bg-black px-5 text-sm font-medium text-white hover:bg-black/90 sm:w-auto sm:min-w-[250px]"
                   data-testid="ats-panel-cta"
                 >
                   {isRunningAtsEnhancement ? (
@@ -1743,8 +1743,8 @@ export default function UserDataPage({
               </div>
             </Card>
 
-            <Card className="rounded-3xl border border-slate-200 bg-white p-0 shadow-sm">
-              <div className="space-y-5 p-6">
+            <Card className="h-fit rounded-[28px] border border-slate-200 bg-white p-0 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.2)] xl:sticky xl:top-0">
+              <div className="space-y-5 p-6 sm:p-7">
                 <div>
                   <h2 className="text-base font-semibold text-slate-950">O que você recebe</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
@@ -1766,26 +1766,6 @@ export default function UserDataPage({
                   <p className="mt-1 text-xs leading-5 text-emerald-700">
                     A IA cria uma nova versão. Você compara antes de exportar.
                   </p>
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Neste modo</p>
-                  {generationFeatures.map((feature) => {
-                    const Icon = feature.icon
-
-                    return (
-                      <div
-                        key={feature.id}
-                        data-testid={`ats-feature-${feature.id}`}
-                        className="flex items-start gap-3 text-sm text-slate-700"
-                      >
-                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <span className="leading-6">{feature.label}</span>
-                      </div>
-                    )
-                  })}
                 </div>
               </div>
             </Card>
