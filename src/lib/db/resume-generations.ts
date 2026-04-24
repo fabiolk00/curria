@@ -2,7 +2,11 @@ import { CVStateSchema } from '@/lib/cv/schema'
 import { createDatabaseId } from '@/lib/db/ids'
 import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
 import { logWarn, serializeError } from '@/lib/observability/structured-log'
-import type { ResumeGeneration, ResumeGenerationType } from '@/types/agent'
+import type {
+  ResumeGeneration,
+  ResumeGenerationHistoryKind,
+  ResumeGenerationType,
+} from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
 type ResumeGenerationRow = {
@@ -13,14 +17,22 @@ type ResumeGenerationRow = {
   type: ResumeGenerationType
   status: ResumeGeneration['status']
   idempotency_key?: string | null
+  history_kind?: ResumeGenerationHistoryKind | null
+  history_title?: string | null
+  history_description?: string | null
+  target_role?: string | null
+  target_job_snippet?: string | null
   source_cv_snapshot: unknown
   generated_cv_state?: unknown
   output_pdf_path?: string | null
   output_docx_path?: string | null
   failure_reason?: string | null
+  error_message?: string | null
   version_number: number
   created_at: string
   updated_at: string
+  completed_at?: string | null
+  failed_at?: string | null
 }
 
 type PostgrestErrorLike = {
@@ -66,6 +78,11 @@ function mapResumeGenerationRow(row: ResumeGenerationRow): ResumeGeneration {
     type: row.type,
     status: row.status,
     idempotencyKey: row.idempotency_key ?? undefined,
+    historyKind: row.history_kind ?? undefined,
+    historyTitle: row.history_title ?? undefined,
+    historyDescription: row.history_description ?? undefined,
+    targetRole: row.target_role ?? undefined,
+    targetJobSnippet: row.target_job_snippet ?? undefined,
     sourceCvSnapshot: structuredClone(CVStateSchema.parse(row.source_cv_snapshot)),
     generatedCvState: row.generated_cv_state == null
       ? undefined
@@ -73,9 +90,12 @@ function mapResumeGenerationRow(row: ResumeGenerationRow): ResumeGeneration {
     outputPdfPath: row.output_pdf_path ?? undefined,
     outputDocxPath: row.output_docx_path ?? undefined,
     failureReason: row.failure_reason ?? undefined,
+    errorMessage: row.error_message ?? undefined,
     versionNumber: row.version_number,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+    failedAt: row.failed_at ? new Date(row.failed_at) : undefined,
   }
 }
 
@@ -104,6 +124,11 @@ export async function createPendingResumeGeneration(input: {
   resumeTargetId?: string
   type: ResumeGenerationType
   idempotencyKey?: string
+  historyKind: ResumeGenerationHistoryKind
+  historyTitle: string
+  historyDescription?: string | null
+  targetRole?: string | null
+  targetJobSnippet?: string | null
   sourceCvSnapshot: CVState
 }): Promise<{ generation: ResumeGeneration; wasCreated: boolean }> {
   const supabase = getSupabaseAdminClient()
@@ -148,6 +173,11 @@ export async function createPendingResumeGeneration(input: {
       type: input.type,
       status: 'pending',
       idempotency_key: input.idempotencyKey ?? null,
+      history_kind: input.historyKind,
+      history_title: input.historyTitle,
+      history_description: input.historyDescription ?? null,
+      target_role: input.targetRole ?? null,
+      target_job_snippet: input.targetJobSnippet ?? null,
       source_cv_snapshot: structuredClone(input.sourceCvSnapshot),
       version_number: (count ?? 0) + 1,
       updated_at: now,
@@ -253,18 +283,74 @@ export async function updateResumeGeneration(input: {
   outputPdfPath?: string
   outputDocxPath?: string
   failureReason?: string
+  historyKind?: ResumeGenerationHistoryKind
+  historyTitle?: string | null
+  historyDescription?: string | null
+  targetRole?: string | null
+  targetJobSnippet?: string | null
+  errorMessage?: string | null
+  completedAt?: Date | null
+  failedAt?: Date | null
 }): Promise<ResumeGeneration> {
   const supabase = getSupabaseAdminClient()
+  const update: Record<string, unknown> = {
+    status: input.status,
+    updated_at: new Date().toISOString(),
+  }
+
+  if ('generatedCvState' in input) {
+    update.generated_cv_state = input.generatedCvState
+      ? structuredClone(input.generatedCvState)
+      : null
+  }
+
+  if ('outputPdfPath' in input) {
+    update.output_pdf_path = input.outputPdfPath ?? null
+  }
+
+  if ('outputDocxPath' in input) {
+    update.output_docx_path = input.outputDocxPath ?? null
+  }
+
+  if ('failureReason' in input) {
+    update.failure_reason = input.failureReason ?? null
+  }
+
+  if ('historyKind' in input) {
+    update.history_kind = input.historyKind
+  }
+
+  if ('historyTitle' in input) {
+    update.history_title = input.historyTitle ?? null
+  }
+
+  if ('historyDescription' in input) {
+    update.history_description = input.historyDescription ?? null
+  }
+
+  if ('targetRole' in input) {
+    update.target_role = input.targetRole ?? null
+  }
+
+  if ('targetJobSnippet' in input) {
+    update.target_job_snippet = input.targetJobSnippet ?? null
+  }
+
+  if ('errorMessage' in input) {
+    update.error_message = input.errorMessage ?? null
+  }
+
+  if ('completedAt' in input) {
+    update.completed_at = input.completedAt?.toISOString() ?? null
+  }
+
+  if ('failedAt' in input) {
+    update.failed_at = input.failedAt?.toISOString() ?? null
+  }
+
   const { data, error } = await supabase
     .from('resume_generations')
-    .update({
-      status: input.status,
-      generated_cv_state: input.generatedCvState ? structuredClone(input.generatedCvState) : null,
-      output_pdf_path: input.outputPdfPath ?? null,
-      output_docx_path: input.outputDocxPath ?? null,
-      failure_reason: input.failureReason ?? null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update)
     .eq('id', input.id)
     .select('*')
     .single<ResumeGenerationRow>()
@@ -274,4 +360,23 @@ export async function updateResumeGeneration(input: {
   }
 
   return mapResumeGenerationRow(data)
+}
+
+export async function listRecentResumeGenerationsForUser(
+  userId: string,
+  limit: number,
+): Promise<ResumeGeneration[]> {
+  const supabase = getSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('resume_generations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(`Failed to list recent resume generations: ${error.message}`)
+  }
+
+  return (data ?? []).map((row) => mapResumeGenerationRow(row as ResumeGenerationRow))
 }

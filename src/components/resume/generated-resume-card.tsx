@@ -1,132 +1,118 @@
-import { ChevronRight, Download, FileText } from "lucide-react"
+import { ArrowUpRight, Download, FileText } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { GeneratedResumeHistoryItem } from "@/lib/generated-resume-types"
+import { cn } from "@/lib/utils"
 
 type GeneratedResumeCardProps = {
   resume: GeneratedResumeHistoryItem
-  onDownloadPdf?: (id: string) => void
-  onOpen?: (id: string) => void
+  onDownloadPdf?: (resume: GeneratedResumeHistoryItem) => void
+  onOpen?: (resume: GeneratedResumeHistoryItem) => void
 }
 
-function formatRelativeTime(dateInput: string): string {
-  const date = new Date(dateInput)
-  if (Number.isNaN(date.getTime())) {
-    return ""
-  }
+const statusLabelMap = {
+  completed: "Concluído",
+  failed: "Falhou",
+  processing: "Processando",
+} as const
 
-  const differenceInMs = Date.now() - date.getTime()
-  const differenceInMinutes = Math.floor(differenceInMs / 60_000)
-  const differenceInHours = Math.floor(differenceInMs / 3_600_000)
-  const differenceInDays = Math.floor(differenceInMs / 86_400_000)
-  const differenceInWeeks = Math.floor(differenceInDays / 7)
-  const differenceInMonths = Math.floor(differenceInDays / 30)
-  const differenceInYears = Math.floor(differenceInDays / 365)
+const statusClassNameMap = {
+  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  failed: "border-rose-200 bg-rose-50 text-rose-700",
+  processing: "border-amber-200 bg-amber-50 text-amber-700",
+} as const
 
-  if (differenceInMinutes < 1) {
-    return "agora mesmo"
-  }
+const sourceLabelMap = {
+  ats_enhancement: "ATS geral",
+  chat: "Chat",
+  target_job: "Vaga alvo",
+} as const
 
-  if (differenceInMinutes < 60) {
-    return `há ${differenceInMinutes} min`
-  }
-
-  if (differenceInHours < 24) {
-    return `há ${differenceInHours} h`
-  }
-
-  if (differenceInDays < 7) {
-    return `há ${differenceInDays} dia${differenceInDays === 1 ? "" : "s"}`
-  }
-
-  if (differenceInWeeks < 5) {
-    return `há ${differenceInWeeks} semana${differenceInWeeks === 1 ? "" : "s"}`
-  }
-
-  if (differenceInMonths < 12) {
-    return differenceInMonths === 1 ? "há 1 mês" : `há ${differenceInMonths} meses`
-  }
-
-  return `há ${differenceInYears} ano${differenceInYears === 1 ? "" : "s"}`
-}
+const sourceClassNameMap = {
+  ats_enhancement: "border-slate-200 bg-slate-100 text-slate-700",
+  chat: "border-blue-200 bg-blue-50 text-blue-700",
+  target_job: "border-emerald-200 bg-emerald-50 text-emerald-700",
+} as const
 
 export function GeneratedResumeCard({
   resume,
   onDownloadPdf,
   onOpen,
 }: GeneratedResumeCardProps) {
-  const modeLabel = resume.mode === "ats_enhancement" ? "ATS otimizado" : "Vaga-alvo"
-  const statusLabel = {
-    completed: "Concluído",
-    processing: "Processando",
-    failed: "Falhou",
-  }[resume.status]
-
-  const statusColor = {
-    completed: "bg-green-50 text-green-700",
-    processing: "bg-yellow-50 text-yellow-700",
-    failed: "bg-red-50 text-red-700",
-  }[resume.status]
-
-  const modeColor =
-    resume.mode === "ats_enhancement" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"
+  const canDownloadPdf = resume.pdfAvailable && Boolean(resume.downloadPdfUrl)
+  const canOpen = Boolean(resume.viewerUrl || resume.sessionId)
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:shadow-sm">
-      <div className="mb-3 flex items-start gap-3">
-        <div className="mt-1 shrink-0">
-          <FileText className="h-5 w-5 text-neutral-400" />
+    <article className="group flex h-full flex-col rounded-[24px] border border-neutral-200 bg-white p-5 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_18px_40px_-24px_rgba(15,23,42,0.32)]">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 text-neutral-500">
+            <FileText className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", sourceClassNameMap[resume.kind])}
+              >
+                {sourceLabelMap[resume.kind]}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", statusClassNameMap[resume.status])}
+              >
+                {statusLabelMap[resume.status]}
+              </Badge>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="line-clamp-2 text-base font-semibold text-neutral-950">
+                {resume.title}
+              </h3>
+              {resume.description ? (
+                <p className="line-clamp-3 text-sm leading-6 text-neutral-600">
+                  {resume.description}
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-sm font-semibold text-neutral-900">{resume.title}</h3>
-          {resume.targetRole ? (
-            <p className="line-clamp-1 text-xs text-neutral-500">{resume.targetRole}</p>
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-3 border-t border-neutral-100 pt-4">
+        <p className="text-xs font-medium text-neutral-500">
+          {resume.relativeCreatedAt}
+        </p>
+
+        <div className="flex items-center gap-2">
+          {canDownloadPdf ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="rounded-full border-neutral-200 text-neutral-700 hover:border-neutral-300"
+              aria-label={`Baixar PDF de ${resume.title}`}
+              onClick={() => onDownloadPdf?.(resume)}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
           ) : null}
-        </div>
-      </div>
 
-      <div className="mb-3 flex shrink-0 flex-wrap gap-2">
-        <Badge variant="secondary" className={modeColor}>
-          {modeLabel}
-        </Badge>
-        <Badge variant="secondary" className={statusColor}>
-          {statusLabel}
-        </Badge>
-      </div>
-
-      {resume.targetJobSnippet ? (
-        <p className="mb-3 flex-1 line-clamp-2 text-xs text-neutral-600">{resume.targetJobSnippet}</p>
-      ) : (
-        <div className="flex-1" />
-      )}
-
-      <p className="mb-4 shrink-0 text-xs text-neutral-400">{formatRelativeTime(resume.createdAt)}</p>
-
-      <div className="flex shrink-0 gap-2">
-        {resume.pdfAvailable ? (
           <Button
             type="button"
-            onClick={() => onDownloadPdf?.(resume.id)}
             variant="outline"
-            size="sm"
-            className="flex-1"
+            size="icon-sm"
+            className="rounded-full border-neutral-200 text-neutral-700 hover:border-neutral-300"
+            aria-label={`Visualizar ${resume.title}`}
+            onClick={() => onOpen?.(resume)}
+            disabled={!canOpen}
           >
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            PDF
+            <ArrowUpRight className="h-4 w-4" />
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          onClick={() => onOpen?.(resume.id)}
-          variant="outline"
-          size="sm"
-          className="flex-none"
-          aria-label={`Abrir ${resume.title}`}
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Button>
+        </div>
       </div>
-    </div>
+    </article>
   )
 }

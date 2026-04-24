@@ -4,7 +4,7 @@ import { GeneratedResumeHistoryPage } from "@/components/resume/generated-resume
 
 export const metadata: Metadata = {
   title: "Histórico de currículos - CurrIA",
-  description: "Visualize o histórico mockado das versões de currículo geradas no dashboard.",
+  description: "Acesse os últimos currículos gerados pela IA, com download protegido e abertura da versão certa.",
 }
 
 export default function ResumesHistoryPage() {

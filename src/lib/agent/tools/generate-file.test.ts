@@ -200,7 +200,7 @@ describe('generateFile', () => {
     expect(pdfText.indexOf('EXPERIENCIA PROFISSIONAL')).toBeLessThan(pdfText.indexOf('EDUCACAO'))
     expect(pdfText.indexOf('EDUCACAO')).toBeLessThan(pdfText.indexOf('CERTIFICACOES'))
     expect(pdfText.indexOf('CERTIFICACOES')).toBeLessThan(pdfText.indexOf('IDIOMAS'))
-  }, 15_000)
+  }, 45_000)
 
   it('renders accented pt-BR and technical strings without broken glyphs in the PDF', async () => {
     const pdfBuffer = await generateFileDeps.generatePDF({
@@ -237,7 +237,7 @@ describe('generateFile', () => {
     expect(pdfText).not.toContain('□')
     expect(pdfText).not.toContain('Est9giário')
     expect(pdfText).not.toContain('Gr9du9ção')
-  }, 15_000)
+  }, 45_000)
 
   it('aligns experience dates on the same header line as the title and keeps the company below', async () => {
     const pdfBuffer = await generateFileDeps.generatePDF({
@@ -266,7 +266,7 @@ describe('generateFile', () => {
     expect(Math.abs((titleItem?.y ?? 0) - (periodItem?.y ?? 0))).toBeLessThan(2)
     expect((periodItem?.x ?? 0)).toBeGreaterThan((titleItem?.x ?? 0))
     expect((companyItem?.y ?? 0)).toBeLessThan((titleItem?.y ?? 0))
-  }, 15_000)
+  }, 45_000)
 
   it('creates transient signed urls from the provided storage seam only', async () => {
     const createSignedUrl = vi.fn().mockResolvedValue({

@@ -1,48 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { ArrowLeft, FileText, Info } from "lucide-react"
+import { ArrowLeft, FileText, RefreshCcw } from "lucide-react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
-import type { GeneratedResumeHistoryItem } from "@/lib/generated-resume-types"
+import type {
+  GeneratedResumeHistoryItem,
+  GeneratedResumeHistoryResponse,
+} from "@/lib/generated-resume-types"
 
 import { GeneratedResumeCard } from "./generated-resume-card"
 
 type GeneratedResumeHistoryProps = {
-  resumes: GeneratedResumeHistoryItem[]
+  items: GeneratedResumeHistoryItem[]
+  pagination: GeneratedResumeHistoryResponse["pagination"]
   isLoading?: boolean
   error?: string | null
   onBack?: () => void
   onRetry?: () => void
-  onDownloadPdf?: (id: string) => void
-  onOpen?: (id: string) => void
+  onPageChange?: (page: number) => void
+  onStartResume?: () => void
+  onDownloadPdf?: (resume: GeneratedResumeHistoryItem) => void
+  onOpen?: (resume: GeneratedResumeHistoryItem) => void
 }
-
-const ITEMS_PER_PAGE = 4
 
 function BackButton({ onBack }: { onBack?: () => void }) {
   return (
     <button
       type="button"
       onClick={onBack}
-      className="mb-6 flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
+      className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-950"
     >
       <ArrowLeft className="h-4 w-4" />
       Voltar ao perfil
@@ -50,172 +36,179 @@ function BackButton({ onBack }: { onBack?: () => void }) {
   )
 }
 
+function SectionHeader({ totalItems }: { totalItems: number }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+        Histórico
+      </p>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-950">
+          Currículos recentes
+        </h1>
+        <p className="max-w-2xl text-sm leading-6 text-neutral-600">
+          Acesse os últimos currículos gerados pela IA e retome a versão certa para
+          download ou visualização.
+          {totalItems > 0 ? ` Mostrando ${totalItems} arquivo${totalItems === 1 ? "" : "s"} mais recente${totalItems === 1 ? "" : "s"}.` : ""}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function HistorySkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div
+          key={index}
+          className="h-[228px] animate-pulse rounded-[24px] border border-neutral-200 bg-white"
+        />
+      ))}
+    </div>
+  )
+}
+
+function EmptyState({
+  onStartResume,
+}: {
+  onStartResume?: () => void
+}) {
+  return (
+    <div className="rounded-[28px] border border-dashed border-neutral-300 bg-white px-6 py-14 text-center shadow-[0_12px_32px_-24px_rgba(15,23,42,0.35)]">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 text-neutral-500">
+        <FileText className="h-6 w-6" />
+      </div>
+      <h2 className="mt-5 text-xl font-semibold text-neutral-950">
+        Nenhum currículo gerado ainda
+      </h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-600">
+        Gere sua primeira versão ATS ou adapte seu currículo para uma vaga
+        específica.
+      </p>
+      <Button className="mt-6 rounded-full px-5" onClick={onStartResume}>
+        Melhorar currículo com IA
+      </Button>
+    </div>
+  )
+}
+
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: string
+  onRetry?: () => void
+}) {
+  return (
+    <div className="rounded-[28px] border border-rose-200 bg-white px-6 py-14 text-center shadow-[0_12px_32px_-24px_rgba(15,23,42,0.35)]">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600">
+        <RefreshCcw className="h-6 w-6" />
+      </div>
+      <h2 className="mt-5 text-xl font-semibold text-neutral-950">
+        Não foi possível carregar seu histórico de currículos.
+      </h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-600">
+        {error}
+      </p>
+      <Button className="mt-6 rounded-full px-5" onClick={onRetry}>
+        Tentar novamente
+      </Button>
+    </div>
+  )
+}
+
+function PaginationControls({
+  pagination,
+  onPageChange,
+}: {
+  pagination: GeneratedResumeHistoryResponse["pagination"]
+  onPageChange?: (page: number) => void
+}) {
+  if (pagination.totalPages <= 1) {
+    return null
+  }
+
+  return (
+    <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-full"
+        onClick={() => onPageChange?.(pagination.page - 1)}
+        disabled={!pagination.hasPreviousPage}
+      >
+        Anterior
+      </Button>
+
+      <p className="text-sm text-neutral-600">
+        Página {pagination.page} de {pagination.totalPages}
+      </p>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-full"
+        onClick={() => onPageChange?.(pagination.page + 1)}
+        disabled={!pagination.hasNextPage}
+      >
+        Próxima
+      </Button>
+    </div>
+  )
+}
+
 export function GeneratedResumeHistory({
-  resumes,
+  items,
+  pagination,
   isLoading = false,
   error = null,
   onBack,
   onRetry,
+  onPageChange,
+  onStartResume,
   onDownloadPdf,
   onOpen,
 }: GeneratedResumeHistoryProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const totalPages = Math.ceil(resumes.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const endIndex = startIndex + ITEMS_PER_PAGE
-  const currentResumes = resumes.slice(startIndex, endIndex)
-
-  useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-2">
-            Não foi possível carregar o histórico
-          </h2>
-          <p className="text-sm text-neutral-600 mb-6">{error}</p>
-          <Button onClick={onRetry}>Tentar novamente</Button>
-        </div>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white px-6 py-8">
-        <div className="mx-auto max-w-4xl">
-          <BackButton onBack={onBack} />
-
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-neutral-900 mb-2">Currículos gerados</h1>
-            <p className="text-sm text-neutral-600">
-              Carregando seu histórico de currículos...
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="h-48 rounded-lg border border-neutral-200 bg-neutral-50 animate-pulse"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (resumes.length === 0) {
-    return (
-      <div className="min-h-screen bg-white px-6 py-8">
-        <div className="mx-auto max-w-4xl">
-          <BackButton onBack={onBack} />
-
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FileText className="h-6 w-6 text-neutral-400" />
-              </EmptyMedia>
-              <EmptyTitle>Nenhum currículo ainda</EmptyTitle>
-              <EmptyDescription>
-                Gere sua primeira versão otimizada para ATS ou adapte seu currículo para uma vaga específica.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={onBack}>Ir para o perfil</Button>
-            </EmptyContent>
-          </Empty>
-        </div>
-      </div>
-    )
-  }
+  const totalItems = pagination.totalItems
 
   return (
-    <div className="min-h-screen bg-white px-6 py-8">
-      <div className="mx-auto max-w-4xl">
+    <div className="min-h-screen bg-neutral-100/70 px-6 py-8 md:px-8">
+      <div className="mx-auto max-w-6xl space-y-8">
         <BackButton onBack={onBack} />
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-neutral-900 mb-2">Currículos gerados</h1>
-          <p className="text-sm text-neutral-600">
-            Você tem {resumes.length} currículo{resumes.length !== 1 ? "s" : ""} gerado
-            {resumes.length !== 1 ? "s" : ""} pronto{resumes.length !== 1 ? "s" : ""} para baixar ou comparar.
-          </p>
-        </div>
+        <section className="rounded-[32px] border border-white/70 bg-[#f5f6f8] px-6 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] md:px-8 md:py-8">
+          <SectionHeader totalItems={totalItems} />
 
-        <Alert className="mb-6 border-blue-200 bg-blue-50">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm text-blue-800">
-            Mantemos seus últimos 6 PDFs gerados. Versões mais antigas podem ser arquivadas automaticamente para liberar armazenamento.
-          </AlertDescription>
-        </Alert>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {currentResumes.map((resume) => (
-            <GeneratedResumeCard
-              key={resume.id}
-              resume={resume}
-              onDownloadPdf={onDownloadPdf}
-              onOpen={onOpen}
-            />
-          ))}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="mt-12 flex justify-center">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      if (currentPage > 1) setCurrentPage((page) => page - 1)
-                    }}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      href="#"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        setCurrentPage(page)
-                      }}
-                      isActive={currentPage === page}
-                      className={`cursor-pointer ${
-                        currentPage === page
-                          ? "bg-black text-white"
-                          : ""
-                      }`}
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      if (currentPage < totalPages) setCurrentPage((page) => page + 1)
-                    }}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+          <div className="mt-8">
+            {error ? (
+              <ErrorState error={error} onRetry={onRetry} />
+            ) : isLoading ? (
+              <HistorySkeleton />
+            ) : items.length === 0 ? (
+              <EmptyState onStartResume={onStartResume} />
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {items.map((resume) => (
+                    <GeneratedResumeCard
+                      key={resume.id}
+                      resume={resume}
+                      onDownloadPdf={onDownloadPdf}
+                      onOpen={onOpen}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  pagination={pagination}
+                  onPageChange={onPageChange}
+                />
+              </>
+            )}
           </div>
-        )}
+        </section>
       </div>
     </div>
   )

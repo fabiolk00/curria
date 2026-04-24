@@ -189,6 +189,13 @@
 - [x] **ATS-INTENT-GUARD-01**: Selecting target-job adaptation without a non-empty vacancy description must be blocked locally in the UI before generation starts, while ATS selection clears any draft target-job description and submit behavior continues to follow the existing `generationMode` and endpoint split.
 - [x] **ATS-INTENT-TEST-01**: Focused component and browser regression coverage must prove default ATS selection, explicit target-job selection, local empty-target validation, ATS-clear behavior, preserved dialogs/toasts/loading/credit messaging, and unchanged ATS versus smart-generation endpoint semantics.
 
+### Generated Resume History
+
+- [x] **RESUME-HISTORY-PERSIST-01**: Generated resume history must remain durable in `resume_generations`, preserving normalized history metadata for source kind, card copy, timestamps, and artifact ownership without replacing the current billing-aware generation flow.
+- [x] **RESUME-HISTORY-ACCESS-01**: Authenticated users must be able to read only their own latest 6 history items and open/download them through protected app routes that never expose raw storage paths or bypass existing file-access ownership checks.
+- [x] **RESUME-HISTORY-UI-01**: The existing `Currículos recentes` screen must use live history data, preserve the approved dashboard-card visual direction, differentiate chat/ATS geral/vaga alvo, and paginate 4 cards per page with explicit loading, empty, and error states.
+- [x] **RESUME-HISTORY-TEST-01**: Focused service, API, and UI regression coverage must prove latest-6 pagination, secure ownership filtering, source-kind mapping, safe URLs, and the real-history rendering/actions on the existing screen without screenshot-only assertions.
+
 ## Future Requirements
 
 | Requirement | Why Deferred |
@@ -337,10 +344,14 @@
 | ATS-INTENT-UI-01 | Phase 100 | Complete |
 | ATS-INTENT-GUARD-01 | Phase 100 | Complete |
 | ATS-INTENT-TEST-01 | Phase 100 | Complete |
+| RESUME-HISTORY-PERSIST-01 | Phase 101 | Complete |
+| RESUME-HISTORY-ACCESS-01 | Phase 101 | Complete |
+| RESUME-HISTORY-UI-01 | Phase 101 | Complete |
+| RESUME-HISTORY-TEST-01 | Phase 101 | Complete |
 
 **Coverage:**
-- v1.6 requirements: 104 total
-- Mapped to phases: 104
+- v1.6 requirements: 108 total
+- Mapped to phases: 108
 - Unmapped: 0
 
 ---

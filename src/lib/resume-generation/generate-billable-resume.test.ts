@@ -756,11 +756,16 @@ describe('generateBillableResume', () => {
       resumeGenerationId: 'gen_pending_render',
       metadata: expect.any(Object),
     })
-    expect(mockUpdateResumeGeneration).toHaveBeenCalledWith({
+    expect(mockUpdateResumeGeneration).toHaveBeenCalledWith(expect.objectContaining({
       id: 'gen_pending_render',
       status: 'failed',
       failureReason: 'renderer crashed',
-    })
+      historyKind: 'ats_enhancement',
+      historyTitle: 'Currículo ATS otimizado',
+      errorMessage: 'renderer crashed',
+      completedAt: null,
+      failedAt: expect.any(Date),
+    }))
   })
 
   it('fails timed-out renders through the release path so capacity is not held indefinitely', async () => {
@@ -803,11 +808,16 @@ describe('generateBillableResume', () => {
       resumeGenerationId: 'gen_pending_timeout',
       metadata: expect.any(Object),
     })
-    expect(mockUpdateResumeGeneration).toHaveBeenCalledWith({
+    expect(mockUpdateResumeGeneration).toHaveBeenCalledWith(expect.objectContaining({
       id: 'gen_pending_timeout',
       status: 'failed',
       failureReason: 'Export generation timed out.',
-    })
+      historyKind: 'ats_enhancement',
+      historyTitle: 'Currículo ATS otimizado',
+      errorMessage: 'Export generation timed out.',
+      completedAt: null,
+      failedAt: expect.any(Date),
+    }))
 
     vi.useRealTimers()
     delete process.env.EXPORT_GENERATION_TIMEOUT_MS

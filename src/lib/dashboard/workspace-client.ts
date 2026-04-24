@@ -9,6 +9,7 @@ import type {
   DownloadUrlsResponse,
   GenerateResumeResponse,
   ResumeComparisonResponse,
+  ResumeGenerationHistoryResponse,
   SessionWorkspace,
 } from '@/types/dashboard'
 
@@ -136,6 +137,20 @@ export async function getBillingHistory(limit = 10): Promise<BillingHistoryRespo
   })
 
   return requestJson<BillingHistoryResponse>(`/api/billing/history?${searchParams.toString()}`)
+}
+
+export async function getResumeGenerationHistory(
+  page = 1,
+  limit = 4,
+): Promise<ResumeGenerationHistoryResponse> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  })
+
+  return requestJson<ResumeGenerationHistoryResponse>(
+    `/api/profile/resume-generations?${searchParams.toString()}`,
+  )
 }
 
 export function isGeneratedOutputReady(generatedOutput?: GeneratedOutput): boolean {

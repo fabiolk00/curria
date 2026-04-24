@@ -206,6 +206,43 @@ describe('GET /api/file/[sessionId]', () => {
     )
   })
 
+  it('redirects direct pdf download requests to the protected signed url', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({
+      id: 'usr_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      authIdentity: {
+        id: 'identity_123',
+        userId: 'usr_123',
+        provider: 'clerk',
+        providerSubject: 'user_123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      creditAccount: {
+        id: 'cred_usr_123',
+        userId: 'usr_123',
+        creditsRemaining: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    vi.mocked(getSession).mockResolvedValue(buildSession())
+    vi.mocked(createSignedResumeArtifactUrls).mockResolvedValue({
+      docxUrl: 'https://cdn.example.com/signed/docx',
+      pdfUrl: 'https://cdn.example.com/signed/pdf',
+    })
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/file/sess_123?download=pdf'),
+      { params: { sessionId: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://cdn.example.com/signed/pdf')
+  })
+
   it('serves only the locked preview pdf url for free-trial generated artifacts', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
@@ -267,6 +304,55 @@ describe('GET /api/file/[sessionId]', () => {
         message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
       },
     })
+    expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
+  })
+
+  it('redirects direct pdf download requests to the locked preview route when preview access is restricted', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({
+      id: 'usr_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      authIdentity: {
+        id: 'identity_123',
+        userId: 'usr_123',
+        provider: 'clerk',
+        providerSubject: 'user_123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      creditAccount: {
+        id: 'cred_usr_123',
+        userId: 'usr_123',
+        creditsRemaining: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    vi.mocked(getSession).mockResolvedValue({
+      ...buildSession(),
+      generatedOutput: {
+        ...buildSession().generatedOutput,
+        previewAccess: {
+          locked: true,
+          blurred: true,
+          canViewRealContent: false,
+          requiresUpgrade: true,
+          requiresRegenerationAfterUnlock: true,
+          reason: 'free_trial_locked',
+          lockedAt: '2026-04-20T12:00:00.000Z',
+          message: 'Seu preview gratuito está bloqueado. Faça upgrade e gere novamente para liberar o currículo real.',
+        },
+      },
+    })
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/file/sess_123?download=pdf'),
+      { params: { sessionId: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://example.com/api/file/sess_123/locked-preview')
     expect(createSignedResumeArtifactUrls).not.toHaveBeenCalled()
   })
 

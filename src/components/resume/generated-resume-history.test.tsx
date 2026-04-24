@@ -8,56 +8,169 @@ import { mockGeneratedResumeHistory } from "@/lib/generated-resume-mock"
 import { GeneratedResumeHistory } from "./generated-resume-history"
 
 describe("GeneratedResumeHistory", () => {
-  it("renders the mocked history grid and paginates through the second page", async () => {
-    const user = userEvent.setup()
-    const onBack = vi.fn()
+  const basePagination = {
+    page: 1,
+    limit: 4,
+    totalItems: 6,
+    totalPages: 2,
+    hasNextPage: true,
+    hasPreviousPage: false,
+  }
 
-    render(
+  it("renders loading skeleton cards while history is loading", () => {
+    const { container } = render(
       <GeneratedResumeHistory
-        resumes={mockGeneratedResumeHistory}
-        onBack={onBack}
-        onDownloadPdf={vi.fn()}
-        onOpen={vi.fn()}
+        items={[]}
+        pagination={{
+          page: 1,
+          limit: 4,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }}
+        isLoading
       />,
     )
 
-    expect(screen.getByRole("heading", { name: "Currículos gerados" })).toBeInTheDocument()
-    expect(screen.getByText("Currículo ATS - Designer de Produto")).toBeInTheDocument()
-    expect(screen.queryByText("Currículo alvo - Engenharia de Analytics")).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("link", { name: "2" }))
-
-    expect(screen.getByText("Currículo alvo - Engenharia de Analytics")).toBeInTheDocument()
-    expect(screen.queryByText("Currículo ATS - Designer de Produto")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Voltar ao perfil" })).toBeInTheDocument()
+    expect(screen.getByText("Currículos recentes")).toBeInTheDocument()
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(4)
   })
 
-  it("shows the empty state when there are no generated resumes", () => {
-    const onBack = vi.fn()
+  it("renders the empty state CTA when there are no generated resumes", async () => {
+    const user = userEvent.setup()
+    const onStartResume = vi.fn()
 
-    render(<GeneratedResumeHistory resumes={[]} onBack={onBack} />)
+    render(
+      <GeneratedResumeHistory
+        items={[]}
+        pagination={{
+          page: 1,
+          limit: 4,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }}
+        onStartResume={onStartResume}
+      />,
+    )
 
-    expect(screen.getByText("Nenhum currículo ainda")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Ir para o perfil" })).toBeInTheDocument()
+    expect(screen.getByText("Nenhum currículo gerado ainda")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Melhorar currículo com IA" }))
+    expect(onStartResume).toHaveBeenCalledTimes(1)
   })
 
-  it("surfaces the error state and allows retry", async () => {
+  it("renders the error state and retries loading", async () => {
     const user = userEvent.setup()
     const onRetry = vi.fn()
 
     render(
       <GeneratedResumeHistory
-        resumes={mockGeneratedResumeHistory}
-        error="Falha mockada ao carregar o histórico."
+        items={[]}
+        pagination={basePagination}
+        error="Falha ao carregar o histórico."
         onRetry={onRetry}
       />,
     )
 
-    expect(screen.getByText("Não foi possível carregar o histórico")).toBeInTheDocument()
-    expect(screen.getByText("Falha mockada ao carregar o histórico.")).toBeInTheDocument()
+    expect(
+      screen.getByText("Não foi possível carregar seu histórico de currículos."),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Tentar novamente" }))
-
     expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("renders chat, ATS and target-job cards with badges and actions", async () => {
+    const user = userEvent.setup()
+    const onDownloadPdf = vi.fn()
+    const onOpen = vi.fn()
+
+    render(
+      <GeneratedResumeHistory
+        items={mockGeneratedResumeHistory.slice(0, 3)}
+        pagination={{
+          page: 1,
+          limit: 4,
+          totalItems: 3,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }}
+        onDownloadPdf={onDownloadPdf}
+        onOpen={onOpen}
+      />,
+    )
+
+    expect(screen.getByText("Chat")).toBeInTheDocument()
+    expect(screen.getByText("ATS geral")).toBeInTheDocument()
+    expect(screen.getByText("Vaga alvo")).toBeInTheDocument()
+    expect(screen.getAllByText("Concluído")).toHaveLength(3)
+
+    await user.click(screen.getByRole("button", { name: /Baixar PDF de Currículo gerado no chat/i }))
+    expect(onDownloadPdf).toHaveBeenCalledWith(mockGeneratedResumeHistory[0])
+
+    await user.click(screen.getByRole("button", { name: /Visualizar Currículo para Data Analyst/i }))
+    expect(onOpen).toHaveBeenCalledWith(mockGeneratedResumeHistory[2])
+  })
+
+  it("hides the PDF button when the artifact is unavailable", () => {
+    render(
+      <GeneratedResumeHistory
+        items={[mockGeneratedResumeHistory[3]]}
+        pagination={{
+          page: 1,
+          limit: 4,
+          totalItems: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Processando")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Baixar PDF de Currículo ATS otimizado/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders pagination controls and notifies page changes", async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+
+    render(
+      <GeneratedResumeHistory
+        items={mockGeneratedResumeHistory.slice(0, 4)}
+        pagination={basePagination}
+        onPageChange={onPageChange}
+      />,
+    )
+
+    expect(screen.getByText("Página 1 de 2")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Próxima" }))
+    expect(onPageChange).toHaveBeenCalledWith(2)
+  })
+
+  it("renders the second page with the remaining 2 cards", () => {
+    render(
+      <GeneratedResumeHistory
+        items={mockGeneratedResumeHistory.slice(4, 6)}
+        pagination={{
+          page: 2,
+          limit: 4,
+          totalItems: 6,
+          totalPages: 2,
+          hasNextPage: false,
+          hasPreviousPage: true,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument()
+    expect(screen.getByText("Currículo adaptado para vaga")).toBeInTheDocument()
+    expect(screen.getByText("Currículo gerado no chat")).toBeInTheDocument()
   })
 })

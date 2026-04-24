@@ -424,6 +424,11 @@ model ResumeGeneration {
   type             ResumeGenerationType
   status           String               @default("pending")
   idempotencyKey   String?              @unique @map("idempotency_key")
+  historyKind      String               @map("history_kind")
+  historyTitle     String               @map("history_title")
+  historyDescription String?            @map("history_description")
+  targetRole       String?              @map("target_role")
+  targetJobSnippet String?              @map("target_job_snippet")
   // Canonical product contract: immutable source CVState snapshot.
   sourceCvSnapshot Json                 @map("source_cv_snapshot")
   // Canonical product contract: immutable generated CVState snapshot when present.
@@ -431,9 +436,12 @@ model ResumeGeneration {
   outputPdfPath    String?              @map("output_pdf_path")
   outputDocxPath   String?              @map("output_docx_path")
   failureReason    String?              @map("failure_reason")
+  errorMessage     String?              @map("error_message")
   versionNumber    Int                  @default(1) @map("version_number")
   createdAt        DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
+  completedAt      DateTime?            @map("completed_at")
+  failedAt         DateTime?            @map("failed_at")
 
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   session          Session?             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -443,6 +451,8 @@ model ResumeGeneration {
   creditLedgerEntries CreditLedgerEntry[]
 
   @@index([userId, createdAt])
+  @@index([userId, historyKind, createdAt])
+  @@index([userId, status, createdAt])
   @@index([sessionId, createdAt])
   @@index([resumeTargetId, createdAt])
   @@map("resume_generations")

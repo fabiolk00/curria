@@ -19,6 +19,7 @@ import type {
 } from '@/types/cv'
 import type { BillingHistoryResponse as SerializedBillingHistoryResponse } from '@/types/billing'
 import type { AtsReadinessScoreContract } from '@/lib/ats/scoring/types'
+import type { ResumeGenerationHistoryResponse as SerializedResumeGenerationHistoryResponse } from '@/lib/resume-history/resume-generation-history.types'
 import type { CvHighlightState } from '@/lib/resume/cv-highlight-artifact'
 
 export type PreviewLockSummary = {
@@ -245,6 +246,7 @@ export type DownloadUrlsResponse = {
 }
 
 export type BillingHistoryResponse = SerializedBillingHistoryResponse
+export type ResumeGenerationHistoryResponse = SerializedResumeGenerationHistoryResponse
 
 export type ResumeComparisonResponse = {
   sessionId: string

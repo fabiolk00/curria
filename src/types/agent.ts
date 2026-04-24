@@ -169,6 +169,7 @@ export type CVVersionSource = 'ingestion' | 'rewrite' | 'manual' | 'ats-enhancem
 export type CVVersionScope = 'base' | 'target-derived'
 export type ResumeGenerationType = 'ATS_ENHANCEMENT' | 'JOB_TARGETING'
 export type ResumeGenerationStatus = 'pending' | 'completed' | 'failed'
+export type ResumeGenerationHistoryKind = 'chat' | 'ats_enhancement' | 'target_job'
 export type PreviewAccessReason =
   | 'free_trial_locked'
   | 'payment_required'
@@ -220,14 +221,22 @@ export type ResumeGeneration = {
   type: ResumeGenerationType
   status: ResumeGenerationStatus
   idempotencyKey?: string
+  historyKind?: ResumeGenerationHistoryKind
+  historyTitle?: string
+  historyDescription?: string
+  targetRole?: string
+  targetJobSnippet?: string
   sourceCvSnapshot: CVState
   generatedCvState?: CVState
   outputPdfPath?: string
   outputDocxPath?: string
   failureReason?: string
+  errorMessage?: string
   versionNumber: number
   createdAt: Date
   updatedAt: Date
+  completedAt?: Date
+  failedAt?: Date
 }
 
 export type CreditConsumption = {

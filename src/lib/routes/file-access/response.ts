@@ -8,6 +8,10 @@ import { assertNever } from '@/lib/routes/shared/exhaustive'
 
 import type { FileAccessContext, FileAccessDecision } from './types'
 
+function isDirectPdfDownloadRequest(context: FileAccessContext): boolean {
+  return context.request.nextUrl.searchParams.get('download') === 'pdf'
+}
+
 function buildPdfFileName(context: FileAccessContext): string {
   return buildResumeExportFilename({
     fullName: context.session.cvState.fullName,
@@ -62,6 +66,10 @@ export async function toFileAccessResponse(
       )
     case 'locked_preview':
       recordMetricCounter('architecture.file.locked_preview_responses')
+      if (isDirectPdfDownloadRequest(context) && decision.body.pdfUrl) {
+        return NextResponse.redirect(new URL(decision.body.pdfUrl, context.request.url))
+      }
+
       return NextResponse.json({
         ...decision.body,
         pdfFileName,
@@ -104,6 +112,17 @@ export async function toFileAccessResponse(
           success: true,
           latencyMs: Date.now() - context.requestStartedAt,
         })
+
+        if (isDirectPdfDownloadRequest(context)) {
+          if (!signedUrls.pdfUrl) {
+            return NextResponse.json(
+              { error: 'Generated resume artifacts could not be retrieved.' },
+              { status: 404 },
+            )
+          }
+
+          return NextResponse.redirect(signedUrls.pdfUrl)
+        }
 
         return NextResponse.json({
           ...decision.body,

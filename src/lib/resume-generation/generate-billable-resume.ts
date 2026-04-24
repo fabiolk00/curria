@@ -33,6 +33,8 @@ import {
   PendingResumeGenerationPersistenceError,
   updateResumeGeneration,
 } from '@/lib/db/resume-generations'
+import { buildResumeGenerationHistoryMetadata } from '@/lib/resume-history/resume-generation-history'
+import type { ResumeGenerationHistoryContext } from '@/lib/resume-history/resume-generation-history.types'
 import { getSession } from '@/lib/db/sessions'
 import { resolveExportGenerationConfig } from '@/lib/jobs/config'
 import { recordMetricCounter } from '@/lib/observability/metric-events'
@@ -491,6 +493,7 @@ async function completeResumeGenerationBestEffort(input: {
   resumeGeneration: ResumeGeneration
   sourceCvState: GenerateFileInput['cv_state']
   generationResult: GenerateFileExecutionResult
+  historyMetadata: ReturnType<typeof buildResumeGenerationHistoryMetadata>
 }): Promise<ResumeGenerationPersistenceResult> {
   const completedGeneration = await safeUpdateResumeGeneration({
     id: input.resumeGeneration.id,
@@ -498,6 +501,14 @@ async function completeResumeGenerationBestEffort(input: {
     generatedCvState: input.sourceCvState,
     outputPdfPath: input.generationResult.generatedOutput?.pdfPath,
     outputDocxPath: input.generationResult.generatedOutput?.docxPath,
+    historyKind: input.historyMetadata.historyKind,
+    historyTitle: input.historyMetadata.historyTitle,
+    historyDescription: input.historyMetadata.historyDescription,
+    targetRole: input.historyMetadata.targetRole,
+    targetJobSnippet: input.historyMetadata.targetJobSnippet,
+    errorMessage: null,
+    completedAt: new Date(),
+    failedAt: null,
   })
 
   if (!completedGeneration) {
@@ -764,6 +775,7 @@ export async function generateBillableResume(input: {
   latestVersionId?: string
   latestVersionSource?: string
   sourceScope?: string
+  historyContext?: ResumeGenerationHistoryContext
 }): Promise<BillableGenerationResult> {
   const scope: ArtifactScope = input.targetId
     ? { type: 'target', targetId: input.targetId }
@@ -778,6 +790,12 @@ export async function generateBillableResume(input: {
     targetId: input.targetId,
     generationType,
   }
+  const historyMetadata = buildResumeGenerationHistoryMetadata({
+    ...input.historyContext,
+    idempotencyKey: input.idempotencyKey ?? input.historyContext?.idempotencyKey,
+    resumeTargetId: input.targetId ?? input.historyContext?.resumeTargetId,
+    generationType,
+  })
 
   logInfo('resume_generation.stage.started', buildBillableStageLogFields(stageContext, stageState, 'validate_cv_state'))
   const validation = validateGenerationCvState(input.sourceCvState)
@@ -1003,6 +1021,11 @@ export async function generateBillableResume(input: {
             resumeTargetId: input.targetId,
             type: generationType,
             idempotencyKey: input.idempotencyKey,
+            historyKind: historyMetadata.historyKind,
+            historyTitle: historyMetadata.historyTitle,
+            historyDescription: historyMetadata.historyDescription,
+            targetRole: historyMetadata.targetRole,
+            targetJobSnippet: historyMetadata.targetJobSnippet,
             sourceCvSnapshot: input.sourceCvState,
           })
         } catch (error) {
@@ -1300,6 +1323,14 @@ export async function generateBillableResume(input: {
       id: resumeGeneration.id,
       status: 'failed',
       failureReason: generationFailureReason,
+      historyKind: historyMetadata.historyKind,
+      historyTitle: historyMetadata.historyTitle,
+      historyDescription: historyMetadata.historyDescription,
+      targetRole: historyMetadata.targetRole,
+      targetJobSnippet: historyMetadata.targetJobSnippet,
+      errorMessage: generationFailureReason,
+      completedAt: null,
+      failedAt: new Date(),
     })
     if (failedPersistence) {
       logInfo('resume_generation.stage.completed', buildBillableStageLogFields(stageContext, stageState, 'persist_failed_generation'))
@@ -1451,6 +1482,7 @@ export async function generateBillableResume(input: {
       resumeGeneration,
       sourceCvState: input.sourceCvState,
       generationResult,
+      historyMetadata,
     }),
     {
       failureCode: TOOL_ERROR_CODES.GENERATE_RESUME_PERSISTENCE_FAILED,

@@ -761,6 +761,14 @@ describe('agent tool dispatch', () => {
       latestVersionId: 'ver_123',
       latestVersionSource: 'ats-enhancement',
       sourceScope: 'optimized',
+      historyContext: {
+        workflowMode: undefined,
+        lastRewriteMode: undefined,
+        targetJobDescription: undefined,
+        targetRole: undefined,
+        resumeTargetId: undefined,
+        idempotencyKey: undefined,
+      },
     })
     expect(execution.patch).toEqual({
       generatedOutput: {
@@ -946,6 +954,14 @@ describe('agent tool dispatch', () => {
       latestVersionId: 'ver_123',
       latestVersionSource: 'ats-enhancement',
       sourceScope: 'target',
+      historyContext: {
+        workflowMode: undefined,
+        lastRewriteMode: undefined,
+        targetJobDescription: undefined,
+        targetRole: undefined,
+        resumeTargetId: 'target_123',
+        idempotencyKey: undefined,
+      },
     })
     expect(updateResumeTargetGeneratedOutput).toHaveBeenCalledWith(
       session.id,

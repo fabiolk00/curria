@@ -728,3 +728,13 @@ Plans:
 
 Plans:
 - [x] 100-01-PLAN.md - Add a UI-only enhancement intent selector, preserve `generationMode` as the behavior seam, refresh the enhancement-panel layout, and add focused unit/browser regression coverage without changing backend generation contracts
+
+### Phase 101: Connect the existing resume history UI to real generated artifacts and protected access
+
+**Goal:** Reuse the existing `Currículos recentes` dashboard surface and back it with durable generation-history metadata, authenticated pagination, protected PDF access, and viewer/open actions without rewriting the current generation or billing architecture.
+**Requirements**: [RESUME-HISTORY-PERSIST-01, RESUME-HISTORY-ACCESS-01, RESUME-HISTORY-UI-01, RESUME-HISTORY-TEST-01]
+**Depends on:** Phase 100
+**Plans:** 1 plan
+
+Plans:
+- [x] 101-01-PLAN.md - Extend `resume_generations` with history metadata, expose the latest 6 owned records through a protected paginated API, adapt the existing history UI to real data and actions, and add focused service/API/UI regression coverage

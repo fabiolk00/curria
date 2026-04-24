@@ -20,7 +20,32 @@ function prioritizeExperienceBullets(bullets: string[]): string[] {
     return bullets
   }
 
-  return bullets.slice(0, MAX_REWRITE_BULLETS_PER_EXPERIENCE)
+  const prioritizedIndexes = new Set<number>()
+  const highSignalIndexes = bullets
+    .map((bullet, index) => ({
+      index,
+      score: /\d|%/.test(bullet) ? 2 : 0,
+    }))
+    .filter((entry) => entry.score > 0)
+    .map((entry) => entry.index)
+
+  for (const index of highSignalIndexes) {
+    prioritizedIndexes.add(index)
+
+    if (prioritizedIndexes.size === MAX_REWRITE_BULLETS_PER_EXPERIENCE) {
+      break
+    }
+  }
+
+  for (const [index] of bullets.entries()) {
+    if (prioritizedIndexes.size === MAX_REWRITE_BULLETS_PER_EXPERIENCE) {
+      break
+    }
+
+    prioritizedIndexes.add(index)
+  }
+
+  return bullets.filter((_, index) => prioritizedIndexes.has(index))
 }
 
 export function shapeRewriteCurrentContent(

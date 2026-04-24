@@ -1,5 +1,3 @@
-import { createHash } from 'crypto'
-
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 
@@ -10,9 +8,10 @@ import { resolveEffectiveResumeSource } from '@/lib/jobs/source-of-truth'
 import { logWarn } from '@/lib/observability/structured-log'
 import { validateTrustedMutationRequest } from '@/lib/security/request-trust'
 
-import type { SessionGenerateContext, SessionGenerateContextResult } from './types'
+import { buildArtifactJobIdempotencyKey } from './keys'
+import type { SessionGenerateContextResult } from './types'
 
-export const BodySchema = z.discriminatedUnion('scope', [
+const BodySchema = z.discriminatedUnion('scope', [
   z.object({
     scope: z.literal('base'),
     clientRequestId: z.string().min(1).max(200).optional(),
@@ -23,48 +22,6 @@ export const BodySchema = z.discriminatedUnion('scope', [
     clientRequestId: z.string().min(1).max(200).optional(),
   }),
 ])
-
-export function buildArtifactJobIdempotencyKey(input: {
-  session: SessionGenerateContext['session']
-  target: SessionGenerateContext['target']
-  targetId?: string
-  clientRequestId?: string
-}): string {
-  const effectiveSource = resolveEffectiveResumeSource(input.session, input.target)
-  const fingerprint = createHash('sha256')
-    .update(JSON.stringify({
-      sessionId: input.session.id,
-      targetId: input.targetId ?? null,
-      clientRequestId: input.clientRequestId ?? null,
-      dispatchInputRef: effectiveSource.ref,
-      sourceCvState: effectiveSource.cvState,
-    }))
-    .digest('hex')
-    .slice(0, 24)
-
-  return `session-generate:${input.session.id}:${input.targetId ?? 'base'}:${fingerprint}`
-}
-
-export function buildRetryArtifactJobIdempotencyKey(input: {
-  session: SessionGenerateContext['session']
-  target: SessionGenerateContext['target']
-  targetId?: string
-  retryOfJobId: string
-}): string {
-  const effectiveSource = resolveEffectiveResumeSource(input.session, input.target)
-  const fingerprint = createHash('sha256')
-    .update(JSON.stringify({
-      sessionId: input.session.id,
-      targetId: input.targetId ?? null,
-      retryOfJobId: input.retryOfJobId,
-      dispatchInputRef: effectiveSource.ref,
-      sourceCvState: effectiveSource.cvState,
-    }))
-    .digest('hex')
-    .slice(0, 24)
-
-  return `session-generate:${input.session.id}:${input.targetId ?? 'base'}:retry:${fingerprint}`
-}
 
 export async function resolveSessionGenerateContext(
   req: NextRequest,

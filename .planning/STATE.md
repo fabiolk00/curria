@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 94
-current_phase_name: promote core contextual stack evidence in preview highlights without reopening phase 92
+current_phase: 101
+current_phase_name: connect existing resume history UI to real generated artifacts and protected access
 current_plan: 01 complete
 status: phase_complete
-stopped_at: Completed 94-01-PLAN.md
-last_updated: "2026-04-24T09:54:10.0000000-03:00"
+stopped_at: Completed 101-01-PLAN.md
+last_updated: "2026-04-24T10:46:03.0509245-03:00"
 last_activity: 2026-04-24
 progress:
   total_phases: 57
@@ -24,19 +24,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** A job seeker can reliably turn their real profile and a target role into an honest, ATS-ready resume output they can confidently download and use.
-**Current focus:** ATS summary rewrites are now denser and less repetitive, and preview highlights better surface execution-backed contextual stack evidence without weakening preserved metrics or changing Layer 3 ordering.
+**Current focus:** The existing resume history surface now uses durable protected generation history while preserving the current generation, billing, and compare/file seams.
 
 ## Current Position
 
-Phase: 94 (promote core contextual stack evidence in preview highlights without reopening phase 92) - COMPLETE
+Phase: 101 (connect existing resume history UI to real generated artifacts and protected access) - COMPLETE
 Plan: 01 complete
-Current Phase: 94
-Current Phase Name: promote core contextual stack evidence in preview highlights without reopening phase 92
+Current Phase: 101
+Current Phase Name: connect existing resume history UI to real generated artifacts and protected access
 Current Plan: 01 complete
 Total Plans in Phase: 1
 Status: Phase complete - verified locally
 Last activity: 2026-04-24
-Last Activity Description: Quick task 260424-dpi fixed the production build type mismatch between /chat and the optional billing surface contract
+Last Activity Description: Completed quick task 260424-ey2 removing the orphan legacy SEO landing page component
 
 Progress: [##########] 100%
 
@@ -51,6 +51,8 @@ Baseline carried forward from earlier shipped milestones:
 
 ### Roadmap Evolution
 
+- Phase 101 completed: the existing resume history UI now renders live protected generation history with latest-6 pagination and download/open actions.
+- Phase 101 added: Connect the existing resume history UI to real generated artifacts and protected access.
 - Phase 99 added: Adaptar a UI de profile do currículo para layout CRM preservando 100% da lógica e funcionalidade existente.
 - Phase 100 added: Clarify ATS enhancement intent selector while preserving target-job generation behavior.
 - Phase 100 completed: ATS enhancement now has an explicit intent selector, local accessible empty-target validation, and focused unit/browser proof while preserving the existing generation contracts.
@@ -75,6 +77,9 @@ Baseline carried forward from earlier shipped milestones:
 
 ### Decisions
 
+- [Phase 101]: Keep durable history metadata on `resume_generations` instead of introducing a parallel artifact-history store.
+- [Phase 101]: Reuse `/api/file/[sessionId]` with an opt-in `download=pdf` mode so history cards open protected URLs without exposing storage paths.
+- [Phase 101]: Reuse `/dashboard/resume/compare/[sessionId]` as the viewer/open destination instead of building a new history viewer.
 - Keep critical route hardening route-specific; do not build a generic route framework.
 - Preserve public behavior while reducing semantic density.
 - Treat preview-lock, replay, compare, versions, and file-access contracts as executable invariants.
@@ -166,6 +171,8 @@ Baseline carried forward from earlier shipped milestones:
 | 260424-c9m | Alinhar user-data-page.tsx ao layout do zip de referência com fidelidade visual máxima sem regredir os fluxos existentes | 2026-04-24 | working-tree | Validated | [260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-](./quick/260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-/) |
 | 260424-d2p | Renomear endpoints de auth/dashboard para `/profile-setup`, `/chat` e `/dashboard/resumes-history`, atualizando redirects, redirect_to e cobertura de testes | 2026-04-24 | working-tree | Validated | [260424-d2p-rename-auth-dashboard-endpoints-dashboar](./quick/260424-d2p-rename-auth-dashboard-endpoints-dashboar/) |
 | 260424-dpi | Fix production build type error by aligning `/chat` with the optional billing surface contract | 2026-04-24 | working-tree | Validated | [260424-dpi-fix-production-build-type-error-chat-pag](./quick/260424-dpi-fix-production-build-type-error-chat-pag/) |
+| 260424-euu | cleanup dead code: consolidate session-generate helpers, remove orphan parse and tracker showcase | 2026-04-24 | working-tree | Typechecked | [260424-euu-cleanup-dead-code-consolidate-session-ge](./quick/260424-euu-cleanup-dead-code-consolidate-session-ge/) |
+| 260424-ey2 | remove orphan seo-role-landing-page component | 2026-04-24 | working-tree | Typechecked | [260424-ey2-remove-orphan-seo-role-landing-page-comp](./quick/260424-ey2-remove-orphan-seo-role-landing-page-comp/) |
 
 ## Session Continuity
 

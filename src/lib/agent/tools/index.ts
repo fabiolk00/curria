@@ -491,6 +491,14 @@ export async function executeTool(
         latestVersionId: intake.context.latestAllowedVersionId ?? undefined,
         latestVersionSource: intake.diagnostics.latestVersionSource ?? undefined,
         sourceScope: intake.context.sourceScope,
+        historyContext: {
+          idempotencyKey: intake.context.idempotencyKey,
+          workflowMode: session.agentState.workflowMode,
+          lastRewriteMode: session.agentState.lastRewriteMode,
+          targetJobDescription: session.agentState.targetJobDescription,
+          targetRole: session.agentState.targetingPlan?.targetRole,
+          resumeTargetId: intake.context.targetId,
+        },
       })
 
     if (intake.context.targetId && result.generatedOutput) {

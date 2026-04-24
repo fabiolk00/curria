@@ -107,6 +107,14 @@ export async function processArtifactGenerationJob(
     idempotencyKey: job.idempotencyKey,
     templateTargetSource: target?.targetJobDescription ?? session.agentState,
     resumePendingGeneration: true,
+    historyContext: {
+      idempotencyKey: job.idempotencyKey,
+      workflowMode: session.agentState.workflowMode,
+      lastRewriteMode: session.agentState.lastRewriteMode,
+      targetJobDescription: target?.targetJobDescription ?? session.agentState.targetJobDescription,
+      targetRole: session.agentState.targetingPlan?.targetRole,
+      resumeTargetId: target?.id,
+    },
   })
 
   if (target && result.generatedOutput) {

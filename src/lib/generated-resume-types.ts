@@ -1,15 +1,9 @@
-export type GeneratedResumeMode = "ats_enhancement" | "job_targeting"
-export type GeneratedResumeStatus = "completed" | "processing" | "failed"
+import type {
+  ResumeGenerationHistoryItem,
+  ResumeGenerationHistoryResponse,
+} from '@/lib/resume-history/resume-generation-history.types'
 
-export interface GeneratedResumeHistoryItem {
-  id: string
-  sessionId: string
-  title: string
-  mode: GeneratedResumeMode
-  status: GeneratedResumeStatus
-  createdAt: string
-  updatedAt?: string
-  targetRole?: string
-  targetJobSnippet?: string
-  pdfAvailable: boolean
-}
+export type GeneratedResumeMode = ResumeGenerationHistoryItem['kind']
+export type GeneratedResumeStatus = ResumeGenerationHistoryItem['status']
+export type GeneratedResumeHistoryItem = ResumeGenerationHistoryItem
+export type GeneratedResumeHistoryResponse = ResumeGenerationHistoryResponse

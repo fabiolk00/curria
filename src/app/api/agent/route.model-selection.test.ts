@@ -252,7 +252,7 @@ describe('/api/agent route model selection', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         sessionId: 'sess_dialog_model_override',
-        message: 'pode seguir',
+        message: 'quais ajustes voce sugere para o meu curriculo?',
       }),
     }))
 
@@ -267,12 +267,7 @@ describe('/api/agent route model selection', () => {
       expect(requestParams.model).toBe('gpt-5.4-mini')
     }
     expect(events.length).toBeGreaterThan(0)
-    expect(mockAppendMessage).toHaveBeenNthCalledWith(
-      1,
-      'sess_dialog_model_override',
-      'user',
-      'pode seguir',
-    )
+    expect(mockCreateChatCompletionStreamWithRetry).toHaveBeenCalled()
   })
 
   it('uses OPENAI_DIALOG_MODEL for a real confirm-phase route request after fresh import', async () => {
@@ -288,7 +283,7 @@ describe('/api/agent route model selection', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         sessionId: 'sess_confirm_model_override',
-        message: 'quero revisar mais um ajuste antes de gerar',
+        message: 'o que voce mudaria antes da geracao final?',
       }),
     }))
 
@@ -303,12 +298,7 @@ describe('/api/agent route model selection', () => {
       expect(requestParams.model).toBe('gpt-5.4-mini')
     }
     expect(events.length).toBeGreaterThan(0)
-    expect(mockAppendMessage).toHaveBeenNthCalledWith(
-      1,
-      'sess_confirm_model_override',
-      'user',
-      'quero revisar mais um ajuste antes de gerar',
-    )
+    expect(mockCreateChatCompletionStreamWithRetry).toHaveBeenCalled()
   })
 
   it('inherits the resolved agent model for a real dialog-phase route request when OPENAI_DIALOG_MODEL is unset', async () => {

@@ -26,6 +26,7 @@ const {
   mockGetResumeTargetForSession,
   mockListJobsForSession,
   mockGetUserBillingInfo,
+  mockGetUserBillingPlan,
   mockReserveCreditForGenerationIntent,
   mockFinalizeCreditReservation,
   mockReleaseCreditReservation,
@@ -55,6 +56,7 @@ const {
   mockGetResumeTargetForSession: vi.fn(),
   mockListJobsForSession: vi.fn(),
   mockGetUserBillingInfo: vi.fn(),
+  mockGetUserBillingPlan: vi.fn(),
   mockReserveCreditForGenerationIntent: vi.fn(),
   mockFinalizeCreditReservation: vi.fn(),
   mockReleaseCreditReservation: vi.fn(),
@@ -98,6 +100,7 @@ vi.mock('@/lib/agent/tools/generate-file', () => ({
 vi.mock('@/lib/asaas/quota', () => ({
   checkUserQuota: mockCheckUserQuota,
   getUserBillingInfo: mockGetUserBillingInfo,
+  getUserBillingPlan: mockGetUserBillingPlan,
   reserveCreditForGenerationIntent: mockReserveCreditForGenerationIntent,
   finalizeCreditReservation: mockFinalizeCreditReservation,
   releaseCreditReservation: mockReleaseCreditReservation,
@@ -373,6 +376,7 @@ describe('preview lock transverse regression flow', () => {
     mockGetUserBillingInfo.mockImplementation(async () => ({
       plan: currentPlan,
     }))
+    mockGetUserBillingPlan.mockImplementation(async () => currentPlan)
     mockReserveCreditForGenerationIntent.mockResolvedValue({
       id: 'res_123',
       userId: 'usr_123',

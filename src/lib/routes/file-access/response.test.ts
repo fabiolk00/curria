@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createSignedResumeArtifactUrls } from '@/lib/agent/tools/generate-file'
@@ -19,13 +20,23 @@ vi.mock('@/lib/observability/structured-log', () => ({
 
 function buildContext(): FileAccessContext {
   return {
-    request: new Request('https://example.com/api/file/sess_1') as never,
+    request: new NextRequest('https://example.com/api/file/sess_1') as never,
     requestStartedAt: Date.now(),
     requestPath: '/api/file/sess_1',
     params: { sessionId: 'sess_1' },
     targetId: null,
     appUser: { id: 'usr_1' } as never,
-    session: { id: 'sess_1', generatedOutput: { status: 'ready', pdfPath: 'file.pdf' } } as never,
+    session: {
+      id: 'sess_1',
+      cvState: {
+        fullName: 'Ana Silva',
+      },
+      agentState: {
+        parseStatus: 'parsed',
+        rewriteHistory: {},
+      },
+      generatedOutput: { status: 'ready', pdfPath: 'file.pdf' },
+    } as never,
     target: null,
     artifactMetadata: { status: 'ready', pdfPath: 'file.pdf' },
     latestArtifactJob: null,
@@ -56,6 +67,7 @@ describe('file-access response', () => {
     expect(await response.json()).toEqual({
       docxUrl: null,
       pdfUrl: '/api/file/sess_1/locked-preview',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       available: true,
       generationStatus: 'ready',
     })
@@ -89,6 +101,7 @@ describe('file-access response', () => {
       docxUrl: null,
       available: true,
       generationStatus: 'ready',
+      pdfFileName: 'Curriculo_Ana_Silva.pdf',
       pdfUrl: 'https://example.com/pdf',
     })
     expect(createSignedResumeArtifactUrls).toHaveBeenCalledWith(undefined, 'file.pdf')
