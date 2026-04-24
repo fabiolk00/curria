@@ -487,7 +487,7 @@ function ProfileSectionCard({
           <PenLine className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className={cn("min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-0", contentClassName)}>
+      <div className={cn("min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1.5", contentClassName)}>
         {children}
       </div>
     </Card>

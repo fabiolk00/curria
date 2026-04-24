@@ -737,7 +737,7 @@ describe("UserDataPage", () => {
     expect(within(card).getByText("Resultado relevante 18")).toBeInTheDocument()
   })
 
-  it("removes all shared spacing below resume section headers across cards", async () => {
+  it("keeps shared top spacing below resume section headers at pt-1.5 across cards", async () => {
     buildFetchMock(createJsonResponse(buildProfileResponse(buildResumeData({
       summary: "Resumo enxuto para validar o espaçamento.",
       experience: [{
@@ -763,7 +763,7 @@ describe("UserDataPage", () => {
     expect(experienceCard).toHaveClass("gap-0")
     expect(skillsCard).toHaveClass("gap-0")
     expect(summaryContent).not.toBeNull()
-    expect(summaryContent).toHaveClass("pt-0")
+    expect(summaryContent).toHaveClass("pt-1.5")
     expect(firstExperienceArticle).not.toBeNull()
     expect(firstExperienceArticle).not.toHaveClass("pt-2.5")
   })
