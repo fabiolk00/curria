@@ -1445,6 +1445,13 @@ describe('ATS enhancement reliability hardening', () => {
     })
     expect(session.agentState.lastRewriteMode).toBe('job_targeting')
     expect(mockGenerateCvHighlightState).toHaveBeenCalledTimes(1)
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        workflowMode: 'job_targeting',
+        jobKeywords: ['BigQuery'],
+      }),
+    )
     expect(session.agentState.highlightState).toEqual({
       source: 'rewritten_cv_state',
       version: 2,
@@ -1470,6 +1477,163 @@ describe('ATS enhancement reliability hardening', () => {
       workflowMode: 'job_targeting',
       success: true,
     }))
+  })
+
+  it('passes gap-derived job keywords into job_targeting highlight generation with a max of 20 unique terms', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Analytics Engineer',
+      'Responsabilidades: construir dashboards e automacoes de dados.',
+      'Requisitos: SQL, Power BI, dbt e Tableau.',
+    ].join('\n')
+
+    mockAnalyzeGap.mockResolvedValue({
+      output: {
+        success: true,
+        result: {
+          matchScore: 68,
+          missingSkills: [
+            'Tableau',
+            'dbt',
+            'Airflow',
+            'Snowflake',
+            'Looker',
+            'Kafka',
+            'Docker',
+            'Kubernetes',
+            'Terraform',
+            'AWS',
+            'GCP',
+            'Azure',
+            'Spark',
+            'Databricks',
+            'Python',
+            'SQL',
+            'Power BI',
+            'Excel',
+            'Git',
+            'CI/CD',
+            'Tableau',
+            'Fivetran',
+          ],
+          weakAreas: ['summary'],
+          improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
+        },
+      },
+      result: {
+        matchScore: 68,
+        missingSkills: [
+          'Tableau',
+          'dbt',
+          'Airflow',
+          'Snowflake',
+          'Looker',
+          'Kafka',
+          'Docker',
+          'Kubernetes',
+          'Terraform',
+          'AWS',
+          'GCP',
+          'Azure',
+          'Spark',
+          'Databricks',
+          'Python',
+          'SQL',
+          'Power BI',
+          'Excel',
+          'Git',
+          'CI/CD',
+          'Tableau',
+          'Fivetran',
+        ],
+        weakAreas: ['summary'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
+      },
+    })
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Analytics engineer com foco em SQL, Power BI, Tableau e dbt para automacao analitica.',
+      }, section),
+    }))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        workflowMode: 'job_targeting',
+        jobKeywords: [
+          'Tableau',
+          'dbt',
+          'Airflow',
+          'Snowflake',
+          'Looker',
+          'Kafka',
+          'Docker',
+          'Kubernetes',
+          'Terraform',
+          'AWS',
+          'GCP',
+          'Azure',
+          'Spark',
+          'Databricks',
+          'Python',
+          'SQL',
+          'Power BI',
+          'Excel',
+          'Git',
+          'CI/CD',
+        ],
+      }),
+    )
+  })
+
+  it('keeps job_targeting highlight generation working when missingSkills is empty', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Analytics Engineer',
+      'Responsabilidades: construir dashboards e automacoes de dados.',
+      'Requisitos: SQL, Power BI e comunicacao com negocio.',
+    ].join('\n')
+
+    mockAnalyzeGap.mockResolvedValue({
+      output: {
+        success: true,
+        result: {
+          matchScore: 74,
+          missingSkills: [],
+          weakAreas: ['summary'],
+          improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
+        },
+      },
+      result: {
+        matchScore: 74,
+        missingSkills: [],
+        weakAreas: ['summary'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
+      },
+    })
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Analytics engineer com foco em SQL, Power BI e automacao analitica para negocio.',
+      }, section),
+    }))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        workflowMode: 'job_targeting',
+        jobKeywords: [],
+      }),
+    )
   })
 
   describe('job_targeting highlight seam isolation', () => {

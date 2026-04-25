@@ -75,6 +75,14 @@ function logHighlightStatePersistence(params: {
   })
 }
 
+function extractJobKeywords(session: Session): string[] {
+  return Array.from(new Set(
+    (session.agentState.gapAnalysis?.result?.missingSkills ?? [])
+      .map((value) => value.trim())
+      .filter(Boolean),
+  )).slice(0, 20)
+}
+
 export async function runJobTargetingPipeline(session: Session): Promise<{
   success: boolean
   optimizedCvState?: Session['agentState']['optimizedCvState']
@@ -306,6 +314,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     targetingPlan,
   })
   const optimizedAt = new Date().toISOString()
+  const jobKeywords = extractJobKeywords(session)
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
   const shouldGenerateHighlights = validation.valid && !cvStatesMatch(rewriteResult.optimizedCvState, session.cvState)
@@ -318,6 +327,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         userId: session.userId,
         sessionId: session.id,
         workflowMode: 'job_targeting',
+        jobKeywords,
         onCompleted: (outcome) => {
           highlightDetectionOutcome = outcome
         },

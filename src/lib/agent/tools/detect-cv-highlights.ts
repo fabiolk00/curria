@@ -115,7 +115,21 @@ type ParsedHighlightPayloadResult =
       details?: Record<string, unknown>
     }
 
-function buildHighlightSystemPrompt(): string {
+function sanitizeJobKeywords(jobKeywords?: string[]): string[] {
+  if (!Array.isArray(jobKeywords) || jobKeywords.length === 0) {
+    return []
+  }
+
+  return Array.from(new Set(
+    jobKeywords
+      .map((keyword) => keyword.trim())
+      .filter(Boolean),
+  )).slice(0, 20)
+}
+
+function buildHighlightSystemPrompt(jobKeywords: string[] = []): string {
+  const sanitizedJobKeywords = sanitizeJobKeywords(jobKeywords)
+
   return [
     'You detect strong inline highlight spans for a rewritten resume preview.',
     'Return only structured JSON that matches the provided schema.',
@@ -185,6 +199,14 @@ function buildHighlightSystemPrompt(): string {
     '',
     'If a bullet begins with a generic action verb but later contains a stronger measurable, scalable, architectural, or business-significant phrase, highlight the later phrase instead.',
     '',
+    ...(sanitizedJobKeywords.length > 0
+      ? [
+          'Optional vacancy prioritization:',
+          `- When two highlight candidates are similarly strong, prefer the fragment that truthfully reinforces these vacancy signals already present in the rewritten text: ${sanitizedJobKeywords.join(', ')}.`,
+          '- Vacancy keyword overlap is a tie-breaker only. Do not force keyword matches when a stronger measurable or editorial nucleus exists.',
+          '',
+        ]
+      : []),
     'Examples:',
     'Prefer "scalable processing of large data volumes" over "Developed ETL pipelines".',
     'Prefer "reduced processing time by 40%" over "Optimized pipelines".',
@@ -260,6 +282,7 @@ export type CvHighlightDetectionContext = {
   userId?: string
   sessionId?: string
   workflowMode?: string
+  jobKeywords?: string[]
   onCompleted?: (outcome: HighlightDetectionOutcome) => void
 }
 
@@ -514,6 +537,8 @@ export async function detectCvHighlights(
   items: CvHighlightInputItem[],
   context?: CvHighlightDetectionContext,
 ): Promise<CvResolvedHighlight[]> {
+  const jobKeywords = sanitizeJobKeywords(context?.jobKeywords)
+
   logInfo('agent.highlight_detection.started', {
     sessionId: context?.sessionId,
     userId: context?.userId,
@@ -547,7 +572,7 @@ export async function detectCvHighlights(
         messages: [
           {
             role: 'system',
-            content: buildHighlightSystemPrompt(),
+            content: buildHighlightSystemPrompt(jobKeywords),
           },
           {
             role: 'user',

@@ -121,6 +121,8 @@ describe('detectCvHighlights', () => {
     expect(JSON.parse(createCompletion.mock.calls[0][0].messages[1].content as string)).toEqual({
       items,
     })
+    const systemPrompt = createCompletion.mock.calls[0][0].messages[0].content as string
+    expect(systemPrompt).not.toContain('Optional vacancy prioritization:')
     expect(createCompletion.mock.calls[0][0].response_format.type).toBe('json_schema')
     expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_detection.started', expect.objectContaining({
       itemCount: items.length,
@@ -128,7 +130,23 @@ describe('detectCvHighlights', () => {
     }))
   })
 
-  it.skip('hardens the detector prompt around semantic closure and weak generic starts', async () => {
+  it('includes vacancy keyword prioritization only when job keywords are provided', async () => {
+    const items = flattenCvStateForHighlight(buildCvState())
+
+    createCompletion.mockResolvedValue(buildOpenAIResponse('{"items":[]}'))
+
+    await detectCvHighlights(items, {
+      workflowMode: 'job_targeting',
+      jobKeywords: ['Tableau', 'dbt'],
+    })
+
+    const systemPrompt = createCompletion.mock.calls[0][0].messages[0].content as string
+    expect(systemPrompt).toContain('Optional vacancy prioritization:')
+    expect(systemPrompt).toContain('Tableau, dbt')
+    expect(systemPrompt).toContain('Vacancy keyword overlap is a tie-breaker only.')
+  })
+
+  it('hardens the detector prompt around semantic closure and weak generic starts', async () => {
     // Prompt string inspection is documentation only. The real gate for prompt hardening
     // lives in the response-fixture tests below, which run the resolver against model output.
     const items = flattenCvStateForHighlight(buildCvState())
