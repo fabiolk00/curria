@@ -327,15 +327,15 @@ export function BeforeAfterComparison() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-md mx-auto aspect-[3/4] bg-card border rounded-xl overflow-hidden shadow-2xl"
+      className="relative w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[3/4] bg-card border rounded-xl overflow-hidden shadow-2xl"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
     >
       {/* Status bar */}
-      <div className="absolute top-0 left-0 w-full p-4 bg-muted/50 border-b flex justify-between items-center z-10">
-        <span className="text-sm font-medium">
+      <div className="absolute top-0 left-0 w-full p-3 sm:p-4 bg-muted/50 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 z-10">
+        <span className="text-xs sm:text-sm font-medium">
           {isImproved ? "Currículo Otimizado" : "Currículo Original"}
         </span>
         <span
@@ -356,7 +356,7 @@ export function BeforeAfterComparison() {
       </div>
 
       {/* Resume content */}
-      <div className="pt-16 p-6 h-full relative overflow-hidden">
+      <div className="pt-16 sm:pt-20 p-4 sm:p-6 h-full relative overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={isImproved ? "after" : "before"}
