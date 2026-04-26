@@ -108,37 +108,27 @@ export default function PricingSection() {
                             </span>
                           </>
                         ) : (
-                          <>
-                            <div className="flex items-center gap-3">
-                              {row.included ? (
-                                <Check
-                                  aria-label={`${row.label}: incluído`}
-                                  className="h-4 w-4 shrink-0 text-emerald-500"
-                                />
-                              ) : (
-                                <X
-                                  aria-label={`${row.label}: não incluído`}
-                                  className="h-4 w-4 shrink-0 text-red-500"
-                                />
-                              )}
-                              <span
-                                className={cn(
-                                  "text-sm font-medium",
-                                  row.included ? "text-foreground" : "text-muted-foreground",
-                                )}
-                              >
-                                {row.label}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-3">
+                            {row.included ? (
+                              <Check
+                                aria-label={`${row.label}: incluído`}
+                                className="h-4 w-4 shrink-0 text-emerald-500"
+                              />
+                            ) : (
+                              <X
+                                aria-label={`${row.label}: não incluído`}
+                                className="h-4 w-4 shrink-0 text-red-500"
+                              />
+                            )}
                             <span
                               className={cn(
-                                "text-xs font-semibold uppercase tracking-wide",
-                                row.included ? "text-emerald-600" : "text-red-500",
+                                "text-sm font-medium",
+                                row.included ? "text-foreground" : "text-muted-foreground",
                               )}
                             >
-                              {row.included ? "Incluído" : "Não"}
+                              {row.label}
                             </span>
-                          </>
+                          </div>
                         )}
                       </li>
                     ))}

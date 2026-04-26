@@ -28,6 +28,8 @@ describe("PricingSection", () => {
     expect(screen.getAllByLabelText("Chat com IA: não incluído")).toHaveLength(3)
     expect(screen.getAllByLabelText("Histórico: incluído")).toHaveLength(3)
     expect(screen.getAllByLabelText("Histórico: não incluído")).toHaveLength(1)
+    expect(screen.queryByText("Incluído")).not.toBeInTheDocument()
+    expect(screen.queryByText("Não")).not.toBeInTheDocument()
 
     const ctas = screen.getAllByRole("link", { name: /começar agora/i })
     expect(ctas).toHaveLength(4)
