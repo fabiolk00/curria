@@ -7,7 +7,7 @@ current_phase_name: harden highlight de job targeting com origem rastreavel e ga
 current_plan: 01 completed
 status: in_progress
 stopped_at: Completed Phase 107 highlight hardening implementation and verification
-last_updated: "2026-04-26T19:39:00.0000000-03:00"
+last_updated: "2026-04-26T20:06:00.0000000-03:00"
 last_activity: 2026-04-26
 progress:
   total_phases: 57
@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
 Last activity: 2026-04-26
-Last Activity Description: Fixed the preview-lock transverse architecture proof by updating the test sessions mock to expose getSessionLookupResult and getUserSessions.
+Last Activity Description: Restored synthetic E2E chat access through the centralized AI chat access contract so /chat Playwright flows render the composer again.
 
 Progress: [##########] 100%
 
@@ -212,6 +212,8 @@ Baseline carried forward from earlier shipped milestones:
 | 260426-hrv | Hardening do trace `repairAttempted` e remoção da quarta validação ATS vacuamente redundante | 2026-04-26 | working-tree | Validated | [260426-hrv-hardening-trace-repairattempted-e-validacao-ats-](./quick/260426-hrv-hardening-trace-repairattempted-e-validacao-ats-/) |
 
 | 260426-qfa | Fix preview-lock transverse test sessions mock to match file-access lookup contract | 2026-04-26 | working-tree | Validated | [260426-qfa-fix-preview-lock-transverse-sessions-mock-for-architecture-proof-pack](./quick/260426-qfa-fix-preview-lock-transverse-sessions-mock-for-architecture-proof-pack/) |
+
+| 260426-qcg | Restore E2E chat access by allowing valid synthetic auth cookies through the centralized AI chat access contract | 2026-04-26 | working-tree | Validated | [260426-qcg-restore-e2e-chat-access-via-synthetic-bypass](./quick/260426-qcg-restore-e2e-chat-access-via-synthetic-bypass/) |
 
 ## Session Continuity
 

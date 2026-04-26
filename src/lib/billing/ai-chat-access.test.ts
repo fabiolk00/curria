@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   AI_CHAT_ACCESS_UNAVAILABLE_CODE,
@@ -7,15 +7,89 @@ import {
   resolveAiChatAccessFromBillingMetadata,
 } from '@/lib/billing/ai-chat-access'
 import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
+import { createSignedE2EAuthCookie } from '@/lib/auth/e2e-auth'
 import { getUserBillingMetadata } from '@/lib/asaas/quota'
+import { cookies } from 'next/headers'
 
 vi.mock('@/lib/asaas/quota', () => ({
   getUserBillingMetadata: vi.fn(),
 }))
 
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(),
+}))
+
+const originalEnabled = process.env.E2E_AUTH_ENABLED
+const originalSecret = process.env.E2E_AUTH_BYPASS_SECRET
+const originalNodeEnv = process.env.NODE_ENV
+const originalCi = process.env.CI
+
 describe('ai chat access', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.E2E_AUTH_ENABLED
+    delete process.env.E2E_AUTH_BYPASS_SECRET
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = 'test'
+    process.env.CI = 'false'
+    vi.mocked(cookies).mockReturnValue({
+      get: vi.fn(() => undefined),
+    } as unknown as ReturnType<typeof cookies>)
+  })
+
+  afterAll(() => {
+    if (originalEnabled === undefined) {
+      delete process.env.E2E_AUTH_ENABLED
+    } else {
+      process.env.E2E_AUTH_ENABLED = originalEnabled
+    }
+
+    if (originalSecret === undefined) {
+      delete process.env.E2E_AUTH_BYPASS_SECRET
+    } else {
+      process.env.E2E_AUTH_BYPASS_SECRET = originalSecret
+    }
+
+    if (originalNodeEnv === undefined) {
+      delete (process.env as Record<string, string | undefined>).NODE_ENV
+    } else {
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv
+    }
+
+    if (originalCi === undefined) {
+      delete process.env.CI
+    } else {
+      process.env.CI = originalCi
+    }
+  })
+
+  it('allows a synthetic E2E-authenticated user without querying billing metadata', async () => {
+    process.env.E2E_AUTH_ENABLED = 'true'
+    process.env.E2E_AUTH_BYPASS_SECRET = 'test-e2e-secret'
+
+    const cookie = await createSignedE2EAuthCookie({
+      appUserId: 'usr_e2e_chat',
+      displayName: 'E2E Chat User',
+      primaryEmail: 'e2e@example.com',
+    })
+
+    vi.mocked(cookies).mockReturnValue({
+      get: vi.fn((name: string) => (
+        name === 'curria_e2e_auth'
+          ? { name, value: cookie }
+          : undefined
+      )),
+    } as unknown as ReturnType<typeof cookies>)
+
+    await expect(getAiChatAccess('usr_e2e_chat')).resolves.toEqual({
+      allowed: true,
+      feature: 'ai_chat',
+      reason: 'active_pro',
+      plan: 'pro',
+      status: 'active',
+      renewsAt: null,
+      asaasSubscriptionId: 'e2e_auth_bypass',
+    })
+    expect(getUserBillingMetadata).not.toHaveBeenCalled()
   })
 
   it('allows users with an active Pro subscription', () => {
