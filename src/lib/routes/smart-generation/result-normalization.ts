@@ -26,6 +26,9 @@ export function normalizeSmartGenerationSuccess(input: {
   const generatedOutput = resolvePersistedGeneratedOutput(input.generationResult)
   const previewLock = resolvePreviewLockSummary(input.generationResult)
   const copy = buildGenerationCopy(input.workflow.workflowMode)
+  const warnings = input.workflow.patchedSession.agentState.rewriteValidation?.softWarnings
+    .map((issue) => issue.message)
+    .filter(Boolean)
 
   return {
     kind: 'success',
@@ -42,6 +45,7 @@ export function normalizeSmartGenerationSuccess(input: {
         input.workflow.workflowMode === 'job_targeting' ? 'target' : 'optimized',
       ),
       previewLock,
+      warnings: warnings && warnings.length > 0 ? warnings : undefined,
     },
   }
 }

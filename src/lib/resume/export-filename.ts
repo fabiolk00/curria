@@ -129,7 +129,7 @@ function resolveShouldIncludeTargetTitle(input: {
 function resolveReliableTargetJobTitle(input: {
   targetJobTitle?: string | null
   targetRole?: string | null
-  targetRoleConfidence?: 'high' | 'low' | null
+  targetRoleConfidence?: 'high' | 'medium' | 'low' | null
   targetJobDescription?: string | null
 }): string | null {
   const explicitTargetTitle = normalizeWhitespace(input.targetJobTitle)
@@ -137,7 +137,7 @@ function resolveReliableTargetJobTitle(input: {
     return explicitTargetTitle
   }
 
-  if (input.targetRoleConfidence === 'high' && input.targetRole && !isWeakTargetRole(input.targetRole)) {
+  if (input.targetRoleConfidence !== 'low' && input.targetRole && !isWeakTargetRole(input.targetRole)) {
     return input.targetRole
   }
 
@@ -150,7 +150,7 @@ export function buildResumeExportFilename(input: {
   generationType?: ResumeGenerationType | null
   targetJobTitle?: string | null
   targetRole?: string | null
-  targetRoleConfidence?: 'high' | 'low' | null
+  targetRoleConfidence?: 'high' | 'medium' | 'low' | null
   targetJobDescription?: string | null
   extension: string
 }): string {

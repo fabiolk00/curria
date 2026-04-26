@@ -1,16 +1,20 @@
 type LogLevel = 'info' | 'warn' | 'error'
 
-type LogStructuredObject = {
-  readonly [key: string]: string | number | boolean | null
-}
-
-type LogValue =
+type LogPrimitive =
   | string
   | number
   | boolean
   | null
-  | readonly string[]
-  | readonly LogStructuredObject[]
+
+type LogStructuredValue =
+  | LogPrimitive
+  | readonly LogStructuredValue[]
+  | {
+      readonly [key: string]: LogStructuredValue | undefined
+    }
+
+type LogValue =
+  | LogStructuredValue
   | undefined
 
 type LogFields = Record<string, LogValue>

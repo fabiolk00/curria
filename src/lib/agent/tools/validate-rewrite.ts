@@ -1,4 +1,4 @@
-import type { RewriteValidationResult, WorkflowMode, TargetingPlan } from '@/types/agent'
+import type { RewriteValidationResult, TargetingPlan, ValidationIssue, WorkflowMode } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 function normalize(value: string | undefined): string {
@@ -25,14 +25,34 @@ function extractNumbers(text: string): string[] {
 
 function buildEvidenceText(cvState: CVState): string {
   return [
+    cvState.fullName,
+    cvState.email,
+    cvState.phone,
+    cvState.linkedin,
+    cvState.location,
     cvState.summary,
     cvState.skills.join(' '),
     ...cvState.experience.flatMap((entry) => [entry.title, entry.company, ...entry.bullets]),
+    ...cvState.education.flatMap((entry) => [entry.degree, entry.institution, entry.year, entry.gpa]),
+    ...(cvState.certifications ?? []).flatMap((entry) => [entry.name, entry.issuer, entry.year]),
   ].join(' ').toLowerCase()
 }
 
 function toSkillSet(cvState: CVState): Set<string> {
   return new Set(cvState.skills.map((skill) => normalize(skill)).filter(Boolean))
+}
+
+function buildValidationResult(issues: ValidationIssue[]): RewriteValidationResult {
+  const hardIssues = issues.filter((issue) => issue.severity === 'high')
+  const softWarnings = issues.filter((issue) => issue.severity === 'medium')
+
+  return {
+    blocked: hardIssues.length > 0,
+    valid: issues.length === 0,
+    hardIssues,
+    softWarnings,
+    issues,
+  }
 }
 
 export function validateRewrite(
@@ -45,14 +65,10 @@ export function validateRewrite(
     targetingPlan?: TargetingPlan
   },
 ): RewriteValidationResult {
-  const issues: RewriteValidationResult['issues'] = []
+  const issues: ValidationIssue[] = []
   const originalEvidenceText = buildEvidenceText(originalCvState)
   const originalSummary = normalize(originalCvState.summary)
   const optimizedSummary = normalize(optimizedCvState.summary)
-  const originalExperienceText = originalCvState.experience
-    .flatMap((entry) => [entry.title, ...entry.bullets])
-    .join(' ')
-    .toLowerCase()
 
   const originalCompanies = new Set(originalCvState.experience.map((entry) => normalize(entry.company)))
   const originalTitleCompanyPairs = new Set(
@@ -62,10 +78,11 @@ export function validateRewrite(
   for (const entry of optimizedCvState.experience) {
     const company = normalize(entry.company)
     const titleCompany = `${normalize(entry.title)}::${company}`
+
     if (!originalCompanies.has(company) || !originalTitleCompanyPairs.has(titleCompany)) {
       issues.push({
         severity: 'high',
-        message: 'A experiência otimizada introduziu empresa ou combinação cargo/empresa inexistente no currículo original.',
+        message: 'A experiÃƒÂªncia otimizada introduziu empresa ou combinaÃƒÂ§ÃƒÂ£o cargo/empresa inexistente no currÃƒÂ­culo original.',
         section: 'experience',
       })
     }
@@ -81,7 +98,7 @@ export function validateRewrite(
     if (normalize(originalMatch.startDate) !== normalize(entry.startDate) || normalize(originalMatch.endDate) !== normalize(entry.endDate)) {
       issues.push({
         severity: 'high',
-        message: 'A experiência otimizada alterou datas de início ou término sem base no currículo original.',
+        message: 'A experiÃƒÂªncia otimizada alterou datas de inÃƒÂ­cio ou tÃƒÂ©rmino sem base no currÃƒÂ­culo original.',
         section: 'experience',
       })
     }
@@ -91,7 +108,7 @@ export function validateRewrite(
     if (optimizedNumbers.some((value) => !originalNumbers.has(value))) {
       issues.push({
         severity: 'medium',
-        message: 'A experiência otimizada adicionou claims numéricos que não aparecem no currículo original.',
+        message: 'A experiÃƒÂªncia otimizada adicionou claims numÃƒÂ©ricos que nÃƒÂ£o aparecem no currÃƒÂ­culo original.',
         section: 'experience',
       })
     }
@@ -105,7 +122,7 @@ export function validateRewrite(
     if (!originalCertificationSet.has(key)) {
       issues.push({
         severity: 'high',
-        message: 'A versão otimizada incluiu certificação não comprovada no currículo original.',
+        message: 'A versÃƒÂ£o otimizada incluiu certificaÃƒÂ§ÃƒÂ£o nÃƒÂ£o comprovada no currÃƒÂ­culo original.',
         section: 'certifications',
       })
     }
@@ -116,51 +133,36 @@ export function validateRewrite(
   if (Array.from(optimizedSkillSet).some((skill) => !originalSkillSet.has(skill))) {
     issues.push({
       severity: 'medium',
-      message: 'A lista de skills otimizada introduziu habilidade ou ferramenta sem base no currículo original.',
+      message: 'A lista de skills otimizada introduziu habilidade ou ferramenta sem base no currÃƒÂ­culo original.',
       section: 'skills',
     })
   }
 
   const summaryNumbers = extractNumbers(optimizedCvState.summary)
-  const originalNumbers = new Set(extractNumbers(buildEvidenceText(originalCvState)))
+  const originalNumbers = new Set(extractNumbers(originalEvidenceText))
   if (summaryNumbers.some((value) => !originalNumbers.has(value))) {
     issues.push({
       severity: 'medium',
-      message: 'O resumo otimizado adicionou claim numérico sem suporte no currículo original.',
+      message: 'O resumo otimizado adicionou claim numÃƒÂ©rico sem suporte no currÃƒÂ­culo original.',
       section: 'summary',
     })
   }
 
-  const unsupportedSummarySkills = optimizedCvState.skills.filter((skill) => {
-    const normalizedSkill = normalize(skill)
-    return optimizedSummary.includes(normalizedSkill) && !originalEvidenceText.includes(normalizedSkill)
-  })
-  if (unsupportedSummarySkills.length > 0) {
-    issues.push({
-      severity: 'medium',
-      message: 'O resumo otimizado destaca habilidades que não aparecem com evidência no currículo original.',
-      section: 'summary',
-    })
-  }
-
-  const optimizedExperienceText = optimizedCvState.experience
-    .flatMap((entry) => [entry.title, ...entry.bullets])
-    .join(' ')
-    .toLowerCase()
-  const summarySkillMentionsWithoutExperience = optimizedCvState.skills.filter((skill) => {
+  const summarySkillMentionsWithoutOriginalEvidence = optimizedCvState.skills.filter((skill) => {
     const normalizedSkill = normalize(skill)
     const alreadyClaimedInOriginalSummary = originalSummary.includes(normalizedSkill)
-    const alreadySupportedInOriginalExperience = originalExperienceText.includes(normalizedSkill)
 
     return optimizedSummary.includes(normalizedSkill)
-      && !optimizedExperienceText.includes(normalizedSkill)
       && !alreadyClaimedInOriginalSummary
-      && !alreadySupportedInOriginalExperience
+      && !originalEvidenceText.includes(normalizedSkill)
   })
-  if (summarySkillMentionsWithoutExperience.length > 0 && optimizedCvState.experience.length > 0) {
+  if (
+    summarySkillMentionsWithoutOriginalEvidence.length > 0
+    && optimizedCvState.experience.length > 0
+  ) {
     issues.push({
       severity: 'medium',
-      message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.',
+      message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
       section: 'summary',
     })
   }
@@ -179,7 +181,7 @@ export function validateRewrite(
     ) {
       issues.push({
         severity: 'medium',
-        message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+        message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidÃƒÂªncia equivalente no currÃƒÂ­culo original.',
         section: 'summary',
       })
     }
@@ -196,14 +198,11 @@ export function validateRewrite(
     if (newlyClaimedMissingItems.length > 0) {
       issues.push({
         severity: 'high',
-        message: 'A versão targetizada tentou apagar gaps reais adicionando alinhamento não comprovado com a vaga.',
+        message: 'A versÃƒÂ£o targetizada tentou apagar gaps reais adicionando alinhamento nÃƒÂ£o comprovado com a vaga.',
         section: 'summary',
       })
     }
   }
 
-  return {
-    valid: issues.length === 0,
-    issues,
-  }
+  return buildValidationResult(issues)
 }

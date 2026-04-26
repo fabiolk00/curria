@@ -132,7 +132,10 @@ describe('POST /api/profile/ats-enhancement', () => {
         analyzedAt: '2026-04-14T12:00:00.000Z',
       },
       validation: {
+        blocked: false,
         valid: true,
+        hardIssues: [],
+        softWarnings: [],
         issues: [],
       },
     })
@@ -299,7 +302,10 @@ describe('POST /api/profile/ats-enhancement', () => {
         analyzedAt: '2026-04-14T12:00:00.000Z',
       },
       validation: {
+        blocked: false,
         valid: true,
+        hardIssues: [],
+        softWarnings: [],
         issues: [],
       },
     })

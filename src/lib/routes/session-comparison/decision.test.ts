@@ -82,6 +82,8 @@ describe('session-comparison decision', () => {
           highlightState: {
             source: 'rewritten_cv_state',
             version: 2,
+            highlightSource: 'ats_enhancement',
+            highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
             generatedAt: '2026-04-22T12:00:00.000Z',
             resolvedHighlights: [{
               itemId: 'summary_0',
@@ -222,6 +224,8 @@ describe('session-comparison decision', () => {
     const highlightState = {
       source: 'rewritten_cv_state',
       version: 2,
+      highlightSource: 'ats_enhancement',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
       generatedAt: '2026-04-22T12:00:00.000Z',
       resolvedHighlights: [{
         itemId: 'summary_0',
@@ -287,6 +291,8 @@ describe('session-comparison decision', () => {
     const highlightState = {
       source: 'rewritten_cv_state',
       version: 2,
+      highlightSource: 'job_targeting',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
       generatedAt: '2026-04-22T12:00:00.000Z',
       resolvedHighlights: [{
         itemId: 'summary_0',
@@ -372,6 +378,8 @@ describe('session-comparison decision', () => {
           highlightState: {
             source: 'rewritten_cv_state',
             version: 2,
+            highlightSource: 'ats_enhancement',
+            highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
             generatedAt: '2026-04-22T12:00:00.000Z',
             resolvedHighlights: [{
               itemId: 'missing_item',

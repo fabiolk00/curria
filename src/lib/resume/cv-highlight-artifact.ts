@@ -112,6 +112,8 @@ export type CvHighlightState = {
   source: 'rewritten_cv_state'
   version: typeof CV_HIGHLIGHT_ARTIFACT_VERSION
   resolvedHighlights: CvResolvedHighlight[]
+  highlightSource: 'ats_enhancement' | 'job_targeting'
+  highlightGeneratedAt: string
   generatedAt: string
 }
 
@@ -192,6 +194,8 @@ const cvHighlightStateSchema = z.object({
   source: z.literal('rewritten_cv_state'),
   version: z.literal(CV_HIGHLIGHT_ARTIFACT_VERSION),
   resolvedHighlights: z.array(cvResolvedHighlightSchema),
+  highlightSource: z.enum(['ats_enhancement', 'job_targeting']).optional(),
+  highlightGeneratedAt: z.string().min(1).optional(),
   generatedAt: z.string().min(1),
 })
 
@@ -1611,7 +1615,32 @@ export function segmentTextByHighlightRanges(
   return segments
 }
 
-export function normalizeCvHighlightState(value: unknown): CvHighlightState | undefined {
+function resolveLegacyHighlightSource(params: {
+  workflowMode?: unknown
+  lastRewriteMode?: unknown
+}): CvHighlightState['highlightSource'] {
+  const preferredMode = params.lastRewriteMode ?? params.workflowMode
+  return preferredMode === 'job_targeting' ? 'job_targeting' : 'ats_enhancement'
+}
+
+export function normalizeCvHighlightState(
+  value: unknown,
+  fallback?: {
+    workflowMode?: unknown
+    lastRewriteMode?: unknown
+  },
+): CvHighlightState | undefined {
   const result = cvHighlightStateSchema.safeParse(value)
-  return result.success ? result.data : undefined
+  if (!result.success) {
+    return undefined
+  }
+
+  return {
+    ...result.data,
+    highlightSource: result.data.highlightSource ?? resolveLegacyHighlightSource({
+      workflowMode: fallback?.workflowMode,
+      lastRewriteMode: fallback?.lastRewriteMode,
+    }),
+    highlightGeneratedAt: result.data.highlightGeneratedAt ?? result.data.generatedAt,
+  }
 }

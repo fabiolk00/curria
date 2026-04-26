@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-current_phase: 102
-current_phase_name: restrict ai chat access to active pro subscribers across ui and api
-current_plan: 01 complete
-status: phase_complete
-stopped_at: Completed 102-01-PLAN.md
-last_updated: "2026-04-26T02:11:00.0000000-03:00"
+current_phase: 107
+current_phase_name: harden highlight de job targeting com origem rastreavel e gate auditado
+current_plan: 01 completed
+status: in_progress
+stopped_at: Completed Phase 107 highlight hardening implementation and verification
+last_updated: "2026-04-26T18:53:00.0000000-03:00"
 last_activity: 2026-04-26
 progress:
   total_phases: 57
@@ -28,15 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 102 (restrict ai chat access to active pro subscribers across ui and api) - COMPLETE
-Plan: 01 complete
-Current Phase: 102
-Current Phase Name: restrict ai chat access to active pro subscribers across ui and api
-Current Plan: 01 complete
+Phase: 107 (harden highlight de job targeting com origem rastreavel e gate auditado) - IN PROGRESS
+Plan: 01 completed
+Current Phase: 107
+Current Phase Name: harden highlight de job targeting com origem rastreavel e gate auditado
+Current Plan: 01 completed
 Total Plans in Phase: 1
-Status: Phase complete - verified locally
+Status: In progress
 Last activity: 2026-04-26
-Last Activity Description: Completed quick task 260425-wdg tightening sitemap, robots, and canonical SEO URL handling.
+Last Activity Description: Propagated real gap-analysis repair attempts into the job_targeting trace and removed the vacuous fourth ATS validateRewrite fallback pass.
 
 Progress: [##########] 100%
 
@@ -51,6 +51,9 @@ Baseline carried forward from earlier shipped milestones:
 
 ### Roadmap Evolution
 
+- Phase 107 added: Harden highlight de job_targeting com origem rastreável, gate auditado e keywords defensivas.
+- Phase 106 completed: job_targeting now blocks only on hard validation issues, persists soft warnings, and falls back to semantic target-role extraction while shared ATS validation compatibility remains intact.
+- Phase 106 added: Refatorar o pipeline job_targeting para validacao por severidade e extracao de cargo semantica.
 - Phase 104 added: Warn before job target generation when vacancy match is weak and require user confirmation to continue.
 - Phase 105 added: Refine career fit from a boolean warning into a graduated low/medium/high risk evaluation with contextual gating.
 - Phase 103 added: Align Monthly and Pro plan price and credit limits across UI, billing, and tests.
@@ -203,6 +206,10 @@ Baseline carried forward from earlier shipped milestones:
 | 260425-w1z | Fix missing job-targeting cv_version_source enum value | 2026-04-26 | working-tree | Validated | [260425-w1z-fix-missing-job-targeting-cv-version-sou](./quick/260425-w1z-fix-missing-job-targeting-cv-version-sou/) |
 | 260425-w5l | Analyze and eliminate unexpected stale download session warnings | 2026-04-26 | working-tree | Validated | [260425-w5l-analyze-and-eliminate-unexpected-stale-d](./quick/260425-w5l-analyze-and-eliminate-unexpected-stale-d/) |
 | 260425-wdg | Ajustar sitemap.xml e indexacao SEO do CurrIA | 2026-04-26 | working-tree | Scoped Validated | [260425-wdg-ajustar-sitemap-xml-e-indexacao-seo-do-c](./quick/260425-wdg-ajustar-sitemap-xml-e-indexacao-seo-do-c/) |
+| 260426-isx | Hardening pós-refatoração da validação `job_targeting`: corrigir copy da Regra 8, exibir warnings de sucesso e separar hardIssues de softWarnings no modal 422 | 2026-04-26 | working-tree | Validated | [260426-isx-hardening-pos-refatoracao-validacao-job-](./quick/260426-isx-hardening-pos-refatoracao-validacao-job-/) |
+| 260426-hjh | Hardening final do highlight compartilhado: auditoria ATS, compatibilidade legada e thresholds nomeados | 2026-04-26 | working-tree | Validated | [260426-hjh-hardening-final-highlight-job-targeting-ats-](./quick/260426-hjh-hardening-final-highlight-job-targeting-ats-/) |
+| 260426-hat | Hardening arquitetural: trace consolidado de job_targeting e documentação das quatro validações ATS | 2026-04-26 | working-tree | Validated | [260426-hat-hardening-arquitetural-observabilidade-validacao-ats-](./quick/260426-hat-hardening-arquitetural-observabilidade-validacao-ats-/) |
+| 260426-hrv | Hardening do trace `repairAttempted` e remoção da quarta validação ATS vacuamente redundante | 2026-04-26 | working-tree | Validated | [260426-hrv-hardening-trace-repairattempted-e-validacao-ats-](./quick/260426-hrv-hardening-trace-repairattempted-e-validacao-ats-/) |
 
 ## Session Continuity
 

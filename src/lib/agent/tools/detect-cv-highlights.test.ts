@@ -11,7 +11,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { detectCvHighlights } from './detect-cv-highlights'
+import { detectCvHighlights, generateCvHighlightState } from './detect-cv-highlights'
 import {
   createExperienceBulletHighlightItemId,
   flattenCvStateForHighlight,
@@ -144,6 +144,31 @@ describe('detectCvHighlights', () => {
     expect(systemPrompt).toContain('Optional vacancy prioritization:')
     expect(systemPrompt).toContain('Tableau, dbt')
     expect(systemPrompt).toContain('Vacancy keyword overlap is a tie-breaker only.')
+  })
+
+  it('generates an ATS highlight artifact without vacancy keywords and tags the source as ats_enhancement', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse('{"items":[]}'))
+
+    const highlightState = await generateCvHighlightState(buildCvState(), {
+      workflowMode: 'ats_enhancement',
+      sessionId: 'sess_ats_only',
+      userId: 'usr_123',
+    })
+
+    expect(highlightState.highlightSource).toBe('ats_enhancement')
+    expect(highlightState.highlightGeneratedAt).toBe(highlightState.generatedAt)
+
+    const systemPrompt = createCompletion.mock.calls[0][0].messages[0].content as string
+    expect(systemPrompt).not.toContain('Optional vacancy prioritization:')
+  })
+
+  it('defaults the highlight source to ats_enhancement when workflowMode is omitted', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse('{"items":[]}'))
+
+    const highlightState = await generateCvHighlightState(buildCvState())
+
+    expect(highlightState.highlightSource).toBe('ats_enhancement')
+    expect(highlightState.highlightGeneratedAt).toBe(highlightState.generatedAt)
   })
 
   it('still accepts a stronger non-keyword semantic nucleus even when job keywords are provided', async () => {

@@ -15,6 +15,10 @@ import { executeWithStageRetry } from '@/lib/agent/job-targeting-retry'
 import { createJobTargetingLogContext } from '@/lib/agent/job-targeting-observability'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import type { Session } from '@/types/agent'
+import type { JobTargetingTrace } from '@/types/trace'
+
+type JobTargetingTraceDraft = Pick<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt'>
+  & Partial<Omit<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt' | 'status'>>
 
 function buildWorkflowRun(
   session: Session,
@@ -41,7 +45,14 @@ async function persistAgentState(session: Session, agentState: Session['agentSta
   session.agentState = agentState
 }
 
-function cvStatesMatch(left: Session['cvState'], right: Session['cvState']): boolean {
+function cvStatesMatch(
+  left?: Session['cvState'],
+  right?: Session['cvState'],
+): boolean {
+  if (!left || !right) {
+    return false
+  }
+
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
@@ -76,11 +87,21 @@ function logHighlightStatePersistence(params: {
 }
 
 function normalizeKeywords(values: string[]): string[] {
-  return Array.from(new Set(
-    values
-      .map((value) => value.trim())
-      .filter(Boolean),
-  )).slice(0, 20)
+  const seen = new Set<string>()
+
+  return values
+    .map((value) => value.trim())
+    .filter((value) => value.length >= 3)
+    .filter((value) => {
+      const normalized = value.toLocaleLowerCase()
+      if (seen.has(normalized)) {
+        return false
+      }
+
+      seen.add(normalized)
+      return true
+    })
+    .slice(0, 20)
 }
 
 function extractReasonKeywords(reasons: string[]): string[] {
@@ -107,6 +128,10 @@ function extractJobKeywords(params: {
   targetFitAssessment?: Session['agentState']['targetFitAssessment']
   targetJobDescription?: string
 }): string[] {
+  const excludedTargetRole = params.targetingPlan?.targetRoleConfidence === 'low'
+    ? params.targetingPlan.targetRole.trim().toLocaleLowerCase()
+    : null
+
   const preferredSources = [
     params.gapAnalysis?.result?.missingSkills ?? [],
     params.targetingPlan?.mustEmphasize ?? [],
@@ -117,14 +142,16 @@ function extractJobKeywords(params: {
 
   const selectedSource = preferredSources.find((source) => source.length > 0) ?? []
 
-  return normalizeKeywords(selectedSource)
+  return normalizeKeywords(selectedSource.filter((keyword) => (
+    !excludedTargetRole || keyword.trim().toLocaleLowerCase() !== excludedTargetRole
+  )))
 }
 
 function classifyHighlightGenerationGate(params: {
-  validationValid: boolean
+  validationBlocked: boolean
   optimizedChanged: boolean
 }): 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' {
-  if (!params.validationValid) {
+  if (params.validationBlocked) {
     return 'blocked_validation_failed'
   }
 
@@ -139,8 +166,10 @@ function logHighlightGenerationGate(params: {
   session: Session
   gate: 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state'
   jobKeywordsCount: number
-  validationValid: boolean
+  validationBlocked: boolean
   optimizedChanged: boolean
+  targetRoleConfidence?: NonNullable<Session['agentState']['targetingPlan']>['targetRoleConfidence']
+  targetRoleSource?: NonNullable<Session['agentState']['targetingPlan']>['targetRoleSource']
 }): void {
   logInfo('agent.highlight_state.generation_gate', {
     workflowMode: 'job_targeting',
@@ -149,9 +178,41 @@ function logHighlightGenerationGate(params: {
     stage: 'highlight_generation_gate',
     highlightGenerationDecision: params.gate,
     jobKeywordsCount: params.jobKeywordsCount,
-    validationValid: params.validationValid,
+    validationBlocked: params.validationBlocked,
     optimizedChanged: params.optimizedChanged,
+    targetRoleConfidence: params.targetRoleConfidence,
+    targetRoleSource: params.targetRoleSource,
   })
+}
+
+function finalizeJobTargetingTrace(
+  trace: JobTargetingTraceDraft,
+  status: JobTargetingTrace['status'],
+  extra?: Partial<Pick<JobTargetingTrace, 'error'>>,
+): JobTargetingTrace {
+  return {
+    ...trace,
+    ...extra,
+    completedAt: new Date().toISOString(),
+    status,
+  }
+}
+
+function logJobTargetingPipelineTrace(
+  trace: JobTargetingTraceDraft,
+  status: JobTargetingTrace['status'],
+  extra?: Partial<Pick<JobTargetingTrace, 'error'>>,
+): void {
+  logInfo('agent.job_targeting.pipeline_trace', finalizeJobTargetingTrace(trace, status, extra))
+}
+
+function summarizeValidationIssues(
+  issues: NonNullable<Session['agentState']['rewriteValidation']>['issues'],
+): Array<{ section?: string; message: string }> {
+  return issues.map((issue) => ({
+    section: issue.section,
+    message: issue.message,
+  }))
 }
 
 export async function runJobTargetingPipeline(session: Session): Promise<{
@@ -172,8 +233,16 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     ? structuredClone(session.agentState.optimizationSummary)
     : undefined
   const previousLastRewriteMode = session.agentState.lastRewriteMode
+  const trace: JobTargetingTraceDraft = {
+    sessionId: session.id,
+    userId: session.userId,
+    startedAt: new Date().toISOString(),
+  }
   const targetJobDescription = session.agentState.targetJobDescription?.trim()
   if (!targetJobDescription) {
+    logJobTargetingPipelineTrace(trace, 'failed', {
+      error: 'Target job description is required for job targeting.',
+    })
     return {
       success: false,
       error: 'Target job description is required for job targeting.',
@@ -206,18 +275,18 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         attemptCount: attempt,
       })
 
-      const result = await analyzeGap(
+      const execution = await analyzeGap(
         session.cvState,
         targetJobDescription,
         session.userId,
         session.id,
       )
 
-      if (!result.output.success || !result.result) {
-        throw new Error('error' in result.output ? result.output.error : 'Gap analysis failed.')
+      if (!execution.output.success || !execution.result) {
+        throw new Error('error' in execution.output ? execution.output.error : 'Gap analysis failed.')
       }
 
-      return result.result
+      return execution
     },
     {
       onRetry: (_error, attempt) => {
@@ -251,18 +320,37 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   })
 
   if (!gapAnalysisExecution) {
+    logJobTargetingPipelineTrace(trace, 'failed', {
+      error: session.agentState.atsWorkflowRun?.lastFailureReason ?? 'Gap analysis failed.',
+    })
     return {
       success: false,
       error: session.agentState.atsWorkflowRun?.lastFailureReason ?? 'Gap analysis failed.',
     }
   }
 
+  const gapAnalysisResult = gapAnalysisExecution.result
+  if (!gapAnalysisResult) {
+    const errorMessage = 'Gap analysis did not return a validated result.'
+    logJobTargetingPipelineTrace(trace, 'failed', { error: errorMessage })
+    return {
+      success: false,
+      error: errorMessage,
+    }
+  }
+
   const analyzedAt = new Date().toISOString()
   const gapAnalysis = {
-    result: gapAnalysisExecution,
+    result: gapAnalysisResult,
     analyzedAt,
   } satisfies NonNullable<Session['agentState']['gapAnalysis']>
-  const targetFitAssessment = deriveTargetFitAssessment(gapAnalysisExecution, analyzedAt)
+  trace.gapAnalysis = {
+    matchScore: gapAnalysisResult.matchScore,
+    missingSkillsCount: gapAnalysisResult.missingSkills.length,
+    weakAreasCount: gapAnalysisResult.weakAreas.length,
+    repairAttempted: gapAnalysisExecution.repairAttempted,
+  }
+  const targetFitAssessment = deriveTargetFitAssessment(gapAnalysisResult, analyzedAt)
   const careerFitEvaluation = evaluateCareerFitRisk({
     cvState: session.cvState,
     agentState: {
@@ -299,11 +387,28 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     })
   }
 
-  const targetingPlan = buildTargetingPlan({
+  const targetingPlan = await buildTargetingPlan({
     cvState: session.cvState,
     targetJobDescription,
-    gapAnalysis: gapAnalysisExecution,
+    gapAnalysis: gapAnalysisResult,
+    userId: session.userId,
+    sessionId: session.id,
   })
+  const jobKeywords = extractJobKeywords({
+    gapAnalysis,
+    targetingPlan,
+    targetFitAssessment,
+    targetJobDescription,
+  })
+  trace.extraction = {
+    targetRole: targetingPlan.targetRole,
+    targetRoleConfidence: targetingPlan.targetRoleConfidence,
+    targetRoleSource: targetingPlan.targetRoleSource,
+    extractionWarning: targetingPlan.targetRoleConfidence === 'low'
+      ? 'low_confidence_role'
+      : undefined,
+    jobKeywordsCount: jobKeywords.length,
+  }
 
   await persistAgentState(session, {
     ...session.agentState,
@@ -317,11 +422,35 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     }),
   })
 
+  if (targetingPlan.targetRoleConfidence === 'low') {
+    logWarn('agent.job_targeting.low_confidence_role_extraction', {
+      sessionId: session.id,
+      userId: session.userId,
+      workflowMode: 'job_targeting',
+      stage: 'targeting_plan',
+      targetRoleSource: targetingPlan.targetRoleSource,
+    })
+
+    await persistAgentState(session, {
+      ...session.agentState,
+      workflowMode: 'job_targeting',
+      gapAnalysis,
+      targetFitAssessment,
+      careerFitEvaluation: careerFitEvaluation ?? undefined,
+      targetingPlan,
+      extractionWarning: 'low_confidence_role',
+      atsWorkflowRun: buildWorkflowRun(session, {
+        currentStage: 'rewrite_plan',
+      }),
+    })
+  }
+
   logInfo(
     'agent.job_targeting.plan_built',
     createJobTargetingLogContext(session, 'targeting_plan', {
       targetRole: targetingPlan.targetRole,
       targetRoleConfidence: targetingPlan.targetRoleConfidence,
+      targetRoleSource: targetingPlan.targetRoleSource,
       emphasizeCount: targetingPlan.mustEmphasize.length,
       missingCount: targetingPlan.missingButCannotInvent.length,
     }),
@@ -331,13 +460,21 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     mode: 'job_targeting',
     cvState: session.cvState,
     targetJobDescription,
-    gapAnalysis: gapAnalysisExecution,
+    gapAnalysis: gapAnalysisResult,
     targetingPlan,
     userId: session.userId,
     sessionId: session.id,
   })
 
   if (!rewriteResult.success || !rewriteResult.optimizedCvState) {
+    trace.rewrite = {
+      sectionsAttempted: rewriteResult.diagnostics?.sectionAttempts
+        ? Object.keys(rewriteResult.diagnostics.sectionAttempts)
+        : [],
+      sectionsChanged: rewriteResult.summary?.changedSections ?? [],
+      sectionsRetried: rewriteResult.diagnostics?.retriedSections ?? [],
+      sectionsCompacted: rewriteResult.diagnostics?.compactedSections ?? [],
+    }
     const nextAgentState: Session['agentState'] = {
       ...session.agentState,
       workflowMode: 'job_targeting',
@@ -371,6 +508,9 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         compactedSections: rewriteResult.diagnostics?.compactedSections.length ?? 0,
       }),
     )
+    logJobTargetingPipelineTrace(trace, 'failed', {
+      error: rewriteResult.error ?? 'Job targeting rewrite failed.',
+    })
 
     return {
       success: false,
@@ -381,32 +521,47 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   const validation = validateRewrite(session.cvState, rewriteResult.optimizedCvState, {
     mode: 'job_targeting',
     targetJobDescription,
-    gapAnalysis: gapAnalysisExecution,
+    gapAnalysis: gapAnalysisResult,
     targetingPlan,
   })
+  trace.rewrite = {
+    sectionsAttempted: rewriteResult.diagnostics?.sectionAttempts
+      ? Object.keys(rewriteResult.diagnostics.sectionAttempts)
+      : [],
+    sectionsChanged: rewriteResult.summary?.changedSections ?? [],
+    sectionsRetried: rewriteResult.diagnostics?.retriedSections ?? [],
+    sectionsCompacted: rewriteResult.diagnostics?.compactedSections ?? [],
+  }
+  trace.validation = {
+    blocked: validation.blocked,
+    hardIssuesCount: validation.hardIssues.length,
+    softWarningsCount: validation.softWarnings.length,
+    hardIssues: summarizeValidationIssues(validation.hardIssues),
+    softWarnings: summarizeValidationIssues(validation.softWarnings),
+    failureStage: validation.blocked ? 'validation' : undefined,
+  }
   const optimizedAt = new Date().toISOString()
-  const optimizedChanged = !cvStatesMatch(rewriteResult.optimizedCvState, session.cvState)
-  const jobKeywords = extractJobKeywords({
-    gapAnalysis,
-    targetingPlan,
-    targetFitAssessment,
-    targetJobDescription,
-  })
+  const optimizedChanged = !cvStatesMatch(
+    rewriteResult.optimizedCvState,
+    previousOptimizedCvState ?? session.cvState,
+  )
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
   const highlightGenerationGate = classifyHighlightGenerationGate({
-    validationValid: validation.valid,
+    validationBlocked: validation.blocked,
     optimizedChanged,
   })
   logHighlightGenerationGate({
     session,
     gate: highlightGenerationGate,
     jobKeywordsCount: jobKeywords.length,
-    validationValid: validation.valid,
+    validationBlocked: validation.blocked,
     optimizedChanged,
+    targetRoleConfidence: targetingPlan.targetRoleConfidence,
+    targetRoleSource: targetingPlan.targetRoleSource,
   })
   const shouldGenerateHighlights = highlightGenerationGate === 'allowed'
-  let nextHighlightState = shouldGenerateHighlights ? previousHighlightState : undefined
+  let nextHighlightState = previousHighlightState
   let highlightDetectionOutcome: HighlightDetectionOutcome | undefined
 
   if (shouldGenerateHighlights) {
@@ -432,6 +587,12 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       })
     }
   }
+  trace.highlight = {
+    gate: highlightGenerationGate,
+    generated: shouldGenerateHighlights && Boolean(nextHighlightState),
+    highlightSource: shouldGenerateHighlights ? nextHighlightState?.highlightSource : undefined,
+    jobKeywordsCount: jobKeywords.length,
+  }
 
   const nextAgentState: Session['agentState'] = {
     ...session.agentState,
@@ -440,16 +601,17 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     targetFitAssessment,
     careerFitEvaluation: careerFitEvaluation ?? undefined,
     targetingPlan,
-    rewriteStatus: validation.valid ? 'completed' : 'failed',
-    optimizedCvState: validation.valid ? rewriteResult.optimizedCvState : previousOptimizedCvState,
-    highlightState: validation.valid ? nextHighlightState : previousHighlightState,
-    optimizedAt: validation.valid ? optimizedAt : previousOptimizedAt,
-    optimizationSummary: validation.valid ? rewriteResult.summary : previousOptimizationSummary,
-    lastRewriteMode: validation.valid ? 'job_targeting' : previousLastRewriteMode,
+    extractionWarning: targetingPlan.targetRoleConfidence === 'low' ? 'low_confidence_role' : undefined,
+    rewriteStatus: validation.blocked ? 'failed' : 'completed',
+    optimizedCvState: validation.blocked ? previousOptimizedCvState : rewriteResult.optimizedCvState,
+    highlightState: validation.blocked ? previousHighlightState : nextHighlightState,
+    optimizedAt: validation.blocked ? previousOptimizedAt : optimizedAt,
+    optimizationSummary: validation.blocked ? previousOptimizationSummary : rewriteResult.summary,
+    lastRewriteMode: validation.blocked ? previousLastRewriteMode : 'job_targeting',
     rewriteValidation: validation,
     atsWorkflowRun: buildWorkflowRun(session, {
-      status: validation.valid ? 'completed' : 'failed',
-      currentStage: validation.valid ? 'persist_version' : 'validation',
+      status: validation.blocked ? 'failed' : 'completed',
+      currentStage: validation.blocked ? 'validation' : 'persist_version',
       sectionAttempts: rewriteResult.diagnostics?.sectionAttempts ?? {},
       retriedSections: rewriteResult.diagnostics?.retriedSections ?? [],
       compactedSections: rewriteResult.diagnostics?.compactedSections ?? [],
@@ -458,28 +620,28 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         retriedSections: rewriteResult.diagnostics?.retriedSections.length ?? 0,
         compactedSections: rewriteResult.diagnostics?.compactedSections.length ?? 0,
       },
-      lastFailureStage: validation.valid ? undefined : 'validation',
-      lastFailureReason: validation.valid
-        ? undefined
-        : validationIssueMessages[0]
+      lastFailureStage: validation.blocked ? 'validation' : undefined,
+      lastFailureReason: validation.blocked
+        ? validationIssueMessages[0]
           ? `Job targeting rewrite validation failed: ${validationIssueMessages[0]}`
-          : 'Job targeting rewrite validation failed.',
+          : 'Job targeting rewrite validation failed.'
+        : undefined,
     }),
   }
   await persistAgentState(session, nextAgentState)
-  const highlightStatePersistedReason = !validation.valid
+  const highlightStatePersistedReason = validation.blocked
     ? 'validation_failed'
     : !shouldGenerateHighlights
       ? 'not_generated_for_unchanged_cv_state'
-    : highlightDetectionOutcome?.resultKind === 'valid_empty'
-      ? 'empty_valid_result'
-      : highlightDetectionOutcome?.resultKind === 'all_filtered_out'
-        ? 'all_filtered_out'
-        : highlightDetectionOutcome?.resultKind === 'invalid_payload'
-          ? 'invalid_payload'
-          : highlightDetectionOutcome?.resultKind === 'thrown_error'
-            ? 'thrown_error'
-            : 'generated'
+      : highlightDetectionOutcome?.resultKind === 'valid_empty'
+        ? 'empty_valid_result'
+        : highlightDetectionOutcome?.resultKind === 'all_filtered_out'
+          ? 'all_filtered_out'
+          : highlightDetectionOutcome?.resultKind === 'invalid_payload'
+            ? 'invalid_payload'
+            : highlightDetectionOutcome?.resultKind === 'thrown_error'
+              ? 'thrown_error'
+              : 'generated'
 
   logHighlightStatePersistence({
     session,
@@ -491,18 +653,24 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     highlightDetectionOutcome,
   })
 
-  if (!validation.valid) {
+  if (validation.blocked) {
     logWarn(
       'agent.job_targeting.validation_failed',
       createJobTargetingLogContext(session, 'validation', {
         success: false,
         issueCount: validation.issues.length,
+        hardIssueCount: validation.hardIssues.length,
+        softWarningCount: validation.softWarnings.length,
         issueSections: validationIssueSections.join(', ') || undefined,
         issueMessages: validationIssueMessages.join(' | ') || undefined,
         targetRole: targetingPlan.targetRole,
         targetRoleConfidence: targetingPlan.targetRoleConfidence,
+        targetRoleSource: targetingPlan.targetRoleSource,
       }),
     )
+    logJobTargetingPipelineTrace(trace, 'blocked', {
+      error: 'Job targeting rewrite validation failed.',
+    })
 
     return {
       success: false,
@@ -569,6 +737,9 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         ...serializeError(error),
       }),
     )
+    logJobTargetingPipelineTrace(trace, 'failed', {
+      error: error instanceof Error ? error.message : 'Failed to persist job targeting version.',
+    })
 
     return {
       success: false,
@@ -592,10 +763,14 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     createJobTargetingLogContext(session, 'persist_version', {
       success: true,
       issueCount: validation.issues.length,
+      hardIssueCount: validation.hardIssues.length,
+      softWarningCount: validation.softWarnings.length,
       targetRole: targetingPlan.targetRole,
       targetRoleConfidence: targetingPlan.targetRoleConfidence,
+      targetRoleSource: targetingPlan.targetRoleSource,
     }),
   )
+  logJobTargetingPipelineTrace(trace, 'success')
 
   return {
     success: true,

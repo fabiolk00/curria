@@ -24,6 +24,14 @@ const BASE_CV = {
   }],
 }
 
+const cleanRewriteValidation = {
+  blocked: false,
+  valid: true,
+  hardIssues: [],
+  softWarnings: [],
+  issues: [],
+}
+
 describe('ATS readiness scoring contract', () => {
   it('emits the ATS Readiness contract as v2', () => {
     expect(ATS_READINESS_CONTRACT_VERSION).toBe(2)
@@ -55,10 +63,7 @@ describe('ATS readiness scoring contract', () => {
         ...BASE_CV,
         summary: 'Analista de dados.',
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary'],
         notes: ['Resumo simplificado.'],
@@ -98,10 +103,7 @@ describe('ATS readiness scoring contract', () => {
         }],
         skills: ['SQL', 'Power BI', 'Excel', 'ETL'],
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary', 'experience', 'skills'],
         notes: ['Maior clareza e impacto.'],
@@ -126,10 +128,7 @@ describe('ATS readiness scoring contract', () => {
         ...BASE_CV,
         summary: 'Analista de dados com foco em SQL, BI e indicadores executivos para decisoes de negocio.',
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary', 'skills'],
         notes: ['Resumo ficou mais claro e executivo.'],
@@ -151,10 +150,7 @@ describe('ATS readiness scoring contract', () => {
         ...BASE_CV,
         summary: 'Resumo Profissional: Analista de dados com foco em SQL e Power BI para analytics.',
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary'],
         notes: ['Resumo alterado superficialmente.'],
@@ -179,10 +175,7 @@ describe('ATS readiness scoring contract', () => {
           bullets: ['Estruturei indicadores em SQL e Power BI para decisoes executivas.'],
         }],
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary', 'experience'],
         notes: ['Mais visibilidade para stack principal.'],
@@ -205,10 +198,7 @@ describe('ATS readiness scoring contract', () => {
           bullets: ['Implementei e otimizei processos com apoio ao time.'],
         }],
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary', 'experience'],
         notes: ['Mais verbos de acao, sem ganho explicito de keywords.'],
@@ -232,7 +222,10 @@ describe('ATS readiness scoring contract', () => {
         education: [],
       },
       rewriteValidation: {
+        blocked: true,
         valid: false,
+        hardIssues: [{ severity: 'high', message: 'Unsupported claims.', section: 'summary' }],
+        softWarnings: [],
         issues: [{ severity: 'high', message: 'Unsupported claims.', section: 'summary' }],
       },
       optimizationSummary: {
@@ -288,10 +281,7 @@ describe('ATS readiness scoring contract', () => {
         }],
         skills: ['SQL'],
       },
-      rewriteValidation: {
-        valid: true,
-        issues: [],
-      },
+      rewriteValidation: cleanRewriteValidation,
       optimizationSummary: {
         changedSections: ['summary', 'experience', 'skills'],
         notes: ['Versao curta.'],

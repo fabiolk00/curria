@@ -332,11 +332,18 @@ describe('POST /api/profile/smart-generation', () => {
     vi.mocked(runJobTargetingPipeline).mockResolvedValue({
       success: false,
       validation: {
+        blocked: true,
         valid: false,
+        hardIssues: [{
+          severity: 'high',
+          section: 'summary',
+          message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
+        }],
+        softWarnings: [],
         issues: [{
           severity: 'high',
           section: 'summary',
-          message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.',
+          message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
         }],
       },
       error: 'Job targeting rewrite validation failed.',
@@ -349,6 +356,7 @@ describe('POST /api/profile/smart-generation', () => {
         targetingPlan: {
           targetRole: 'Vaga Alvo',
           targetRoleConfidence: 'low',
+          targetRoleSource: 'fallback',
           focusKeywords: [],
           mustEmphasize: [],
           shouldDeemphasize: [],
@@ -379,11 +387,18 @@ describe('POST /api/profile/smart-generation', () => {
       sessionId: 'sess_generation_123',
       workflowMode: 'job_targeting',
       rewriteValidation: {
+        blocked: true,
         valid: false,
+        hardIssues: [{
+          severity: 'high',
+          section: 'summary',
+          message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
+        }],
+        softWarnings: [],
         issues: [{
           severity: 'high',
           section: 'summary',
-          message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.',
+          message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
         }],
       },
       targetRoleConfidence: 'low',
@@ -473,6 +488,7 @@ describe('POST /api/profile/smart-generation', () => {
       session.agentState.targetingPlan = {
         targetRole: 'Vaga Alvo',
         targetRoleConfidence: 'low',
+        targetRoleSource: 'fallback',
         focusKeywords: [],
         mustEmphasize: [],
         shouldDeemphasize: [],
@@ -489,11 +505,18 @@ describe('POST /api/profile/smart-generation', () => {
       return {
         success: false,
         validation: {
+          blocked: true,
           valid: false,
+          hardIssues: [{
+            severity: 'high',
+            section: 'summary',
+            message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
+          }],
+          softWarnings: [],
           issues: [{
             severity: 'high',
             section: 'summary',
-            message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.',
+            message: 'O resumo otimizado menciona skill sem evid�ncia no curr�culo original.',
           }],
         },
         error: 'Job targeting rewrite validation failed.',

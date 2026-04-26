@@ -658,6 +658,40 @@ describe("UserDataPage", () => {
     }))
   })
 
+  it("surfaces success warnings in the completion toast when job targeting saves with observations", async () => {
+    const user = userEvent.setup()
+    buildFetchMock(
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse({
+        success: true,
+        sessionId: "sess_target_warning_123",
+        warnings: ["O resumo otimizado menciona skill sem evidência no currículo original."],
+      }),
+    )
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    await user.type(
+      screen.getByTestId("target-job-description-input"),
+      "Vaga para analista de dados senior com foco em produto e SQL.",
+    )
+    await user.click(screen.getByTestId("ats-panel-cta"))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_target_warning_123")
+    })
+
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.stringContaining("Revise este ponto antes de usar a versão final"),
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.stringContaining("skill sem evidência no currículo original"),
+    )
+  })
+
   it("shows the missing ATS requirements dialog when the profile is incomplete", async () => {
     const user = userEvent.setup()
     buildFetchMock(createJsonResponse(buildProfileResponse(buildResumeData({
@@ -687,10 +721,25 @@ describe("UserDataPage", () => {
       createJsonResponse({
         workflowMode: "job_targeting",
         rewriteValidation: {
+          blocked: true,
           valid: false,
+          hardIssues: [{
+            severity: "high",
+            message: "A experiência otimizada introduziu empresa ou combinação cargo/empresa inexistente no currículo original.",
+            section: "experience",
+          }],
+          softWarnings: [{
+            severity: "medium",
+            message: "O resumo otimizado menciona skill sem evidência no currículo original.",
+            section: "summary",
+          }],
           issues: [{
             severity: "high",
-            message: "O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.",
+            message: "A experiência otimizada introduziu empresa ou combinação cargo/empresa inexistente no currículo original.",
+            section: "experience",
+          }, {
+            severity: "medium",
+            message: "O resumo otimizado menciona skill sem evidência no currículo original.",
             section: "summary",
           }],
         },
@@ -710,7 +759,10 @@ describe("UserDataPage", () => {
     await user.click(screen.getByTestId("ats-panel-cta"))
 
     expect(await screen.findByRole("heading", { name: /automaticamente/i })).toBeInTheDocument()
-    expect(screen.getByText(/skills sem alinhamento/i)).toBeInTheDocument()
+    expect(screen.getByText(/o que bloqueou automaticamente/i)).toBeInTheDocument()
+    expect(screen.getByText(/outros pontos para revisar/i)).toBeInTheDocument()
+    expect(screen.getByText(/empresa ou combinação cargo\/empresa inexistente/i)).toBeInTheDocument()
+    expect(screen.getByText(/skill sem evidência no currículo original/i)).toBeInTheDocument()
     expect(screen.getByText(/bug de leitura da vaga/i)).toBeInTheDocument()
     expect(screen.getByText(/não conseguimos identificar com confiança o cargo-alvo/i)).toBeInTheDocument()
     expect(screen.queryByText("Vaga Alvo")).not.toBeInTheDocument()

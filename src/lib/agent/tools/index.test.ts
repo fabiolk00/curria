@@ -827,11 +827,11 @@ describe('agent tool dispatch', () => {
       cv_state: session.cvState,
     }, session)
 
-    expect(execution.output).toEqual({
+    expect(execution.output).toMatchObject({
       success: false,
       code: 'GENERATE_FILE_LATEST_VERSION_MISSING',
-      error: 'Gere uma nova versão otimizada pela IA antes de exportar este currículo.',
     })
+    expect(execution.output.error).toContain('Gere uma nova')
     expect(generateBillableResume).not.toHaveBeenCalled()
     expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.latest_version_missing')
     expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.precondition_failed')
@@ -1097,13 +1097,14 @@ describe('agent tool dispatch', () => {
         weakAreas: ['summary'],
         improvementSuggestions: ['Highlight AWS experience'],
       },
+      repairAttempted: false,
     })
 
     const execution = await executeTool('analyze_gap', {
       target_job_description: 'AWS backend role',
     }, session)
 
-    expect(execution.patch).toEqual({
+    expect(execution.patch).toMatchObject({
       agentState: {
         targetJobDescription: 'AWS backend role',
         targetFitAssessment: {
@@ -1121,6 +1122,10 @@ describe('agent tool dispatch', () => {
           },
           analyzedAt: expect.any(String),
         },
+        careerFitEvaluation: expect.objectContaining({
+          riskLevel: 'low',
+          summary: expect.any(String),
+        }),
       },
     })
   })

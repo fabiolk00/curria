@@ -234,7 +234,7 @@ function buildTargetJobSectionInstructions(
 ): string {
   const shared = [
     buildJobTargetingStyleGuide(targetJobDescription),
-    targetingPlan.targetRoleConfidence === 'high'
+    targetingPlan.targetRoleConfidence !== 'low'
       ? `Target role: ${targetingPlan.targetRole}`
       : 'No reliable target role title was extracted. Anchor the rewrite on the vacancy requirements, tools, responsibilities, and seniority signals instead of forcing a literal role claim.',
     targetingPlan.focusKeywords.length > 0
@@ -258,7 +258,7 @@ function buildTargetJobSectionInstructions(
         ...shared,
         ...targetingPlan.sectionStrategy.summary,
         'Rewrite only the professional summary.',
-        targetingPlan.targetRoleConfidence === 'high'
+        targetingPlan.targetRoleConfidence !== 'low'
           ? 'Use 4 to 6 concise lines aligned to the target role without claiming skills or experiences the candidate does not have.'
           : 'Use 4 to 6 concise lines aligned to the vacancy context without claiming a literal role identity, skills, or experiences the candidate does not have.',
         'Preserve grounded technical scope, business context, and supported achievements that help the recruiter understand the real profile.',
@@ -599,10 +599,12 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
       ? buildRewritePlan(params.cvState, params.atsAnalysis)
       : undefined
     const targetingPlan = params.mode === 'job_targeting'
-      ? (params.targetingPlan ?? buildTargetingPlan({
+      ? (params.targetingPlan ?? await buildTargetingPlan({
           cvState: params.cvState,
           targetJobDescription: params.targetJobDescription,
           gapAnalysis: params.gapAnalysis,
+          userId: params.userId,
+          sessionId: params.sessionId,
         }))
       : undefined
 

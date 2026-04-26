@@ -48,6 +48,7 @@ export type SmartGenerationDecision =
         originalCvState?: CVState
         optimizedCvState?: CVState
         previewLock?: PreviewLockSummary
+        warnings?: string[]
       }
     }
 

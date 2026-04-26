@@ -86,18 +86,24 @@ export type AtsAnalysisResult = {
   recommendations: string[]
 }
 
+export type ValidationIssue = {
+  severity: 'high' | 'medium'
+  message: string
+  section?: string
+}
+
 export type RewriteValidationResult = {
+  blocked: boolean
   valid: boolean
-  issues: Array<{
-    severity: 'high' | 'medium'
-    message: string
-    section?: string
-  }>
+  hardIssues: ValidationIssue[]
+  softWarnings: ValidationIssue[]
+  issues: ValidationIssue[]
 }
 
 export type TargetingPlan = {
   targetRole: string
-  targetRoleConfidence: 'high' | 'low'
+  targetRoleConfidence: 'high' | 'medium' | 'low'
+  targetRoleSource: 'heuristic' | 'llm' | 'fallback'
   focusKeywords: string[]
   mustEmphasize: string[]
   shouldDeemphasize: string[]
@@ -117,6 +123,7 @@ export type AgentState = {
   targetJobDescription?: string
   targetFitAssessment?: TargetFitAssessment
   careerFitEvaluation?: CareerFitEvaluation
+  extractionWarning?: 'low_confidence_role'
   parseConfidenceScore?: number
   parseStatus: 'empty' | 'attached' | 'parsed' | 'failed'
   parseError?: string

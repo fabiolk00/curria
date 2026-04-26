@@ -1,8 +1,14 @@
+import { AGENT_CONFIG, MODEL_CONFIG } from '@/lib/agent/config'
 import { MAX_TARGETING_PLAN_ITEMS, shapeTargetJobDescription } from '@/lib/agent/job-targeting-retry'
-import type { GapAnalysisResult, CVState } from '@/types/cv'
+import { trackApiUsage } from '@/lib/agent/usage-tracker'
+import { openai } from '@/lib/openai/client'
+import { callOpenAIWithRetry, getChatCompletionText, getChatCompletionUsage } from '@/lib/openai/chat'
 import type { TargetingPlan } from '@/types/agent'
+import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 const FALLBACK_TARGET_ROLE = 'Vaga Alvo'
+const UNKNOWN_TARGET_ROLE = 'Unknown Role'
+const TARGET_ROLE_EXTRACTION_MAX_COMPLETION_TOKENS = 120
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase()
@@ -53,7 +59,7 @@ function isWeakTargetRole(value: string): boolean {
     return true
   }
 
-  return /^(bi|vaga\s+alvo|target\s+role)$/.test(normalized)
+  return /^(bi|vaga\s+alvo|target\s+role|unknown\s+role)$/.test(normalized)
 }
 
 function matchesSemanticSignal(value: string, semanticSignals: string[]): boolean {
@@ -78,9 +84,9 @@ function extractSemanticSignals(targetJobDescription: string): string[] {
     /\bdata\s+warehouse\b/gi,
     /\bdata\s+analytics\b/gi,
     /\bmodelagem\s+de\s+dados\b/gi,
-    /\bvisualiza(?:c|ç)(?:a|ã)o\s+de\s+dados\b/gi,
+    /\bvisualiza(?:c|Ã§)(?:a|Ã£)o\s+de\s+dados\b/gi,
     /\bpipelines?\s+de\s+dados\b/gi,
-    /\borquestra(?:c|ç)(?:a|ã)o\b/gi,
+    /\borquestra(?:c|Ã§)(?:a|Ã£)o\b/gi,
     /\bpower\s+automate\b/gi,
     /\bpython\b/gi,
     /\bpyspark\b/gi,
@@ -110,7 +116,7 @@ function extractSemanticSignals(targetJobDescription: string): string[] {
   ]))
 }
 
-function extractTargetRole(targetJobDescription: string): { targetRole: string; confidence: 'high' | 'low' } {
+function extractTargetRole(targetJobDescription: string): { targetRole: string; confidence: 'high' | 'medium' | 'low' } {
   const shapedTargetJob = shapeTargetJobDescription(targetJobDescription).content
   const lines = shapedTargetJob
     .split('\n')
@@ -157,6 +163,154 @@ function extractTargetRole(targetJobDescription: string): { targetRole: string; 
   }
 }
 
+function stripMarkdownFences(rawText: string): string {
+  const trimmed = rawText.trim()
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  return fenceMatch?.[1]?.trim() ?? trimmed
+}
+
+function extractJsonCandidate(rawText: string): string | null {
+  const stripped = stripMarkdownFences(rawText)
+
+  let startIndex = -1
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let index = 0; index < stripped.length; index += 1) {
+    const char = stripped[index]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+        continue
+      }
+
+      if (char === '\\') {
+        escaped = true
+        continue
+      }
+
+      if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
+    if (char === '{') {
+      if (startIndex === -1) {
+        startIndex = index
+      }
+      depth += 1
+      continue
+    }
+
+    if (char === '}' && startIndex !== -1) {
+      depth -= 1
+      if (depth === 0) {
+        return stripped.slice(startIndex, index + 1)
+      }
+    }
+  }
+
+  return null
+}
+
+async function extractTargetRoleWithLLM(
+  targetJobDescription: string,
+  context?: {
+    userId?: string
+    sessionId?: string
+  },
+): Promise<{ targetRole: string; confidence: 'high' | 'medium' | 'low' }> {
+  const shapedTargetJobDescription = shapeTargetJobDescription(targetJobDescription)
+
+  try {
+    const response = await callOpenAIWithRetry(
+      (signal) => openai.chat.completions.create({
+        model: MODEL_CONFIG.structuredModel,
+        max_completion_tokens: TARGET_ROLE_EXTRACTION_MAX_COMPLETION_TOKENS,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: `You are a job posting analyst.
+Given a job description, identify the target job title.
+
+Rules:
+- Return ONLY a valid JSON object with the shape { "targetRole": string, "confidence": "high" | "medium" | "low" }
+- "high": the title is stated explicitly in the posting
+- "medium": the title is strongly implied by responsibilities, tools, and seniority signals
+- "low": you cannot determine the role confidently
+- Do not invent a role
+- If confidence is "low", set targetRole to "Unknown Role"
+- Return the role name in the same language as the job description
+- Be concise: "Engenheiro de Dados", "Product Manager", "UX Designer"`,
+          },
+          {
+            role: 'user',
+            content: shapedTargetJobDescription.content,
+          },
+        ],
+      }, { signal }),
+      3,
+      AGENT_CONFIG.timeout,
+      undefined,
+      {
+        operation: 'target_role_extraction',
+        workflowMode: 'job_targeting',
+        stage: 'target_role_extraction',
+        model: MODEL_CONFIG.structuredModel,
+        sessionId: context?.sessionId,
+        userId: context?.userId,
+      },
+    )
+
+    const usage = getChatCompletionUsage(response)
+    if (context?.userId && context?.sessionId) {
+      trackApiUsage({
+        userId: context.userId,
+        sessionId: context.sessionId,
+        model: MODEL_CONFIG.structuredModel,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        endpoint: 'rewriter',
+      }).catch(() => {})
+    }
+
+    const rawText = getChatCompletionText(response)
+    const jsonCandidate = extractJsonCandidate(rawText) ?? stripMarkdownFences(rawText)
+    const parsed = JSON.parse(jsonCandidate) as {
+      targetRole?: unknown
+      confidence?: unknown
+    }
+    const targetRole = typeof parsed.targetRole === 'string'
+      ? cleanExtractedRole(parsed.targetRole).trim()
+      : ''
+
+    if (
+      targetRole
+      && ['high', 'medium', 'low'].includes(parsed.confidence as string)
+      && !isWeakTargetRole(targetRole)
+    ) {
+      return {
+        targetRole,
+        confidence: parsed.confidence as 'high' | 'medium' | 'low',
+      }
+    }
+  } catch {
+    // Fall through to low-confidence fallback.
+  }
+
+  return { targetRole: UNKNOWN_TARGET_ROLE, confidence: 'low' }
+}
+
 function takeRelevant(values: string[]): string[] {
   const seen = new Set<string>()
 
@@ -175,14 +329,38 @@ function takeRelevant(values: string[]): string[] {
     .slice(0, MAX_TARGETING_PLAN_ITEMS)
 }
 
-export function buildTargetingPlan(params: {
+export async function buildTargetingPlan(params: {
   cvState: CVState
   targetJobDescription: string
   gapAnalysis: GapAnalysisResult
-}): TargetingPlan {
+  userId?: string
+  sessionId?: string
+}): Promise<TargetingPlan> {
   const { cvState, targetJobDescription, gapAnalysis } = params
-  const extractedTargetRole = extractTargetRole(targetJobDescription)
-  const targetRole = toTitleCase(extractedTargetRole.targetRole)
+  const heuristic = extractTargetRole(targetJobDescription)
+
+  let extractedRole: { targetRole: string; confidence: 'high' | 'medium' | 'low' }
+  let targetRoleSource: TargetingPlan['targetRoleSource']
+
+  if (heuristic.confidence === 'high') {
+    extractedRole = heuristic
+    targetRoleSource = 'heuristic'
+  } else {
+    const llmExtraction = await extractTargetRoleWithLLM(targetJobDescription, {
+      userId: params.userId,
+      sessionId: params.sessionId,
+    })
+
+    if (llmExtraction.confidence !== 'low') {
+      extractedRole = llmExtraction
+      targetRoleSource = 'llm'
+    } else {
+      extractedRole = { targetRole: FALLBACK_TARGET_ROLE, confidence: 'low' }
+      targetRoleSource = 'fallback'
+    }
+  }
+
+  const targetRole = toTitleCase(extractedRole.targetRole)
   const focusKeywords = takeRelevant(extractSemanticSignals(targetJobDescription))
   const normalizedJobText = normalizeWhitespace(shapeTargetJobDescription(targetJobDescription).content)
 
@@ -204,13 +382,14 @@ export function buildTargetingPlan(params: {
   )
 
   const missingButCannotInvent = takeRelevant(gapAnalysis.missingSkills)
-  const roleAwareSummaryInstruction = extractedTargetRole.confidence === 'high'
-    ? `Posicione o candidato para ${targetRole} sem alegar experiência não comprovada.`
-    : 'Use os requisitos, responsabilidades e stack da vaga como âncora sem forçar um cargo-alvo literal não confiável.'
+  const roleAwareSummaryInstruction = extractedRole.confidence !== 'low'
+    ? `Posicione o candidato para ${targetRole} sem alegar experiÃªncia nÃ£o comprovada.`
+    : 'Use os requisitos, responsabilidades e stack da vaga como Ã¢ncora sem forÃ§ar um cargo-alvo literal nÃ£o confiÃ¡vel.'
 
   return {
     targetRole,
-    targetRoleConfidence: extractedTargetRole.confidence,
+    targetRoleConfidence: extractedRole.confidence,
+    targetRoleSource,
     focusKeywords,
     mustEmphasize,
     shouldDeemphasize,
@@ -221,34 +400,34 @@ export function buildTargetingPlan(params: {
         mustEmphasize.length > 0
           ? `Priorize ${mustEmphasize.join(', ')} quando houver suporte factual.`
           : focusKeywords.length > 0
-            ? `Priorize os sinais semânticos da vaga já presentes no currículo, como ${focusKeywords.join(', ')}.`
-            : 'Priorize termos e contextos da vaga que já aparecem no currículo.',
+            ? `Priorize os sinais semÃ¢nticos da vaga jÃ¡ presentes no currÃ­culo, como ${focusKeywords.join(', ')}.`
+            : 'Priorize termos e contextos da vaga que jÃ¡ aparecem no currÃ­culo.',
         missingButCannotInvent.length > 0
-          ? `Não esconda gaps como ${missingButCannotInvent.join(', ')}.`
+          ? `NÃ£o esconda gaps como ${missingButCannotInvent.join(', ')}.`
           : 'Evite parecer um encaixe perfeito quando houver lacunas reais.',
       ],
       experience: [
-        'Reordene a narrativa dos bullets para destacar contexto, stack e impacto mais próximos da vaga.',
+        'Reordene a narrativa dos bullets para destacar contexto, stack e impacto mais prÃ³ximos da vaga.',
         'Mantenha empresas, cargos, datas e escopo factual intactos.',
         shouldDeemphasize.length > 0
-          ? `Reduza ênfase em ${shouldDeemphasize.join(', ')} quando não forem centrais para a vaga.`
+          ? `Reduza Ãªnfase em ${shouldDeemphasize.join(', ')} quando nÃ£o forem centrais para a vaga.`
           : 'Remova redundancias e preserve apenas o que ajuda na leitura ATS.',
       ],
       skills: [
         mustEmphasize.length > 0
           ? `Suba para o topo skills aderentes como ${mustEmphasize.join(', ')}.`
           : focusKeywords.length > 0
-            ? `Ordene skills pela relevância semântica da vaga, como ${focusKeywords.join(', ')}.`
-            : 'Ordene skills pela relevância para a vaga.',
-        'Não adicione skills ausentes do currículo original.',
+            ? `Ordene skills pela relevÃ¢ncia semÃ¢ntica da vaga, como ${focusKeywords.join(', ')}.`
+            : 'Ordene skills pela relevÃ¢ncia para a vaga.',
+        'NÃ£o adicione skills ausentes do currÃ­culo original.',
       ],
       education: [
-        'Mantenha formação totalmente factual.',
+        'Mantenha formaÃ§Ã£o totalmente factual.',
         'Apenas padronize formato e leitura ATS.',
       ],
       certifications: [
-        'Destaque certificações mais próximas da vaga, mantendo nomes, emissores e anos.',
-        'Não crie alinhamento artificial com certificações inexistentes.',
+        'Destaque certificaÃ§Ãµes mais prÃ³ximas da vaga, mantendo nomes, emissores e anos.',
+        'NÃ£o crie alinhamento artificial com certificaÃ§Ãµes inexistentes.',
       ],
     },
   }

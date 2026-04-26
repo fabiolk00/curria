@@ -96,34 +96,37 @@ type SetupGenerationCopy = {
   modalDescription: string
 }
 
+type ValidationMessage = {
+  severity: "high" | "medium"
+  message: string
+  section?: string
+}
+
 type SmartGenerationResponse = {
   success?: boolean
   sessionId?: string
   workflowMode?: SetupGenerationMode
   rewriteValidation?: {
+    blocked?: boolean
     valid: boolean
-    issues: Array<{
-      severity: "high" | "medium"
-      message: string
-      section?: string
-    }>
+    hardIssues?: ValidationMessage[]
+    softWarnings?: ValidationMessage[]
+    issues: ValidationMessage[]
   }
   targetRole?: string
-  targetRoleConfidence?: "high" | "low"
+  targetRoleConfidence?: "high" | "medium" | "low"
   error?: string
   reasons?: string[]
   missingItems?: string[]
+  warnings?: string[]
 }
 
 type RewriteValidationFailure = {
   workflowMode: SetupGenerationMode
-  issues: Array<{
-    severity: "high" | "medium"
-    message: string
-    section?: string
-  }>
+  hardIssues: ValidationMessage[]
+  softWarnings: ValidationMessage[]
   targetRole?: string
-  targetRoleConfidence?: "high" | "low"
+  targetRoleConfidence?: "high" | "medium" | "low"
 }
 
 type ProfileDownloadState = {
@@ -398,6 +401,34 @@ function formatValidationSectionLabel(section?: string): string {
       return "Certificações"
     default:
       return "Validação"
+  }
+}
+
+function buildGenerationSuccessMessage(successMessage: string, warnings?: string[]): string {
+  const visibleWarnings = warnings?.map((warning) => warning.trim()).filter(Boolean) ?? []
+
+  if (visibleWarnings.length === 0) {
+    return successMessage
+  }
+
+  const reviewLead = visibleWarnings.length === 1
+    ? "Revise este ponto antes de usar a versão final:"
+    : "Revise estes pontos antes de usar a versão final:"
+
+  return `${successMessage} ${reviewLead} ${visibleWarnings.join(" ")}`
+}
+
+function splitRewriteValidationIssues(
+  rewriteValidation?: SmartGenerationResponse["rewriteValidation"],
+): {
+  hardIssues: ValidationMessage[]
+  softWarnings: ValidationMessage[]
+} {
+  const issues = rewriteValidation?.issues ?? []
+
+  return {
+    hardIssues: rewriteValidation?.hardIssues ?? issues.filter((issue) => issue.severity === "high"),
+    softWarnings: rewriteValidation?.softWarnings ?? issues.filter((issue) => issue.severity !== "high"),
   }
 }
 
@@ -821,9 +852,12 @@ export default function UserDataPage({
       }
 
       if (response.status === 422 && data.rewriteValidation?.issues?.length) {
+        const { hardIssues, softWarnings } = splitRewriteValidationIssues(data.rewriteValidation)
+
         setRewriteValidationFailure({
           workflowMode: data.workflowMode ?? generationMode,
-          issues: data.rewriteValidation.issues,
+          hardIssues,
+          softWarnings,
           targetRole: data.targetRole,
           targetRoleConfidence: data.targetRoleConfidence,
         })
@@ -843,11 +877,12 @@ export default function UserDataPage({
         message: "O PDF da nova versão estará disponível assim que a geração terminar.",
       })
 
-      toast.success(
+      toast.success(buildGenerationSuccessMessage(
         generationMode === "job_targeting"
           ? "Versão adaptada para a vaga criada com sucesso."
           : "Versão ATS criada com sucesso.",
-      )
+        data.warnings,
+      ))
 
       router.push(buildResumeComparisonPath(data.sessionId))
     } catch (error) {
@@ -1876,7 +1911,7 @@ export default function UserDataPage({
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="font-medium text-amber-900">O que bloqueou automaticamente</p>
               <ul className="mt-2 space-y-2">
-                {rewriteValidationFailure?.issues.map((issue, index) => (
+                {rewriteValidationFailure?.hardIssues.map((issue, index) => (
                   <li key={`${issue.section ?? "unknown"}-${index}`} className="list-none">
                     <span className="font-medium">{formatValidationSectionLabel(issue.section)}:</span>{" "}
                     {issue.message}
@@ -1884,6 +1919,23 @@ export default function UserDataPage({
                 ))}
               </ul>
             </div>
+
+            {rewriteValidationFailure?.softWarnings.length ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="font-medium text-slate-900">Outros pontos para revisar</p>
+                <p className="mt-2 text-slate-700">
+                  Essas observações não foram a causa do bloqueio, mas valem a sua atenção antes de tentar novamente.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {rewriteValidationFailure.softWarnings.map((issue, index) => (
+                    <li key={`${issue.section ?? "unknown"}-warning-${index}`} className="list-none">
+                      <span className="font-medium">{formatValidationSectionLabel(issue.section)}:</span>{" "}
+                      {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {suspiciousValidationTargetRole ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">

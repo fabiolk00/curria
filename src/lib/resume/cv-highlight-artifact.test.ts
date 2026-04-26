@@ -16,6 +16,7 @@ import {
   buildSeparatorTrimLeftCandidate,
   buildTrimLeftCandidate,
   isEditoriallyAcceptableHighlightRange,
+  normalizeCvHighlightState,
   normalizeHighlightSpanBoundaries,
   scoreHighlightCandidatePromotion,
   shouldPromoteHighlightCandidate,
@@ -609,5 +610,60 @@ describe('validateAndResolveHighlights — editorial correction fixtures', () =>
 
     expect(ranges.length).toBeGreaterThan(0)
     expect(text.slice(ranges[0]!.start, ranges[0]!.end)).toBe(correctFragment)
+  })
+})
+
+describe('normalizeCvHighlightState — legacy compatibility', () => {
+  it('accepts a legacy ATS artifact without the new metadata fields', () => {
+    const legacyHighlightState = {
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-26T12:00:00.000Z',
+      resolvedHighlights: [],
+    }
+
+    const normalized = normalizeCvHighlightState(legacyHighlightState, {
+      workflowMode: 'ats_enhancement',
+    })
+
+    expect(normalized).toEqual({
+      ...legacyHighlightState,
+      highlightSource: 'ats_enhancement',
+      highlightGeneratedAt: legacyHighlightState.generatedAt,
+    })
+  })
+
+  it('prefers the persisted rewrite origin fallback when a mixed session last rewrote through ATS', () => {
+    const legacyHighlightState = {
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-26T12:00:00.000Z',
+      resolvedHighlights: [],
+    }
+
+    const normalized = normalizeCvHighlightState(legacyHighlightState, {
+      workflowMode: 'job_targeting',
+      lastRewriteMode: 'ats_enhancement',
+    })
+
+    expect(normalized?.highlightSource).toBe('ats_enhancement')
+  })
+
+  it('keeps the explicit metadata when the artifact already carries highlightSource', () => {
+    const highlightState = {
+      source: 'rewritten_cv_state',
+      version: 2,
+      generatedAt: '2026-04-26T12:00:00.000Z',
+      highlightSource: 'job_targeting' as const,
+      highlightGeneratedAt: '2026-04-26T12:00:01.000Z',
+      resolvedHighlights: [],
+    }
+
+    const normalized = normalizeCvHighlightState(highlightState, {
+      workflowMode: 'ats_enhancement',
+      lastRewriteMode: 'ats_enhancement',
+    })
+
+    expect(normalized).toEqual(highlightState)
   })
 })

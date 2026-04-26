@@ -6,6 +6,14 @@ import type { RewriteSectionInput } from '@/types/agent'
 
 const CHANGED_SECTIONS: RewriteSectionInput['section'][] = ['summary', 'experience', 'skills']
 
+const cleanRewriteValidation = {
+  blocked: false,
+  valid: true,
+  hardIssues: [],
+  softWarnings: [],
+  issues: [],
+}
+
 const BASE_SESSION = {
   cvState: {
     fullName: 'Ana Silva',
@@ -30,10 +38,7 @@ const BASE_SESSION = {
     workflowMode: 'ats_enhancement' as const,
     parseStatus: 'parsed' as const,
     rewriteHistory: {},
-    rewriteValidation: {
-      valid: true,
-      issues: [],
-    },
+    rewriteValidation: cleanRewriteValidation,
     optimizationSummary: {
       changedSections: CHANGED_SECTIONS,
       notes: ['Resumo melhorado.'],

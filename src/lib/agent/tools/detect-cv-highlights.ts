@@ -80,6 +80,12 @@ const cvHighlightStructuredEnvelopeSchema = z.object({
 }).strict()
 
 const MAX_INVALID_HIGHLIGHT_PAYLOAD_SAMPLE_LENGTH = 400
+// Empirical ceiling: above 20 vacancy keywords the prompt starts diluting the
+// strongest signals and the highlight pass becomes noisier instead of sharper.
+const MAX_HIGHLIGHT_JOB_KEYWORDS = 20
+// Drop very short tokens that are usually articles, loose abbreviations, or
+// other low-signal fragments that pollute keyword-oriented highlight tie-breaks.
+const MIN_HIGHLIGHT_KEYWORD_TOKEN_LENGTH = 3
 const ALLOWED_HIGHLIGHT_REASONS: CvHighlightReason[] = [
   'metric_impact',
   'business_impact',
@@ -120,11 +126,27 @@ function sanitizeJobKeywords(jobKeywords?: string[]): string[] {
     return []
   }
 
-  return Array.from(new Set(
-    jobKeywords
-      .map((keyword) => keyword.trim())
-      .filter(Boolean),
-  )).slice(0, 20)
+  const seen = new Set<string>()
+
+  return jobKeywords
+    .map((keyword) => keyword.trim())
+    .filter((keyword) => keyword.length >= MIN_HIGHLIGHT_KEYWORD_TOKEN_LENGTH)
+    .filter((keyword) => {
+      const normalized = keyword.toLocaleLowerCase()
+      if (seen.has(normalized)) {
+        return false
+      }
+
+      seen.add(normalized)
+      return true
+    })
+    .slice(0, MAX_HIGHLIGHT_JOB_KEYWORDS)
+}
+
+function resolveHighlightSource(
+  workflowMode?: string,
+): CvHighlightState['highlightSource'] {
+  return workflowMode === 'job_targeting' ? 'job_targeting' : 'ats_enhancement'
 }
 
 function buildHighlightSystemPrompt(jobKeywords: string[] = []): string {
@@ -672,10 +694,14 @@ export async function generateCvHighlightState(
   cvState: CVState,
   context?: CvHighlightDetectionContext,
 ): Promise<CvHighlightState> {
+  const generatedAt = new Date().toISOString()
+
   return {
     source: 'rewritten_cv_state',
     version: CV_HIGHLIGHT_ARTIFACT_VERSION,
     resolvedHighlights: await detectCvHighlights(flattenCvStateForHighlight(cvState), context),
-    generatedAt: new Date().toISOString(),
+    highlightSource: resolveHighlightSource(context?.workflowMode),
+    highlightGeneratedAt: generatedAt,
+    generatedAt,
   }
 }

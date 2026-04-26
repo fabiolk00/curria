@@ -12,6 +12,7 @@ import type { CVState, GapAnalysisResult } from '@/types/cv'
 type GapAnalysisExecutionResult = {
   output: AnalyzeGapOutput
   result?: GapAnalysisResult
+  repairAttempted: boolean
 }
 
 const GAP_ANALYSIS_MAX_COMPLETION_TOKENS = 600
@@ -360,6 +361,8 @@ export async function analyzeGap(
   sessionId: string,
   externalSignal?: AbortSignal,
 ): Promise<GapAnalysisExecutionResult> {
+  let repairAttempted = false
+
   try {
     const response = await requestGapAnalysis(cvState, targetJobDescription, externalSignal)
 
@@ -377,6 +380,7 @@ export async function analyzeGap(
     const result = parseGapAnalysis(responseText)
 
     if (!result) {
+      repairAttempted = true
       const repairResponse = await tryRepairGapAnalysis(
         cvState,
         targetJobDescription,
@@ -402,11 +406,13 @@ export async function analyzeGap(
             result: repairResult,
           },
           result: repairResult,
+          repairAttempted,
         }
       }
 
       return {
         output: toolFailure(TOOL_ERROR_CODES.LLM_INVALID_OUTPUT, 'Invalid gap analysis payload.'),
+        repairAttempted,
       }
     }
 
@@ -416,10 +422,12 @@ export async function analyzeGap(
         result,
       },
       result,
+      repairAttempted,
     }
   } catch (error) {
     return {
       output: toolFailureFromUnknown(error, 'Failed to analyze resume gap.'),
+      repairAttempted,
     }
   }
 }

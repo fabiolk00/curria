@@ -78,7 +78,10 @@ export function normalizeAgentState(value: unknown): AgentState {
   return {
     ...EMPTY_AGENT_STATE,
     ...(value as Partial<AgentState>),
-    highlightState: normalizeCvHighlightState((value as Partial<AgentState>).highlightState),
+    highlightState: normalizeCvHighlightState((value as Partial<AgentState>).highlightState, {
+      workflowMode: (value as Partial<AgentState>).workflowMode,
+      lastRewriteMode: (value as Partial<AgentState>).lastRewriteMode,
+    }),
     rewriteHistory: {
       ...EMPTY_AGENT_STATE.rewriteHistory,
       ...((value as Partial<AgentState>).rewriteHistory ?? {}),

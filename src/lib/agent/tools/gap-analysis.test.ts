@@ -84,6 +84,7 @@ describe('gap analysis', () => {
         weakAreas: ['summary'],
         improvementSuggestions: ['Add AWS experience to the summary and skills sections'],
       },
+      repairAttempted: false,
     })
   })
 
@@ -124,6 +125,7 @@ describe('gap analysis', () => {
         weakAreas: ['summary', 'experience'],
         improvementSuggestions: ['Add AWS examples', 'Show Docker usage'],
       },
+      repairAttempted: false,
     })
 
     expect(createCompletion).toHaveBeenCalledTimes(1)
@@ -174,6 +176,7 @@ describe('gap analysis', () => {
         weakAreas: ['summary'],
         improvementSuggestions: ['Highlight AWS projects in the summary'],
       },
+      repairAttempted: true,
     })
 
     expect(createCompletion).toHaveBeenCalledTimes(2)
@@ -219,6 +222,7 @@ describe('gap analysis', () => {
         code: 'LLM_INVALID_OUTPUT',
         error: 'Invalid gap analysis payload.',
       },
+      repairAttempted: true,
     })
 
     expect(createCompletion).toHaveBeenCalledTimes(2)

@@ -80,6 +80,7 @@ describe('createTargetResumeVariant', () => {
         weakAreas: ['summary'],
         improvementSuggestions: ['Highlight cloud experience'],
       },
+      repairAttempted: false,
     })
   })
 

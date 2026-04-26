@@ -7,6 +7,7 @@ import type {
   CareerFitCheckpoint,
   Phase,
   PreviewAccessReason,
+  RewriteValidationResult,
   ResumeGenerationType,
   RewriteStatus,
   TargetingPlan,
@@ -179,14 +180,7 @@ export type SessionWorkspace = {
         keywordCoverageImprovement?: string[]
       }
       lastRewriteMode?: 'ats_enhancement' | 'job_targeting'
-      rewriteValidation?: {
-        valid: boolean
-        issues: Array<{
-          severity: 'high' | 'medium'
-          message: string
-          section?: string
-        }>
-      }
+      rewriteValidation?: RewriteValidationResult
     }
     generatedOutput: GeneratedOutput
     atsReadiness?: AtsReadinessScoreContract

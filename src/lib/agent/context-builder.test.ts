@@ -143,7 +143,10 @@ describe('buildSystemPrompt', () => {
             education: [],
           },
           rewriteValidation: {
+            blocked: false,
             valid: true,
+            hardIssues: [],
+            softWarnings: [],
             issues: [],
           },
         },

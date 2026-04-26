@@ -783,3 +783,35 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 105 to break down)
+
+### Phase 106: Refatorar o pipeline job_targeting para validacao por severidade e extracao de cargo semantica
+
+**Goal:** Corrigir os falsos positivos e o bloqueio excessivo do `job_targeting` ao tornar a validacao compartilhada sensivel a severidade, preservar explicitamente o isolamento do `ats_enhancement`, e substituir o fallback fraco de cargo alvo por extracao semantica em camadas.
+**Requirements**: [JOB-TARGET-VAL-01, JOB-TARGET-ROLE-01, JOB-TARGET-ATS-ISO-01, JOB-TARGET-TEST-01]
+**Depends on:** Phase 105
+**Plans:** 1 plan
+
+**Success Criteria** (what must be TRUE):
+  1. `validateRewrite` continua seguro para `ats_enhancement`, usa o curriculo original inteiro como ancora de evidencia para a Regra 8, e retorna um contrato com `blocked`, `hardIssues`, `softWarnings`, e alias de compatibilidade sem quebrar consumidores ATS.
+  2. O pipeline `job_targeting` salva a versao quando so houver warnings de severidade media, persiste esses warnings no estado e sinaliza extracao de cargo com baixa confianca sem abortar a execucao.
+  3. `buildTargetingPlan` continua heuristico como camada zero, chama LLM apenas quando a heuristica falha, registra a origem da extracao, e nao adiciona nenhuma lista hardcoded nova de cargos.
+  4. Os arquivos compartilhados tocados documentam explicitamente por que o fluxo `ats_enhancement` nao foi afetado, e testes cobrindo ambos os modos passam.
+
+Plans:
+- [x] 106-01-PLAN.md - Isolar a validacao compartilhada por severidade, liberar soft warnings no job_targeting, adicionar extracao semantica de target role em camadas, e provar por testes e artefatos que o ATS continua intacto
+
+### Phase 107: Harden highlight de job_targeting com origem rastreável e gate auditado
+
+**Goal:** Garantir que o highlight do `job_targeting` seja gerado, persistido e servido com origem rastreável, sem poluir keywords com placeholders de baixa confiança e sem alterar o comportamento validado do highlight ATS.
+**Requirements**: [JOB-TARGET-HILITE-ORIGIN-01, JOB-TARGET-HILITE-GATE-01, JOB-TARGET-HILITE-KEYWORDS-01, JOB-TARGET-HILITE-TEST-01]
+**Depends on:** Phase 106
+**Plans:** 1 plan
+
+**Success Criteria** (what must be TRUE):
+  1. O mapeamento do gate, das keywords e da exposição ao cliente fica documentado e alinhado ao código real antes das mudanças estruturais.
+  2. O artefato `highlightState` passa a carregar origem e timestamp de geração sem mudar o comportamento visual ou editorial do ATS.
+  3. O `job_targeting` não usa `Vaga Alvo` como keyword de highlight em cenários de baixa confiança e emite observabilidade suficiente para explicar quando o highlight roda ou é pulado.
+  4. Os testes cobrem geração normal, rollback, reexecução idêntica, baixa confiança e a continuidade do ATS sem regressões.
+
+Plans:
+- [ ] 107-01-PLAN.md - Auditar o fluxo atual do highlight, adicionar metadado de origem ao artefato compartilhado, endurecer gate e keywords do job_targeting, e provar por testes que o ATS continua intacto

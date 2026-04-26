@@ -40,6 +40,16 @@ async function persistAgentState(session: Session, agentState: Session['agentSta
   session.agentState = agentState
 }
 
+function buildCleanRewriteValidationResult(): NonNullable<Session['agentState']['rewriteValidation']> {
+  return {
+    blocked: false,
+    valid: true,
+    hardIssues: [],
+    softWarnings: [],
+    issues: [],
+  }
+}
+
 function logHighlightStatePersistence(params: {
   session: Session
   highlightState: Session['agentState']['highlightState']
@@ -410,6 +420,8 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
     compactedSections: rewriteResult.diagnostics?.compactedSections.length ?? 0,
   })
 
+  // Validate the raw full ATS rewrite before any repair logic so we know whether
+  // recovery is needed and can log the original issue set consistently.
   const validation = validateRewrite(session.cvState, rewriteResult.optimizedCvState)
   const optimizedAt = new Date().toISOString()
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
@@ -425,6 +437,7 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
       rewriteResult.optimizedCvState,
       validation.issues,
     )
+    // Validate the first repair attempt before accepting it as the persisted ATS resume.
     const smartRepairValidation = validateRewrite(session.cvState, smartRepair.cvState)
 
     if (smartRepairValidation.valid) {
@@ -456,6 +469,7 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
         smartRepair.cvState,
         smartRepairValidation.issues,
       )
+      // Validate the conservative second-pass fallback after section-level reversions.
       const conservativeValidation = validateRewrite(session.cvState, conservativeFallback.cvState)
 
       if (conservativeValidation.valid) {
@@ -484,7 +498,10 @@ export async function runAtsEnhancementPipeline(session: Session): Promise<{
         validationRecoveryKind = 'conservative_fallback'
       } else {
         finalOptimizedCvState = structuredClone(session.cvState)
-        finalValidation = validateRewrite(session.cvState, finalOptimizedCvState)
+        // The explicit original-CV fallback is the canonical source snapshot itself,
+        // so validateRewrite(original, original) would be a vacuous pass. Build the
+        // canonical clean contract directly and keep downstream ATS stages aligned.
+        finalValidation = buildCleanRewriteValidationResult()
         finalOptimizationSummary = {
           changedSections: [],
           notes: Array.from(new Set([

@@ -43,6 +43,14 @@ const BASE_CV = {
   }],
 }
 
+const cleanRewriteValidation = {
+  blocked: false,
+  valid: true,
+  hardIssues: [],
+  softWarnings: [],
+  issues: [],
+}
+
 function buildHealthyEnhancementContract() {
   return buildAtsReadinessContractForEnhancement({
     originalCvState: {
@@ -58,10 +66,7 @@ function buildHealthyEnhancementContract() {
       }],
       skills: ['SQL', 'Power BI', 'Excel', 'ETL'],
     },
-    rewriteValidation: {
-      valid: true,
-      issues: [],
-    },
+    rewriteValidation: cleanRewriteValidation,
     optimizationSummary: {
       changedSections: ['summary', 'experience', 'skills'],
       notes: ['Resumo e stack ficaram mais claros.'],
@@ -80,10 +85,7 @@ function buildSummaryClarityFailContract() {
       ...BASE_CV,
       summary: 'Resumo Profissional: Analista de dados com foco em SQL e Power BI para analytics.',
     },
-    rewriteValidation: {
-      valid: true,
-      issues: [],
-    },
+    rewriteValidation: cleanRewriteValidation,
     optimizationSummary: {
       changedSections: ['summary'],
       notes: ['Resumo alterado superficialmente.'],
@@ -136,7 +138,10 @@ describe('ATS readiness observability', () => {
         education: [],
       },
       rewriteValidation: {
+        blocked: true,
         valid: false,
+        hardIssues: [{ severity: 'high', message: 'Unsupported claims.', section: 'summary' }],
+        softWarnings: [],
         issues: [{ severity: 'high', message: 'Unsupported claims.', section: 'summary' }],
       },
       optimizationSummary: {
