@@ -47,7 +47,12 @@ export function validateRewrite(
 ): RewriteValidationResult {
   const issues: RewriteValidationResult['issues'] = []
   const originalEvidenceText = buildEvidenceText(originalCvState)
+  const originalSummary = normalize(originalCvState.summary)
   const optimizedSummary = normalize(optimizedCvState.summary)
+  const originalExperienceText = originalCvState.experience
+    .flatMap((entry) => [entry.title, ...entry.bullets])
+    .join(' ')
+    .toLowerCase()
 
   const originalCompanies = new Set(originalCvState.experience.map((entry) => normalize(entry.company)))
   const originalTitleCompanyPairs = new Set(
@@ -144,7 +149,13 @@ export function validateRewrite(
     .toLowerCase()
   const summarySkillMentionsWithoutExperience = optimizedCvState.skills.filter((skill) => {
     const normalizedSkill = normalize(skill)
-    return optimizedSummary.includes(normalizedSkill) && !optimizedExperienceText.includes(normalizedSkill)
+    const alreadyClaimedInOriginalSummary = originalSummary.includes(normalizedSkill)
+    const alreadySupportedInOriginalExperience = originalExperienceText.includes(normalizedSkill)
+
+    return optimizedSummary.includes(normalizedSkill)
+      && !optimizedExperienceText.includes(normalizedSkill)
+      && !alreadyClaimedInOriginalSummary
+      && !alreadySupportedInOriginalExperience
   })
   if (summarySkillMentionsWithoutExperience.length > 0 && optimizedCvState.experience.length > 0) {
     issues.push({

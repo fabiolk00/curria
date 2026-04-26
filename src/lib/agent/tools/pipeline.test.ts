@@ -171,7 +171,7 @@ function buildDefaultTargetingPlan(overrides: Record<string, unknown> = {}) {
     shouldDeemphasize: [],
     missingButCannotInvent: ['BigQuery'],
     sectionStrategy: {
-      summary: ['Aproxime o posicionamento da vaga sem inventar experiencia.'],
+      summary: ['Aproxime o posicionamento da vaga sem inventar experiência.'],
       experience: ['Priorize stack e contexto relevantes.'],
       skills: ['Reordene por aderencia ao alvo.'],
       education: ['Mantenha factual.'],
@@ -1410,7 +1410,7 @@ describe('ATS enhancement reliability hardening', () => {
         matchScore: 68,
         missingSkills: ['BigQuery'],
         weakAreas: ['summary'],
-        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiÃªncia.'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
       },
       targetingPlan: {
         targetRole: 'Analytics Engineer',

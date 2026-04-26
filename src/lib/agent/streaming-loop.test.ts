@@ -1266,7 +1266,7 @@ describe('runAgentLoop streaming', () => {
       company: 'Acme',
       startDate: '2024',
       endDate: 'Atual',
-      bullets: ['ExperiÃªncia base antiga.'],
+      bullets: ['Experiência base antiga.'],
     }
     const optimizedExperience = [
       {

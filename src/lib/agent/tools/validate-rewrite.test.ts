@@ -145,6 +145,61 @@ describe('validateRewrite', () => {
     expect(result.issues).toEqual([])
   })
 
+  it('does not fail when the optimized summary keeps a skill already claimed in the original summary', () => {
+    const original = {
+      ...buildCvState(),
+      summary: 'Profissional de dados com foco em BI e SQL.',
+      experience: [{
+        title: 'Analista de Dados',
+        company: 'Acme',
+        startDate: '2022',
+        endDate: '2024',
+        bullets: ['Construi dashboards executivos para a operacao comercial.'],
+      }],
+    }
+
+    const optimized = {
+      ...original,
+      summary: 'Profissional de dados com foco em BI e SQL para suportar decisoes de negocio.',
+      experience: [{
+        ...original.experience[0],
+        bullets: ['Estruturei dashboards executivos para apoiar a operacao comercial.'],
+      }],
+    }
+
+    const result = validateRewrite(original, optimized)
+
+    expect(result.issues.some((issue) => issue.message.includes('skills sem alinhamento com a experiência reescrita'))).toBe(false)
+  })
+
+  it('still fails when the optimized summary introduces a skill that was only listed in skills', () => {
+    const original = {
+      ...buildCvState(),
+      summary: 'Profissional de dados com foco em BI.',
+      experience: [{
+        title: 'Analista de Dados',
+        company: 'Acme',
+        startDate: '2022',
+        endDate: '2024',
+        bullets: ['Construi dashboards e rotinas em SQL.'],
+      }],
+      skills: ['SQL', 'Power BI'],
+    }
+
+    const optimized = {
+      ...original,
+      summary: 'Profissional de dados com foco em BI, SQL e Power BI.',
+    }
+
+    const result = validateRewrite(original, optimized)
+
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      severity: 'medium',
+      section: 'summary',
+      message: 'O resumo otimizado menciona skills sem alinhamento com a experiência reescrita.',
+    }))
+  })
+
   it('does not fail solely because a metric disappeared when no unsupported claim was introduced', () => {
     const original = {
       ...buildCvState(),
