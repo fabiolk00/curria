@@ -170,10 +170,15 @@ function extractJobKeywords(params: {
 }
 
 function classifyHighlightGenerationGate(params: {
+  acceptedLowFitOverride: boolean
   validationBlocked: boolean
   lowFitRecoverableBlocked: boolean
   optimizedChanged: boolean
-}): 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' {
+}): 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' | 'skipped_after_override' {
+  if (params.acceptedLowFitOverride) {
+    return 'skipped_after_override'
+  }
+
   if (params.lowFitRecoverableBlocked) {
     return 'blocked_low_fit'
   }
@@ -191,7 +196,7 @@ function classifyHighlightGenerationGate(params: {
 
 function logHighlightGenerationGate(params: {
   session: Session
-  gate: 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state'
+  gate: 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' | 'skipped_after_override'
   jobKeywordsCount: number
   validationBlocked: boolean
   lowFitRecoverableBlocked: boolean
@@ -264,11 +269,69 @@ function resolveEvidenceRatios(targetEvidence: NonNullable<Session['agentState']
   }
 }
 
+const ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES = new Set([
+  'low_fit_target_role',
+  'target_role_overclaim',
+  'summary_skill_without_evidence',
+  'unsupported_claim',
+  'unsupported_skill',
+  'seniority_inflation',
+  'ungrounded_bridge',
+  'forbidden_claim',
+] satisfies NonNullable<NonNullable<Session['agentState']['rewriteValidation']>['issues'][number]['issueType']>[])
+
+export function shouldBlockAfterAcceptedOverride(validation: NonNullable<Session['agentState']['rewriteValidation']>): boolean {
+  return validation.hardIssues.some((issue) => !issue.issueType || !ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES.has(issue.issueType))
+}
+
+export function relaxValidationForAcceptedLowFitOverride(
+  validation: NonNullable<Session['agentState']['rewriteValidation']>,
+): NonNullable<Session['agentState']['rewriteValidation']> {
+  const downgradedHardIssues = validation.hardIssues
+    .filter((issue) => issue.issueType && ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES.has(issue.issueType))
+    .map((issue) => ({
+      ...issue,
+      severity: 'medium' as const,
+    }))
+
+  const remainingSoftWarnings = [
+    ...validation.softWarnings,
+    ...downgradedHardIssues,
+  ]
+
+  return {
+    ...validation,
+    blocked: false,
+    recoverable: false,
+    valid: remainingSoftWarnings.length === 0,
+    hardIssues: [],
+    softWarnings: remainingSoftWarnings,
+    issues: remainingSoftWarnings,
+  }
+}
+
+export function buildAcceptedLowFitFallbackCvState(params: {
+  originalCvState: Session['cvState']
+  targetingPlan: NonNullable<Session['agentState']['targetingPlan']>
+}): Session['cvState'] {
+  const directSignals = params.targetingPlan.safeTargetingEmphasis?.safeDirectEmphasis.slice(0, 4) ?? []
+  const fallbackSummary = directSignals.length > 0
+    ? `Profissional com experiência em ${directSignals.join(', ')}.`
+    : params.originalCvState.summary
+
+  return {
+    ...structuredClone(params.originalCvState),
+    summary: fallbackSummary,
+  }
+}
+
 export async function runJobTargetingPipeline(
   session: Session,
   options?: {
     userAcceptedLowFit?: boolean
-    overrideReason?: 'pre_rewrite_low_fit_block'
+    overrideReason?: 'pre_rewrite_low_fit_block' | 'post_rewrite_validation_block'
+    skipPreRewriteLowFitBlock?: boolean
+    skipLowFitRecoverableBlocking?: boolean
   },
 ): Promise<{
   success: boolean
@@ -276,6 +339,8 @@ export async function runJobTargetingPipeline(
   optimizationSummary?: Session['agentState']['optimizationSummary']
   validation?: Session['agentState']['rewriteValidation']
   recoverableBlock?: Session['agentState']['recoverableValidationBlock']
+  acceptedLowFitFallbackUsed?: boolean
+  cvVersionId?: string
   error?: string
 }> {
   const previousOptimizedCvState = session.agentState.optimizedCvState
@@ -479,6 +544,8 @@ export async function runJobTargetingPipeline(
     evaluated: Boolean(targetingPlan.lowFitWarningGate),
     triggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
     reason: targetingPlan.lowFitWarningGate?.reason,
+    acceptedByUser: options?.userAcceptedLowFit === true,
+    blockingSkipped: options?.skipLowFitRecoverableBlocking === true,
     matchScore: targetingPlan.lowFitWarningGate?.matchScore ?? gapAnalysisResult.matchScore,
     riskLevel: targetingPlan.lowFitWarningGate?.riskLevel,
     familyDistance: targetingPlan.lowFitWarningGate?.familyDistance,
@@ -491,6 +558,7 @@ export async function runJobTargetingPipeline(
       supported: targetingPlan.coreRequirementCoverage?.supported ?? 0,
       unsupported: targetingPlan.coreRequirementCoverage?.unsupported ?? 0,
       unsupportedSignals: targetingPlan.coreRequirementCoverage?.unsupportedSignals ?? [],
+      topUnsupportedSignalsForDisplay: targetingPlan.coreRequirementCoverage?.topUnsupportedSignalsForDisplay ?? [],
     },
   }
 
@@ -561,12 +629,14 @@ export async function runJobTargetingPipeline(
     explicitEvidenceRatio: targetingPlan.lowFitWarningGate?.explicitEvidenceRatio ?? evidenceRatios.explicitEvidenceRatio,
     triggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
     reason: targetingPlan.lowFitWarningGate?.reason,
+    acceptedByUser: options?.userAcceptedLowFit === true,
+    blockingSkipped: options?.skipLowFitRecoverableBlocking === true,
     coreUnsupportedSignals: targetingPlan.lowFitWarningGate?.coreRequirementCoverage.unsupportedSignals ?? [],
   })
 
   const preRewriteLowFitBlocked = shouldPreRewriteLowFitBlock({
     lowFitWarningGate: targetingPlan.lowFitWarningGate,
-    skipPreRewriteLowFitBlock: options?.userAcceptedLowFit === true,
+    skipPreRewriteLowFitBlock: options?.skipPreRewriteLowFitBlock === true || options?.userAcceptedLowFit === true,
   })
 
   if (preRewriteLowFitBlocked) {
@@ -639,7 +709,7 @@ export async function runJobTargetingPipeline(
         lowFitWarningGate: targetingPlan.lowFitWarningGate,
         directClaimsAllowed: targetingPlan.rewritePermissions?.directClaimsAllowed,
         originalProfileLabel: sanitizeText(targetingPlan.targetRolePositioning?.safeRolePositioning ?? '')
-          .replace(/^Profissional com experiência em\s*/i, '')
+          .replace(/^Profissional com experi[êe]ncia em\s*/i, '')
           .replace(/[.]$/u, '') || undefined,
       }),
       expiresAt: blockedDraft.expiresAt,
@@ -880,7 +950,49 @@ export async function runJobTargetingPipeline(
     lowFitWarningGate: targetingPlan.lowFitWarningGate,
     targetRole: targetingPlan.targetRole,
     targetRolePositioning: targetingPlan.targetRolePositioning,
+    skipLowFitRecoverableBlocking: options?.skipLowFitRecoverableBlocking === true,
   })
+  let acceptedLowFitFallbackUsed = false
+
+  if (
+    options?.userAcceptedLowFit
+    && validation.blocked
+    && isRecoverableValidationBlock(validation)
+    && !shouldBlockAfterAcceptedOverride(validation)
+  ) {
+    finalizedOptimizedCvState = buildAcceptedLowFitFallbackCvState({
+      originalCvState: session.cvState,
+      targetingPlan,
+    })
+    finalizedOptimizationSummary = {
+      changedSections: Array.from(new Set([
+        ...(finalizedOptimizationSummary?.changedSections ?? []),
+        'summary',
+      ])),
+      notes: [
+        ...(finalizedOptimizationSummary?.notes ?? []),
+        'Accepted low-fit fallback applied after recoverable validation issues.',
+      ],
+      keywordCoverageImprovement: finalizedOptimizationSummary?.keywordCoverageImprovement,
+    }
+    validation = validateRewrite(session.cvState, finalizedOptimizedCvState, {
+      mode: 'job_targeting',
+      targetJobDescription,
+      gapAnalysis: gapAnalysisResult,
+      targetingPlan,
+    })
+    acceptedLowFitFallbackUsed = true
+  }
+
+  if (
+    options?.userAcceptedLowFit
+    && validation.blocked
+    && isRecoverableValidationBlock(validation)
+    && !shouldBlockAfterAcceptedOverride(validation)
+  ) {
+    validation = relaxValidationForAcceptedLowFitOverride(validation)
+  }
+
   validation = sanitizeValidationResultForLogging({
     ...validation,
     recoverable: validation.blocked && isRecoverableValidationBlock(validation),
@@ -917,13 +1029,15 @@ export async function runJobTargetingPipeline(
     ? isRecoverableValidationBlock(validation)
     : undefined
   const lowFitRecoverableBlocked = Boolean(
-    targetingPlan.lowFitWarningGate?.triggered
+    !options?.skipLowFitRecoverableBlocking
+    && targetingPlan.lowFitWarningGate?.triggered
     && validation.blocked
-    && validation.recoverable,
+    && validation.recoverable
   )
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
   const highlightGenerationGate = classifyHighlightGenerationGate({
+    acceptedLowFitOverride: options?.userAcceptedLowFit === true,
     validationBlocked: validation.blocked,
     lowFitRecoverableBlocked,
     optimizedChanged,
@@ -972,7 +1086,8 @@ export async function runJobTargetingPipeline(
     jobKeywordsCount: jobKeywords.length,
   }
 
-  const blockedDraft = validation.blocked
+  const blockedDraft = !options?.skipLowFitRecoverableBlocking
+    && validation.blocked
     && isRecoverableValidationBlock(validation)
     && (
       optimizedChanged
@@ -1006,7 +1121,9 @@ export async function runJobTargetingPipeline(
         targetEvidence: targetingPlan.targetEvidence,
         lowFitWarningGate: targetingPlan.lowFitWarningGate,
         directClaimsAllowed: targetingPlan.rewritePermissions?.directClaimsAllowed,
-        originalProfileLabel: targetingPlan.targetRolePositioning?.safeRolePositioning.replace(/^Profissional com experiência em\s*/i, '').replace(/[.]$/u, ''),
+        originalProfileLabel: sanitizeText(targetingPlan.targetRolePositioning?.safeRolePositioning ?? '')
+          .replace(/^Profissional com experi[êe]ncia em\s*/i, '')
+          .replace(/[.]$/u, '') || undefined,
       }),
       expiresAt: blockedDraft.expiresAt,
     }
@@ -1026,7 +1143,7 @@ export async function runJobTargetingPipeline(
     optimizedAt: validation.blocked ? previousOptimizedAt : optimizedAt,
     optimizationSummary: validation.blocked ? previousOptimizationSummary : finalizedOptimizationSummary,
     lastRewriteMode: validation.blocked ? previousLastRewriteMode : 'job_targeting',
-    rewriteValidation: validation,
+      rewriteValidation: validation,
     blockedTargetedRewriteDraft: blockedDraft,
     recoverableValidationBlock,
     atsWorkflowRun: buildWorkflowRun(session, {
@@ -1053,6 +1170,8 @@ export async function runJobTargetingPipeline(
     ? lowFitRecoverableBlocked
       ? 'low_fit_recoverable_block'
       : 'validation_failed'
+    : highlightGenerationGate === 'skipped_after_override'
+      ? 'skipped_after_override'
     : !shouldGenerateHighlights
       ? 'not_generated_for_unchanged_cv_state'
       : highlightDetectionOutcome?.resultKind === 'valid_empty'
@@ -1127,6 +1246,7 @@ export async function runJobTargetingPipeline(
   }
 
   const validatedOptimizedCvState = finalizedOptimizedCvState
+  let persistedCvVersionId: string | undefined
 
   try {
     await executeWithStageRetry(
@@ -1136,11 +1256,12 @@ export async function runJobTargetingPipeline(
           currentStage: 'persist_version',
           attemptCount: attempt,
         })
-        await createCvVersion({
+        const createdVersion = await createCvVersion({
           sessionId: session.id,
           snapshot: validatedOptimizedCvState,
           source: 'job-targeting',
         })
+        persistedCvVersionId = createdVersion.id
       },
       {
         onRetry: (_error, attempt) => {
@@ -1224,5 +1345,7 @@ export async function runJobTargetingPipeline(
     optimizedCvState: finalizedOptimizedCvState,
     optimizationSummary: finalizedOptimizationSummary,
     validation,
+    acceptedLowFitFallbackUsed,
+    cvVersionId: persistedCvVersionId,
   }
 }

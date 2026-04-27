@@ -321,6 +321,7 @@ export function buildCoreRequirementCoverage(params: {
   const unsupportedSignals = coreRequirements
     .filter((requirement) => !supportedCoreRequirements.includes(requirement))
     .map((requirement) => requirement.signal)
+  const topUnsupportedSignalsForDisplay = unsupportedSignals.slice(0, 6)
 
   return {
     requirements: requirementList,
@@ -328,5 +329,6 @@ export function buildCoreRequirementCoverage(params: {
     supported: supportedCoreRequirements.length,
     unsupported: unsupportedSignals.length,
     unsupportedSignals,
+    topUnsupportedSignalsForDisplay,
   }
 }

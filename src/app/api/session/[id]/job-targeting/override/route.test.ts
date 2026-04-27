@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { POST } from './route'
+import { tryAcquireOverrideProcessingLock } from '@/lib/agent/job-targeting/override-processing-lock'
 import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
@@ -29,6 +30,11 @@ vi.mock('@/lib/agent/job-targeting-pipeline', () => ({
   runJobTargetingPipeline: vi.fn(),
 }))
 
+vi.mock('@/lib/agent/job-targeting/override-processing-lock', () => ({
+  hashOverrideToken: vi.fn((token: string) => `hash:${token}`),
+  tryAcquireOverrideProcessingLock: vi.fn(),
+}))
+
 function buildCvState() {
   return {
     fullName: 'Ana Silva',
@@ -50,7 +56,7 @@ function buildCvState() {
   }
 }
 
-function buildSession() {
+function buildSession(): any {
   const optimizedCvState = {
     ...buildCvState(),
     summary: 'Profissional de BI e dados com experiência em dashboards, automação e integração de dados.',
@@ -72,16 +78,16 @@ function buildSession() {
         blocked: true,
         valid: false,
         hardIssues: [{
-          severity: 'high',
+          severity: 'high' as const,
           section: 'summary',
-          issueType: 'target_role_overclaim',
+          issueType: 'target_role_overclaim' as const,
           message: 'O resumo assumiu o cargo alvo diretamente.',
         }],
         softWarnings: [],
         issues: [{
-          severity: 'high',
+          severity: 'high' as const,
           section: 'summary',
-          issueType: 'target_role_overclaim',
+          issueType: 'target_role_overclaim' as const,
           message: 'O resumo assumiu o cargo alvo diretamente.',
         }],
       },
@@ -99,9 +105,9 @@ function buildSession() {
         targetJobDescription: 'Vaga para Analista de Sistemas de RH',
         targetRole: 'Analista de Sistemas de RH',
         validationIssues: [{
-          severity: 'high',
+          severity: 'high' as const,
           section: 'summary',
-          issueType: 'target_role_overclaim',
+          issueType: 'target_role_overclaim' as const,
           message: 'O resumo assumiu o cargo alvo diretamente.',
         }],
         recoverable: true,
@@ -109,7 +115,7 @@ function buildSession() {
         expiresAt: '2099-04-27T15:20:00.000Z',
       },
       recoverableValidationBlock: {
-        status: 'validation_blocked_recoverable',
+        status: 'validation_blocked_recoverable' as const,
         overrideToken: 'override_token_123',
         expiresAt: '2099-04-27T15:20:00.000Z',
         modal: {
@@ -120,19 +126,19 @@ function buildSession() {
           reassurance: 'Você ainda pode gerar o currículo, mas recomendamos revisar.',
           actions: {
             secondary: {
-              label: 'Fechar',
-              action: 'close',
+              label: 'Fechar' as const,
+              action: 'close' as const,
             },
             primary: {
-              label: 'Gerar mesmo assim (1 crédito)',
-              action: 'override_generate',
+              label: 'Gerar mesmo assim (1 crédito)' as const,
+              action: 'override_generate' as const,
               creditCost: 1,
             },
           },
         },
       },
     },
-    generatedOutput: { status: 'idle' },
+    generatedOutput: { status: 'idle' as const },
     creditsUsed: 0,
     messageCount: 0,
     creditConsumed: false,
@@ -141,38 +147,85 @@ function buildSession() {
   }
 }
 
-function buildPreRewriteLowFitSession() {
+function buildPreRewriteLowFitSession(): any {
+  const session = buildSession()
+
   return {
-    ...buildSession(),
+    ...session,
     agentState: {
-      ...buildSession().agentState,
+      ...session.agentState,
       rewriteValidation: {
         blocked: true,
         valid: false,
         hardIssues: [{
-          severity: 'high',
+          severity: 'high' as const,
           section: 'summary',
-          issueType: 'low_fit_target_role',
+          issueType: 'low_fit_target_role' as const,
           message: 'Esta vaga parece muito distante do seu currículo atual.',
         }],
         softWarnings: [],
         issues: [{
-          severity: 'high',
+          severity: 'high' as const,
           section: 'summary',
-          issueType: 'low_fit_target_role',
+          issueType: 'low_fit_target_role' as const,
           message: 'Esta vaga parece muito distante do seu currículo atual.',
         }],
       },
       blockedTargetedRewriteDraft: {
-        ...buildSession().agentState.blockedTargetedRewriteDraft,
+        ...session.agentState.blockedTargetedRewriteDraft,
         kind: 'pre_rewrite_low_fit_block' as const,
         optimizedCvState: undefined,
       },
       recoverableValidationBlock: {
-        ...buildSession().agentState.recoverableValidationBlock,
+        ...session.agentState.recoverableValidationBlock,
         kind: 'pre_rewrite_low_fit_block' as const,
       },
     },
+  }
+}
+
+function buildProcessingState() {
+  return {
+    status: 'processing' as const,
+    startedAt: '2026-04-27T15:00:00.000Z',
+    expiresAt: '2026-04-27T15:05:00.000Z',
+    requestId: 'req_lock_123',
+    idempotencyKey: 'profile-target-override:sess_123:draft_123',
+    overrideTokenHash: 'hash:override_token_123',
+  }
+}
+
+function buildLockAcquiredResult(session = buildSession()) {
+  const draft = session.agentState.blockedTargetedRewriteDraft
+
+  if (!draft || !session.agentState.recoverableValidationBlock) {
+    throw new Error('Expected recoverable draft fixture.')
+  }
+
+  const processingState = buildProcessingState()
+
+  return {
+    acquired: true as const,
+    session: {
+      ...session,
+      agentState: {
+        ...session.agentState,
+        blockedTargetedRewriteDraft: {
+          ...draft,
+          overrideProcessing: processingState,
+        },
+        recoverableValidationBlock: {
+          ...session.agentState.recoverableValidationBlock,
+          overrideProcessing: processingState,
+        },
+      },
+    },
+    draft: {
+      ...draft,
+      overrideProcessing: processingState,
+    },
+    processingState,
+    expiredLockReclaimed: false,
   }
 }
 
@@ -213,6 +266,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     } as never)
     vi.mocked(getSession).mockResolvedValue(buildSession() as never)
     vi.mocked(updateSession).mockResolvedValue(undefined)
+    vi.mocked(tryAcquireOverrideProcessingLock).mockResolvedValue(buildLockAcquiredResult() as never)
     vi.mocked(runJobTargetingPipeline).mockResolvedValue({
       success: true,
       optimizedCvState: buildCvState(),
@@ -262,6 +316,12 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       resumeGenerationId: 'gen_123',
       generationType: 'JOB_TARGETING',
     })
+    expect(tryAcquireOverrideProcessingLock).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'sess_123',
+      userId: 'usr_123',
+      draftId: 'draft_123',
+      overrideToken: 'override_token_123',
+    }))
     expect(createCvVersion).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: 'sess_123',
       source: 'job-targeting',
@@ -286,6 +346,9 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
         validationOverride: expect.objectContaining({
           enabled: true,
           targetRole: 'Analista de Sistemas de RH',
+          overrideTokenHash: 'hash:override_token_123',
+          cvVersionId: 'ver_123',
+          resumeGenerationId: 'gen_123',
         }),
         blockedTargetedRewriteDraft: undefined,
         recoverableValidationBlock: undefined,
@@ -294,13 +357,16 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
   })
 
   it('runs the targeted pipeline only after confirmation for pre-rewrite low-fit blocks', async () => {
-    vi.mocked(getSession).mockResolvedValue(buildPreRewriteLowFitSession() as never)
+    const lowFitSession = buildPreRewriteLowFitSession()
+    vi.mocked(getSession).mockResolvedValue(lowFitSession as never)
+    vi.mocked(tryAcquireOverrideProcessingLock).mockResolvedValue(buildLockAcquiredResult(lowFitSession) as never)
     vi.mocked(runJobTargetingPipeline).mockResolvedValue({
       success: true,
       optimizedCvState: {
         ...buildCvState(),
         summary: 'Versão gerada após confirmação explícita de low-fit.',
       },
+      acceptedLowFitFallbackUsed: true,
       validation: {
         blocked: false,
         valid: true,
@@ -344,6 +410,8 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       expect.objectContaining({
         userAcceptedLowFit: true,
         overrideReason: 'pre_rewrite_low_fit_block',
+        skipPreRewriteLowFitBlock: true,
+        skipLowFitRecoverableBlocking: true,
       }),
     )
     expect(createCvVersion).not.toHaveBeenCalled()
@@ -356,6 +424,17 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
         id: 'sess_123',
       }),
     )
+    expect(updateSession).toHaveBeenLastCalledWith('sess_123', expect.objectContaining({
+      agentState: expect.objectContaining({
+        validationOverride: expect.objectContaining({
+          enabled: true,
+          acceptedLowFit: true,
+          fallbackUsed: true,
+          overrideTokenHash: 'hash:override_token_123',
+          resumeGenerationId: 'gen_low_fit_123',
+        }),
+      }),
+    }))
   })
 
   it('rejects override tokens that do not belong to the blocked draft', async () => {
@@ -370,6 +449,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     expect(await response.json()).toEqual({
       error: 'O token de override não corresponde à sessão atual.',
     })
+    expect(tryAcquireOverrideProcessingLock).not.toHaveBeenCalled()
     expect(createCvVersion).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
   })
@@ -413,6 +493,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       availableCredits: 0,
       openPricing: true,
     })
+    expect(tryAcquireOverrideProcessingLock).not.toHaveBeenCalled()
     expect(updateSession).not.toHaveBeenCalled()
     expect(createCvVersion).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
@@ -441,6 +522,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     expect(await response.json()).toEqual({
       error: 'Esta confirmação expirou. Gere uma nova versão para continuar.',
     })
+    expect(tryAcquireOverrideProcessingLock).not.toHaveBeenCalled()
     expect(updateSession).not.toHaveBeenCalled()
     expect(createCvVersion).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
@@ -479,7 +561,65 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     expect(updateSession).not.toHaveBeenLastCalledWith('sess_123', expect.objectContaining({
       agentState: expect.objectContaining({
         validationOverride: expect.anything(),
+        blockedTargetedRewriteDraft: undefined,
       }),
     }))
+  })
+
+  it('returns override_in_progress when the persistent processing lock is already active', async () => {
+    vi.mocked(getSession).mockResolvedValue(buildPreRewriteLowFitSession() as never)
+    vi.mocked(tryAcquireOverrideProcessingLock).mockResolvedValue({
+      acquired: false,
+      reason: 'already_processing',
+      existingRequestId: 'req_existing_123',
+      processingExpiresAt: '2026-04-27T15:05:00.000Z',
+    } as never)
+
+    const response = await POST(buildRequest({
+      overrideToken: 'override_token_123',
+      consumeCredit: true,
+    }), {
+      params: { id: 'sess_123' },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'override_in_progress',
+      message: 'Essa geração já está em andamento.',
+      requestId: 'req_existing_123',
+      retryAfterMs: 3000,
+    })
+    expect(runJobTargetingPipeline).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
+  })
+
+  it('returns the completed result idempotently when the same override token is replayed after success', async () => {
+    vi.mocked(tryAcquireOverrideProcessingLock).mockResolvedValue({
+      acquired: false,
+      reason: 'already_completed',
+      completedResult: {
+        cvVersionId: 'ver_123',
+        resumeGenerationId: 'gen_123',
+      },
+    } as never)
+
+    const response = await POST(buildRequest({
+      overrideToken: 'override_token_123',
+      consumeCredit: true,
+    }), {
+      params: { id: 'sess_123' },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      status: 'already_completed',
+      sessionId: 'sess_123',
+      cvVersionId: 'ver_123',
+      resumeGenerationId: 'gen_123',
+      generationType: 'JOB_TARGETING',
+    })
+    expect(createCvVersion).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
   })
 })

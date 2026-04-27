@@ -79,6 +79,10 @@ describe('core requirement coverage', () => {
       'Docker',
       'CI/CD',
     ]))
+    expect(coverage.topUnsupportedSignalsForDisplay.length).toBeLessThanOrEqual(6)
+    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(
+      coverage.unsupportedSignals.slice(0, coverage.topUnsupportedSignalsForDisplay.length),
+    )
   })
 
   it('filters pure headings from the requirement list', () => {

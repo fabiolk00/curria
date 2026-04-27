@@ -240,6 +240,32 @@ describe('classifyTargetEvidence', () => {
     }))
   })
 
+  it('matches REST API requirements when the resume contains API and REST evidence in the same span', async () => {
+    const targetEvidence = await classifyTargetEvidence({
+      cvState: buildCvState({
+        summary: 'Profissional com foco em integrações e automação.',
+        experience: [{
+          title: 'Analista de Sistemas',
+          company: 'Acme',
+          startDate: '2022',
+          endDate: '2024',
+          bullets: ['Integrei APIs de Dynamics CRM, SharePoint e REST para automatizar fluxos internos.'],
+        }],
+        skills: ['Integrações com APIs'],
+      }),
+      targetingPlan: buildTargetingPlan({
+        mustEmphasize: ['APIs REST'],
+      }),
+      gapAnalysis: baseGapAnalysis,
+    })
+
+    expect(targetEvidence).toContainEqual(expect.objectContaining({
+      jobSignal: 'APIs REST',
+      evidenceLevel: 'technical_equivalent',
+      rewritePermission: 'can_claim_normalized',
+    }))
+  })
+
   it('supports strong contextual inference without converting it into a direct claim', async () => {
     mockOpenAICompletionCreate.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
       items: [{

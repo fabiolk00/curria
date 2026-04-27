@@ -19,7 +19,8 @@ function buildSyntheticLowFitIssue(params: {
   targetRolePositioning?: TargetRolePositioning
   lowFitWarningGate: LowFitWarningGate
 }): ValidationIssue {
-  const unsupportedSignals = params.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
+  const unsupportedSignals = params.lowFitWarningGate.coreRequirementCoverage.topUnsupportedSignalsForDisplay
+    ?? params.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
   const targetRole = params.targetRole?.trim()
 
   return {
@@ -57,6 +58,7 @@ export function buildLowFitWarningGate(params: {
     supported: number
     unsupported: number
     unsupportedSignals: string[]
+    topUnsupportedSignalsForDisplay: string[]
   }
 }): LowFitWarningGate {
   const explicitEvidenceCount = params.targetEvidence.filter((evidence) => evidence.evidenceLevel === 'explicit').length
@@ -157,7 +159,12 @@ export function applyLowFitWarningGateToValidation(params: {
   lowFitWarningGate?: LowFitWarningGate
   targetRole?: string
   targetRolePositioning?: TargetRolePositioning
+  skipLowFitRecoverableBlocking?: boolean
 }): RewriteValidationResult {
+  if (params.skipLowFitRecoverableBlocking) {
+    return params.validation
+  }
+
   if (!params.lowFitWarningGate?.triggered) {
     return params.validation
   }

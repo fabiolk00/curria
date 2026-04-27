@@ -34,6 +34,7 @@ function buildLowFitGate(overrides: Partial<LowFitWarningGate> = {}): LowFitWarn
       supported: 1,
       unsupported: 5,
       unsupportedSignals: ['Java', 'Spring Boot', 'Docker'],
+      topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'Docker'],
     },
     ...overrides,
   }
@@ -156,6 +157,7 @@ describe('low-fit warning gate', () => {
         supported: 1,
         unsupported: 5,
         unsupportedSignals: ['Java', 'Spring Boot', 'Docker'],
+        topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'Docker'],
       },
     })
 
@@ -174,6 +176,7 @@ describe('low-fit warning gate', () => {
           supported: 0,
           unsupported: 7,
           unsupportedSignals: ['Java', 'Spring Boot', 'Docker'],
+          topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'Docker'],
         },
       }),
     })).toBe(true)
@@ -191,6 +194,7 @@ describe('low-fit warning gate', () => {
           supported: 3,
           unsupported: 3,
           unsupportedSignals: ['People Analytics', 'RPA', 'Power Apps'],
+          topUnsupportedSignalsForDisplay: ['People Analytics', 'RPA', 'Power Apps'],
         },
       }),
     })).toBe(false)

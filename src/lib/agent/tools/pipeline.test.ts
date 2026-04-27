@@ -16,7 +16,12 @@ import type { TargetingPlan } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
 import { runAtsEnhancementPipeline } from '@/lib/agent/ats-enhancement-pipeline'
-import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
+import {
+  buildAcceptedLowFitFallbackCvState,
+  relaxValidationForAcceptedLowFitOverride,
+  runJobTargetingPipeline,
+  shouldBlockAfterAcceptedOverride,
+} from '@/lib/agent/job-targeting-pipeline'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { createExperienceBulletHighlightItemId } from '@/lib/resume/cv-highlight-artifact'
 import { resetOpenAICircuitBreakerForTest } from '@/lib/openai/chat'
@@ -333,7 +338,13 @@ describe('ATS enhancement reliability hardening', () => {
     vi.clearAllMocks()
     resetOpenAICircuitBreakerForTest()
     mockUpdateSession.mockResolvedValue(undefined)
-    mockCreateCvVersion.mockResolvedValue(undefined)
+    mockCreateCvVersion.mockResolvedValue({
+      id: 'ver_job_123',
+      sessionId: 'sess_ats_123',
+      snapshot: buildCvState(),
+      source: 'job-targeting',
+      createdAt: new Date('2026-04-22T12:00:00.000Z'),
+    })
     mockGenerateCvHighlightState.mockImplementation(async (_cvState, context) => {
       context?.onCompleted?.(buildHighlightDetectionOutcome())
       return buildHighlightStateFixture({
@@ -2294,7 +2305,13 @@ describe('ATS enhancement reliability hardening', () => {
       )
 
       mockUpdateSession.mockResolvedValue(undefined)
-      mockCreateCvVersion.mockResolvedValue(undefined)
+      mockCreateCvVersion.mockResolvedValue({
+        id: 'ver_job_highlight_123',
+        sessionId: session.id,
+        snapshot: buildCvState(),
+        source: 'job-targeting',
+        createdAt: new Date('2026-04-22T12:00:00.000Z'),
+      })
       mockValidateRewrite.mockReturnValue(buildRewriteValidationResult())
       mockAnalyzeGap.mockResolvedValue({
         output: {
@@ -2692,6 +2709,7 @@ describe('ATS enhancement reliability hardening', () => {
         supported: 0,
         unsupported: 7,
         unsupportedSignals: ['Java', '5+ anos de Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker', 'CI/CD'],
+        topUnsupportedSignalsForDisplay: ['Java', '5+ anos de Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker'],
       },
       lowFitWarningGate: {
         triggered: true,
@@ -2708,6 +2726,7 @@ describe('ATS enhancement reliability hardening', () => {
           supported: 0,
           unsupported: 7,
           unsupportedSignals: ['Java', '5+ anos de Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker', 'CI/CD'],
+          topUnsupportedSignalsForDisplay: ['Java', '5+ anos de Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker'],
         },
       },
     }))
@@ -2789,6 +2808,7 @@ describe('ATS enhancement reliability hardening', () => {
         supported: 1,
         unsupported: 7,
         unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+        topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker'],
       },
       lowFitWarningGate: {
         triggered: true,
@@ -2805,6 +2825,7 @@ describe('ATS enhancement reliability hardening', () => {
           supported: 1,
           unsupported: 7,
           unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+          topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker'],
         },
       },
     }))
@@ -2907,6 +2928,221 @@ describe('ATS enhancement reliability hardening', () => {
     }))
   })
 
+  it('blocks only technical hard issues after an accepted low-fit override', () => {
+    expect(shouldBlockAfterAcceptedOverride(buildRewriteValidationResult({
+      blocked: true,
+      hardIssues: [{
+        severity: 'high',
+        issueType: 'unsupported_claim',
+        message: 'Claim sem evidência direta.',
+      }],
+      issues: [{
+        severity: 'high',
+        issueType: 'unsupported_claim',
+        message: 'Claim sem evidência direta.',
+      }],
+    }) as never)).toBe(false)
+
+    expect(shouldBlockAfterAcceptedOverride(buildRewriteValidationResult({
+      blocked: true,
+      hardIssues: [{
+        severity: 'high',
+        issueType: undefined,
+        message: 'Erro estrutural sem classificação.',
+      }],
+      issues: [{
+        severity: 'high',
+        issueType: undefined,
+        message: 'Erro estrutural sem classificação.',
+      }],
+    }) as never)).toBe(true)
+  })
+
+  it('relaxes accepted low-fit recoverable issues into audit warnings', () => {
+    const relaxed = relaxValidationForAcceptedLowFitOverride(buildRewriteValidationResult({
+      blocked: true,
+      valid: false,
+      recoverable: true,
+      hardIssues: [{
+        severity: 'high',
+        issueType: 'target_role_overclaim',
+        message: 'O resumo assumiu o cargo alvo.',
+      }],
+      issues: [{
+        severity: 'high',
+        issueType: 'target_role_overclaim',
+        message: 'O resumo assumiu o cargo alvo.',
+      }],
+    }) as never)
+
+    expect(relaxed).toEqual(expect.objectContaining({
+      blocked: false,
+      recoverable: false,
+      hardIssues: [],
+      softWarnings: expect.arrayContaining([
+        expect.objectContaining({
+          issueType: 'target_role_overclaim',
+          severity: 'medium',
+        }),
+      ]),
+    }))
+  })
+
+  it('builds a conservative fallback CV state for accepted low-fit overrides', () => {
+    const fallback = buildAcceptedLowFitFallbackCvState({
+      originalCvState: buildCvState(),
+      targetingPlan: buildDefaultTargetingPlan({
+        safeTargetingEmphasis: {
+          safeDirectEmphasis: ['SQL', 'APIs REST', 'Git', 'modelagem de dados', 'Power BI'],
+          cautiousBridgeEmphasis: [],
+          forbiddenDirectClaims: ['Java', 'Spring Boot', 'Docker'],
+        },
+      }),
+    } as never)
+
+    expect(fallback.summary).toContain('SQL')
+    expect(fallback.summary).toContain('APIs REST')
+    expect(fallback.summary).not.toContain('Java')
+    expect(fallback.summary).not.toContain('Spring Boot')
+  })
+
+  it('does not re-block accepted low-fit overrides and skips highlight blocking after confirmation', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Desenvolvedor Java',
+      'Requisitos: Java com mais de 5 anos, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsserviços, Docker e CI/CD.',
+    ].join('\n')
+    session.agentState.rewriteStatus = 'pending'
+
+    mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
+      targetRole: 'Desenvolvedor Java',
+      safeTargetingEmphasis: {
+        safeDirectEmphasis: ['Git', 'APIs REST', 'SQL', 'modelagem de dados'],
+        cautiousBridgeEmphasis: [],
+        forbiddenDirectClaims: ['Java', 'Spring Boot', 'Docker', 'CI/CD'],
+      },
+      targetRolePositioning: {
+        targetRole: 'Desenvolvedor Java',
+        permission: 'must_not_claim_target_role',
+        reason: 'career_fit_high_risk',
+        safeRolePositioning: 'Profissional com experiência em BI, SQL, APIs REST e Git.',
+        forbiddenRoleClaims: ['Desenvolvedor Java'],
+      },
+      rewritePermissions: {
+        directClaimsAllowed: ['Git', 'APIs REST', 'SQL'],
+        normalizedClaimsAllowed: [],
+        bridgeClaimsAllowed: [],
+        relatedButNotClaimable: [],
+        forbiddenClaims: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker', 'CI/CD'],
+        skillsSurfaceAllowed: ['Git', 'APIs REST', 'SQL'],
+      },
+      coreRequirementCoverage: {
+        requirements: [],
+        total: 8,
+        supported: 1,
+        unsupported: 7,
+        unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+        topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker'],
+      },
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'too_many_unsupported_core_requirements',
+        matchScore: 32,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 12,
+        unsupportedGapRatio: 12 / 13,
+        explicitEvidenceRatio: 1 / 13,
+        coreRequirementCoverage: {
+          total: 8,
+          supported: 1,
+          unsupported: 7,
+          unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+          topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker'],
+        },
+      },
+    }))
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Desenvolvedor Java com foco em APIs REST, SQL e Git.',
+      }, section),
+    }))
+    mockValidateRewrite
+      .mockReturnValueOnce(buildRewriteValidationResult({
+        blocked: true,
+        valid: false,
+        recoverable: true,
+        hardIssues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+        }],
+        softWarnings: [],
+        issues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+        }],
+      }))
+      .mockReturnValueOnce(buildRewriteValidationResult({
+        blocked: true,
+        valid: false,
+        recoverable: true,
+        hardIssues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'unsupported_claim',
+          message: 'O resumo otimizado ainda menciona claim sem evidência direta no currículo original.',
+        }],
+        softWarnings: [],
+        issues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'unsupported_claim',
+          message: 'O resumo otimizado ainda menciona claim sem evidência direta no currículo original.',
+        }],
+      }))
+
+    const result = await runJobTargetingPipeline(session, {
+      userAcceptedLowFit: true,
+      overrideReason: 'pre_rewrite_low_fit_block',
+      skipPreRewriteLowFitBlock: true,
+      skipLowFitRecoverableBlocking: true,
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.acceptedLowFitFallbackUsed).toBe(true)
+    expect(result.validation).toEqual(expect.objectContaining({
+      blocked: false,
+      recoverable: false,
+      hardIssues: [],
+    }))
+    expect(mockCreateCvVersion).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: session.id,
+      source: 'job-targeting',
+    }))
+    expect(mockGenerateCvHighlightState).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.generation_gate', expect.objectContaining({
+      highlightGenerationDecision: 'skipped_after_override',
+      validationBlocked: false,
+      lowFitRecoverableBlocked: false,
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      highlightDetectionInvoked: false,
+      highlightStatePersistedReason: 'skipped_after_override',
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.job_targeting.low_fit_gate.evaluated', expect.objectContaining({
+      acceptedByUser: true,
+      blockingSkipped: true,
+      triggered: true,
+    }))
+  })
+
   it('creates a synthetic recoverable issue when a low-fit vacancy has no promotable warnings but still should not auto-generate', async () => {
     const session = buildSession()
     session.agentState.workflowMode = 'job_targeting'
@@ -2936,6 +3172,7 @@ describe('ATS enhancement reliability hardening', () => {
         supported: 1,
         unsupported: 5,
         unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+        topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
       },
       lowFitWarningGate: {
         triggered: true,
@@ -2952,6 +3189,7 @@ describe('ATS enhancement reliability hardening', () => {
           supported: 1,
           unsupported: 5,
           unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+          topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
         },
       },
     }))
@@ -3009,6 +3247,7 @@ describe('ATS enhancement reliability hardening', () => {
           supported: 1,
           unsupported: 5,
           unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+          topUnsupportedSignalsForDisplay: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
         },
       },
     }))

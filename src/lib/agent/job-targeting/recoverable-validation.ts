@@ -260,7 +260,8 @@ export function buildUserFacingValidationBlockModal(args: {
   ]).slice(0, 4)
 
   if (args.lowFitWarningGate?.triggered) {
-    const unsupportedSignals = args.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
+    const unsupportedSignals = args.lowFitWarningGate.coreRequirementCoverage.topUnsupportedSignalsForDisplay
+      ?? args.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
     const targetRoleLabel = targetRole ? ` como ${targetRole}` : ''
 
     return sanitizeModalPayload({
@@ -463,6 +464,12 @@ export function buildValidationOverrideMetadata(params: {
   userId: string
   targetRole?: string
   validationIssues: ValidationIssue[]
+  acceptedLowFit?: boolean
+  fallbackUsed?: boolean
+  overrideRequestId?: string
+  overrideTokenHash?: string
+  cvVersionId?: string
+  resumeGenerationId?: string
 }): ValidationOverrideMetadata {
   return {
     enabled: true,
@@ -470,11 +477,18 @@ export function buildValidationOverrideMetadata(params: {
     acceptedByUserId: params.userId,
     validationIssueCount: params.validationIssues.length,
     hardIssueCount: params.validationIssues.filter((issue) => issue.severity === 'high').length,
+    issues: structuredClone(params.validationIssues.map(sanitizeValidationIssue)),
     issueTypes: dedupe(
       params.validationIssues
         .map((issue) => issue.issueType)
         .filter(isDefined),
     ),
     targetRole: params.targetRole,
+    acceptedLowFit: params.acceptedLowFit,
+    fallbackUsed: params.fallbackUsed,
+    overrideRequestId: params.overrideRequestId,
+    overrideTokenHash: params.overrideTokenHash,
+    cvVersionId: params.cvVersionId,
+    resumeGenerationId: params.resumeGenerationId,
   }
 }

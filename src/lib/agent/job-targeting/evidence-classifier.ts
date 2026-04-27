@@ -181,6 +181,11 @@ function canonicalizeDisplaySignal(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
 }
 
+function containsApiAndRestTokens(value: string): boolean {
+  const normalized = normalizeSemanticText(value)
+  return /\bapis?\b/u.test(normalized) && /\brest(?:ful)?\b/u.test(normalized)
+}
+
 function buildTargetEvidenceRecord(signal: string, item: ClassifiedEvidenceItem): TargetEvidence {
   const canonicalSignal = canonicalizeDisplaySignal(signal)
   const evidenceLevel = item.evidenceLevel
@@ -235,6 +240,22 @@ function classifyDeterministically(signal: TargetSignal, resumeEvidence: ResumeE
       supportingResumeSpans: aliasMatches.map((entry) => entry.span),
       rationale: 'The job signal is a lexical or canonical variant of resume evidence already present.',
     })
+  }
+
+  if (containsApiAndRestTokens(signal.value)) {
+    const restApiMatches = resumeEvidence.filter((entry) =>
+      containsApiAndRestTokens(entry.term) || containsApiAndRestTokens(entry.span))
+
+    if (restApiMatches.length > 0) {
+      return buildTargetEvidenceRecord(signal.value, {
+        jobSignal: signal.value,
+        evidenceLevel: 'technical_equivalent',
+        confidence: 0.89,
+        matchedResumeTerms: restApiMatches.map((entry) => entry.term),
+        supportingResumeSpans: restApiMatches.map((entry) => entry.span),
+        rationale: 'The resume contains matching API and REST evidence in the same span, supporting REST API experience as a technical equivalent.',
+      })
+    }
   }
 
   const signalAcronym = buildAcronym(signal.value)

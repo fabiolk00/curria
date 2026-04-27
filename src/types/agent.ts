@@ -183,6 +183,7 @@ export type CoreRequirementCoverage = {
   supported: number
   unsupported: number
   unsupportedSignals: string[]
+  topUnsupportedSignalsForDisplay: string[]
 }
 
 export type LowFitWarningGate = {
@@ -205,6 +206,7 @@ export type LowFitWarningGate = {
     supported: number
     unsupported: number
     unsupportedSignals: string[]
+    topUnsupportedSignalsForDisplay: string[]
   }
 }
 
@@ -260,7 +262,23 @@ export type ValidationOverrideMetadata = {
   validationIssueCount: number
   hardIssueCount: number
   issueTypes: string[]
+  issues?: ValidationIssue[]
   targetRole?: string
+  acceptedLowFit?: boolean
+  fallbackUsed?: boolean
+  overrideRequestId?: string
+  overrideTokenHash?: string
+  cvVersionId?: string
+  resumeGenerationId?: string
+}
+
+export type OverrideProcessingState = {
+  startedAt: string
+  expiresAt: string
+  status: 'processing'
+  requestId: string
+  idempotencyKey: string
+  overrideTokenHash?: string
 }
 
 export type RecoverableValidationBlockKind =
@@ -287,6 +305,7 @@ export type BlockedTargetedRewriteDraft = {
   targetEvidence?: TargetEvidence[]
   safeTargetingEmphasis?: SafeTargetingEmphasis
   coreRequirementCoverage?: CoreRequirementCoverage
+  overrideProcessing?: OverrideProcessingState
   recoverable: boolean
   createdAt: string
   expiresAt: string
@@ -317,6 +336,7 @@ export type RecoverableValidationBlock = {
   kind?: RecoverableValidationBlockKind
   overrideToken: string
   modal: UserFacingValidationModalPayload
+  overrideProcessing?: OverrideProcessingState
   expiresAt: string
 }
 
