@@ -183,7 +183,7 @@ function buildDefaultTargetingPlan(overrides: Partial<TargetingPlan> = {}): Targ
         rewritePermission: 'can_claim_directly',
         matchedResumeTerms: ['SQL'],
         supportingResumeSpans: ['SQL'],
-        rationale: 'O termo aparece explicitamente no curriculo.',
+      rationale: 'O termo aparece explicitamente no currículo.',
         confidence: 1,
         allowedRewriteForms: ['SQL'],
         forbiddenRewriteForms: [],
@@ -196,7 +196,7 @@ function buildDefaultTargetingPlan(overrides: Partial<TargetingPlan> = {}): Targ
         rewritePermission: 'must_not_claim',
         matchedResumeTerms: [],
         supportingResumeSpans: [],
-        rationale: 'Nao ha evidencia suficiente no curriculo.',
+      rationale: 'Não ha evidencia suficiente no currículo.',
         confidence: 0.95,
         allowedRewriteForms: [],
         forbiddenRewriteForms: ['BigQuery'],
@@ -1468,6 +1468,8 @@ describe('ATS enhancement reliability hardening', () => {
     expect(summaryCall?.[0].instructions).not.toContain('Direct claims allowed:')
     expect(summaryCall?.[0].instructions).not.toContain('Forbidden claims:')
     expect(summaryCall?.[0].instructions).not.toContain('Bridge carefully only when anchored in real evidence:')
+    expect(summaryCall?.[0].instructions).not.toContain('Prioritize these proven aligned signals:')
+    expect(summaryCall?.[0].instructions).not.toContain('Preferred cautious bridge wording:')
   })
 
   it('keeps ATS highlight generation isolated from the targeted semantic layer', async () => {
@@ -1488,6 +1490,10 @@ describe('ATS enhancement reliability hardening', () => {
         jobKeywords: expect.anything(),
       }),
     )
+    expect(mockLogInfo).not.toHaveBeenCalledWith(
+      'agent.job_targeting.low_fit_gate.evaluated',
+      expect.anything(),
+    )
   })
 
   it('passes evidence-aware permission buckets into the targeted rewrite prompt', async () => {
@@ -1506,7 +1512,7 @@ describe('ATS enhancement reliability hardening', () => {
         matchScore: 68,
         missingSkills: ['BigQuery'],
         weakAreas: ['summary'],
-        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiencia.'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
       },
       targetingPlan: buildDefaultTargetingPlan(),
       userId: 'usr_123',
@@ -1535,7 +1541,7 @@ describe('ATS enhancement reliability hardening', () => {
         matchScore: 68,
         missingSkills: ['BigQuery'],
         weakAreas: ['summary'],
-        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiencia.'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
       },
       userId: 'usr_123',
       sessionId: 'sess_job_123',
@@ -2652,6 +2658,274 @@ describe('ATS enhancement reliability hardening', () => {
         generated: false,
       }),
     }))
+  })
+
+  it('promotes low-fit soft warnings into a recoverable block before persist_version for off-target Java vacancies', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Desenvolvedor Java',
+      'Requisitos: Java com mais de 5 anos, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsserviços, Docker e CI/CD.',
+    ].join('\n')
+    session.agentState.rewriteStatus = 'pending'
+
+    mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
+      targetRole: 'Desenvolvedor Java',
+      targetRolePositioning: {
+        targetRole: 'Desenvolvedor Java',
+        permission: 'must_not_claim_target_role',
+        reason: 'career_fit_high_risk',
+        safeRolePositioning: 'Profissional com experiência em BI, SQL, APIs REST e Git.',
+        forbiddenRoleClaims: ['Desenvolvedor Java'],
+      },
+      rewritePermissions: {
+        directClaimsAllowed: ['Git', 'APIs REST', 'SQL'],
+        normalizedClaimsAllowed: [],
+        bridgeClaimsAllowed: [],
+        relatedButNotClaimable: [],
+        forbiddenClaims: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'Docker', 'CI/CD'],
+        skillsSurfaceAllowed: ['Git', 'APIs REST', 'SQL'],
+      },
+      coreRequirementCoverage: {
+        requirements: [],
+        total: 8,
+        supported: 1,
+        unsupported: 7,
+        unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+      },
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'too_many_unsupported_core_requirements',
+        matchScore: 32,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 12,
+        unsupportedGapRatio: 12 / 13,
+        explicitEvidenceRatio: 1 / 13,
+        coreRequirementCoverage: {
+          total: 8,
+          supported: 1,
+          unsupported: 7,
+          unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD'],
+        },
+      },
+    }))
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Desenvolvedor Java com foco em APIs REST, SQL e Git.',
+      }, section),
+    }))
+    mockValidateRewrite.mockReturnValue(buildRewriteValidationResult({
+      blocked: false,
+      valid: false,
+      softWarnings: [
+        {
+          severity: 'medium',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+        },
+        {
+          severity: 'medium',
+          section: 'summary',
+          issueType: 'summary_skill_without_evidence',
+          message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
+        },
+      ],
+      issues: [
+        {
+          severity: 'medium',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+        },
+        {
+          severity: 'medium',
+          section: 'summary',
+          issueType: 'summary_skill_without_evidence',
+          message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
+        },
+      ],
+    }))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(false)
+    expect(result.validation).toEqual(expect.objectContaining({
+      blocked: true,
+      recoverable: true,
+      promotedWarnings: expect.arrayContaining([
+        expect.objectContaining({
+          issueType: 'target_role_overclaim',
+        }),
+      ]),
+    }))
+    expect(result.recoverableBlock?.modal).toMatchObject({
+      problemBullets: expect.arrayContaining([
+        expect.stringContaining('Git, APIs REST e SQL'),
+      ]),
+    })
+    expect(result.recoverableBlock?.modal.title).toMatch(/vaga parece muito distante/i)
+    expect(result.recoverableBlock?.modal.description).toMatch(/poucos pontos comprovados/i)
+    expect(mockCreateCvVersion).not.toHaveBeenCalled()
+    expect(mockGenerateCvHighlightState).not.toHaveBeenCalled()
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.generation_gate', expect.objectContaining({
+      workflowMode: 'job_targeting',
+      highlightGenerationDecision: 'blocked_low_fit',
+      validationBlocked: true,
+      lowFitRecoverableBlocked: true,
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.highlight_state.persisted', expect.objectContaining({
+      workflowMode: 'job_targeting',
+      highlightDetectionInvoked: false,
+      highlightStateGenerated: false,
+      highlightStatePersisted: false,
+      highlightStatePersistedReason: 'low_fit_recoverable_block',
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.job_targeting.low_fit_gate.evaluated', expect.objectContaining({
+      sessionId: session.id,
+      targetRole: 'Desenvolvedor Java',
+      triggered: true,
+      reason: 'too_many_unsupported_core_requirements',
+      coreUnsupportedSignals: expect.arrayContaining(['Java', 'Spring Boot']),
+    }))
+    expect(mockLogInfo).toHaveBeenCalledWith('agent.job_targeting.pipeline_trace', expect.objectContaining({
+      status: 'blocked',
+      lowFitGate: expect.objectContaining({
+        triggered: true,
+        reason: 'too_many_unsupported_core_requirements',
+      }),
+      validation: expect.objectContaining({
+        promotedWarnings: expect.arrayContaining([
+          expect.objectContaining({
+            issueType: 'target_role_overclaim',
+          }),
+        ]),
+      }),
+    }))
+  })
+
+  it('creates a synthetic recoverable issue when a low-fit vacancy has no promotable warnings but still should not auto-generate', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = 'Cargo: Desenvolvedor Java'
+    session.agentState.rewriteStatus = 'pending'
+
+    mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
+      targetRole: 'Desenvolvedor Java',
+      targetRolePositioning: {
+        targetRole: 'Desenvolvedor Java',
+        permission: 'must_not_claim_target_role',
+        reason: 'career_fit_high_risk',
+        safeRolePositioning: 'Profissional com experiência em BI, SQL e APIs REST.',
+        forbiddenRoleClaims: ['Desenvolvedor Java'],
+      },
+      rewritePermissions: {
+        directClaimsAllowed: ['Git', 'SQL', 'APIs REST'],
+        normalizedClaimsAllowed: [],
+        bridgeClaimsAllowed: [],
+        relatedButNotClaimable: [],
+        forbiddenClaims: ['Java', 'Spring Boot'],
+        skillsSurfaceAllowed: ['Git', 'SQL', 'APIs REST'],
+      },
+      coreRequirementCoverage: {
+        requirements: [],
+        total: 6,
+        supported: 1,
+        unsupported: 5,
+        unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+      },
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'high_risk_off_target',
+        matchScore: 32,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 10,
+        unsupportedGapRatio: 0.9,
+        explicitEvidenceRatio: 0.08,
+        coreRequirementCoverage: {
+          total: 6,
+          supported: 1,
+          unsupported: 5,
+          unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+        },
+      },
+    }))
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Profissional de dados com foco em SQL, APIs REST e Git.',
+      }, section),
+    }))
+    mockValidateRewrite.mockReturnValue(buildRewriteValidationResult())
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(false)
+    expect(result.validation?.blocked).toBe(true)
+    expect(result.validation?.recoverable).toBe(true)
+    expect(result.validation?.hardIssues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        issueType: 'low_fit_target_role',
+      }),
+    ]))
+    expect(result.recoverableBlock).toBeDefined()
+    expect(mockCreateCvVersion).not.toHaveBeenCalled()
+  })
+
+  it('still returns an override token for low-fit recoverable blocks when the rewritten CV stays unchanged', async () => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = 'Cargo: Desenvolvedor Java'
+    session.agentState.rewriteStatus = 'pending'
+
+    const originalCvState = buildCvState()
+
+    mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
+      targetRole: 'Desenvolvedor Java',
+      targetRolePositioning: {
+        targetRole: 'Desenvolvedor Java',
+        permission: 'must_not_claim_target_role',
+        reason: 'career_fit_high_risk',
+        safeRolePositioning: 'Profissional com experiência em BI, SQL e APIs REST.',
+        forbiddenRoleClaims: ['Desenvolvedor Java'],
+      },
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'high_risk_off_target',
+        matchScore: 32,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 10,
+        unsupportedGapRatio: 0.9,
+        explicitEvidenceRatio: 0.08,
+        coreRequirementCoverage: {
+          total: 6,
+          supported: 1,
+          unsupported: 5,
+          unsupportedSignals: ['Java', 'Spring Boot', 'JPA/Hibernate', 'Docker', 'CI/CD'],
+        },
+      },
+    }))
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput(originalCvState, section),
+    }))
+    mockValidateRewrite.mockReturnValue(buildRewriteValidationResult())
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(false)
+    expect(result.validation?.recoverable).toBe(true)
+    expect(result.recoverableBlock).toEqual(expect.objectContaining({
+      status: 'validation_blocked_recoverable',
+      overrideToken: expect.any(String),
+    }))
+    expect(mockCreateCvVersion).not.toHaveBeenCalled()
   })
 
   it('logs a partial pipeline trace when gap analysis fails before rewrite starts', async () => {

@@ -116,6 +116,10 @@ function createBlobResponse() {
   }
 }
 
+function encodeUtf8AsMojibake(value: string): string {
+  return Array.from(new TextEncoder().encode(value), (byte) => String.fromCharCode(byte)).join("")
+}
+
 function buildFetchMock(...responses: Array<ReturnType<typeof createJsonResponse> | ReturnType<typeof createBlobResponse>>) {
   const fetchMock = vi.fn()
 
@@ -736,6 +740,52 @@ describe("UserDataPage", () => {
     )
   })
 
+  it("sanitizes mojibake warnings before showing the success toast", async () => {
+    const user = userEvent.setup()
+    buildFetchMock(
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse({
+        success: true,
+        sessionId: "sess_target_warning_mojibake_123",
+        warnings: [
+          encodeUtf8AsMojibake("O resumo otimizado menciona skill sem evid\u00EAncia no curr\u00EDculo original."),
+          encodeUtf8AsMojibake("O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evid\u00EAncia equivalente no curr\u00EDculo original."),
+        ],
+      }),
+    )
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    await user.type(
+      screen.getByTestId("target-job-description-input"),
+      "Vaga para analista de dados senior com foco em produto e SQL.",
+    )
+    await user.click(screen.getByTestId("ats-panel-cta"))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_target_warning_mojibake_123")
+    })
+
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.stringContaining("Revise estes pontos antes de usar a vers\u00E3o final"),
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.stringContaining("skill sem evid\u00EAncia no curr\u00EDculo original"),
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.stringContaining("cargo alvo sem evid\u00EAncia equivalente no curr\u00EDculo original"),
+    )
+    expect(toast.success).not.toHaveBeenCalledWith(
+      expect.stringContaining(encodeUtf8AsMojibake("evid\u00EAncia")),
+    )
+    expect(toast.success).not.toHaveBeenCalledWith(
+      expect.stringContaining(encodeUtf8AsMojibake("curr\u00EDculo")),
+    )
+  })
+
   it("shows the missing ATS requirements dialog when the profile is incomplete", async () => {
     const user = userEvent.setup()
     buildFetchMock(createJsonResponse(buildProfileResponse(buildResumeData({
@@ -889,6 +939,76 @@ describe("UserDataPage", () => {
       })
     })
     expect(screen.getByTestId("plan-update-dialog")).toHaveAttribute("data-open", "false")
+  })
+
+  it("renders the low-fit warning modal with human copy for off-target vacancies", async () => {
+    const user = userEvent.setup()
+    buildFetchMock(
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse({
+        sessionId: "sess_low_fit_modal_123",
+        workflowMode: "job_targeting",
+        rewriteValidation: {
+          blocked: true,
+          valid: false,
+          recoverable: true,
+          hardIssues: [{
+            severity: "high",
+            section: "summary",
+            issueType: "target_role_overclaim",
+            message: "A vaga de Desenvolvedor Java ficou distante demais do histórico comprovado no currículo original para geração automática segura.",
+          }],
+          softWarnings: [],
+          issues: [{
+            severity: "high",
+            section: "summary",
+            issueType: "target_role_overclaim",
+            message: "A vaga de Desenvolvedor Java ficou distante demais do histórico comprovado no currículo original para geração automática segura.",
+          }],
+        },
+        recoverableValidationBlock: {
+          status: "validation_blocked_recoverable",
+          overrideToken: "override_token_low_fit_123",
+          expiresAt: "2099-04-27T16:00:00.000Z",
+          modal: {
+            title: "Esta vaga parece muito distante do seu currículo atual",
+            description: "Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.",
+            primaryProblem: "A vaga pede Java, Spring Boot, JPA/Hibernate, mensageria, Docker e CI/CD, mas seu histórico atual sustenta melhor outra trajetória profissional.",
+            problemBullets: [
+              "Seu currículo comprova melhor experiência em BI, Engenharia de Dados, SQL e Python.",
+              "Encontramos alguns pontos próximos, como Git, APIs REST e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.",
+            ],
+            reassurance: "Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.",
+            recommendation: "Você pode gerar mesmo assim e revisar manualmente antes de enviar.",
+            actions: {
+              secondary: { label: "Fechar", action: "close" },
+              primary: {
+                label: "Gerar mesmo assim (1 crédito)",
+                action: "override_generate",
+                creditCost: 1,
+              },
+            },
+          },
+        },
+      }, {
+        ok: false,
+        status: 422,
+      }),
+    )
+
+    render(<UserDataPage currentCredits={1} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    await user.type(screen.getByTestId("target-job-description-input"), "Vaga para desenvolvedor Java.")
+    await user.click(screen.getByTestId("ats-panel-cta"))
+
+    expect(await screen.findByText("Esta vaga parece muito distante do seu currículo atual")).toBeInTheDocument()
+    expect(screen.getByText(/Java, Spring Boot, JPA\/Hibernate, mensageria, Docker e CI\/CD/i)).toBeInTheDocument()
+    expect(screen.getByText(/BI, Engenharia de Dados, SQL e Python/i)).toBeInTheDocument()
+    expect(screen.getByText(/Git, APIs REST e SQL/i)).toBeInTheDocument()
+    expect(screen.queryByText(/unsupported_gap|targetEvidence|hardIssue|pipeline/i)).not.toBeInTheDocument()
   })
 
   it("switches the recoverable validation CTA to pricing when credits are missing", async () => {

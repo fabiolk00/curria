@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 
+import { repairUtf8Mojibake } from '@/lib/text/repair-utf8-mojibake'
 import type {
   BlockedTargetedRewriteDraft,
   Session,
@@ -21,6 +22,7 @@ const RECOVERABLE_VALIDATION_ISSUE_TYPES = new Set<NonNullable<ValidationIssue['
   'ungrounded_bridge',
   'forbidden_claim',
   'summary_skill_without_evidence',
+  'low_fit_target_role',
 ])
 
 function dedupe(values: string[]): string[] {
@@ -45,6 +47,50 @@ function listToSentence(values: string[]): string {
   }
 
   return `${values.slice(0, -1).join(', ')} e ${values[values.length - 1]}`
+}
+
+function sanitizeText(value: string): string {
+  return repairUtf8Mojibake(value)
+}
+
+function sanitizeValidationIssue(issue: ValidationIssue): ValidationIssue {
+  return {
+    ...issue,
+    message: sanitizeText(issue.message),
+    offendingSignal: issue.offendingSignal ? sanitizeText(issue.offendingSignal) : issue.offendingSignal,
+    suggestedReplacement: issue.suggestedReplacement ? sanitizeText(issue.suggestedReplacement) : issue.suggestedReplacement,
+    userFacingTitle: issue.userFacingTitle ? sanitizeText(issue.userFacingTitle) : issue.userFacingTitle,
+    userFacingExplanation: issue.userFacingExplanation ? sanitizeText(issue.userFacingExplanation) : issue.userFacingExplanation,
+  }
+}
+
+function sanitizeModalPayload(payload: UserFacingValidationModalPayload): UserFacingValidationModalPayload {
+  const sanitizedRecommendation = payload.recommendation
+    ? sanitizeText(payload.recommendation)
+    : undefined
+  const sanitizedPrimaryAction = payload.actions.primary
+    ? {
+        ...payload.actions.primary,
+        label: sanitizeText(payload.actions.primary.label) as 'Gerar mesmo assim (1 crédito)',
+      }
+    : undefined
+
+  return {
+    ...payload,
+    title: sanitizeText(payload.title),
+    description: sanitizeText(payload.description),
+    primaryProblem: sanitizeText(payload.primaryProblem),
+    problemBullets: payload.problemBullets.map(sanitizeText),
+    reassurance: sanitizeText(payload.reassurance),
+    recommendation: sanitizedRecommendation,
+    actions: {
+      secondary: {
+        ...payload.actions.secondary,
+        label: sanitizeText(payload.actions.secondary.label) as 'Fechar',
+      },
+      primary: sanitizedPrimaryAction,
+    },
+  }
 }
 
 function findStrongestAnchors(params: {
@@ -153,6 +199,7 @@ export function isRecoverableValidationBlock(
 function extractProblemBullets(issues: ValidationIssue[]): string[] {
   return dedupe(
     issues
+      .map((issue) => sanitizeValidationIssue(issue))
       .map((issue) => issue.userFacingExplanation ?? issue.suggestedReplacement ?? issue.offendingSignal ?? issue.message)
       .filter(Boolean),
   ).slice(0, 3)
@@ -176,21 +223,69 @@ export function buildUserFacingValidationBlockModal(args: {
   validationIssues: ValidationIssue[]
   targetEvidence?: TargetEvidence[]
   originalProfileLabel?: string
+  lowFitWarningGate?: TargetingPlan['lowFitWarningGate']
+  directClaimsAllowed?: string[]
 }): UserFacingValidationModalPayload {
-  const primaryIssue = args.validationIssues.find((issue) => issue.issueType === 'target_role_overclaim')
-    ?? args.validationIssues.find((issue) => issue.issueType === 'unsupported_claim')
-    ?? args.validationIssues[0]
+  const sanitizedIssues = args.validationIssues.map(sanitizeValidationIssue)
+  const primaryIssue = sanitizedIssues.find((issue) => issue.issueType === 'target_role_overclaim')
+    ?? sanitizedIssues.find((issue) => issue.issueType === 'unsupported_claim')
+    ?? sanitizedIssues[0]
   const targetRole = args.targetRole?.trim()
   const originalProfileLabel = args.originalProfileLabel ?? buildOriginalProfileLabel(args.targetEvidence)
+  const nearbySignals = dedupe([
+    ...(args.directClaimsAllowed ?? []),
+    ...(args.targetEvidence ?? [])
+      .filter((evidence) =>
+        evidence.rewritePermission === 'can_claim_directly'
+        || evidence.rewritePermission === 'can_claim_normalized')
+      .map((evidence) => evidence.canonicalSignal),
+  ]).slice(0, 4)
+
+  if (args.lowFitWarningGate?.triggered) {
+    const unsupportedSignals = args.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
+    const targetRoleLabel = targetRole ? ` como ${targetRole}` : ''
+
+    return sanitizeModalPayload({
+      title: 'Esta vaga parece muito distante do seu currículo atual',
+      description: 'Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.',
+      primaryProblem: unsupportedSignals.length > 0
+        ? `A vaga pede ${listToSentence(unsupportedSignals)}, mas seu histórico atual sustenta melhor outra trajetória profissional.`
+        : targetRole
+          ? `Não encontramos comprovação suficiente para sustentar uma apresentação direta como ${targetRole}.`
+          : 'Não encontramos comprovação suficiente para sustentar uma apresentação direta para esta vaga.',
+      problemBullets: [
+        originalProfileLabel
+          ? `Seu currículo comprova melhor experiência em ${originalProfileLabel}.`
+          : '',
+        nearbySignals.length > 0
+          ? `Encontramos alguns pontos próximos, como ${listToSentence(nearbySignals)}, mas eles não sustentam uma apresentação direta${targetRoleLabel}.`
+          : '',
+        ...extractProblemBullets(sanitizedIssues),
+      ].filter(Boolean).slice(0, 3),
+      reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.',
+      recommendation: 'Você pode gerar mesmo assim e revisar manualmente antes de enviar.',
+      actions: {
+        secondary: {
+          label: 'Fechar',
+          action: 'close',
+        },
+        primary: {
+          label: 'Gerar mesmo assim (1 crédito)',
+          action: 'override_generate',
+          creditCost: 1,
+        },
+      },
+    })
+  }
 
   if (primaryIssue?.issueType === 'target_role_overclaim' && targetRole) {
-    return {
+    return sanitizeModalPayload({
       title: 'O resumo ficou agressivo demais para esta vaga',
-      description: `A versão gerada tentou se aproximar diretamente do cargo “${targetRole}”, mas seu currículo comprova melhor outra trajetória profissional.`,
+      description: `A versão gerada tentou se aproximar diretamente do cargo "${targetRole}", mas seu currículo comprova melhor outra trajetória profissional.`,
       primaryProblem: originalProfileLabel
         ? `Seu histórico mostra principalmente experiência em ${originalProfileLabel}. A vaga pede ${targetRole}.`
-        : `O resumo tentou se apresentar diretamente como “${targetRole}”, sem evidência suficiente no seu currículo original.`,
-      problemBullets: extractProblemBullets(args.validationIssues),
+        : `O resumo tentou se apresentar diretamente como "${targetRole}", sem evidência suficiente no seu currículo original.`,
+      problemBullets: extractProblemBullets(sanitizedIssues),
       reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que recomendamos revisar esse trecho para evitar que o currículo pareça declarar uma experiência direta que não está comprovada.',
       recommendation: 'Você pode gerar mesmo assim, mas recomendamos revisar o resumo antes de enviar.',
       actions: {
@@ -204,18 +299,18 @@ export function buildUserFacingValidationBlockModal(args: {
           creditCost: 1,
         },
       },
-    }
+    })
   }
 
   if (primaryIssue?.offendingSignal) {
-    return {
+    return sanitizeModalPayload({
       title: 'A versão gerada declarou uma experiência sem comprovação suficiente',
       description: primaryIssue.suggestedReplacement
-        ? `A adaptação tentou usar “${primaryIssue.offendingSignal}” como experiência direta, mas seu currículo sustenta melhor: ${primaryIssue.suggestedReplacement}.`
-        : `A adaptação tentou usar “${primaryIssue.offendingSignal}” como experiência direta sem evidência suficiente no currículo original.`,
+        ? `A adaptação tentou usar "${primaryIssue.offendingSignal}" como experiência direta, mas seu currículo sustenta melhor: ${primaryIssue.suggestedReplacement}.`
+        : `A adaptação tentou usar "${primaryIssue.offendingSignal}" como experiência direta sem evidência suficiente no currículo original.`,
       primaryProblem: primaryIssue.userFacingExplanation
         ?? 'Encontramos um trecho que pode exagerar sua experiência em relação ao que o currículo original comprova.',
-      problemBullets: extractProblemBullets(args.validationIssues),
+      problemBullets: extractProblemBullets(sanitizedIssues),
       reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode precisar de revisão para ficar fiel ao seu histórico.',
       recommendation: 'Você pode gerar mesmo assim, mas recomendamos revisar esse trecho antes de enviar o currículo.',
       actions: {
@@ -229,16 +324,16 @@ export function buildUserFacingValidationBlockModal(args: {
           creditCost: 1,
         },
       },
-    }
+    })
   }
 
-  return {
+  return sanitizeModalPayload({
     title: 'Encontramos pontos que podem exagerar sua experiência',
     description: 'A adaptação para esta vaga ficou mais agressiva do que o seu currículo original comprova.',
     primaryProblem: targetRole
-      ? `Geramos uma versão alinhada à vaga “${targetRole}”, mas alguns trechos podem ter se aproximado demais de experiências que o seu currículo ainda não comprova diretamente.`
+      ? `Geramos uma versão alinhada à vaga "${targetRole}", mas alguns trechos podem ter se aproximado demais de experiências que o seu currículo ainda não comprova diretamente.`
       : 'O currículo gerado pode ter declarado como experiência direta alguns requisitos da vaga que aparecem apenas como experiências próximas no seu histórico.',
-    problemBullets: extractProblemBullets(args.validationIssues),
+    problemBullets: extractProblemBullets(sanitizedIssues),
     reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que recomendamos revisar esses pontos para evitar que o currículo pareça declarar algo que ainda não está no seu currículo original.',
     recommendation: 'Você pode gerar mesmo assim, mas recomendamos revisar esses pontos antes de enviar.',
     actions: {
@@ -252,7 +347,7 @@ export function buildUserFacingValidationBlockModal(args: {
         creditCost: 1,
       },
     },
-  }
+  })
 }
 
 export function createBlockedTargetedRewriteDraft(params: {
@@ -279,7 +374,7 @@ export function createBlockedTargetedRewriteDraft(params: {
       : undefined,
     targetJobDescription: params.targetJobDescription,
     targetRole: params.targetRole,
-    validationIssues: structuredClone(params.validationIssues),
+    validationIssues: structuredClone(params.validationIssues.map(sanitizeValidationIssue)),
     recoverable: params.recoverable,
     createdAt,
     expiresAt: new Date(Date.now() + RECOVERABLE_DRAFT_TTL_MS).toISOString(),
@@ -290,9 +385,13 @@ export function buildSummaryRetryInstructions(targetingPlan: TargetingPlan): str
   const permissions = targetingPlan.rewritePermissions
   const directClaimsAllowed = permissions?.directClaimsAllowed.join(', ') || 'none'
   const normalizedClaimsAllowed = permissions?.normalizedClaimsAllowed.join(', ') || 'none'
+  const safeDirectEmphasis = targetingPlan.safeTargetingEmphasis?.safeDirectEmphasis.join(', ') || 'none'
   const forbiddenClaims = permissions?.forbiddenClaims.join(', ') || 'none'
   const bridgeClaimsAllowed = permissions?.bridgeClaimsAllowed
     .map((claim) => `${claim.jobSignal}: ${claim.safeBridge}`)
+    .join(' | ') || 'none'
+  const cautiousBridgeEmphasis = targetingPlan.safeTargetingEmphasis?.cautiousBridgeEmphasis
+    .map((claim) => `${claim.jobSignal}: ${claim.safeWording}`)
     .join(' | ') || 'none'
   const targetRolePositioning = targetingPlan.targetRolePositioning
 
@@ -308,7 +407,9 @@ export function buildSummaryRetryInstructions(targetingPlan: TargetingPlan): str
     `Do not directly claim unsupported requirements: ${forbiddenClaims}.`,
     `Allowed direct claims: ${directClaimsAllowed}.`,
     `Allowed normalized claims: ${normalizedClaimsAllowed}.`,
+    `Prioritize these proven aligned signals: ${safeDirectEmphasis}.`,
     `Allowed bridges: ${bridgeClaimsAllowed}.`,
+    `Preferred cautious bridge wording: ${cautiousBridgeEmphasis}.`,
     'Rules:',
     '- Keep the candidate real professional identity.',
     '- Do not invent experience in the target role.',

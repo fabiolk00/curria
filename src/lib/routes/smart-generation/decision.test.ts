@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { executeSmartGenerationDecision } from './decision'
 import { buildGenerationCopy, resolveWorkflowMode } from './decision'
+import { dispatchSmartGenerationArtifact, runSmartGenerationPipeline } from './dispatch'
 import { bootstrapSmartGenerationSession } from './session-bootstrap'
 
 vi.mock('./readiness', () => ({
@@ -150,5 +151,110 @@ describe('smart-generation helpers', () => {
         code: 'PRECONDITION_FAILED',
       },
     })
+  })
+
+  it('returns the recoverable low-fit validation block and never dispatches generate_file automatically', async () => {
+    vi.mocked(bootstrapSmartGenerationSession).mockResolvedValueOnce({
+      session: { id: 'sess_low_fit' } as never,
+      patchedSession: {
+        id: 'sess_low_fit',
+        userId: 'usr_1',
+        phase: 'intake',
+        stateVersion: 1,
+        cvState: {
+          fullName: 'Ana',
+          email: 'ana@example.com',
+          phone: '555-0100',
+          summary: 'Resumo base',
+          experience: [{ title: 'Analista', company: 'Acme', startDate: '2022', endDate: '2024', bullets: ['Entrega'] }],
+          skills: ['SQL'],
+          education: [],
+        },
+        agentState: {
+          parseStatus: 'parsed',
+          rewriteHistory: {},
+          targetingPlan: {
+            targetRole: 'Desenvolvedor Java',
+            targetRoleConfidence: 'high',
+            targetRoleSource: 'heuristic',
+          },
+        },
+        generatedOutput: { status: 'idle' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never,
+    })
+    vi.mocked(runSmartGenerationPipeline).mockResolvedValueOnce({
+      success: false,
+      error: 'Job targeting rewrite validation failed.',
+      validation: {
+        blocked: true,
+        valid: false,
+        recoverable: true,
+        hardIssues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'A vaga de Desenvolvedor Java ficou distante demais do histórico comprovado no currículo original para geração automática segura.',
+        }],
+        softWarnings: [],
+        issues: [{
+          severity: 'high',
+          section: 'summary',
+          issueType: 'target_role_overclaim',
+          message: 'A vaga de Desenvolvedor Java ficou distante demais do histórico comprovado no currículo original para geração automática segura.',
+        }],
+      },
+      recoverableBlock: {
+        status: 'validation_blocked_recoverable',
+        overrideToken: 'override_low_fit',
+        expiresAt: '2099-04-27T16:00:00.000Z',
+        modal: {
+          title: 'Esta vaga parece muito distante do seu currículo atual',
+          description: 'Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.',
+          primaryProblem: 'A vaga pede Java, Spring Boot e CI/CD, mas seu histórico atual sustenta melhor outra trajetória profissional.',
+          problemBullets: ['Encontramos alguns pontos próximos, como Git e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.'],
+          reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.',
+          recommendation: 'Você pode gerar mesmo assim e revisar manualmente antes de enviar.',
+          actions: {
+            secondary: {
+              label: 'Fechar',
+              action: 'close',
+            },
+            primary: {
+              label: 'Gerar mesmo assim (1 crédito)',
+              action: 'override_generate',
+              creditCost: 1,
+            },
+          },
+        },
+      },
+    } as never)
+
+    const decision = await executeSmartGenerationDecision({
+      request: {} as never,
+      appUser: { id: 'usr_1' } as never,
+      cvState: {
+        fullName: 'Ana',
+        email: 'ana@example.com',
+        phone: '555-0100',
+        summary: 'Resumo base',
+        experience: [{ title: 'Analista', company: 'Acme', startDate: '2022', endDate: '2024', bullets: ['Entrega'] }],
+        skills: ['SQL'],
+        education: [],
+      },
+      targetJobDescription: 'Cargo: Desenvolvedor Java',
+    })
+
+    expect(decision).toEqual(expect.objectContaining({
+      kind: 'validation_error',
+      status: 422,
+      body: expect.objectContaining({
+        recoverableValidationBlock: expect.objectContaining({
+          overrideToken: 'override_low_fit',
+        }),
+      }),
+    }))
+    expect(dispatchSmartGenerationArtifact).not.toHaveBeenCalled()
   })
 })

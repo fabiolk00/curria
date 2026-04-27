@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import * as coreRequirementCoverageModule from '@/lib/agent/job-targeting/core-requirement-coverage'
 import * as evidenceClassifierModule from '@/lib/agent/job-targeting/evidence-classifier'
+import * as lowFitWarningGateModule from '@/lib/agent/job-targeting/low-fit-warning-gate'
+import * as safeTargetingEmphasisModule from '@/lib/agent/job-targeting/safe-targeting-emphasis'
 import * as rewritePermissionsModule from '@/lib/agent/job-targeting/rewrite-permissions'
 import { buildTargetedRewritePlan, buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
@@ -73,6 +76,9 @@ describe('buildTargetingPlan', () => {
   it('does not run semantic evidence classification for the legacy targeting plan path', async () => {
     const classifySpy = vi.spyOn(evidenceClassifierModule, 'classifyTargetEvidence')
     const permissionsSpy = vi.spyOn(rewritePermissionsModule, 'buildTargetedRewritePermissions')
+    const coreCoverageSpy = vi.spyOn(coreRequirementCoverageModule, 'buildCoreRequirementCoverage')
+    const safeEmphasisSpy = vi.spyOn(safeTargetingEmphasisModule, 'buildSafeTargetingEmphasis')
+    const lowFitSpy = vi.spyOn(lowFitWarningGateModule, 'buildLowFitWarningGate')
 
     const plan = await buildTargetingPlan({
       cvState: buildCvState(),
@@ -82,9 +88,16 @@ describe('buildTargetingPlan', () => {
 
     expect(classifySpy).not.toHaveBeenCalled()
     expect(permissionsSpy).not.toHaveBeenCalled()
+    expect(coreCoverageSpy).not.toHaveBeenCalled()
+    expect(safeEmphasisSpy).not.toHaveBeenCalled()
+    expect(lowFitSpy).not.toHaveBeenCalled()
     expect(mockOpenAICompletionCreate).not.toHaveBeenCalled()
     expect(plan.targetEvidence).toBeUndefined()
     expect(plan.rewritePermissions).toBeUndefined()
+    expect(plan.safeTargetingEmphasis).toBeUndefined()
+    expect(plan.coreRequirementCoverage).toBeUndefined()
+    expect(plan.lowFitWarningGate).toBeUndefined()
+    expect(plan.targetRolePositioning).toBeUndefined()
   })
 
   it('extracts a role from prose instead of promoting section headings', async () => {
@@ -263,6 +276,159 @@ describe('buildTargetingPlan', () => {
     expect(plan.targetRolePositioning?.safeRolePositioning).toContain('Profissional')
   })
 
+  it('derives safe direct emphasis and cautious bridges for partially adherent systems and BI vacancies', async () => {
+    const cvState = {
+      ...buildCvState(),
+      summary: 'Profissional de BI com foco em Power Automate, APIs REST, dashboards e relatórios gerenciais.',
+      experience: [{
+        title: 'Analista de BI',
+        company: 'Acme',
+        startDate: '2022',
+        endDate: '2024',
+        bullets: [
+          'Automatizei fluxos com Power Automate e eliminei processos manuais.',
+          'Integrei APIs REST e sistemas internos para relatórios gerenciais.',
+          'Criei dashboards em Power BI e Qlik Sense para áreas corporativas.',
+        ],
+      }],
+      skills: ['SQL', 'Python', 'Power BI', 'Qlik Sense', 'Power Automate', 'APIs REST', 'HTML', 'CSS'],
+    }
+
+    const plan = await buildTargetedRewritePlan({
+      cvState,
+      targetJobDescription: [
+        'Cargo: Analista de Sistemas BI/RH',
+        'Requisitos: Power BI, Qlik, SQL, Python, Power Automate, APIs REST, People Analytics, RPA.',
+        'Desejável: Power Apps e FLUIG.',
+      ].join('\n'),
+      gapAnalysis: {
+        ...gapAnalysis,
+        matchScore: 71,
+        missingSkills: ['People Analytics', 'RPA', 'Power Apps', 'FLUIG'],
+        weakAreas: ['target role'],
+      },
+      mode: 'job_targeting',
+      rewriteIntent: 'targeted_rewrite',
+      careerFitEvaluation: {
+        riskLevel: 'medium',
+        needsExplicitConfirmation: false,
+        summary: 'A vaga é adjacente ao histórico principal de BI.',
+        riskPoints: 2,
+        assessedAt: '2026-04-27T12:00:00.000Z',
+        signals: {
+          matchScore: 71,
+          missingSkillsCount: 4,
+          weakAreasCount: 1,
+          familyDistance: 'adjacent',
+          seniorityGapMajor: false,
+        },
+        reasons: ['Há aderência real em BI, automação e integrações.'],
+      },
+    })
+
+    expect(plan.safeTargetingEmphasis?.safeDirectEmphasis).toEqual(expect.arrayContaining([
+      'Power Automate',
+      'APIs REST',
+      'Power BI',
+      'Qlik Sense',
+    ]))
+    expect(plan.safeTargetingEmphasis?.forbiddenDirectClaims).toEqual(expect.arrayContaining([
+      'People Analytics',
+      'RPA',
+      'Power Apps',
+      'FLUIG',
+    ]))
+    expect(plan.lowFitWarningGate?.triggered).toBe(false)
+  })
+
+  it('triggers the low-fit warning gate for off-target Java vacancies with unsupported core coverage', async () => {
+    const plan = await buildTargetedRewritePlan({
+      cvState: {
+        ...buildCvState(),
+        summary: 'Profissional de BI e engenharia de dados com foco em SQL, Python, ETL, APIs REST e Git.',
+        experience: [{
+          title: 'Analista de BI',
+          company: 'Acme',
+          startDate: '2022',
+          endDate: '2024',
+          bullets: [
+            'Desenvolvi dashboards em Power BI e Qlik Sense.',
+            'Modelei dados e integrações com APIs REST, SQL e Python.',
+            'Automatizei rotinas com Power Automate e Databricks.',
+          ],
+        }],
+        skills: ['Power BI', 'Qlik Sense', 'SQL', 'Python', 'PySpark', 'Databricks', 'ETL', 'APIs REST', 'Git'],
+      },
+      targetJobDescription: [
+        'Cargo: Desenvolvedor Java',
+        'Requisitos obrigatórios: Java com mais de 5 anos, orientação a objetos, SOLID, Spring Boot, APIs REST, JPA/Hibernate, bancos relacionais, Kafka/RabbitMQ, microsserviços, testes automatizados, Git, CI/CD, Docker, cloud, Kubernetes, observabilidade e performance.',
+        'Profissional com experiência em decisões técnicas e mentoria.',
+      ].join('\n'),
+      gapAnalysis: {
+        ...gapAnalysis,
+        matchScore: 32,
+        missingSkills: ['Java', '5+ anos Java', 'Spring Boot', 'JPA/Hibernate', 'Kafka/RabbitMQ', 'microsserviços', 'Docker', 'CI/CD', 'SOLID', 'testes automatizados', 'Kubernetes', 'observabilidade', 'performance', 'mentoria'],
+        weakAreas: ['target role', 'stack core'],
+      },
+      mode: 'job_targeting',
+      rewriteIntent: 'targeted_rewrite',
+      careerFitEvaluation: {
+        riskLevel: 'high',
+        needsExplicitConfirmation: true,
+        summary: 'A vaga pede uma trajetória de engenharia Java que não aparece de forma comprovada no currículo.',
+        riskPoints: 5,
+        assessedAt: '2026-04-27T12:00:00.000Z',
+        signals: {
+          matchScore: 32,
+          missingSkillsCount: 14,
+          weakAreasCount: 2,
+          familyDistance: 'distant',
+          seniorityGapMajor: true,
+        },
+        reasons: ['O histórico comprovado permanece centrado em BI e dados.'],
+      },
+    })
+
+    expect(plan.targetRolePositioning).toEqual(expect.objectContaining({
+      permission: 'must_not_claim_target_role',
+    }))
+    expect(plan.coreRequirementCoverage).toEqual(expect.objectContaining({
+      total: expect.any(Number),
+      unsupported: expect.any(Number),
+      unsupportedSignals: expect.arrayContaining([
+        'Java com mais de 5 anos',
+        'Spring Boot',
+        'JPA/Hibernate',
+        'Kafka/RabbitMQ',
+        'microsserviços',
+        'Docker',
+        'CI/CD',
+      ]),
+    }))
+    expect(plan.lowFitWarningGate).toEqual(expect.objectContaining({
+      triggered: true,
+      matchScore: 32,
+      riskLevel: 'high',
+    }))
+  })
+
+  it('emits enriched semantic and low-fit payload only for targeted rewrite', async () => {
+    const plan = await buildTargetedRewritePlan({
+      cvState: buildCvState(),
+      targetJobDescription: 'Cargo: Analytics Engineer\nRequisitos: SQL, Python e Power BI.',
+      gapAnalysis,
+      mode: 'job_targeting',
+      rewriteIntent: 'targeted_rewrite',
+    })
+
+    expect(plan.targetEvidence).toBeDefined()
+    expect(plan.rewritePermissions).toBeDefined()
+    expect(plan.safeTargetingEmphasis).toBeDefined()
+    expect(plan.coreRequirementCoverage).toBeDefined()
+    expect(plan.lowFitWarningGate).toBeDefined()
+    expect(plan.targetRolePositioning).toBeDefined()
+  })
+
   it('fails explicitly if the enriched targeted-rewrite builder is called without a target job description', async () => {
     await expect(buildTargetedRewritePlan({
       cvState: buildCvState(),
@@ -271,5 +437,15 @@ describe('buildTargetingPlan', () => {
       mode: 'job_targeting',
       rewriteIntent: 'targeted_rewrite',
     })).rejects.toThrow('buildTargetedRewritePlan requires a target job description')
+  })
+
+  it('fails explicitly if the enriched builder is called outside job_targeting targeted_rewrite', async () => {
+    await expect(buildTargetedRewritePlan({
+      cvState: buildCvState(),
+      targetJobDescription: 'Cargo: Analytics Engineer',
+      gapAnalysis,
+      mode: 'ats_enhancement',
+      rewriteIntent: 'generic_rewrite',
+    } as never)).rejects.toThrow('buildTargetedRewritePlan only supports job_targeting targeted_rewrite flows.')
   })
 })

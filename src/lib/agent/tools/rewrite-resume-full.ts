@@ -155,6 +155,7 @@ function buildTargetedPermissionInstructions(targetingPlan: TargetingPlan): stri
   const permissions = targetingPlan.rewritePermissions
     ?? buildTargetedRewritePermissions(targetingPlan.targetEvidence ?? [])
   const targetRolePositioning = targetingPlan.targetRolePositioning
+  const safeTargetingEmphasis = targetingPlan.safeTargetingEmphasis
 
   const lines: string[] = [
     'Evidence-based targeted rewrite permissions apply only to this targeted rewrite.',
@@ -165,6 +166,12 @@ function buildTargetedPermissionInstructions(targetingPlan: TargetingPlan): stri
       ? `Normalized or equivalent claims allowed: ${permissions.normalizedClaimsAllowed.join(', ')}.`
       : 'Normalized or equivalent claims allowed: none.',
   ]
+
+  if ((safeTargetingEmphasis?.safeDirectEmphasis.length ?? 0) > 0) {
+    lines.push(
+      `Prioritize these proven aligned signals when they improve the resume truthfully: ${safeTargetingEmphasis?.safeDirectEmphasis.join(', ')}.`,
+    )
+  }
 
   if (targetRolePositioning?.permission === 'must_not_claim_target_role') {
     lines.push(
@@ -179,6 +186,13 @@ function buildTargetedPermissionInstructions(targetingPlan: TargetingPlan): stri
       'Target role positioning:',
       `- You may bridge toward "${targetRolePositioning.targetRole}" carefully, but avoid presenting it as fully established professional identity unless the wording stays grounded.`,
       `- Prefer safer positioning such as: "${targetRolePositioning.safeRolePositioning}".`,
+    )
+  }
+
+  if ((safeTargetingEmphasis?.cautiousBridgeEmphasis.length ?? 0) > 0) {
+    lines.push(
+      'Use careful bridge wording only in narrative surfaces, never as direct skill or role claims:',
+      ...safeTargetingEmphasis!.cautiousBridgeEmphasis.map((bridge) => `- ${bridge.jobSignal}: ${bridge.safeWording}. Do not say: ${bridge.forbiddenWording.join(', ')}.`),
     )
   }
 
@@ -312,6 +326,8 @@ function buildTargetJobSectionInstructions(
   targetingPlan: TargetingPlan,
   targetJobDescription: string,
 ): string {
+  const safeDirectEmphasis = targetingPlan.safeTargetingEmphasis?.safeDirectEmphasis ?? []
+  const cautiousBridges = targetingPlan.safeTargetingEmphasis?.cautiousBridgeEmphasis ?? []
   const shared = [
     buildJobTargetingStyleGuide(targetJobDescription),
     targetingPlan.targetRoleConfidence !== 'low'
@@ -320,9 +336,14 @@ function buildTargetJobSectionInstructions(
     targetingPlan.focusKeywords.length > 0
       ? `Vacancy semantic focus: ${targetingPlan.focusKeywords.join(', ')}.`
       : '',
-    targetingPlan.mustEmphasize.length > 0
+    safeDirectEmphasis.length > 0
+      ? `Must emphasize when factually supported: ${safeDirectEmphasis.join(', ')}.`
+      : targetingPlan.mustEmphasize.length > 0
       ? `Must emphasize when factually supported: ${targetingPlan.mustEmphasize.join(', ')}.`
       : 'Must emphasize the strongest overlaps already proven in the resume.',
+    cautiousBridges.length > 0
+      ? `Use cautious bridges only as narrative support: ${cautiousBridges.map((bridge) => `${bridge.jobSignal} -> ${bridge.safeWording}`).join(' | ')}.`
+      : '',
     targetingPlan.shouldDeemphasize.length > 0
       ? `De-emphasize when secondary to the target role: ${targetingPlan.shouldDeemphasize.join(', ')}.`
       : '',
@@ -716,7 +737,11 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
           )
         : buildSectionInstructions(section, params.atsAnalysis, rewritePlan!)
       const targetKeywords = params.mode === 'job_targeting'
-        ? targetingPlan!.mustEmphasize
+        ? (
+          targetingPlan!.safeTargetingEmphasis?.safeDirectEmphasis.length
+            ? targetingPlan!.safeTargetingEmphasis.safeDirectEmphasis
+            : targetingPlan!.mustEmphasize
+        )
         : rewritePlan!.keywordFocus
 
       let result: Awaited<ReturnType<typeof rewriteSection>>

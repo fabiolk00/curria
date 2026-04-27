@@ -44,9 +44,33 @@ export type JobTargetingTrace = {
     }>
     failureStage?: string
     recoverable?: boolean
+    promotedWarnings?: Array<{
+      from: 'soft'
+      to: 'recoverable_hard'
+      issueType: string
+      reason: string
+    }>
+  }
+  lowFitGate?: {
+    evaluated: boolean
+    triggered: boolean
+    reason?: string
+    matchScore: number
+    riskLevel?: string
+    familyDistance?: string
+    explicitEvidenceCount: number
+    unsupportedGapCount: number
+    unsupportedGapRatio: number
+    explicitEvidenceRatio: number
+    coreRequirementCoverage: {
+      total: number
+      supported: number
+      unsupported: number
+      unsupportedSignals: string[]
+    }
   }
   highlight?: {
-    gate: 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state'
+    gate: 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' | 'blocked_low_fit'
     generated: boolean
     highlightSource?: 'job_targeting' | 'ats_enhancement'
     jobKeywordsCount: number

@@ -94,6 +94,7 @@ export type ValidationIssue = {
     | 'unsupported_claim'
     | 'unsupported_skill'
     | 'target_role_overclaim'
+    | 'low_fit_target_role'
     | 'seniority_inflation'
     | 'ungrounded_bridge'
     | 'forbidden_claim'
@@ -113,6 +114,13 @@ export type RewriteValidationResult = {
   hardIssues: ValidationIssue[]
   softWarnings: ValidationIssue[]
   issues: ValidationIssue[]
+  recoverable?: boolean
+  promotedWarnings?: Array<{
+    from: 'soft'
+    to: 'recoverable_hard'
+    issueType: string
+    reason: string
+  }>
 }
 
 export type EvidenceLevel =
@@ -150,6 +158,55 @@ export type BridgeClaimInstruction = {
   doNotSay: string[]
 }
 
+export type SafeTargetingEmphasis = {
+  safeDirectEmphasis: string[]
+  cautiousBridgeEmphasis: Array<{
+    jobSignal: string
+    safeWording: string
+    supportingTerms: string[]
+    forbiddenWording: string[]
+  }>
+  forbiddenDirectClaims: string[]
+}
+
+export type CoreRequirement = {
+  signal: string
+  importance: 'core' | 'secondary' | 'differential'
+  evidenceLevel: EvidenceLevel
+  rewritePermission: RewritePermission
+}
+
+export type CoreRequirementCoverage = {
+  requirements: CoreRequirement[]
+  total: number
+  supported: number
+  unsupported: number
+  unsupportedSignals: string[]
+}
+
+export type LowFitWarningGate = {
+  triggered: boolean
+  reason?:
+    | 'very_low_match_score'
+    | 'too_many_unsupported_core_requirements'
+    | 'target_role_not_supported'
+    | 'explicit_evidence_too_low'
+    | 'high_risk_off_target'
+  matchScore: number
+  riskLevel?: CareerFitRiskLevel
+  familyDistance?: 'same' | 'adjacent' | 'distant' | 'unknown'
+  explicitEvidenceCount: number
+  unsupportedGapCount: number
+  unsupportedGapRatio: number
+  explicitEvidenceRatio: number
+  coreRequirementCoverage: {
+    total: number
+    supported: number
+    unsupported: number
+    unsupportedSignals: string[]
+  }
+}
+
 export type TargetRoleClaimPermission =
   | 'can_claim_target_role'
   | 'can_bridge_to_target_role'
@@ -182,6 +239,9 @@ export type TargetingPlan = {
   missingButCannotInvent: string[]
   targetEvidence?: TargetEvidence[]
   rewritePermissions?: TargetedRewritePermissions
+  safeTargetingEmphasis?: SafeTargetingEmphasis
+  coreRequirementCoverage?: CoreRequirementCoverage
+  lowFitWarningGate?: LowFitWarningGate
   targetRolePositioning?: TargetRolePositioning
   sectionStrategy: {
     summary: string[]

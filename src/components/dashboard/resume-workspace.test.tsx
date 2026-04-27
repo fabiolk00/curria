@@ -835,6 +835,78 @@ describe("ResumeWorkspace", () => {
     expect(mockGenerateResume).not.toHaveBeenCalled()
   })
 
+  it("renders the low-fit workspace modal with human copy and without internal terms", async () => {
+    mockGetSessionWorkspace.mockResolvedValue({
+      ...buildWorkspace(),
+      session: {
+        ...buildWorkspace().session,
+        id: "sess_low_fit_workspace",
+        updatedAt: "2026-04-27T16:00:00.000Z",
+        agentState: {
+          ...buildWorkspace().session.agentState,
+          workflowMode: "job_targeting",
+          rewriteStatus: "failed",
+          rewriteValidation: {
+            blocked: true,
+            valid: false,
+            recoverable: true,
+            hardIssues: [{
+              severity: "high",
+              section: "summary",
+              issueType: "low_fit_target_role",
+              message: "A vaga ficou distante demais do histórico comprovado no currículo original.",
+            }],
+            softWarnings: [],
+            issues: [{
+              severity: "high",
+              section: "summary",
+              issueType: "low_fit_target_role",
+              message: "A vaga ficou distante demais do histórico comprovado no currículo original.",
+            }],
+          },
+          recoverableValidationBlock: {
+            status: "validation_blocked_recoverable",
+            overrideToken: "workspace_low_fit_token",
+            expiresAt: "2099-04-27T16:30:00.000Z",
+            modal: {
+              title: "Esta vaga parece muito distante do seu currículo atual",
+              description: "Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.",
+              primaryProblem: "A vaga pede Java, Spring Boot, JPA/Hibernate, mensageria, Docker, CI/CD e microsserviços.",
+              problemBullets: [
+                "Seu currículo comprova melhor experiência em BI, Engenharia de Dados, SQL, Python, Power BI, Qlik, APIs e modelagem de dados.",
+                "Encontramos alguns pontos próximos, como Git, APIs REST, bancos relacionais e integrações, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.",
+              ],
+              reassurance: "Isso não significa que você não pode se candidatar.",
+              recommendation: "Você pode gerar mesmo assim e revisar manualmente.",
+              actions: {
+                secondary: { label: "Fechar", action: "close" },
+                primary: {
+                  label: "Gerar mesmo assim (1 crédito)",
+                  action: "override_generate",
+                  creditCost: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    renderWorkspace(
+      <ResumeWorkspace
+        initialSessionId="sess_low_fit_workspace"
+        userName="Fabio"
+        currentCredits={1}
+      />,
+    )
+
+    expect(await screen.findByText("Esta vaga parece muito distante do seu currículo atual")).toBeInTheDocument()
+    expect(screen.getByText(/Encontramos poucos pontos comprovados/i)).toBeInTheDocument()
+    expect(screen.getByText(/Java, Spring Boot, JPA\/Hibernate, mensageria, Docker, CI\/CD e microsserviços/i)).toBeInTheDocument()
+    expect(screen.getByText(/Git, APIs REST, bancos relacionais e integrações/i)).toBeInTheDocument()
+    expect(screen.queryByText(/unsupported_gap|targetEvidence|lowFitGate|hardIssue|softWarning|pipeline|recoverableValidationBlock/i)).not.toBeInTheDocument()
+  })
+
   it("opens pricing when override fallback returns insufficient credits", async () => {
     mockOverrideJobTargetingValidation.mockRejectedValue({
       code: "INSUFFICIENT_CREDITS",

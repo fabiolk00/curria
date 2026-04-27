@@ -1,7 +1,10 @@
 import { AGENT_CONFIG, MODEL_CONFIG } from '@/lib/agent/config'
+import { buildCoreRequirementCoverage } from '@/lib/agent/job-targeting/core-requirement-coverage'
 import { classifyTargetEvidence } from '@/lib/agent/job-targeting/evidence-classifier'
+import { buildLowFitWarningGate } from '@/lib/agent/job-targeting/low-fit-warning-gate'
 import { buildTargetRolePositioning } from '@/lib/agent/job-targeting/recoverable-validation'
 import { buildTargetedRewritePermissions } from '@/lib/agent/job-targeting/rewrite-permissions'
+import { buildSafeTargetingEmphasis } from '@/lib/agent/job-targeting/safe-targeting-emphasis'
 import { MAX_TARGETING_PLAN_ITEMS, shapeTargetJobDescription } from '@/lib/agent/job-targeting-retry'
 import { trackApiUsage } from '@/lib/agent/usage-tracker'
 import { openai } from '@/lib/openai/client'
@@ -146,6 +149,10 @@ export async function buildTargetingPlan(params: BuildTargetingPlanParams): Prom
  * TargetedRewritePermissions generation.
  */
 export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanInput): Promise<TargetingPlan> {
+  if (params.mode !== 'job_targeting' || params.rewriteIntent !== 'targeted_rewrite') {
+    throw new Error('buildTargetedRewritePlan only supports job_targeting targeted_rewrite flows.')
+  }
+
   if (!params.targetJobDescription.trim()) {
     throw new Error('buildTargetedRewritePlan requires a target job description for targeted rewrite.')
   }
@@ -160,18 +167,41 @@ export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanI
     sessionId: params.sessionId,
   })
   const rewritePermissions = buildTargetedRewritePermissions(targetEvidence)
+  const targetRolePositioning = buildTargetRolePositioning({
+    targetRole: basePlan.targetRole,
+    targetEvidence,
+    mustEmphasize: basePlan.mustEmphasize,
+    directClaimsAllowed: rewritePermissions.directClaimsAllowed,
+    careerFitEvaluation: params.careerFitEvaluation,
+  })
+  const safeTargetingEmphasis = buildSafeTargetingEmphasis({
+    targetEvidence,
+    rewritePermissions,
+    mustEmphasize: basePlan.mustEmphasize,
+  })
+  const coreRequirementCoverage = buildCoreRequirementCoverage({
+    targetJobDescription: params.targetJobDescription,
+    targetRole: basePlan.targetRole,
+    targetEvidence,
+    missingButCannotInvent: basePlan.missingButCannotInvent,
+    targetRolePositioning,
+  })
+  const lowFitWarningGate = buildLowFitWarningGate({
+    matchScore: params.gapAnalysis.matchScore,
+    careerFitEvaluation: params.careerFitEvaluation,
+    targetEvidence,
+    targetRolePositioning,
+    coreRequirementCoverage,
+  })
 
   return {
     ...basePlan,
     targetEvidence,
     rewritePermissions,
-    targetRolePositioning: buildTargetRolePositioning({
-      targetRole: basePlan.targetRole,
-      targetEvidence,
-      mustEmphasize: basePlan.mustEmphasize,
-      directClaimsAllowed: rewritePermissions.directClaimsAllowed,
-      careerFitEvaluation: params.careerFitEvaluation,
-    }),
+    safeTargetingEmphasis,
+    coreRequirementCoverage,
+    lowFitWarningGate,
+    targetRolePositioning,
   }
 }
 

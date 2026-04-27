@@ -13,6 +13,7 @@ import {
   isRecoverableValidationBlock,
   isSummaryOnlyRecoverableValidation,
 } from '@/lib/agent/job-targeting/recoverable-validation'
+import { applyLowFitWarningGateToValidation } from '@/lib/agent/job-targeting/low-fit-warning-gate'
 import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { rewriteSection } from '@/lib/agent/tools/rewrite-section'
 import { validateRewrite } from '@/lib/agent/tools/validate-rewrite'
@@ -165,8 +166,13 @@ function extractJobKeywords(params: {
 
 function classifyHighlightGenerationGate(params: {
   validationBlocked: boolean
+  lowFitRecoverableBlocked: boolean
   optimizedChanged: boolean
-}): 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' {
+}): 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state' {
+  if (params.lowFitRecoverableBlocked) {
+    return 'blocked_low_fit'
+  }
+
   if (params.validationBlocked) {
     return 'blocked_validation_failed'
   }
@@ -180,9 +186,10 @@ function classifyHighlightGenerationGate(params: {
 
 function logHighlightGenerationGate(params: {
   session: Session
-  gate: 'allowed' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state'
+  gate: 'allowed' | 'blocked_low_fit' | 'blocked_validation_failed' | 'blocked_unchanged_cv_state'
   jobKeywordsCount: number
   validationBlocked: boolean
+  lowFitRecoverableBlocked: boolean
   optimizedChanged: boolean
   targetRoleConfidence?: NonNullable<Session['agentState']['targetingPlan']>['targetRoleConfidence']
   targetRoleSource?: NonNullable<Session['agentState']['targetingPlan']>['targetRoleSource']
@@ -195,6 +202,7 @@ function logHighlightGenerationGate(params: {
     highlightGenerationDecision: params.gate,
     jobKeywordsCount: params.jobKeywordsCount,
     validationBlocked: params.validationBlocked,
+    lowFitRecoverableBlocked: params.lowFitRecoverableBlocked,
     optimizedChanged: params.optimizedChanged,
     targetRoleConfidence: params.targetRoleConfidence,
     targetRoleSource: params.targetRoleSource,
@@ -236,6 +244,19 @@ function countEvidenceLevels(targetEvidence: NonNullable<Session['agentState']['
     counts[evidence.evidenceLevel] = (counts[evidence.evidenceLevel] ?? 0) + 1
     return counts
   }, {})
+}
+
+function resolveEvidenceRatios(targetEvidence: NonNullable<Session['agentState']['targetingPlan']>['targetEvidence'] = []) {
+  const total = targetEvidence.length
+  const explicitEvidenceCount = targetEvidence.filter((evidence) => evidence.evidenceLevel === 'explicit').length
+  const unsupportedGapCount = targetEvidence.filter((evidence) => evidence.evidenceLevel === 'unsupported_gap').length
+
+  return {
+    explicitEvidenceCount,
+    unsupportedGapCount,
+    explicitEvidenceRatio: total > 0 ? explicitEvidenceCount / total : 0,
+    unsupportedGapRatio: total > 0 ? unsupportedGapCount / total : 0,
+  }
 }
 
 export async function runJobTargetingPipeline(session: Session): Promise<{
@@ -427,6 +448,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     targetFitAssessment,
     targetJobDescription,
   })
+  const evidenceRatios = resolveEvidenceRatios(targetingPlan.targetEvidence)
   trace.extraction = {
     targetRole: targetingPlan.targetRole,
     targetRoleConfidence: targetingPlan.targetRoleConfidence,
@@ -441,6 +463,24 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     evidenceLevelCounts: targetingPlan.targetEvidence
       ? countEvidenceLevels(targetingPlan.targetEvidence)
       : undefined,
+  }
+  trace.lowFitGate = {
+    evaluated: Boolean(targetingPlan.lowFitWarningGate),
+    triggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+    reason: targetingPlan.lowFitWarningGate?.reason,
+    matchScore: targetingPlan.lowFitWarningGate?.matchScore ?? gapAnalysisResult.matchScore,
+    riskLevel: targetingPlan.lowFitWarningGate?.riskLevel,
+    familyDistance: targetingPlan.lowFitWarningGate?.familyDistance,
+    explicitEvidenceCount: targetingPlan.lowFitWarningGate?.explicitEvidenceCount ?? evidenceRatios.explicitEvidenceCount,
+    unsupportedGapCount: targetingPlan.lowFitWarningGate?.unsupportedGapCount ?? evidenceRatios.unsupportedGapCount,
+    unsupportedGapRatio: targetingPlan.lowFitWarningGate?.unsupportedGapRatio ?? evidenceRatios.unsupportedGapRatio,
+    explicitEvidenceRatio: targetingPlan.lowFitWarningGate?.explicitEvidenceRatio ?? evidenceRatios.explicitEvidenceRatio,
+    coreRequirementCoverage: targetingPlan.lowFitWarningGate?.coreRequirementCoverage ?? {
+      total: targetingPlan.coreRequirementCoverage?.total ?? 0,
+      supported: targetingPlan.coreRequirementCoverage?.supported ?? 0,
+      unsupported: targetingPlan.coreRequirementCoverage?.unsupported ?? 0,
+      unsupportedSignals: targetingPlan.coreRequirementCoverage?.unsupportedSignals ?? [],
+    },
   }
 
   await persistAgentState(session, {
@@ -487,8 +527,31 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       emphasizeCount: targetingPlan.mustEmphasize.length,
       missingCount: targetingPlan.missingButCannotInvent.length,
       targetEvidenceCount: targetingPlan.targetEvidence?.length,
+      targetRolePermission: targetingPlan.targetRolePositioning?.permission,
+      unsupportedGapRatio: evidenceRatios.unsupportedGapRatio,
+      explicitEvidenceRatio: evidenceRatios.explicitEvidenceRatio,
+      lowFitGateTriggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+      lowFitGateReason: targetingPlan.lowFitWarningGate?.reason,
+      coreRequirementCoverageSupported: targetingPlan.coreRequirementCoverage?.supported,
+      coreRequirementCoverageUnsupported: targetingPlan.coreRequirementCoverage?.unsupported,
     }),
   )
+
+  logInfo('agent.job_targeting.low_fit_gate.evaluated', {
+    sessionId: session.id,
+    userId: session.userId,
+    workflowMode: 'job_targeting',
+    stage: 'targeting_plan',
+    targetRole: targetingPlan.targetRole,
+    matchScore: targetingPlan.lowFitWarningGate?.matchScore ?? gapAnalysisResult.matchScore,
+    riskLevel: targetingPlan.lowFitWarningGate?.riskLevel,
+    familyDistance: targetingPlan.lowFitWarningGate?.familyDistance,
+    unsupportedGapRatio: targetingPlan.lowFitWarningGate?.unsupportedGapRatio ?? evidenceRatios.unsupportedGapRatio,
+    explicitEvidenceRatio: targetingPlan.lowFitWarningGate?.explicitEvidenceRatio ?? evidenceRatios.explicitEvidenceRatio,
+    triggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+    reason: targetingPlan.lowFitWarningGate?.reason,
+    coreUnsupportedSignals: targetingPlan.lowFitWarningGate?.coreRequirementCoverage.unsupportedSignals ?? [],
+  })
 
   const rewriteResult = await rewriteResumeFull({
     mode: 'job_targeting',
@@ -629,6 +692,16 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
       })
     }
   }
+  validation = applyLowFitWarningGateToValidation({
+    validation,
+    lowFitWarningGate: targetingPlan.lowFitWarningGate,
+    targetRole: targetingPlan.targetRole,
+    targetRolePositioning: targetingPlan.targetRolePositioning,
+  })
+  validation = {
+    ...validation,
+    recoverable: validation.blocked && isRecoverableValidationBlock(validation),
+  }
   trace.rewrite = {
     sectionsAttempted: rewriteResult.diagnostics?.sectionAttempts
       ? Object.keys(rewriteResult.diagnostics.sectionAttempts)
@@ -650,17 +723,26 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     hardIssues: summarizeValidationIssues(validation.hardIssues),
     softWarnings: summarizeValidationIssues(validation.softWarnings),
     failureStage: validation.blocked ? 'validation' : undefined,
+    promotedWarnings: validation.promotedWarnings,
   }
   const optimizedAt = new Date().toISOString()
   const optimizedChanged = !cvStatesMatch(
     finalizedOptimizedCvState,
     previousOptimizedCvState ?? session.cvState,
   )
-  trace.validation.recoverable = validation.blocked ? optimizedChanged : undefined
+  trace.validation.recoverable = validation.blocked
+    ? isRecoverableValidationBlock(validation)
+    : undefined
+  const lowFitRecoverableBlocked = Boolean(
+    targetingPlan.lowFitWarningGate?.triggered
+    && validation.blocked
+    && validation.recoverable,
+  )
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
   const highlightGenerationGate = classifyHighlightGenerationGate({
     validationBlocked: validation.blocked,
+    lowFitRecoverableBlocked,
     optimizedChanged,
   })
   logHighlightGenerationGate({
@@ -668,6 +750,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     gate: highlightGenerationGate,
     jobKeywordsCount: jobKeywords.length,
     validationBlocked: validation.blocked,
+    lowFitRecoverableBlocked,
     optimizedChanged,
     targetRoleConfidence: targetingPlan.targetRoleConfidence,
     targetRoleSource: targetingPlan.targetRoleSource,
@@ -706,7 +789,12 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     jobKeywordsCount: jobKeywords.length,
   }
 
-  const blockedDraft = validation.blocked && optimizedChanged && isRecoverableValidationBlock(validation)
+  const blockedDraft = validation.blocked
+    && isRecoverableValidationBlock(validation)
+    && (
+      optimizedChanged
+      || targetingPlan.lowFitWarningGate?.triggered === true
+    )
     ? createBlockedTargetedRewriteDraft({
       sessionId: session.id,
       userId: session.userId,
@@ -727,6 +815,8 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         targetRole: targetingPlan.targetRole,
         validationIssues: validation.issues,
         targetEvidence: targetingPlan.targetEvidence,
+        lowFitWarningGate: targetingPlan.lowFitWarningGate,
+        directClaimsAllowed: targetingPlan.rewritePermissions?.directClaimsAllowed,
         originalProfileLabel: targetingPlan.targetRolePositioning?.safeRolePositioning.replace(/^Profissional com experiência em\s*/i, '').replace(/[.]$/u, ''),
       }),
       expiresAt: blockedDraft.expiresAt,
@@ -771,7 +861,9 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
   }
   await persistAgentState(session, nextAgentState)
   const highlightStatePersistedReason = validation.blocked
-    ? 'validation_failed'
+    ? lowFitRecoverableBlocked
+      ? 'low_fit_recoverable_block'
+      : 'validation_failed'
     : !shouldGenerateHighlights
       ? 'not_generated_for_unchanged_cv_state'
       : highlightDetectionOutcome?.resultKind === 'valid_empty'
@@ -789,7 +881,7 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
     highlightState: nextAgentState.highlightState,
     highlightDetectionInvoked: shouldGenerateHighlights,
     highlightStateGenerated: shouldGenerateHighlights && Boolean(nextHighlightState),
-    highlightStatePersisted: Boolean(nextAgentState.highlightState),
+    highlightStatePersisted: !validation.blocked && Boolean(nextAgentState.highlightState),
     highlightStatePersistedReason,
     highlightDetectionOutcome,
   })
@@ -805,6 +897,9 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         recoverable: Boolean(recoverableValidationBlock),
         issueSections: validationIssueSections.join(', ') || undefined,
         issueMessages: validationIssueMessages.join(' | ') || undefined,
+        promotedWarningTypes: validation.promotedWarnings?.map((warning) => warning.issueType).join(', ') || undefined,
+        lowFitGateTriggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+        lowFitGateReason: targetingPlan.lowFitWarningGate?.reason,
         targetRole: targetingPlan.targetRole,
         targetRoleConfidence: targetingPlan.targetRoleConfidence,
         targetRoleSource: targetingPlan.targetRoleSource,
@@ -826,6 +921,8 @@ export async function runJobTargetingPipeline(session: Session): Promise<{
         matchScore: gapAnalysisResult.matchScore,
         riskLevel: careerFitEvaluation?.riskLevel,
         familyDistance: careerFitEvaluation?.signals.familyDistance,
+        lowFitGateTriggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+        lowFitGateReason: targetingPlan.lowFitWarningGate?.reason,
       })
     }
     logJobTargetingPipelineTrace(trace, 'blocked', {
