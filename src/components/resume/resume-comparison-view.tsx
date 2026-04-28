@@ -658,7 +658,9 @@ export function ResumeComparisonView({
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <p className="text-sm text-amber-900 dark:text-amber-100">
-              Este currículo foi gerado com pontos de atenção. Revise os itens abaixo antes de enviar.
+              {hasInlineHighlights
+                ? "Este currículo foi gerado com pontos de atenção. Revise os trechos marcados antes de enviar."
+                : "Este currículo foi gerado com pontos de atenção. Revise os itens abaixo antes de enviar."}
             </p>
           </div>
         </div>

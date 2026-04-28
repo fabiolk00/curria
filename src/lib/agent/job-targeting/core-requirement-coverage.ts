@@ -49,7 +49,7 @@ const GENERIC_REQUIREMENT_PATTERNS = [
   /^vivencia profissional$/i,
   /^perfil analitico$/i,
 ]
-const REQUIREMENT_PREFIX_RE = /^(?:experi[eê]ncia(?:\s+forte)?\s+(?:com|em)|experience\s+with|strong\s+experience\s+with|viv[eê]ncia\s+(?:com|em)|conhecimento\s+(?:em|com)|dom[ií]nio\s+(?:de|em)|profissional\s+com|atua[cç][aã]o\s+com|atuar[aá]?\s+com|ser[aá]\s+respons[aá]vel\s+por|respons[aá]vel\s+por|constru[cç][aã]o\s+e\s+manuten[cç][aã]o\s+de|manuten[cç][aã]o\s+de|desenvolvimento\s+de|produ[cç][aã]o\s+de|mais\s+de\s+\d+\s+anos\s+de\s+experi[eê]ncia\s+(?:em|com))\s+/iu
+const REQUIREMENT_PREFIX_RE = /^(?:experi[eê]ncia(?:\s+forte)?\s+(?:com|em)|experience\s+with|strong\s+experience\s+with|viv[eê]ncia\s+(?:com|em)|conhecimento\s+(?:em|com)|dom[ií]nio\s+(?:de|em)|profissional\s+com|atua[cç][aã]o\s+com|atuar[aá]?\s+com|ser[aá]\s+respons[aá]vel\s+por|respons[aá]vel\s+por|constru[cç][aã]o\s+e\s+manuten[cç][aã]o\s+de|manuten[cç][aã]o\s+de|desenvolvimento\s+de|mais\s+de\s+\d+\s+anos\s+de\s+experi[eê]ncia\s+(?:em|com))\s+/iu
 const YEARS_PREFIX_RE = /(?:mais\s+de\s+)?(\d+)\+?\s*(?:anos|years)(?:\s+de\s+experi[eê]ncia)?\s+(?:em|com|with)\s+(.+)/iu
 const YEARS_SUFFIX_RE = /^(.+?)\s+com\s+(?:mais\s+de\s+)?(\d+)\+?\s*(?:anos|years)(?:\s+de\s+experi[eê]ncia)?$/iu
 const PARENS_RE = /\(([^)]+)\)/u
@@ -63,6 +63,38 @@ const WEAK_DISPLAY_SIGNAL_PATTERNS = [
   /^fazer o acompanhamento$/i,
   /^acompanhamento$/i,
 ]
+const STANDALONE_MODIFIER_TOKENS = new Set([
+  'administrativo',
+  'administrativos',
+  'analitico',
+  'analiticos',
+  'comercial',
+  'comerciais',
+  'corporativo',
+  'corporativos',
+  'digital',
+  'digitais',
+  'estrategico',
+  'estrategicos',
+  'externo',
+  'externos',
+  'gerencial',
+  'gerenciais',
+  'interno',
+  'internos',
+  'institucional',
+  'institucionais',
+  'legal',
+  'legais',
+  'operacional',
+  'operacionais',
+  'promocional',
+  'promocionais',
+  'tecnico',
+  'tecnicos',
+])
+const ACTION_VERB_RE = /\b(acompanhar|analisar|apoiar|build|criar|define|definir|develop|desenvolver|elaborar|execute|executar|gerenciar|implement|implementar|integrar|lead|liderar|maintain|manter|manage|optimize|otimizar|planejar|support)\b/iu
+const SEMANTIC_OBJECT_RE = /[A-Z]{2,}|[a-z]+(?:[/.-][a-z0-9]+)+|\b[\p{L}\p{N}]{3,}\b/iu
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
@@ -80,80 +112,93 @@ function isGenericRequirement(text: string): boolean {
 
 function isWeakDisplaySignal(text: string): boolean {
   const normalized = normalizeSemanticText(text)
-  return normalized.length < 4
+  return normalized.length < 2
     || WEAK_DISPLAY_SIGNAL_PATTERNS.some((pattern) => pattern.test(normalized))
 }
 
-function humanizeDisplaySignal(requirement: CoreRequirement): string | null {
-  const signal = requirement.signal.trim()
-  const normalized = normalizeSemanticText(signal)
+function wordCount(text: string): number {
+  return normalizeSemanticText(text).split(/\s+/u).filter(Boolean).length
+}
 
-  if (!signal || isPureSectionHeading(signal) || isGenericRequirement(signal) || isWeakDisplaySignal(signal)) {
+function isStandaloneModifier(text: string): boolean {
+  const tokens = normalizeSemanticText(text).split(/\s+/u).filter(Boolean)
+  return tokens.length > 0 && tokens.length <= 2 && tokens.every((token) => STANDALONE_MODIFIER_TOKENS.has(token))
+}
+
+function hasActionVerb(text: string): boolean {
+  return ACTION_VERB_RE.test(normalizeSemanticText(text))
+}
+
+function hasSemanticObject(text: string): boolean {
+  const normalized = normalizeSemanticText(text)
+  return SEMANTIC_OBJECT_RE.test(text) || normalized.split(/\s+/u).filter(Boolean).length > 1
+}
+
+function cleanDisplaySignal(signal: string): string | null {
+  const cleaned = signal
+    .replace(/^[\-•*]\s*/u, '')
+    .replace(/\s+/gu, ' ')
+    .replace(/[.]+$/u, '')
+    .trim()
+
+  if (
+    !cleaned
+    || isPureSectionHeading(cleaned)
+    || isGenericRequirement(cleaned)
+    || isWeakDisplaySignal(cleaned)
+    || isStandaloneModifier(cleaned)
+  ) {
     return null
   }
 
-  if (/\bmarketing\b/i.test(normalized)) {
-    if (/\b(planejar|planejamento|acoes?|ações?)\b/i.test(normalized)) {
-      return 'Planejamento de ações de marketing'
-    }
-    if (/\bcampanhas?\b/i.test(normalized)) {
-      return 'Campanhas comerciais e institucionais'
-    }
-    return 'Marketing'
-  }
+  return cleaned.charAt(0).toLocaleUpperCase('pt-BR') + cleaned.slice(1)
+}
 
-  if (/\beventos?\b/i.test(normalized)) {
-    return 'Eventos'
-  }
+function scoreDisplaySignal(requirement: CoreRequirement): number {
+  const signal = requirement.signal
+  const words = wordCount(signal)
+  let score = 0
 
-  if (/\b(campanhas?|comerciais?|institucionais?)\b/i.test(normalized)) {
-    return 'Campanhas comerciais e institucionais'
-  }
+  if (requirement.importance === 'core') score += 30
+  if (requirement.evidenceLevel === 'unsupported_gap') score += 10
+  if (requirement.rewritePermission === 'must_not_claim') score += 5
+  if (words >= 2 && words <= 8) score += 10
+  if (hasActionVerb(signal)) score += 8
+  if (hasSemanticObject(signal)) score += 6
+  if (words === 1) score -= 4
+  if (isWeakDisplaySignal(signal)) score -= 20
+  if (isStandaloneModifier(signal)) score -= 30
+  if (isPureSectionHeading(signal)) score -= 100
+  if (isGenericRequirement(signal)) score -= 100
 
-  if (/\b(cronogramas?|planos?\s+de\s+acao|planos?\s+de\s+ação)\b/i.test(normalized)) {
-    return 'Cronogramas e planos de ação'
-  }
-
-  if (/\b(publico-alvo|público-alvo|indicadores?|desempenho)\b/i.test(normalized)) {
-    return 'Público-alvo e indicadores de desempenho'
-  }
-
-  if (/\b(orcamento|orçamento|custos?)\b/i.test(normalized)) {
-    return 'Orçamento e custos'
-  }
-
-  if (/\b(conteudo|conteúdo|canais?\s+externos?)\b/i.test(normalized)) {
-    return 'Conteúdo para canais externos'
-  }
-
-  return signal
+  return score
 }
 
 export function buildCoreRequirementDisplaySignals(requirements: CoreRequirement[]): string[] {
-  const signals = dedupe(
-    requirements
-      .filter((requirement) => requirement.importance === 'core')
-      .filter((requirement) => !SUPPORTED_CORE_LEVELS.has(requirement.evidenceLevel)
-        || requirement.rewritePermission === 'must_not_claim')
-      .map(humanizeDisplaySignal)
-      .filter((signal): signal is string => Boolean(signal)),
-  )
+  const candidates = requirements
+    .filter((requirement) => requirement.importance === 'core')
+    .filter((requirement) => !SUPPORTED_CORE_LEVELS.has(requirement.evidenceLevel)
+      || requirement.rewritePermission === 'must_not_claim')
+    .map((requirement, index) => ({
+      signal: cleanDisplaySignal(requirement.signal),
+      score: scoreDisplaySignal(requirement),
+      canonical: buildCanonicalSignal(requirement.signal),
+      index,
+    }))
+    .filter((entry): entry is { signal: string; score: number; canonical: string; index: number } => (
+      Boolean(entry.signal) && Boolean(entry.canonical) && entry.score > 0
+    ))
 
-  const priority = (signal: string): number => {
-    if (signal === 'Marketing') return 1
-    if (signal === 'Eventos') return 2
-    if (/^Planejamento/u.test(signal)) return 3
-    if (/^Campanhas/u.test(signal)) return 4
-    if (/^Cronogramas/u.test(signal)) return 5
-    if (/^Público-alvo/u.test(signal)) return 6
-    if (/^Orçamento/u.test(signal)) return 7
-    if (/^Conteúdo/u.test(signal)) return 8
-    return 50
-  }
+  const strongestByCanonical = new Map<string, { signal: string; score: number; index: number }>()
+  candidates.forEach((candidate) => {
+    const current = strongestByCanonical.get(candidate.canonical)
+    if (!current || candidate.score > current.score || (candidate.score === current.score && candidate.index < current.index)) {
+      strongestByCanonical.set(candidate.canonical, candidate)
+    }
+  })
 
-  return signals
-    .map((signal, index) => ({ signal, index }))
-    .sort((left, right) => priority(left.signal) - priority(right.signal) || left.index - right.index)
+  return Array.from(strongestByCanonical.values())
+    .sort((left, right) => right.score - left.score || left.index - right.index)
     .map((entry) => entry.signal)
     .slice(0, MAX_DISPLAY_REQUIREMENTS)
 }
@@ -167,6 +212,61 @@ function normalizeRequirementSignal(value: string): string {
     .trim()
 }
 
+function isStandaloneRequirement(text: string): boolean {
+  const normalized = normalizeSemanticText(text)
+  if (
+    !normalized
+    || isPureSectionHeading(text)
+    || isGenericRequirement(text)
+    || isWeakDisplaySignal(text)
+    || isStandaloneModifier(text)
+  ) {
+    return false
+  }
+
+  return normalized.length >= 2 && wordCount(text) <= 8
+}
+
+function shouldSplitOnConjunction(left: string, right: string): boolean {
+  const leftSignal = normalizeRequirementSignal(left)
+  const rightSignal = normalizeRequirementSignal(right)
+
+  if (!isStandaloneRequirement(leftSignal) || !isStandaloneRequirement(rightSignal)) {
+    return false
+  }
+
+  if (isStandaloneModifier(leftSignal) || isStandaloneModifier(rightSignal)) {
+    return false
+  }
+
+  if (hasActionVerb(leftSignal) && !hasActionVerb(rightSignal) && wordCount(rightSignal) === 1) {
+    return false
+  }
+
+  return true
+}
+
+function splitOnIndependentConjunction(fragment: string): string[] {
+  const parts = fragment.split(/\s+\b(?:e|and)\b\s+/iu).map((part) => part.trim()).filter(Boolean)
+  if (parts.length <= 1) {
+    return [fragment.trim()].filter(Boolean)
+  }
+
+  const result: string[] = []
+  let current = parts[0] ?? ''
+
+  parts.slice(1).forEach((part) => {
+    if (shouldSplitOnConjunction(current, part)) {
+      result.push(current)
+      current = part
+    } else {
+      current = `${current} e ${part}`
+    }
+  })
+
+  return [...result, current].map((part) => part.trim()).filter(Boolean)
+}
+
 function splitCompositeFragments(line: string): string[] {
   return line
     .replace(/[•·]/gu, ',')
@@ -175,7 +275,7 @@ function splitCompositeFragments(line: string): string[] {
     .flatMap((fragment) => (
       /\b(?:constru[cç][aã]o|construction)\s+\b(?:e|and)\b\s+\b(?:manuten[cç][aã]o|maintenance)\b\s+\bde\b/iu.test(fragment)
         ? [fragment]
-        : fragment.split(/\s+\b(?:e|and)\b\s+/iu)
+        : splitOnIndependentConjunction(fragment)
     ))
     .map((fragment) => fragment.trim())
     .filter(Boolean)

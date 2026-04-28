@@ -251,6 +251,7 @@ describe('ResumeComparisonView', () => {
     )
 
     expect(screen.getAllByText('Pontos para revisar').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Revise os trechos marcados antes de enviar/i)).toBeInTheDocument()
     expect(screen.queryByText('Match da vaga')).not.toBeInTheDocument()
     expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Cargo alvo assumido com pouca evidência')
     const highlighted = screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')
@@ -298,6 +299,8 @@ describe('ResumeComparisonView', () => {
 
     const panel = screen.getByTestId('override-review-panel')
     expect(screen.getByText(/Este currículo foi gerado com pontos de atenção/i)).toBeInTheDocument()
+    expect(screen.getByText(/Revise os itens abaixo antes de enviar/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Revise os trechos marcados antes de enviar/i)).not.toBeInTheDocument()
     expect(panel).toHaveTextContent('Pontos para revisar')
     expect(panel).toHaveTextContent('Skill sem evidência suficiente')
     expect(panel).toHaveTextContent('Cargo alvo assumido com pouca evidência')

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import { buildCoreRequirementCoverage } from '@/lib/agent/job-targeting/core-requirement-coverage'
@@ -12,7 +14,7 @@ function buildTargetEvidence(): TargetEvidence[] {
       rewritePermission: 'can_claim_directly',
       matchedResumeTerms: ['Git'],
       supportingResumeSpans: ['Git'],
-      rationale: 'Evidência explícita.',
+      rationale: 'Evidencia explicita.',
       confidence: 1,
       allowedRewriteForms: ['Git'],
       forbiddenRewriteForms: [],
@@ -25,7 +27,7 @@ function buildTargetEvidence(): TargetEvidence[] {
       rewritePermission: 'can_claim_directly',
       matchedResumeTerms: ['APIs REST'],
       supportingResumeSpans: ['APIs REST'],
-      rationale: 'Evidência explícita.',
+      rationale: 'Evidencia explicita.',
       confidence: 1,
       allowedRewriteForms: ['APIs REST'],
       forbiddenRewriteForms: [],
@@ -38,7 +40,7 @@ function buildTargetEvidence(): TargetEvidence[] {
       rewritePermission: 'must_not_claim',
       matchedResumeTerms: [],
       supportingResumeSpans: [],
-      rationale: 'Sem evidência real.',
+      rationale: 'Sem evidencia real.',
       confidence: 0.99,
       allowedRewriteForms: [],
       forbiddenRewriteForms: ['Java'],
@@ -48,12 +50,19 @@ function buildTargetEvidence(): TargetEvidence[] {
 }
 
 describe('core requirement coverage', () => {
+  it('does not hardcode domain-specific display rules in the requirement coverage source', () => {
+    const source = readFileSync('src/lib/agent/job-targeting/core-requirement-coverage.ts', 'utf8')
+
+    expect(source).not.toMatch(/\bif\s*\([^)]*(marketing|eventos|campanhas|java|juridico|financas|vendas|saude|operacoes|logistica)/iu)
+    expect(source).not.toMatch(/Planejamento de acoes de marketing|Campanhas comerciais|Conteudo para canais externos/iu)
+  })
+
   it('separates unsupported Java core requirements from peripheral supported evidence', () => {
     const coverage = buildCoreRequirementCoverage({
       targetJobDescription: [
         'Cargo: Desenvolvedor Java',
-        'Requisitos obrigatórios: Java com mais de 5 anos, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsserviços, Docker, CI/CD e testes automatizados.',
-        'Desejável: cloud e observabilidade.',
+        'Requisitos obrigatorios: Java com mais de 5 anos, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsservicos, Docker, CI/CD e testes automatizados.',
+        'Desejavel: cloud e observabilidade.',
       ].join('\n'),
       targetRole: 'Desenvolvedor Java',
       targetEvidence: buildTargetEvidence(),
@@ -62,7 +71,7 @@ describe('core requirement coverage', () => {
         targetRole: 'Desenvolvedor Java',
         permission: 'must_not_claim_target_role',
         reason: 'career_fit_high_risk',
-        safeRolePositioning: 'Profissional com experiência em BI, SQL e APIs REST.',
+        safeRolePositioning: 'Profissional com experiencia em BI, SQL e APIs REST.',
         forbiddenRoleClaims: ['Desenvolvedor Java'],
       },
     })
@@ -75,23 +84,26 @@ describe('core requirement coverage', () => {
       'Spring Boot',
       'JPA/Hibernate',
       'Kafka/RabbitMQ',
-      'microsserviços',
+      'microsservicos',
       'Docker',
       'CI/CD',
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay.length).toBeLessThanOrEqual(8)
-    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(
-      coverage.unsupportedSignals.slice(0, coverage.topUnsupportedSignalsForDisplay.length),
-    )
+    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
+      '5+ anos de Java',
+      'Spring Boot',
+      'JPA/Hibernate',
+      'Kafka/RabbitMQ',
+    ]))
   })
 
   it('filters pure headings from the requirement list', () => {
     const coverage = buildCoreRequirementCoverage({
       targetJobDescription: [
-        'Requisitos e qualificações',
+        'Requisitos e qualificacoes',
         'Responsabilidades',
         'Diferenciais',
-        'Experiência com SQL e Power BI.',
+        'Experiencia com SQL e Power BI.',
       ].join('\n'),
       targetRole: 'Analista de BI',
       targetEvidence: buildTargetEvidence(),
@@ -100,13 +112,13 @@ describe('core requirement coverage', () => {
 
     expect(coverage.requirements.map((requirement) => requirement.signal)).not.toEqual(expect.arrayContaining([
       'Requisitos',
-      'qualificações',
+      'qualificacoes',
       'Responsabilidades',
       'Diferenciais',
     ]))
   })
 
-  it('extracts core requirements from non-technical marketing and events vacancies', () => {
+  it('extracts core requirements from non-technical vacancies without display labels', () => {
     const coverage = buildCoreRequirementCoverage({
       targetJobDescription: [
         'Cargo: Analista de Marketing e Eventos',
@@ -125,8 +137,7 @@ describe('core requirement coverage', () => {
 
     expect(coverage.total).toBeGreaterThan(0)
     expect(coverage.unsupportedSignals).toEqual(expect.arrayContaining([
-      'Planejar campanhas de marketing',
-      'comunicacao',
+      'Planejar campanhas de marketing e comunicacao',
       'briefing',
       'relacionamento com fornecedores',
       'midias sociais',
@@ -134,14 +145,14 @@ describe('core requirement coverage', () => {
       'eventos corporativos',
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
-      'Planejamento de ações de marketing',
-      'Eventos',
-      'Conteúdo para canais externos',
+      'Planejar campanhas de marketing e comunicacao',
+      'Criar conteudo para canais externos',
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
-      'atribuições',
+      'atribuicoes',
       'externos',
       'institucionais',
+      'promocional',
     ]))
     expect(coverage.requirements.map((requirement) => requirement.signal)).not.toEqual(expect.arrayContaining([
       'Requisitos',
@@ -149,9 +160,94 @@ describe('core requirement coverage', () => {
     ]))
   })
 
+  it('keeps modifier pairs intact and avoids loose display fragments', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: [
+        'Responsabilidades',
+        '- Planejar acoes de comunicacao institucional e promocional.',
+        '- Desenvolver estrategias para encontros internos e externos.',
+        '- Apoiar producao de materiais comerciais e institucionais.',
+        '- Gerenciar custos e forecast.',
+      ].join('\n'),
+      targetRole: 'Analista',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.unsupportedSignals).toEqual(expect.arrayContaining([
+      'Planejar acoes de comunicacao institucional e promocional',
+      'Desenvolver estrategias para encontros internos e externos',
+      'Apoiar producao de materiais comerciais e institucionais',
+    ]))
+    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
+      'Planejar acoes de comunicacao institucional e promocional',
+      'Desenvolver estrategias para encontros internos e externos',
+      'Apoiar producao de materiais comerciais e institucionais',
+    ]))
+    expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
+      'promocional',
+      'externos',
+      'institucionais',
+    ]))
+  })
+
+  it('splits independent conjunction requirements without domain rules', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: [
+        'Requisitos',
+        '- Vivencia com Python e SQL.',
+        '- Conhecimento em Git e Docker.',
+        '- Experiencia com contratos e compliance.',
+        '- Experiencia com recrutamento e selecao.',
+      ].join('\n'),
+      targetRole: 'Analista',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.unsupportedSignals).toEqual(expect.arrayContaining([
+      'Python',
+      'SQL',
+      'Git',
+      'Docker',
+      'contratos',
+      'compliance',
+      'recrutamento',
+      'selecao',
+    ]))
+  })
+
+  it.each([
+    ['Tecnologia backend', 'Requisitos: Experiencia com Spring Boot, APIs REST, bancos relacionais e mensageria.'],
+    ['Juridico', 'Requisitos: Elaborar contratos, analisar riscos regulatorios e acompanhar compliance.'],
+    ['Financas', 'Responsabilidades: Analisar DRE, gerenciar forecast e apoiar fechamento contabil.'],
+    ['Operacoes', 'Responsabilidades: Otimizar processos, acompanhar indicadores e gerenciar fornecedores.'],
+    ['RH', 'Responsabilidades: Executar recrutamento e selecao, acompanhar clima e apoiar liderancas.'],
+    ['Vendas', 'Responsabilidades: Gerenciar funil comercial, analisar CRM e executar negociacoes.'],
+  ])('builds clean display signals for %s vacancies', (_domain, targetJobDescription) => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription,
+      targetRole: 'Analista',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.topUnsupportedSignalsForDisplay.length).toBeGreaterThan(0)
+    expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
+      'Requisitos',
+      'Responsabilidades',
+      'externos',
+      'institucionais',
+      'promocional',
+    ]))
+    coverage.topUnsupportedSignalsForDisplay.forEach((signal) => {
+      expect(signal.trim().length).toBeGreaterThan(1)
+    })
+  })
+
   it('breaks compound technical requirements into clean atomic signals', () => {
     const coverage = buildCoreRequirementCoverage({
-      targetJobDescription: 'Experiência com Spring Boot, construção e manutenção de APIs REST, JPA/Hibernate, bancos relacionais e mensageria (Kafka/RabbitMQ)',
+      targetJobDescription: 'Experiencia com Spring Boot, construcao e manutencao de APIs REST, JPA/Hibernate, bancos relacionais e mensageria (Kafka/RabbitMQ)',
       targetRole: 'Desenvolvedor Java',
       targetEvidence: buildTargetEvidence(),
       missingButCannotInvent: [],
@@ -169,7 +265,7 @@ describe('core requirement coverage', () => {
 
   it('extracts both the technology and the years-of-experience requirement', () => {
     const coverage = buildCoreRequirementCoverage({
-      targetJobDescription: 'Profissional com mais de 5 anos de experiência em Java',
+      targetJobDescription: 'Profissional com mais de 5 anos de experiencia em Java',
       targetRole: 'Desenvolvedor Java',
       targetEvidence: buildTargetEvidence(),
       missingButCannotInvent: [],
