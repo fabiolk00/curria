@@ -55,6 +55,8 @@ describe('core requirement coverage', () => {
     const source = readFileSync('src/lib/agent/job-targeting/core-requirement-coverage.ts', 'utf8')
     const forbiddenRuntimePatterns = [
       /if\s*\([^)]*vendas/i,
+      /if\s*\([^)]*comercial/i,
+      /if\s*\([^)]*crm/i,
       /if\s*\([^)]*marketing/i,
       /if\s*\([^)]*java/i,
       /if\s*\([^)]*financeiro/i,
@@ -156,7 +158,7 @@ describe('core requirement coverage', () => {
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
       'Planejar campanhas de marketing e comunicacao',
-      'Criar conteudo para canais externos',
+      'Criar conteudo para canais externos e campanhas institucionais',
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
       'atribuicoes',
@@ -263,7 +265,6 @@ describe('core requirement coverage', () => {
 
     expect(coverage.requirements.map((requirement) => requirement.signal)).toEqual(expect.arrayContaining([
       'Spring Boot',
-      'APIs REST',
       'JPA/Hibernate',
       'bancos relacionais e mensageria',
       'Kafka/RabbitMQ',
@@ -334,16 +335,13 @@ describe('core requirement coverage', () => {
     })
 
     expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
-      'Manter cadastros de clientes atualizados',
-      'Acompanhar carteira de clientes',
+      'Manter cadastros de clientes atualizados e acompanhar carteira de clientes',
       'Monitorar estratégias de repasse de preço',
       'Cumprir metas de vendas estabelecidas',
-      'Construir relacionamento com clientes',
-      'Executar planos acordados com clientes',
+      'Construir relacionamento com clientes e executar planos acordados com clientes',
       'Negociar instalação de equipamentos',
       'Espaços para exposição de produtos e materiais de merchandising',
-      'Acompanhar retornos, entregas',
-      'Pendências de produtos',
+      'Acompanhar retornos, entregas e pendências de produtos',
     ]))
     expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
       'Aplicar',
@@ -388,11 +386,10 @@ describe('core requirement coverage', () => {
       'Cumprir metas de vendas estabelecidas',
       'Implementar atividades para geração de demanda',
       'Construir relacionamento com clientes',
-      'Executar planos acordados com clientes',
+      'Executar planos acordados com clientes e reciprocidades dos acordos comerciais',
       'Negociar instalação de equipamentos',
       'Espaços para exposição de produtos e materiais de merchandising',
-      'Acompanhar retornos, entregas',
-      'Pendências de produtos',
+      'Acompanhar retornos, entregas e pendências de produtos',
       'Ensino médio completo',
       'Vendas ou área comercial',
       'Obrigatório CNH B e veículo próprio',
@@ -425,6 +422,60 @@ describe('core requirement coverage', () => {
       'Kafka',
       'Docker',
       'CI/CD',
+    ]))
+  })
+
+  it('builds a mixed human display list from the low-fit pipeline trace vacancy', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: [
+        'E o seu dia a dia como será? 💼',
+        '',
+        'Prospectar novos leads de acordo com o ICP pré-definido;',
+        'Negociar e fechar vendas com novos clientes;',
+        'Mapear e identificar novas oportunidades com clientes existentes;',
+        'Negociar novos fluxos com os clientes existentes;',
+        'Realizar reuniões para apresentação e fechamento de vendas;',
+        'Manter um fluxo de cadência e acompanhamento do processo comercial, com follow-ups a fim de acompanhar e avançar no funil, sempre atualizando o CRM;',
+        'Acompanhar os indicadores de margem %, volume e margem absoluta dos clientes da carteira;',
+        'Acompanhar a carteira nos primeiros meses do cliente, para garantir o volume negociado e evitar o churn;',
+        'Realizar visitas comerciais, para apresentações da solução e fechamento de venda.',
+        '',
+        'Requisitos e qualificações',
+        '',
+        'O que esperamos de você? 🎓',
+        '',
+        'Formação superior completa em Administração, Logística, Marketing ou áreas afins;',
+        'Essencial experiência na área comercial;',
+        'Conhecimento em técnicas de vendas;',
+        'Experiência com gestão de carteira de clientes;',
+        'Autonomia e Hands on;',
+        'Habilidade em se comunicar com diversos públicos;',
+        'Adaptação a ambientes dinâmicos.',
+      ].join('\n'),
+      targetRole: 'Executivo De Vendas',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    const display = coverage.topUnsupportedSignalsForDisplay
+    expect(display).toEqual(expect.arrayContaining([
+      'Prospectar novos leads de acordo com o ICP pré-definido',
+      'Negociar e fechar vendas com novos clientes',
+      'Mapear e identificar novas oportunidades com clientes existentes',
+      'Realizar reuniões para apresentação e fechamento de vendas',
+      'Realizar visitas comerciais',
+      'Formação superior completa em Administração, Logística, Marketing ou áreas afins',
+      'Experiência na área comercial',
+      'Conhecimento em técnicas de vendas',
+      'Gestão de carteira de clientes',
+    ]))
+    expect(display).not.toEqual(expect.arrayContaining([
+      'E o seu dia a dia como será? 💼',
+      'O que esperamos de você? 🎓',
+      'Requisitos e qualificações',
+      'Logística',
+      'Marketing ou áreas afins',
+      'técnicas de vendas',
     ]))
   })
 })

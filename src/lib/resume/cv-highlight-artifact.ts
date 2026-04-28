@@ -122,8 +122,15 @@ export type CvHighlightState = {
   generatedAt: string
 }
 
+export type ReviewIssueRootCause =
+  | 'low_fit_target_mismatch'
+  | 'unsupported_claim'
+  | 'missing_required_evidence'
+  | 'language_fidelity'
+
 export type ReviewWarningItem = {
   id: string
+  kind?: ReviewIssueRootCause
   severity: 'review' | 'caution' | 'risk'
   section: 'summary' | 'experience' | 'skills' | 'education' | 'certifications' | 'general'
   sectionLabel?: string
@@ -231,6 +238,7 @@ const cvHighlightStateSchema = z.object({
   highlightMode: z.enum(['normal_job_match', 'override_review']).optional(),
   reviewItems: z.array(z.object({
     id: z.string().min(1),
+    kind: z.enum(['low_fit_target_mismatch', 'unsupported_claim', 'missing_required_evidence', 'language_fidelity']).optional(),
     severity: z.enum(['review', 'caution', 'risk']),
     section: z.enum(['summary', 'experience', 'skills', 'education', 'certifications', 'general']),
     sectionLabel: z.string().min(1).optional(),

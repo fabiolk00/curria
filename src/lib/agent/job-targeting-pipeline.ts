@@ -1130,15 +1130,33 @@ export async function runJobTargetingPipeline(
         cvState: finalizedOptimizedCvState,
       })
       const summary = summarizeHighlightState(nextHighlightState)
+      const reviewCards = nextHighlightState.reviewItems ?? []
+      const lowFitCard = reviewCards.find((item) => item.kind === 'low_fit_target_mismatch')
+      if (lowFitCard) {
+        logInfo('agent.highlight_state.override_review.card_built', {
+          sessionId: session.id,
+          cvVersionId: undefined,
+          acceptedLowFit: options?.userAcceptedLowFit === true,
+          cardKind: lowFitCard.kind,
+          targetRole: lowFitCard.targetRole,
+          jobRequirementCount: lowFitCard.jobRequirements?.length ?? 0,
+          missingEvidenceCount: lowFitCard.missingEvidence?.length ?? lowFitCard.unsupportedRequirements?.length ?? 0,
+          provenProfilePresent: Boolean(lowFitCard.provenProfile ?? lowFitCard.originalProfileLabel),
+          sourceIssueCount: validation.issues.length,
+          dedupedCardCount: reviewCards.length,
+        })
+      }
       logInfo('agent.highlight_state.override_review.completed', {
         sessionId: session.id,
         cvVersionId: undefined,
         acceptedLowFit: options?.userAcceptedLowFit === true,
         fallbackUsed: acceptedLowFitFallbackUsed,
         issueCount: validation.issues.length,
-        reviewCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'review').length ?? 0,
-        cautionCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'caution').length ?? 0,
-        riskCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'risk').length ?? 0,
+        reviewCardCount: reviewCards.length,
+        reviewCount: reviewCards.filter((item) => item.severity === 'review').length,
+        cautionCount: reviewCards.filter((item) => item.severity === 'caution').length,
+        riskCount: validation.issues.length,
+        highlightRangeCount: summary.highlightStateResolvedRangeCount,
         overrideReviewHighlightCount: summary.highlightStateResolvedRangeCount,
       })
     } catch (error) {

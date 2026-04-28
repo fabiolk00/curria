@@ -262,6 +262,78 @@ describe('buildOverrideReviewHighlightState', () => {
       'pendências de produtos da sua área',
     ]))
   })
+
+  it('consolidates low-fit soft warnings into one target mismatch review card', () => {
+    const session = buildSession({
+      validationOverride: {
+        enabled: true,
+        acceptedAt: '2026-04-28T00:00:00.000Z',
+        acceptedByUserId: 'usr_123',
+        validationIssueCount: 2,
+        hardIssueCount: 0,
+        targetRole: 'Executivo De Vendas',
+        acceptedLowFit: true,
+        issueTypes: ['summary_skill_without_evidence', 'target_role_overclaim'],
+        issues: [
+          {
+            severity: 'medium',
+            section: 'summary',
+            issueType: 'summary_skill_without_evidence',
+            message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
+          },
+          {
+            severity: 'medium',
+            section: 'summary',
+            issueType: 'target_role_overclaim',
+            message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+          },
+        ],
+      },
+      targetingPlan: {
+        ...buildSession().agentState.targetingPlan!,
+        targetRole: 'Executivo De Vendas',
+        targetRolePositioning: {
+          targetRole: 'Executivo De Vendas',
+          permission: 'must_not_claim_target_role',
+          reason: 'career_fit_high_risk',
+          safeRolePositioning: 'Profissional com SQL e Power BI.',
+          forbiddenRoleClaims: ['Executivo De Vendas'],
+        },
+        lowFitWarningGate: {
+          triggered: true,
+          matchScore: 14,
+          riskLevel: 'high',
+          familyDistance: 'distant',
+          explicitEvidenceCount: 0,
+          unsupportedGapCount: 8,
+          unsupportedGapRatio: 1,
+          explicitEvidenceRatio: 0,
+          coreRequirementCoverage: {
+            total: 8,
+            supported: 0,
+            unsupported: 8,
+            unsupportedSignals: [],
+            topUnsupportedSignalsForDisplay: [
+              'Prospectar novos leads',
+              'Negociar e fechar vendas',
+              'Formação superior completa',
+            ],
+          },
+        },
+      },
+    })
+
+    const state = buildOverrideReviewHighlightState({ session, cvState: session.cvState })
+    const cards = state.reviewItems ?? []
+
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toEqual(expect.objectContaining({
+      kind: 'low_fit_target_mismatch',
+      title: expect.stringMatching(/vaga.*distante|ader[eÃª]ncia/i),
+      targetRole: 'Executivo De Vendas',
+    }))
+    expect(cards[0]?.message).not.toMatch(/skill sem evid[êe]ncia|cargo alvo sem evid[êe]ncia/i)
+  })
 })
 
 describe('buildOriginalProfileLabel', () => {

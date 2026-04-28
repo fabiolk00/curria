@@ -2,6 +2,7 @@ import {
   CV_HIGHLIGHT_ARTIFACT_VERSION,
   buildExperienceBulletHighlightItemIds,
   createSummaryHighlightItemId,
+  canonicalizeHighlightIdentityText,
   type CvHighlightReason,
   type ReviewWarningItem,
   type CvHighlightState,
@@ -139,6 +140,110 @@ export function buildOriginalProfileLabel(cvState: CVState): string {
   return picked.length > 0
     ? picked.join(', ')
     : 'experiência analítica e técnica comprovada no currículo original'
+}
+
+function isTechnicalEvidenceWarning(issue: ValidationIssue): boolean {
+  const message = `${issue.issueType ?? ''} ${issue.message ?? ''}`.toLocaleLowerCase('pt-BR')
+  return issue.issueType === 'summary_skill_without_evidence'
+    || issue.issueType === 'target_role_overclaim'
+    || issue.issueType === 'unsupported_claim'
+    || message.includes('skill sem evid')
+    || message.includes('cargo alvo sem evid')
+}
+
+function hasLowFitMismatchContext(params: {
+  session: Session
+  issues: ValidationIssue[]
+  unsupportedRequirements: string[]
+}): boolean {
+  const validationOverride = params.session.agentState.validationOverride
+  const targetingPlan = params.session.agentState.targetingPlan
+  const lowFitGate = targetingPlan?.lowFitWarningGate
+  const targetRolePermission = targetingPlan?.targetRolePositioning?.permission
+  const acceptedLowFit = validationOverride?.acceptedLowFit === true
+  const distantFamily = lowFitGate?.familyDistance === 'distant'
+  const unsupportedGapHigh = (lowFitGate?.unsupportedGapRatio ?? 0) >= 0.7
+  const noExplicitEvidence = (lowFitGate?.explicitEvidenceRatio ?? 1) === 0
+  const cannotClaimTargetRole = targetRolePermission === 'must_not_claim_target_role'
+  const hasCoreGaps = (lowFitGate?.coreRequirementCoverage.unsupported ?? 0) > 0
+    || params.unsupportedRequirements.length > 0
+  const hasTechnicalWarning = params.issues.some(isTechnicalEvidenceWarning)
+
+  return acceptedLowFit
+    && hasCoreGaps
+    && (
+      distantFamily
+      || unsupportedGapHigh
+      || noExplicitEvidence
+      || cannotClaimTargetRole
+      || hasTechnicalWarning
+    )
+}
+
+function buildLowFitTargetMismatchReviewItem(params: {
+  targetRole?: string
+  originalProfileLabel: string
+  unsupportedRequirements: string[]
+  sourceIssueCount: number
+}): ReviewWarningItem {
+  const jobRequirements = params.unsupportedRequirements.slice(0, 12)
+  const provenProfile = params.originalProfileLabel
+    || 'O currÃ­culo original nÃ£o deixou claro um perfil diretamente alinhado a esta vaga.'
+
+  return {
+    id: `review-low-fit-target-mismatch-${params.targetRole ?? 'target-role'}`.slice(0, 120),
+    kind: 'low_fit_target_mismatch',
+    severity: 'risk',
+    section: 'general',
+    sectionLabel: 'DiagnÃ³stico da vaga',
+    title: 'Esta vaga parece distante do seu currÃ­culo atual',
+    summary: 'A geraÃ§Ã£o foi feita apÃ³s seu aceite, mas a aderÃªncia entre a vaga e o histÃ³rico original exige uma revisÃ£o cuidadosa.',
+    explanation: 'A vaga pede responsabilidades e requisitos que nÃ£o aparecem com evidÃªncia suficiente no currÃ­culo original.',
+    whyItMatters: 'A versÃ£o gerada pode aproximar seu currÃ­culo de uma funÃ§Ã£o que o histÃ³rico original nÃ£o comprova diretamente. Isso pode fazer o currÃ­culo parecer artificial ou sugerir experiÃªncia sem sustentaÃ§Ã£o no documento original.',
+    suggestedAction: 'Revise o resumo e as experiÃªncias antes de enviar. Mantenha sua identidade profissional real e destaque apenas habilidades transferÃ­veis comprovadas.',
+    message: `DiagnÃ³stico consolidado de baixa aderÃªncia a partir de ${params.sourceIssueCount} ponto(s) de validaÃ§Ã£o.`,
+    issueType: 'low_fit_target_mismatch',
+    targetRole: params.targetRole,
+    provenProfile,
+    originalProfileLabel: provenProfile,
+    jobRequirements,
+    unsupportedRequirements: jobRequirements,
+    missingEvidence: jobRequirements,
+    inline: false,
+  }
+}
+
+function reviewItemRichness(item: ReviewWarningItem): number {
+  return [
+    item.targetRole,
+    item.jobRequirements?.length,
+    item.provenProfile || item.originalProfileLabel,
+    item.missingEvidence?.length || item.unsupportedRequirements?.length,
+    item.whyItMatters,
+    item.suggestedAction,
+  ].reduce<number>((score, value) => score + (value ? 1 : 0), 0)
+}
+
+function reviewItemSignature(item: ReviewWarningItem): string {
+  return [
+    item.kind ?? item.issueType ?? 'generic',
+    canonicalizeHighlightIdentityText(item.targetRole ?? ''),
+    canonicalizeHighlightIdentityText((item.jobRequirements ?? []).slice(0, 5).join('|')),
+  ].join(':')
+}
+
+function dedupeReviewItems(items: ReviewWarningItem[]): ReviewWarningItem[] {
+  const bySignature = new Map<string, ReviewWarningItem>()
+
+  items.forEach((item) => {
+    const signature = reviewItemSignature(item)
+    const current = bySignature.get(signature)
+    if (!current || reviewItemRichness(item) > reviewItemRichness(current)) {
+      bySignature.set(signature, item)
+    }
+  })
+
+  return Array.from(bySignature.values())
 }
 
 function buildIssueReviewItem(params: {
@@ -318,20 +423,29 @@ export function buildOverrideReviewHighlightState(params: {
     ?? targetingPlan?.coreRequirementCoverage?.topUnsupportedSignalsForDisplay
     ?? []
 
-  issues.forEach((issue) => {
-    const fragments = issueFragments([issue])
-    const inline = fragments.some((fragment) => (
-      findRange(params.cvState.summary ?? '', fragment)
-      || params.cvState.experience.some((entry) => entry.bullets.some((bullet) => findRange(bullet, fragment)))
-    ))
-    reviewItems.push(buildIssueReviewItem({
-      issue,
-      inline,
+  if (hasLowFitMismatchContext({ session: params.session, issues, unsupportedRequirements })) {
+    reviewItems.push(buildLowFitTargetMismatchReviewItem({
       targetRole,
       originalProfileLabel,
       unsupportedRequirements,
+      sourceIssueCount: issues.length,
     }))
-  })
+  } else {
+    issues.forEach((issue) => {
+      const fragments = issueFragments([issue])
+      const inline = fragments.some((fragment) => (
+        findRange(params.cvState.summary ?? '', fragment)
+        || params.cvState.experience.some((entry) => entry.bullets.some((bullet) => findRange(bullet, fragment)))
+      ))
+      reviewItems.push(buildIssueReviewItem({
+        issue,
+        inline,
+        targetRole,
+        originalProfileLabel,
+        unsupportedRequirements,
+      }))
+    })
+  }
 
   return {
     source: 'rewritten_cv_state',
@@ -342,7 +456,7 @@ export function buildOverrideReviewHighlightState(params: {
     })),
     highlightSource: 'job_targeting',
     highlightMode: 'override_review',
-    reviewItems,
+    reviewItems: dedupeReviewItems(reviewItems),
     highlightGeneratedAt: generatedAt,
     generatedAt,
   }

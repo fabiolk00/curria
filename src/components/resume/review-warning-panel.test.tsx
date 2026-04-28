@@ -8,6 +8,7 @@ type ReviewItem = NonNullable<CvHighlightState["reviewItems"]>[number]
 
 const reviewItem: ReviewItem = {
   id: "low-fit-1",
+  kind: "low_fit_target_mismatch",
   severity: "risk",
   section: "general",
   sectionLabel: "Resumo",
@@ -45,6 +46,10 @@ describe("ReviewWarningPanel", () => {
   it("does not render legacy generic warning copy", () => {
     render(<ReviewWarningPanel items={[reviewItem]} hasInlineHighlights={true} />)
 
+    expect(screen.queryByText(/Revise este ponto antes de enviar/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Identificamos um ponto que merece revisão/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/skill sem evidência/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/cargo alvo sem evidência/i)).not.toBeInTheDocument()
     expect(screen.queryByText("Ponto para revisar")).not.toBeInTheDocument()
     expect(screen.queryByText(/Ajustes de linguagem/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Esta versão contém um ponto que merece revisão/i)).not.toBeInTheDocument()

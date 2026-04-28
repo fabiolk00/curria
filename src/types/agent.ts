@@ -124,6 +124,26 @@ export type RewriteValidationResult = {
   }>
 }
 
+export type ReviewIssueRootCause =
+  | 'low_fit_target_mismatch'
+  | 'unsupported_claim'
+  | 'missing_required_evidence'
+  | 'language_fidelity'
+
+export type ReviewWarningCard = {
+  kind: 'low_fit_target_mismatch'
+  severity: 'review' | 'risk'
+  sectionLabel?: string
+  title: string
+  intro: string
+  targetRole?: string
+  jobRequirements: string[]
+  provenProfile?: string
+  missingEvidence: string[]
+  whyItMatters: string
+  suggestedAction: string
+}
+
 export type EvidenceLevel =
   | 'explicit'
   | 'normalized_alias'

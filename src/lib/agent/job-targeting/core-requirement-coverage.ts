@@ -14,9 +14,9 @@ import type {
   TargetRolePositioning,
 } from '@/types/agent'
 
-const CORE_HEADING_RE = /^(requisitos?(?:\s+obrigatorios)?|requirements?|must(?:\s+have)?|mandatory|qualificacoes|qualifications|pre[\s-]?requisitos?)\b/i
+const CORE_HEADING_RE = /^(requisitos?(?:\s+obrigatorios)?|requirements?|must(?:\s+have)?|mandatory|qualificacoes|qualifications|pre[\s-]?requisitos?|o que esperamos de voce)\b/i
 const DIFFERENTIAL_HEADING_RE = /^(desejavel|desejaveis|differentials?|nice\s+to\s+have|plus)\b/i
-const SECONDARY_HEADING_RE = /^(responsabilidades?|atividades|atribuicoes|responsibilities|what\s+you(?:'ll|\s+will)?\s+do)\b/i
+const SECONDARY_HEADING_RE = /^(responsabilidades?|atividades|atribuicoes|responsibilities|what\s+you(?:'ll|\s+will)?\s+do|e o seu dia a dia como sera)\b/i
 const CORE_LINE_RE = /\b(obrigatori[oa]s?|required|must|dominio|experience with|experi[eê]ncia com|experi[eê]ncia forte|strong experience|profissional com|conhecimento em|conhecimento com|viv[eê]ncia em|viv[eê]ncia com|ser[aá] respons[aá]vel por|atuar[aá] com|mais de \d+ anos|\d+\+?\s*(?:anos|years))\b/i
 const SUPPORTED_CORE_LEVELS = new Set<EvidenceLevel>([
   'explicit',
@@ -24,11 +24,13 @@ const SUPPORTED_CORE_LEVELS = new Set<EvidenceLevel>([
   'technical_equivalent',
 ])
 const SECTION_HEADING_PATTERNS = [
+  /^about the job$/i,
   /^responsabilidades?\s+d[ae]\s+posicao$/i,
   /^requisitos$/i,
   /^qualificacoes$/i,
   /^requisitos e qualificacoes$/i,
   /^responsabilidades$/i,
+  /^sobre a vaga$/i,
   /^atividades$/i,
   /^atribuicoes$/i,
   /^descricao da vaga$/i,
@@ -44,6 +46,10 @@ const SECTION_HEADING_PATTERNS = [
   /^requirements?$/i,
   /^qualifications?$/i,
   /^responsibilities$/i,
+  /^what you will do$/i,
+  /^what you ll do$/i,
+  /^o que esperamos de voce$/i,
+  /^e o seu dia a dia como sera$/i,
 ]
 const GENERIC_REQUIREMENT_PATTERNS = [
   /^boas praticas de desenvolvimento$/i,
@@ -95,9 +101,11 @@ const STANDALONE_MODIFIER_TOKENS = new Set([
   'tecnico',
   'tecnicos',
 ])
-const ACTION_VERB_RE = /\b(acompanhar|analisar|apoiar|build|criar|define|definir|develop|desenvolver|elaborar|execute|executar|gerenciar|implement|implementar|integrar|lead|liderar|maintain|manter|manage|optimize|otimizar|planejar|support)\b/iu
+const ACTION_VERB_RE = /\b(acompanhar|adaptar|analisar|apoiar|atualizar|build|comunicar|criar|define|definir|develop|desenvolver|elaborar|evitar|execute|executar|fechar|garantir|gerenciar|identificar|implement|implementar|integrar|lead|liderar|maintain|manter|mapear|manage|negociar|optimize|otimizar|planejar|prospectar|realizar|support)\b/iu
 const SEMANTIC_OBJECT_RE = /[A-Z]{2,}|[a-z]+(?:[/.-][a-z0-9]+)+|\b[\p{L}\p{N}]{3,}\b/iu
 const TECH_STACK_INTRO_RE = /^(?:experi[eê]ncia|conhecimento|viv[eê]ncia)\s+com\s+/iu
+const LIST_PRESERVING_REQUIREMENT_RE = /\b(?:bacharelado|curso|forma[cç][aã]o|gradua[cç][aã]o|licenciatura|superior)\b/iu
+const LIST_COMPLETION_CONTEXT_RE = /\b(?:[aá]reas?\s+(?:afins|correlatas|relacionadas)|correlatas?|relacionadas?)\b/iu
 const INCOMPLETE_FRAGMENT_SUFFIX_RE = /(?:\bde|\bda|\bdo|\bdos|\bdas|\bem|\bna|\bno|\bnas|\bnos|\bpara|\bcom)\s*$/iu
 const LIST_COMPLEMENT_PREFIX_RE = /^(?:e\s+)?(?:de|da|do|das|dos|em|na|no|nas|nos|para|com)\b/iu
 const TRAILING_AREA_CONTEXT_RE = /\s+d[ao]?\s+sua\s+[a-z\u00c0-\u024f]+(?:\s+[a-z\u00c0-\u024f]+){0,2}$/iu
@@ -118,6 +126,30 @@ function dedupe(values: string[]): string[] {
 function isPureSectionHeading(text: string): boolean {
   const normalized = normalizeSemanticText(text)
   return SECTION_HEADING_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
+function containsEmoji(text: string): boolean {
+  return /\p{Extended_Pictographic}/u.test(text)
+}
+
+function isLikelyIntroductoryHeading(text: string): boolean {
+  const trimmed = text.trim()
+  const normalized = normalizeSemanticText(trimmed)
+  const words = normalized.split(/\s+/u).filter(Boolean)
+  if (!normalized) return true
+  if (isLikelyTechnicalSignal(trimmed)) return false
+  if (trimmed.endsWith('?')) return true
+  if (containsEmoji(trimmed) && words.length <= 8) return true
+  if (isPureSectionHeading(trimmed)) return true
+
+  const hasOperationalSignal = hasActionVerb(trimmed)
+    || CORE_LINE_RE.test(normalized)
+    || /\b(?:experiencia|conhecimento|vivencia|formacao|graduacao|curso|bacharelado)\b/iu.test(normalized)
+  const isShortTitleCase = words.length <= 5
+    && !/[.;:]/u.test(trimmed)
+    && trimmed.split(/\s+/u).filter(Boolean).every((word) => /^[A-ZÀ-Þ0-9]/u.test(word) || /^(?:e|and|da|de|do|das|dos)$/iu.test(word))
+
+  return isShortTitleCase && !hasOperationalSignal
 }
 
 function isGenericRequirement(text: string): boolean {
@@ -157,6 +189,7 @@ function hasSemanticObject(text: string): boolean {
 export function normalizeRequirementForDisplay(text: string): string {
   const withoutParens = text.replace(/\([^)]*\)/gu, ' ')
   return withoutParens
+    .replace(/^essencial\s+/iu, '')
     .replace(/^[\-•*]\s*/u, '')
     .replace(/,\s*visando\b.*$/iu, '')
     .replace(/\bvisando\b.*$/iu, '')
@@ -170,6 +203,11 @@ export function normalizeRequirementForDisplay(text: string): string {
     .replace(/\b(?:as|os)\s+estrat[eé]gias\b/iu, 'estratégias')
     .replace(/\bconstruir\s+um\s+relacionamento\s+sustent[aá]vel\s+com\s+os\s+clientes\s+de\s+sua\s+carteira\b/iu, 'Construir relacionamento com clientes')
     .replace(/\bplanos\s+acordados\s+com\s+os\s+clientes\b/iu, 'planos acordados com clientes')
+    .replace(/,\s*para\s+apresenta[cç][oõ]es?\b.*$/iu, '')
+    .replace(/^conhecimento\s+em\s+(.+)/iu, 'Conhecimento em $1')
+    .replace(/^experi[eê]ncia\s+com\s+gest[aã]o\s+de\s+(.+)/iu, 'Gestão de $1')
+    .replace(/^gest[aã]o\s+de\s+(.+)/iu, 'Gestão de $1')
+    .replace(/^autonomia\s+e\s+hands?\s+on$/iu, 'Autonomia e postura hands-on')
     .replace(/\s+/gu, ' ')
     .replace(/[,:;.-]+$/u, '')
     .trim()
@@ -224,6 +262,7 @@ function cleanDisplaySignal(signal: string): string | null {
   if (
     !cleaned
     || isPureSectionHeading(cleaned)
+    || isLikelyIntroductoryHeading(cleaned)
     || isGenericRequirement(cleaned)
     || isWeakDisplaySignal(cleaned)
     || isStandaloneModifier(cleaned)
@@ -245,6 +284,7 @@ function scoreDisplaySignal(requirement: CoreRequirement): number {
   if (words >= 2 && words <= 8) score += 10
   if (hasActionVerb(signal)) score += 8
   if (hasSemanticObject(signal)) score += 6
+  if (/^(?:experi[eê]ncia|conhecimento|viv[eê]ncia|forma[cç][aã]o|gradua[cç][aã]o|curso|bacharelado)\b/iu.test(signal)) score += 7
   if (words === 1) score -= 4
   if (isWeakDisplaySignal(signal)) score -= 20
   if (isStandaloneModifier(signal)) score -= 30
@@ -285,7 +325,25 @@ export function buildCoreRequirementDisplaySignals(requirements: CoreRequirement
 }
 
 function normalizeRequirementSignal(value: string): string {
-  return value
+  const trimmed = value.trim()
+  const prefixMatch = trimmed.match(/^(conhecimento\s+em|experi[eê]ncia\s+com|experi[eê]ncia\s+em|viv[eê]ncia\s+com|viv[eê]ncia\s+em)\s+(.+)$/iu)
+  if (prefixMatch) {
+    const prefix = prefixMatch[1] ?? ''
+    const remainder = (prefixMatch[2] ?? '').trim()
+    const remainderWords = remainder.split(/\s+/u).filter(Boolean)
+    const isShortTechnicalListItem = remainderWords.length <= 3 && isLikelyTechnicalSignal(remainder)
+    if (!isShortTechnicalListItem && remainderWords.length > 1) {
+      return `${prefix} ${remainder}`
+    .replace(/^[\-â€¢*]\s*/u, '')
+    .replace(/^essencial\s+/iu, '')
+        .replace(/\s+(?:obrigatorio|obrigatoria|required)$/iu, '')
+        .replace(/[.]+$/u, '')
+        .trim()
+    }
+  }
+
+  return trimmed
+    .replace(/^construcao\s+e\s+manutencao\s+de\s+/iu, '')
     .replace(/^[\-•*]\s*/u, '')
     .replace(REQUIREMENT_PREFIX_RE, '')
     .replace(/\s+(?:obrigatorio|obrigatoria|required)$/iu, '')
@@ -312,6 +370,10 @@ function shouldSplitOnConjunction(left: string, right: string): boolean {
   const leftSignal = normalizeRequirementSignal(left)
   const rightSignal = normalizeRequirementSignal(right)
 
+  if (isLikelyTechnicalSignal(leftSignal) && isLikelyTechnicalSignal(rightSignal)) {
+    return true
+  }
+
   if (!isStandaloneRequirement(leftSignal) || !isStandaloneRequirement(rightSignal)) {
     return false
   }
@@ -320,7 +382,7 @@ function shouldSplitOnConjunction(left: string, right: string): boolean {
     return false
   }
 
-  if (hasActionVerb(leftSignal) && !hasActionVerb(rightSignal) && wordCount(rightSignal) === 1) {
+  if (hasActionVerb(leftSignal) || hasActionVerb(rightSignal)) {
     return false
   }
   if (!hasActionVerb(leftSignal) && !hasActionVerb(rightSignal) && (wordCount(leftSignal) > 1 || wordCount(rightSignal) > 1)) {
@@ -367,6 +429,24 @@ function splitCommaFragments(fragment: string): string[] {
   }
 
   const parts = trimmed.split(/,\s*/u).map((part) => part.trim()).filter(Boolean)
+  if (
+    parts.length > 1
+    && hasActionVerb(parts[0] ?? '')
+    && !/\b(?:instala[cç][aã]o|equipamentos)\b/iu.test(parts[0] ?? '')
+  ) {
+    return [trimmed]
+  }
+  const hasPreservedEnumeration = LIST_PRESERVING_REQUIREMENT_RE.test(trimmed)
+    && parts.length > 1
+    && (
+      LIST_COMPLETION_CONTEXT_RE.test(trimmed)
+      || /\bou\b/iu.test(parts.at(-1) ?? '')
+      || /\be\b/iu.test(parts.at(-1) ?? '')
+    )
+    && parts.slice(1).every((part) => part.split(/\s+/u).filter(Boolean).length <= 6)
+  if (hasPreservedEnumeration) {
+    return [trimmed]
+  }
   if (parts.length === 2 && hasActionVerb(parts[0] ?? '') && !hasActionVerb(parts[1] ?? '')) {
     return [trimmed]
   }
@@ -457,6 +537,10 @@ function extractYearsSignals(fragment: string): string[] {
 }
 
 function extractRequirementFragments(line: string): string[] {
+  if (isLikelyIntroductoryHeading(line)) {
+    return []
+  }
+
   const sanitized = line
     .replace(/^[^:]{0,40}:\s*/u, '')
     .trim()
@@ -473,6 +557,7 @@ function extractRequirementFragments(line: string): string[] {
         && fragment.split(/\s+/u).length <= 18
         && !isIncompleteFragment(fragment)
         && !isPureSectionHeading(fragment)
+        && !isLikelyIntroductoryHeading(fragment)
         && !isGenericRequirement(fragment)
       )),
   )
@@ -617,7 +702,7 @@ export function buildCoreRequirementCoverage(params: {
       activeHeading = 'core'
     }
 
-    if (isPureSectionHeading(line)) {
+    if (isPureSectionHeading(line) || isLikelyIntroductoryHeading(line)) {
       return
     }
 
