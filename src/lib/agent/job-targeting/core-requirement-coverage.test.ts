@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
+import { vendedorJrVacancy } from '@/lib/agent/job-targeting/__fixtures__/vendedor-jr-vacancy'
 import { buildCoreRequirementCoverage } from '@/lib/agent/job-targeting/core-requirement-coverage'
 import type { TargetEvidence } from '@/types/agent'
 
@@ -138,8 +139,7 @@ describe('core requirement coverage', () => {
     expect(coverage.total).toBeGreaterThan(0)
     expect(coverage.unsupportedSignals).toEqual(expect.arrayContaining([
       'Planejar campanhas de marketing e comunicacao',
-      'briefing',
-      'relacionamento com fornecedores',
+      'briefing e relacionamento com fornecedores',
       'midias sociais, trade marketing',
       'eventos corporativos',
     ]))
@@ -209,10 +209,8 @@ describe('core requirement coverage', () => {
       'SQL',
       'Git',
       'Docker',
-      'contratos',
-      'compliance',
-      'recrutamento',
-      'selecao',
+      'contratos e compliance',
+      'recrutamento e selecao',
     ]))
   })
 
@@ -256,8 +254,7 @@ describe('core requirement coverage', () => {
       'Spring Boot',
       'APIs REST',
       'JPA/Hibernate',
-      'bancos relacionais',
-      'mensageria',
+      'bancos relacionais e mensageria',
       'Kafka/RabbitMQ',
     ]))
   })
@@ -273,6 +270,19 @@ describe('core requirement coverage', () => {
     expect(coverage.requirements.map((requirement) => requirement.signal)).toEqual(expect.arrayContaining([
       'Java',
       '5+ anos de Java',
+    ]))
+  })
+
+  it('does not promote structural headings to top unsupported display signals', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: 'Responsabilidades Da Posição',
+      targetRole: 'Vendedora/Vendedor JR',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
+      'Responsabilidades Da Posição',
     ]))
   })
 
@@ -302,6 +312,35 @@ describe('core requirement coverage', () => {
       'visando a geração da',
       'materiais de',
       'ativos de mercado (geladeiras',
+    ]))
+  })
+
+  it('builds human-friendly unsupported requirements for the real vendedor jr vacancy fixture', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: vendedorJrVacancy,
+      targetRole: 'Vendedora/Vendedor JR',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
+      'Manter cadastros de clientes atualizados',
+      'Monitorar estratégias de repasse de preço',
+      'Cumprir metas de vendas estabelecidas',
+      'Construir relacionamento com clientes',
+      'Executar planos acordados com clientes',
+      'Negociar instalação de equipamentos',
+      'Acompanhar retornos, entregas e pendências de produtos',
+    ]))
+    expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
+      'Aplicar',
+      'demanda',
+      'gôndolas',
+      'racks, etc.)',
+      'precificando conforme padrão',
+      'reciprocidades dos acordos comerciais',
+      'pendências de produtos da sua área',
+      'Responsabilidades Da Posição',
     ]))
   })
 

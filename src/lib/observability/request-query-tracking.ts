@@ -81,7 +81,10 @@ export function flushRequestQueryTracking(
   logInfo('db.request_queries', payload)
 
   if (context.queryCount > threshold) {
-    logWarn('db.n_plus_one_threshold_exceeded', {
+    const warningEvent = suspectedNPlusOne
+      ? 'db.n_plus_one_threshold_exceeded'
+      : 'db.query_count_threshold_exceeded'
+    logWarn(warningEvent, {
       ...payload,
       sampledQueries: context.queries,
       topRepeatedQueryPatterns: patternSummary.topRepeatedQueryPatterns,
