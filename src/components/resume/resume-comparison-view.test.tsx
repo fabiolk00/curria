@@ -213,6 +213,7 @@ describe('ResumeComparisonView', () => {
     expect(highlighted).toHaveTextContent('Azure Databricks')
     expect(highlighted).toHaveAttribute('data-highlight-reason', 'tool_context')
     expect(bullet).toHaveTextContent('Reduced processing time by 40% with Azure Databricks.')
+    expect(screen.queryByTestId('override-review-panel')).not.toBeInTheDocument()
   })
 
   it('renders warning generations as review highlights instead of normal match copy', () => {
@@ -230,10 +231,11 @@ describe('ResumeComparisonView', () => {
       }],
       reviewItems: [{
         severity: 'risk',
-        message: 'Trecho aceito com aviso para revisao manual.',
+        message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
         issueType: 'low_fit_target_role',
         offendingText: 'Desenvolvedor Java',
         inline: true,
+        section: 'summary',
       }],
     }
 
@@ -250,10 +252,131 @@ describe('ResumeComparisonView', () => {
 
     expect(screen.getAllByText('Pontos para revisar').length).toBeGreaterThan(0)
     expect(screen.queryByText('Match da vaga')).not.toBeInTheDocument()
-    expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Trecho aceito com aviso')
+    expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Cargo alvo assumido com pouca evidência')
     const highlighted = screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')
     expect(highlighted).toHaveTextContent('Desenvolvedor Java')
     expect(highlighted).toHaveAttribute('data-highlight-reason', 'risk')
+  })
+
+  it('shows a review panel outside the resume body when override has no inline highlights', () => {
+    const highlightState: CvHighlightState = {
+      source: 'rewritten_cv_state',
+      version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+      highlightSource: 'job_targeting',
+      highlightMode: 'override_review',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+      reviewItems: [
+        {
+          severity: 'risk',
+          message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
+          issueType: 'unsupported_skill',
+          inline: false,
+          section: 'summary',
+        },
+        {
+          severity: 'risk',
+          message: 'O resumo targetizado passou a se apresentar diretamente como o cargo alvo sem evidência equivalente no currículo original.',
+          issueType: 'low_fit_target_role',
+          inline: false,
+          section: 'summary',
+        },
+      ],
+    }
+
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Resumo targetizado para marketing.')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_review_text"
+        highlightState={highlightState}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    const panel = screen.getByTestId('override-review-panel')
+    expect(screen.getByText(/Este currículo foi gerado com pontos de atenção/i)).toBeInTheDocument()
+    expect(panel).toHaveTextContent('Pontos para revisar')
+    expect(panel).toHaveTextContent('Skill sem evidência suficiente')
+    expect(panel).toHaveTextContent('Cargo alvo assumido com pouca evidência')
+    expect(panel).toHaveTextContent('Não há trechos destacados automaticamente')
+    expect(screen.queryByText('Match da vaga')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /ocultar destaques/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Comprovado:/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('optimized-resume-document')).not.toContainElement(panel)
+  })
+
+  it('repairs mojibake in review issue copy before rendering', () => {
+    const highlightState: CvHighlightState = {
+      source: 'rewritten_cv_state',
+      version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+      highlightSource: 'job_targeting',
+      highlightMode: 'override_review',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+      reviewItems: [{
+        severity: 'risk',
+        message: 'Revise o currÃ­culo com atenÃ§Ã£o para evitar aproximaÃ§Ã£o sem evidÃªncia.',
+        issueType: 'review_copy',
+        inline: false,
+        section: 'summary',
+      }],
+    }
+
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_mojibake"
+        highlightState={highlightState}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('override-review-panel')).toHaveTextContent(
+      'Revise o currículo com atenção para evitar aproximação sem evidência.',
+    )
+  })
+
+  it('scrolls to the optimized section when a review item is selected', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const user = userEvent.setup()
+    const highlightState: CvHighlightState = {
+      source: 'rewritten_cv_state',
+      version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+      highlightSource: 'job_targeting',
+      highlightMode: 'override_review',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+      reviewItems: [{
+        severity: 'risk',
+        message: 'O resumo otimizado menciona skill sem evidência no currículo original.',
+        issueType: 'unsupported_skill',
+        inline: false,
+        section: 'summary',
+      }],
+    }
+
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_scroll"
+        highlightState={highlightState}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /skill sem evidência suficiente/i }))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
   })
 
   it('renders plain text when no highlight artifact exists', () => {

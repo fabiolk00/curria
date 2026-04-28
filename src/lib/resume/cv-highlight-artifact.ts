@@ -122,6 +122,7 @@ export type CvHighlightState = {
     message: string
     issueType?: string
     offendingText?: string
+    section?: 'summary' | 'experience' | 'skills' | 'education' | 'certifications'
     inline: boolean
   }>
   highlightGeneratedAt: string
@@ -215,6 +216,7 @@ const cvHighlightStateSchema = z.object({
     message: z.string().min(1),
     issueType: z.string().min(1).optional(),
     offendingText: z.string().min(1).optional(),
+    section: z.enum(['summary', 'experience', 'skills', 'education', 'certifications']).optional(),
     inline: z.boolean(),
   })).optional(),
   highlightGeneratedAt: z.string().min(1).optional(),

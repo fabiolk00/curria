@@ -79,7 +79,7 @@ describe('core requirement coverage', () => {
       'Docker',
       'CI/CD',
     ]))
-    expect(coverage.topUnsupportedSignalsForDisplay.length).toBeLessThanOrEqual(6)
+    expect(coverage.topUnsupportedSignalsForDisplay.length).toBeLessThanOrEqual(8)
     expect(coverage.topUnsupportedSignalsForDisplay).toEqual(
       coverage.unsupportedSignals.slice(0, coverage.topUnsupportedSignalsForDisplay.length),
     )
@@ -114,6 +114,7 @@ describe('core requirement coverage', () => {
         '- Planejar campanhas de marketing e comunicacao.',
         '- Sera responsavel por producao de eventos, briefing e relacionamento com fornecedores.',
         '- Atuara com midias sociais, trade marketing e relacionamento com areas internas.',
+        '- Criar conteudo para canais externos e campanhas institucionais.',
         'Requisitos',
         '- Vivencia em eventos corporativos e campanhas digitais.',
       ].join('\n'),
@@ -131,6 +132,16 @@ describe('core requirement coverage', () => {
       'midias sociais',
       'trade marketing',
       'eventos corporativos',
+    ]))
+    expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
+      'Planejamento de ações de marketing',
+      'Eventos',
+      'Conteúdo para canais externos',
+    ]))
+    expect(coverage.topUnsupportedSignalsForDisplay).not.toEqual(expect.arrayContaining([
+      'atribuições',
+      'externos',
+      'institucionais',
     ]))
     expect(coverage.requirements.map((requirement) => requirement.signal)).not.toEqual(expect.arrayContaining([
       'Requisitos',

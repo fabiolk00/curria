@@ -15,6 +15,7 @@ import {
 } from '@/lib/agent/job-targeting/recoverable-validation'
 import { TOOL_ERROR_CODES, getHttpStatusForToolError } from '@/lib/agent/tool-errors'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
+import { runWithApiUsageBuffer } from '@/lib/agent/usage-tracker'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { createCvVersion } from '@/lib/db/cv-versions'
 import { getSession, updateSession } from '@/lib/db/sessions'
@@ -33,6 +34,7 @@ const OverrideBodySchema = z.object({
 })
 
 const OVERRIDE_PROCESSING_LOCK_TTL_MS = 5 * 60 * 1000
+const JOB_TARGETING_OVERRIDE_GENERATION_SOURCE = 'job_targeting_override'
 
 function buildValidationFromIssues(
   validationIssues: NonNullable<NonNullable<Awaited<ReturnType<typeof getSession>>>['agentState']['blockedTargetedRewriteDraft']>['validationIssues'],
@@ -107,6 +109,7 @@ function buildAlreadyCompletedResponse(params: {
     cvVersionId: params.cvVersionId,
     resumeGenerationId: params.resumeGenerationId,
     generationType: 'JOB_TARGETING' as const,
+    generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
   })
 }
 
@@ -191,7 +194,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
-  return withRequestQueryTracking(req, async () => {
+  return withRequestQueryTracking(req, async () => runWithApiUsageBuffer(async () => {
     const appUser = await getCurrentAppUser()
     if (!appUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -238,6 +241,7 @@ export async function POST(
         acceptedLowFit: existingValidationOverride.acceptedLowFit === true,
         cvVersionId: existingValidationOverride.cvVersionId,
         resumeGenerationId: existingValidationOverride.resumeGenerationId,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       })
       return buildAlreadyCompletedResponse({
         sessionId: session.id,
@@ -353,6 +357,7 @@ export async function POST(
           cvVersionId: lockResult.completedResult?.cvVersionId,
           resumeGenerationId: lockResult.completedResult?.resumeGenerationId,
           blockKind,
+          generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
         })
         return buildAlreadyCompletedResponse({
           sessionId: session.id,
@@ -432,6 +437,7 @@ export async function POST(
         userAcceptedLowFit: true,
         skipPreRewriteLowFitBlock: true,
         skipLowFitRecoverableBlocking: true,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       })
 
       const pipelineResult = await runJobTargetingPipeline(generationSession, {
@@ -439,6 +445,7 @@ export async function POST(
         overrideReason: 'pre_rewrite_low_fit_block',
         skipPreRewriteLowFitBlock: true,
         skipLowFitRecoverableBlocking: true,
+        deferSessionPersistence: true,
       })
 
       if (!pipelineResult.success || !pipelineResult.optimizedCvState) {
@@ -480,6 +487,7 @@ export async function POST(
           code: generationResult.outputFailure.code,
           error: generationResult.outputFailure.error,
           blockKind,
+          generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
         })
         buildFailedWithoutChargeLog({
           sessionId: lockedSession.id,
@@ -551,6 +559,7 @@ export async function POST(
         resumeGenerationId: output.resumeGenerationId,
         validationOverride: true,
         blockKind,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       })
       logInfo('agent.job_targeting.override.succeeded', {
         sessionId: lockedSession.id,
@@ -564,6 +573,7 @@ export async function POST(
         creditCharged: (output.creditsUsed ?? 0) > 0,
         resumeGenerationId: output.resumeGenerationId,
         cvVersionId: pipelineResult.cvVersionId,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       })
 
       return NextResponse.json({
@@ -572,6 +582,7 @@ export async function POST(
         creditsUsed: output.creditsUsed ?? 0,
         resumeGenerationId: output.resumeGenerationId,
         generationType: 'JOB_TARGETING' as const,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
         warnings: buildSuccessWarnings(completedAgentState.rewriteValidation),
       })
     }
@@ -647,6 +658,7 @@ export async function POST(
         code: generationResult.outputFailure.code,
         error: generationResult.outputFailure.error,
         blockKind,
+        generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       })
       buildFailedWithoutChargeLog({
         sessionId: lockedSession.id,
@@ -715,6 +727,7 @@ export async function POST(
       resumeGenerationId: output.resumeGenerationId,
       validationOverride: true,
       blockKind,
+      generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
     })
     logInfo('agent.job_targeting.override.succeeded', {
       sessionId: lockedSession.id,
@@ -728,6 +741,7 @@ export async function POST(
       creditCharged: (output.creditsUsed ?? 0) > 0,
       resumeGenerationId: output.resumeGenerationId,
       cvVersionId: createdCvVersion.id,
+      generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
     })
 
     return NextResponse.json({
@@ -736,7 +750,8 @@ export async function POST(
       creditsUsed: output.creditsUsed ?? 0,
       resumeGenerationId: output.resumeGenerationId,
       generationType: 'JOB_TARGETING' as const,
+      generationSource: JOB_TARGETING_OVERRIDE_GENERATION_SOURCE,
       warnings: buildSuccessWarnings(completedAgentState.rewriteValidation),
     })
-  })
+  }))
 }

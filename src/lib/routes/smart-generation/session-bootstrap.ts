@@ -1,5 +1,8 @@
 import type { CVState } from '@/types/cv'
-import { markJobTargetingStartLockRunningSessionDurable } from '@/lib/agent/job-targeting-start-lock'
+import {
+  markJobTargetingStartLockRunningSessionDurable,
+  type JobTargetingStartLockBackend,
+} from '@/lib/agent/job-targeting-start-lock'
 import { applyToolPatchWithVersion, createSession } from '@/lib/db/sessions'
 import { buildResumeTextFromCvState } from '@/lib/profile/ats-enhancement'
 
@@ -32,6 +35,7 @@ export async function bootstrapSmartGenerationSession(
   context: SmartGenerationContext,
   options?: {
     jobTargetingStartIdempotencyKey?: string
+    jobTargetingStartLockBackend?: JobTargetingStartLockBackend
   },
 ) {
   const workflowMode = resolveWorkflowMode(context.targetJobDescription)
@@ -42,6 +46,7 @@ export async function bootstrapSmartGenerationSession(
     await markJobTargetingStartLockRunningSessionDurable({
       idempotencyKey: options.jobTargetingStartIdempotencyKey,
       sessionId: session.id,
+      backend: options.jobTargetingStartLockBackend ?? 'memory_fallback',
     })
   }
 

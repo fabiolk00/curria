@@ -53,10 +53,18 @@ function buildWorkflowRun(
   }
 }
 
-async function persistAgentState(session: Session, agentState: Session['agentState']): Promise<void> {
-  await updateSession(session.id, {
-    agentState,
-  })
+async function persistAgentState(
+  session: Session,
+  agentState: Session['agentState'],
+  options?: {
+    skipDatabase?: boolean
+  },
+): Promise<void> {
+  if (!options?.skipDatabase) {
+    await updateSession(session.id, {
+      agentState,
+    })
+  }
   session.agentState = agentState
 }
 
@@ -333,6 +341,7 @@ export async function runJobTargetingPipeline(
     overrideReason?: 'pre_rewrite_low_fit_block' | 'post_rewrite_validation_block'
     skipPreRewriteLowFitBlock?: boolean
     skipLowFitRecoverableBlocking?: boolean
+    deferSessionPersistence?: boolean
   },
 ): Promise<{
   success: boolean
@@ -354,6 +363,12 @@ export async function runJobTargetingPipeline(
   const previousOptimizationSummary = session.agentState.optimizationSummary
     ? structuredClone(session.agentState.optimizationSummary)
     : undefined
+
+  const persistPipelineAgentState = (agentState: Session['agentState']): Promise<void> => (
+    persistAgentState(session, agentState, {
+      skipDatabase: options?.deferSessionPersistence === true,
+    })
+  )
   const previousLastRewriteMode = session.agentState.lastRewriteMode
   const trace: JobTargetingTraceDraft = {
     sessionId: session.id,
@@ -371,7 +386,7 @@ export async function runJobTargetingPipeline(
     }
   }
 
-  await persistAgentState(session, {
+  await persistPipelineAgentState({
     ...session.agentState,
     workflowMode: 'job_targeting',
     rewriteStatus: 'running',
@@ -430,7 +445,7 @@ export async function runJobTargetingPipeline(
         lastFailureReason: error instanceof Error ? error.message : 'Gap analysis failed.',
       }),
     }
-    await persistAgentState(session, nextAgentState)
+    await persistPipelineAgentState(nextAgentState)
     logError(
       'agent.job_targeting.failed',
       createJobTargetingLogContext(session, 'gap_analysis', {
@@ -483,7 +498,7 @@ export async function runJobTargetingPipeline(
     },
   })
 
-  await persistAgentState(session, {
+  await persistPipelineAgentState({
     ...session.agentState,
     workflowMode: 'job_targeting',
     gapAnalysis,
@@ -563,7 +578,7 @@ export async function runJobTargetingPipeline(
     },
   }
 
-  await persistAgentState(session, {
+  await persistPipelineAgentState({
     ...session.agentState,
     workflowMode: 'job_targeting',
     gapAnalysis,
@@ -584,7 +599,7 @@ export async function runJobTargetingPipeline(
       targetRoleSource: targetingPlan.targetRoleSource,
     })
 
-    await persistAgentState(session, {
+    await persistPipelineAgentState({
       ...session.agentState,
       workflowMode: 'job_targeting',
       gapAnalysis,
@@ -742,7 +757,7 @@ export async function runJobTargetingPipeline(
           : 'Job targeting pre-rewrite low-fit block triggered.',
       }),
     }
-    await persistAgentState(session, nextAgentState)
+    await persistPipelineAgentState(nextAgentState)
 
     logHighlightGenerationGate({
       session,
@@ -848,7 +863,7 @@ export async function runJobTargetingPipeline(
         lastFailureReason: rewriteResult.error ?? 'Job targeting rewrite failed.',
       }),
     }
-    await persistAgentState(session, nextAgentState)
+    await persistPipelineAgentState(nextAgentState)
 
     logError(
       'agent.job_targeting.failed',
@@ -1243,7 +1258,7 @@ export async function runJobTargetingPipeline(
         : undefined,
     }),
   }
-  await persistAgentState(session, nextAgentState)
+  await persistPipelineAgentState(nextAgentState)
   const highlightStatePersistedReason = validation.blocked
     ? lowFitRecoverableBlocked
       ? 'low_fit_recoverable_block'
@@ -1366,7 +1381,7 @@ export async function runJobTargetingPipeline(
         lastFailureReason: error instanceof Error ? error.message : 'Failed to persist job targeting version.',
       }),
     }
-    await persistAgentState(session, failedAgentState)
+    await persistPipelineAgentState(failedAgentState)
     logHighlightStatePersistence({
       session,
       highlightState: failedAgentState.highlightState,
@@ -1394,7 +1409,7 @@ export async function runJobTargetingPipeline(
     }
   }
 
-  await persistAgentState(session, {
+  await persistPipelineAgentState({
     ...session.agentState,
     atsWorkflowRun: buildWorkflowRun(session, {
       status: 'completed',

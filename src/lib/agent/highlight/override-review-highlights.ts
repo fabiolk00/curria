@@ -104,11 +104,20 @@ function addFragmentHighlights(params: {
 }
 
 function buildIssueReviewItem(issue: ValidationIssue, inline: boolean): ReviewItem {
+  const section = issue.section === 'summary'
+    || issue.section === 'experience'
+    || issue.section === 'skills'
+    || issue.section === 'education'
+    || issue.section === 'certifications'
+    ? issue.section
+    : undefined
+
   return {
     severity: 'risk',
     message: issue.userFacingExplanation ?? issue.message,
     issueType: issue.issueType,
     offendingText: issue.offendingText ?? issue.offendingSignal,
+    section,
     inline,
   }
 }

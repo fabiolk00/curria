@@ -315,6 +315,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       creditsUsed: 1,
       resumeGenerationId: 'gen_123',
       generationType: 'JOB_TARGETING',
+      generationSource: 'job_targeting_override',
     })
     expect(tryAcquireOverrideProcessingLock).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: 'sess_123',
@@ -402,6 +403,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       creditsUsed: 1,
       resumeGenerationId: 'gen_low_fit_123',
       generationType: 'JOB_TARGETING',
+      generationSource: 'job_targeting_override',
     })
     expect(runJobTargetingPipeline).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -412,6 +414,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
         overrideReason: 'pre_rewrite_low_fit_block',
         skipPreRewriteLowFitBlock: true,
         skipLowFitRecoverableBlocking: true,
+        deferSessionPersistence: true,
       }),
     )
     expect(createCvVersion).not.toHaveBeenCalled()
@@ -618,6 +621,7 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
       cvVersionId: 'ver_123',
       resumeGenerationId: 'gen_123',
       generationType: 'JOB_TARGETING',
+      generationSource: 'job_targeting_override',
     })
     expect(createCvVersion).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()

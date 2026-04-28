@@ -53,6 +53,16 @@ const REQUIREMENT_PREFIX_RE = /^(?:experi[eê]ncia(?:\s+forte)?\s+(?:com|em)|exp
 const YEARS_PREFIX_RE = /(?:mais\s+de\s+)?(\d+)\+?\s*(?:anos|years)(?:\s+de\s+experi[eê]ncia)?\s+(?:em|com|with)\s+(.+)/iu
 const YEARS_SUFFIX_RE = /^(.+?)\s+com\s+(?:mais\s+de\s+)?(\d+)\+?\s*(?:anos|years)(?:\s+de\s+experi[eê]ncia)?$/iu
 const PARENS_RE = /\(([^)]+)\)/u
+const MAX_DISPLAY_REQUIREMENTS = 8
+const WEAK_DISPLAY_SIGNAL_PATTERNS = [
+  /^atribuicoes$/i,
+  /^atribuições$/i,
+  /^promocional$/i,
+  /^externos$/i,
+  /^institucionais$/i,
+  /^fazer o acompanhamento$/i,
+  /^acompanhamento$/i,
+]
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
@@ -66,6 +76,86 @@ function isPureSectionHeading(text: string): boolean {
 function isGenericRequirement(text: string): boolean {
   const normalized = normalizeSemanticText(text)
   return GENERIC_REQUIREMENT_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
+function isWeakDisplaySignal(text: string): boolean {
+  const normalized = normalizeSemanticText(text)
+  return normalized.length < 4
+    || WEAK_DISPLAY_SIGNAL_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
+function humanizeDisplaySignal(requirement: CoreRequirement): string | null {
+  const signal = requirement.signal.trim()
+  const normalized = normalizeSemanticText(signal)
+
+  if (!signal || isPureSectionHeading(signal) || isGenericRequirement(signal) || isWeakDisplaySignal(signal)) {
+    return null
+  }
+
+  if (/\bmarketing\b/i.test(normalized)) {
+    if (/\b(planejar|planejamento|acoes?|ações?)\b/i.test(normalized)) {
+      return 'Planejamento de ações de marketing'
+    }
+    if (/\bcampanhas?\b/i.test(normalized)) {
+      return 'Campanhas comerciais e institucionais'
+    }
+    return 'Marketing'
+  }
+
+  if (/\beventos?\b/i.test(normalized)) {
+    return 'Eventos'
+  }
+
+  if (/\b(campanhas?|comerciais?|institucionais?)\b/i.test(normalized)) {
+    return 'Campanhas comerciais e institucionais'
+  }
+
+  if (/\b(cronogramas?|planos?\s+de\s+acao|planos?\s+de\s+ação)\b/i.test(normalized)) {
+    return 'Cronogramas e planos de ação'
+  }
+
+  if (/\b(publico-alvo|público-alvo|indicadores?|desempenho)\b/i.test(normalized)) {
+    return 'Público-alvo e indicadores de desempenho'
+  }
+
+  if (/\b(orcamento|orçamento|custos?)\b/i.test(normalized)) {
+    return 'Orçamento e custos'
+  }
+
+  if (/\b(conteudo|conteúdo|canais?\s+externos?)\b/i.test(normalized)) {
+    return 'Conteúdo para canais externos'
+  }
+
+  return signal
+}
+
+export function buildCoreRequirementDisplaySignals(requirements: CoreRequirement[]): string[] {
+  const signals = dedupe(
+    requirements
+      .filter((requirement) => requirement.importance === 'core')
+      .filter((requirement) => !SUPPORTED_CORE_LEVELS.has(requirement.evidenceLevel)
+        || requirement.rewritePermission === 'must_not_claim')
+      .map(humanizeDisplaySignal)
+      .filter((signal): signal is string => Boolean(signal)),
+  )
+
+  const priority = (signal: string): number => {
+    if (signal === 'Marketing') return 1
+    if (signal === 'Eventos') return 2
+    if (/^Planejamento/u.test(signal)) return 3
+    if (/^Campanhas/u.test(signal)) return 4
+    if (/^Cronogramas/u.test(signal)) return 5
+    if (/^Público-alvo/u.test(signal)) return 6
+    if (/^Orçamento/u.test(signal)) return 7
+    if (/^Conteúdo/u.test(signal)) return 8
+    return 50
+  }
+
+  return signals
+    .map((signal, index) => ({ signal, index }))
+    .sort((left, right) => priority(left.signal) - priority(right.signal) || left.index - right.index)
+    .map((entry) => entry.signal)
+    .slice(0, MAX_DISPLAY_REQUIREMENTS)
 }
 
 function normalizeRequirementSignal(value: string): string {
@@ -321,7 +411,7 @@ export function buildCoreRequirementCoverage(params: {
   const unsupportedSignals = coreRequirements
     .filter((requirement) => !supportedCoreRequirements.includes(requirement))
     .map((requirement) => requirement.signal)
-  const topUnsupportedSignalsForDisplay = unsupportedSignals.slice(0, 6)
+  const topUnsupportedSignalsForDisplay = buildCoreRequirementDisplaySignals(coreRequirements)
 
   return {
     requirements: requirementList,

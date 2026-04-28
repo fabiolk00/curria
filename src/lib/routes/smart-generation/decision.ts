@@ -4,6 +4,7 @@ import {
   markJobTargetingStartLockCompletedDurable,
   markJobTargetingStartLockFailedDurable,
   tryAcquireJobTargetingStartLockDurable,
+  type JobTargetingStartLockBackend,
 } from '@/lib/agent/job-targeting-start-lock'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import type { CVState } from '@/types/cv'
@@ -82,6 +83,7 @@ export async function executeSmartGenerationDecision(
   }
 
   let jobTargetingStartIdempotencyKey: string | undefined
+  let jobTargetingStartLockBackend: JobTargetingStartLockBackend | undefined
   if (workflowMode === 'job_targeting' && context.targetJobDescription) {
     let lock: Awaited<ReturnType<typeof tryAcquireJobTargetingStartLockDurable>>
     try {
@@ -120,22 +122,28 @@ export async function executeSmartGenerationDecision(
     }
 
     jobTargetingStartIdempotencyKey = lock.idempotencyKey
+    jobTargetingStartLockBackend = lock.backend
   }
 
   const { session, patchedSession } = await bootstrapSmartGenerationSession(context, {
     jobTargetingStartIdempotencyKey,
+    jobTargetingStartLockBackend,
   })
   const workflow = { workflowMode, copy, session, patchedSession } as const
   const pipeline = await runSmartGenerationPipeline(patchedSession, workflowMode)
 
   if (!pipeline.success || !pipeline.optimizedCvState) {
     const recoverableBlock = 'recoverableBlock' in pipeline ? pipeline.recoverableBlock : undefined
-    if (jobTargetingStartIdempotencyKey && !recoverableBlock) {
-      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
-    } else if (jobTargetingStartIdempotencyKey) {
+    if (jobTargetingStartIdempotencyKey && jobTargetingStartLockBackend && !recoverableBlock) {
+      await markJobTargetingStartLockFailedDurable({
+        idempotencyKey: jobTargetingStartIdempotencyKey,
+        backend: jobTargetingStartLockBackend,
+      })
+    } else if (jobTargetingStartIdempotencyKey && jobTargetingStartLockBackend) {
       await markJobTargetingStartLockCompletedDurable({
         idempotencyKey: jobTargetingStartIdempotencyKey,
         sessionId: session.id,
+        backend: jobTargetingStartLockBackend,
       })
     }
 
@@ -153,8 +161,11 @@ export async function executeSmartGenerationDecision(
     optimizedCvState: pipeline.optimizedCvState,
   })
   if (handoffFailure) {
-    if (jobTargetingStartIdempotencyKey) {
-      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
+    if (jobTargetingStartIdempotencyKey && jobTargetingStartLockBackend) {
+      await markJobTargetingStartLockFailedDurable({
+        idempotencyKey: jobTargetingStartIdempotencyKey,
+        backend: jobTargetingStartLockBackend,
+      })
     }
     return handoffFailure
   }
@@ -166,16 +177,20 @@ export async function executeSmartGenerationDecision(
   })
 
   if (generationResult.outputFailure) {
-    if (jobTargetingStartIdempotencyKey) {
-      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
+    if (jobTargetingStartIdempotencyKey && jobTargetingStartLockBackend) {
+      await markJobTargetingStartLockFailedDurable({
+        idempotencyKey: jobTargetingStartIdempotencyKey,
+        backend: jobTargetingStartLockBackend,
+      })
     }
     return normalizeSmartGenerationDispatchFailure(generationResult)
   }
 
-  if (jobTargetingStartIdempotencyKey) {
+  if (jobTargetingStartIdempotencyKey && jobTargetingStartLockBackend) {
     await markJobTargetingStartLockCompletedDurable({
       idempotencyKey: jobTargetingStartIdempotencyKey,
       sessionId: session.id,
+      backend: jobTargetingStartLockBackend,
     })
   }
 

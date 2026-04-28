@@ -9,7 +9,7 @@ const JOB_TARGETING_START_LOCK_TTL_MS = 10 * 60 * 1000
 const JOB_TARGETING_START_LOCK_TTL_SECONDS = Math.ceil(JOB_TARGETING_START_LOCK_TTL_MS / 1000)
 
 type JobTargetingStartLockStatus = 'running' | 'completed' | 'failed'
-type JobTargetingStartLockBackend = 'redis' | 'memory_fallback'
+export type JobTargetingStartLockBackend = 'redis' | 'memory_fallback'
 
 type JobTargetingStartLock = {
   idempotencyKey: string
@@ -377,6 +377,7 @@ export async function tryAcquireJobTargetingStartLockDurable(input: {
 export function markJobTargetingStartLockCompleted(input: {
   idempotencyKey: string
   sessionId: string
+  backend?: JobTargetingStartLockBackend
 }): void {
   const lock = locks.get(input.idempotencyKey)
   if (!lock) {
@@ -395,7 +396,7 @@ export function markJobTargetingStartLockCompleted(input: {
     idempotencyKeyHash: hashForLog(input.idempotencyKey),
     targetJobHash: lock.targetJobHash,
     resumeHash: lock.resumeHash,
-    backend: 'memory_fallback',
+    backend: input.backend ?? 'memory_fallback',
     status: 'completed',
   })
 }
@@ -403,9 +404,10 @@ export function markJobTargetingStartLockCompleted(input: {
 export async function markJobTargetingStartLockCompletedDurable(input: {
   idempotencyKey: string
   sessionId: string
+  backend: JobTargetingStartLockBackend
 }): Promise<void> {
   markJobTargetingStartLockCompleted(input)
-  const redis = getRedisClient()
+  const redis = input.backend === 'redis' ? getRedisClient() : null
   const lock = locks.get(input.idempotencyKey)
   if (!redis || !lock) {
     return
@@ -419,24 +421,36 @@ export async function markJobTargetingStartLockCompletedDurable(input: {
 export function markJobTargetingStartLockRunningSession(input: {
   idempotencyKey: string
   sessionId: string
+  backend?: JobTargetingStartLockBackend
 }): void {
   const lock = locks.get(input.idempotencyKey)
   if (!lock || lock.status !== 'running') {
     return
   }
 
-  locks.set(input.idempotencyKey, {
+  const nextLock = {
     ...lock,
     sessionId: input.sessionId,
+  }
+  locks.set(input.idempotencyKey, nextLock)
+  logLockEvent('agent.job_targeting.start_lock_running_session_marked', {
+    userId: lock.userId,
+    sessionId: input.sessionId,
+    idempotencyKeyHash: hashForLog(input.idempotencyKey),
+    targetJobHash: lock.targetJobHash,
+    resumeHash: lock.resumeHash,
+    backend: input.backend ?? 'memory_fallback',
+    status: 'running',
   })
 }
 
 export async function markJobTargetingStartLockRunningSessionDurable(input: {
   idempotencyKey: string
   sessionId: string
+  backend: JobTargetingStartLockBackend
 }): Promise<void> {
   markJobTargetingStartLockRunningSession(input)
-  const redis = getRedisClient()
+  const redis = input.backend === 'redis' ? getRedisClient() : null
   const lock = locks.get(input.idempotencyKey)
   if (!redis || !lock) {
     return
@@ -447,7 +461,12 @@ export async function markJobTargetingStartLockRunningSessionDurable(input: {
   })
 }
 
-export function markJobTargetingStartLockFailed(idempotencyKey: string): void {
+export function markJobTargetingStartLockFailed(input: string | {
+  idempotencyKey: string
+  backend?: JobTargetingStartLockBackend
+}): void {
+  const idempotencyKey = typeof input === 'string' ? input : input.idempotencyKey
+  const backend = typeof input === 'string' ? 'memory_fallback' : input.backend ?? 'memory_fallback'
   const lock = locks.get(idempotencyKey)
   if (!lock) {
     return
@@ -464,19 +483,22 @@ export function markJobTargetingStartLockFailed(idempotencyKey: string): void {
     idempotencyKeyHash: hashForLog(idempotencyKey),
     targetJobHash: lock.targetJobHash,
     resumeHash: lock.resumeHash,
-    backend: 'memory_fallback',
+    backend,
     status: 'failed',
   })
 }
 
-export async function markJobTargetingStartLockFailedDurable(idempotencyKey: string): Promise<void> {
-  markJobTargetingStartLockFailed(idempotencyKey)
-  const redis = getRedisClient()
+export async function markJobTargetingStartLockFailedDurable(input: {
+  idempotencyKey: string
+  backend: JobTargetingStartLockBackend
+}): Promise<void> {
+  markJobTargetingStartLockFailed(input)
+  const redis = input.backend === 'redis' ? getRedisClient() : null
   if (!redis) {
     return
   }
 
-  await redis.del(idempotencyKey)
+  await redis.del(input.idempotencyKey)
 }
 
 export function resetJobTargetingStartLocksForTests(): void {

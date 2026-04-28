@@ -1,55 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DEFAULT_OPENAI_MODEL } from '@/lib/agent/config'
-import { getSupabaseAdminClient } from '@/lib/db/supabase-admin'
+import { runWithApiUsageBuffer, trackApiUsage } from './usage-tracker'
 
-import {
-  MODEL_PRICING_CENTS_PER_MILLION,
-  getModelPricing,
-  trackApiUsage,
-} from './usage-tracker'
+const insertMock = vi.fn()
 
 vi.mock('@/lib/db/supabase-admin', () => ({
-  getSupabaseAdminClient: vi.fn(),
+  getSupabaseAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      insert: insertMock,
+    })),
+  })),
 }))
 
-const insert = vi.fn()
+vi.mock('@/lib/db/ids', () => ({
+  createDatabaseId: vi.fn(() => 'usage_test_id'),
+}))
 
-describe('usage tracker pricing', () => {
+vi.mock('@/lib/db/timestamps', () => ({
+  createCreatedAtTimestamp: vi.fn(() => ({ created_at: '2026-04-28T00:00:00.000Z' })),
+}))
+
+describe('usage tracker buffering', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(getSupabaseAdminClient).mockReturnValue({
-      from: vi.fn(() => ({
-        insert,
-      })),
-    } as unknown as ReturnType<typeof getSupabaseAdminClient>)
-    insert.mockResolvedValue(null)
+    insertMock.mockReset()
+    insertMock.mockResolvedValue({})
   })
 
-  it('tracks the default standardized model using the pricing table', async () => {
-    await trackApiUsage({
-      userId: 'usr_123',
-      model: DEFAULT_OPENAI_MODEL,
-      inputTokens: 1_000_000,
-      outputTokens: 1_000_000,
-      endpoint: 'agent',
+  it('coalesces repeated request usage into one api_usage insert per model', async () => {
+    await runWithApiUsageBuffer(async () => {
+      await trackApiUsage({
+        userId: 'usr_123',
+        sessionId: 'sess_123',
+        model: 'gpt-5.4-mini',
+        inputTokens: 10,
+        outputTokens: 5,
+        endpoint: 'gap_analysis',
+      })
+      await trackApiUsage({
+        userId: 'usr_123',
+        sessionId: 'sess_123',
+        model: 'gpt-5.4-mini',
+        inputTokens: 20,
+        outputTokens: 15,
+        endpoint: 'rewriter',
+      })
     })
 
-    expect(insert).toHaveBeenCalledWith(
+    expect(insertMock).toHaveBeenCalledTimes(1)
+    expect(insertMock).toHaveBeenCalledWith([
       expect.objectContaining({
-        id: expect.any(String),
-        created_at: expect.any(String),
-        model: DEFAULT_OPENAI_MODEL,
-        cost_cents:
-          MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL].input
-          + MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL].output,
+        user_id: 'usr_123',
+        session_id: 'sess_123',
+        model: 'gpt-5.4-mini',
+        input_tokens: 30,
+        output_tokens: 20,
+        total_tokens: 50,
+        endpoint: 'agent',
       }),
-    )
-  })
-
-  it('falls back unknown models to the standardized default pricing', () => {
-    expect(getModelPricing('unknown-model')).toEqual(
-      MODEL_PRICING_CENTS_PER_MILLION[DEFAULT_OPENAI_MODEL],
-    )
+    ])
   })
 })

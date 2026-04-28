@@ -6,6 +6,7 @@ import { ArrowLeft, Download, Highlighter, Loader2, Pencil } from "lucide-react"
 import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components/dashboard/events"
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
+import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
 import { Button } from "@/components/ui/button"
 import {
   buildExperienceBulletHighlightItemIds,
@@ -147,6 +148,7 @@ function ResumeDocument({
           ? "border-emerald-200 dark:border-emerald-900/50"
           : "border-red-200 dark:border-red-900/50",
       )}
+      data-testid={isOptimized ? "optimized-resume-document" : "original-resume-document"}
     >
       {isOptimized && (onEdit || onDownload) && !isLockedPreview ? (
         <div className="absolute right-2 top-2 flex gap-1 sm:right-4 sm:top-4">
@@ -214,7 +216,10 @@ function ResumeDocument({
       </div>
 
       {displaySummary ? (
-        <div className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}>
+        <div
+          className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}
+          data-optimized-section={isOptimized ? "summary" : undefined}
+        >
           <h3 className="mb-1.5 flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:mb-2 sm:text-xs">
             Resumo
             {isOptimized ? (
@@ -236,7 +241,10 @@ function ResumeDocument({
       ) : null}
 
       {cvState.experience.length > 0 ? (
-        <div className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}>
+        <div
+          className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}
+          data-optimized-section={isOptimized ? "experience" : undefined}
+        >
           <h3 className="mb-2 flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:mb-3 sm:text-xs">
             Experiência
             {isOptimized ? (
@@ -324,7 +332,10 @@ function ResumeDocument({
       ) : null}
 
       {cvState.skills.length > 0 ? (
-        <div className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}>
+        <div
+          className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}
+          data-optimized-section={isOptimized ? "skills" : undefined}
+        >
           <h3 className="mb-1.5 flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:mb-2 sm:text-xs">
             Skills
             {isOptimized ? (
@@ -355,7 +366,10 @@ function ResumeDocument({
       ) : null}
 
       {cvState.education.length > 0 ? (
-        <div className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}>
+        <div
+          className={cn("mb-4 sm:mb-6", isLockedPreview ? "select-none blur-sm" : undefined)}
+          data-optimized-section={isOptimized ? "education" : undefined}
+        >
           <h3 className="mb-1.5 flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:mb-2 sm:text-xs">
             Educação
             {isOptimized ? (
@@ -378,7 +392,10 @@ function ResumeDocument({
       ) : null}
 
       {cvState.certifications && cvState.certifications.length > 0 ? (
-        <div className={cn(isLockedPreview ? "select-none blur-sm" : undefined)}>
+        <div
+          className={cn(isLockedPreview ? "select-none blur-sm" : undefined)}
+          data-optimized-section={isOptimized ? "certifications" : undefined}
+        >
           <h3 className="mb-1.5 flex items-center text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:mb-2 sm:text-xs">
             Certificações
             {isOptimized ? (
@@ -520,6 +537,17 @@ export function ResumeComparisonView({
   const isDownloadPending = isRefreshingDownloadState
     || (downloadState.generationStatus === "generating" && !downloadState.pdfUrl)
   const isOverrideReviewHighlight = currentHighlightState?.highlightMode === "override_review"
+  const inlineHighlightCount = currentHighlightState?.resolvedHighlights
+    .reduce((total, item) => total + item.ranges.length, 0) ?? 0
+  const hasInlineHighlights = inlineHighlightCount > 0
+  const shouldShowHighlightToggle = !previewLock?.locked && hasInlineHighlights
+
+  const handleReviewItemSelect = (item: NonNullable<CvHighlightState["reviewItems"]>[number]) => {
+    const section = item.section ?? "summary"
+    const target = document.querySelector(`[data-optimized-section="${section}"]`)
+      ?? document.querySelector('[data-optimized-section="summary"]')
+    target?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
 
   const handleDownload = async () => {
     try {
@@ -630,7 +658,7 @@ export function ResumeComparisonView({
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <p className="text-sm text-amber-900 dark:text-amber-100">
-              Este currÃ­culo foi gerado com pontos de atenÃ§Ã£o. Revise os trechos marcados antes de enviar.
+              Este currículo foi gerado com pontos de atenção. Revise os itens abaixo antes de enviar.
             </p>
           </div>
         </div>
@@ -649,7 +677,10 @@ export function ResumeComparisonView({
       <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
         <div
           className={cn(
-            "mx-auto grid max-w-7xl gap-8 transition-all duration-700 sm:gap-6 lg:grid-cols-2",
+            "mx-auto grid max-w-7xl gap-8 transition-all duration-700 sm:gap-6",
+            isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length
+              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
+              : "lg:grid-cols-2",
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
           )}
         >
@@ -670,9 +701,9 @@ export function ResumeComparisonView({
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
-                  {isOverrideReviewHighlight ? "Pontos para revisar" : "Otimizado"}
+                  {isOverrideReviewHighlight ? "Revisão recomendada" : "Otimizado"}
                 </span>
-                {!previewLock?.locked ? (
+                {shouldShowHighlightToggle ? (
                   <button
                     type="button"
                     onClick={() => setShowHighlights((value) => !value)}
@@ -684,11 +715,11 @@ export function ResumeComparisonView({
                 ) : null}
               </div>
             </div>
-            {isOverrideReviewHighlight ? (
+            {isOverrideReviewHighlight && hasInlineHighlights ? (
               <div className="mb-3 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-zinc-700 shadow-sm dark:border-amber-900/50 dark:bg-zinc-950 dark:text-zinc-200">
                 <div className="flex flex-wrap gap-3">
-                  <span><strong>Comprovado:</strong> trecho sustentado pelo currÃ­culo original</span>
-                  <span><strong>AtenÃ§Ã£o:</strong> aproximaÃ§Ã£o cautelosa</span>
+                  <span><strong>Comprovado:</strong> trecho sustentado pelo currículo original</span>
+                  <span><strong>Atenção:</strong> aproximação cautelosa</span>
                   <span><strong>Revisar:</strong> ponto aceito com aviso</span>
                 </div>
               </div>
@@ -719,25 +750,15 @@ export function ResumeComparisonView({
                 {downloadStatusMessage}
               </div>
             ) : null}
-            {isOverrideReviewHighlight && currentHighlightState.reviewItems?.length ? (
-              <div
-                data-testid="override-review-panel"
-                className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
-              >
-                <p className="font-semibold">Pontos para revisar</p>
-                <ul className="mt-2 space-y-1.5">
-                  {currentHighlightState.reviewItems.map((item, index) => (
-                    <li key={`${item.severity}-${index}`}>
-                      <span className="font-medium">
-                        {item.severity === "supported" ? "Comprovado" : item.severity === "caution" ? "AtenÃ§Ã£o" : "Revisar"}:
-                      </span>{" "}
-                      {item.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </div>
+          {isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length ? (
+            <ReviewWarningPanel
+              items={currentHighlightState.reviewItems}
+              hasInlineHighlights={hasInlineHighlights}
+              onItemSelect={handleReviewItemSelect}
+              className="lg:sticky lg:top-4 lg:self-start"
+            />
+          ) : null}
         </div>
       </div>
 

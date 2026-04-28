@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
 Last activity: 2026-04-28
-Last Activity Description: Completed quick hardening for session history access, job-targeting start idempotency, and override review highlights.
+Last Activity Description: Completed quick hardening for lock backend consistency, core display cleanup, override write reduction, and override observability.
 
 Progress: [##########] 100%
 
@@ -225,6 +225,8 @@ Baseline carried forward from earlier shipped milestones:
 | 260427-qse | Harden semantic evidence isolation so enrichment runs only in job_targeting targeted rewrite, with acronym, grounding, and cross-domain safeguards | 2026-04-27 | working-tree | Validated | [260427-qse-hardening-semantic-evidence-targeted-rewrite-isolation](./quick/260427-qse-hardening-semantic-evidence-targeted-rewrite-isolation/) |
 | 260427-qtr | Final hardening to lock semantic evidence to the enriched targeted-rewrite entrypoint with explicit contract, trace semantics, and acronym-context regression proof | 2026-04-27 | working-tree | Validated | [260427-qtr-final-hardening-semantic-evidence-targeted-rewrite-regression-safety](./quick/260427-qtr-final-hardening-semantic-evidence-targeted-rewrite-regression-safety/) |
 | 260427-trm | Hardening session history access, job targeting start idempotency, and override review highlights | 2026-04-28 | working-tree | Validated | [260427-trm-hardening-session-history-access-job-tar](./quick/260427-trm-hardening-session-history-access-job-tar/) |
+| 260427-v3b | Hardening lock backend consistency, core display cleanup, override N+1 reduction, and override observability | 2026-04-28 | working-tree | Validated | [260427-v3b-hardening-lock-backend-consistency-core-](./quick/260427-v3b-hardening-lock-backend-consistency-core-/) |
+| 260427-val | UX hardening review warning panel for generated resumes with override | 2026-04-28 | working-tree | Validated | [260427-val-ux-hardening-review-warning-panel-for-ge](./quick/260427-val-ux-hardening-review-warning-panel-for-ge/) |
 
 ## Session Continuity
 
