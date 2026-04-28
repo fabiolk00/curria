@@ -129,7 +129,7 @@ export async function resolveGenerateFileExecutionContext(
       kind: 'error',
       failure: toolFailure(
         TOOL_ERROR_CODES.GENERATE_FILE_LATEST_VERSION_MISSING,
-        'Gere uma nova versÃ£o otimizada pela IA antes de exportar este currÃ­culo.',
+        'Gere uma nova versão otimizada pela IA antes de exportar este currículo.',
       ),
       diagnostics,
     }

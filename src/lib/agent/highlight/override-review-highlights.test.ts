@@ -121,14 +121,14 @@ describe('buildOverrideReviewHighlightState', () => {
         issues: [{
           severity: 'high',
           issueType: 'unsupported_claim',
-          message: 'Cargo nao comprovado no historico.',
+          message: 'Cargo não comprovado no histórico.',
           offendingText: 'Desenvolvedor Java',
         }],
       },
     })
     const cvState = {
       ...session.cvState,
-      summary: 'Desenvolvedor Java com experiencia em eventos internos.',
+      summary: 'Desenvolvedor Java com experiência em eventos internos.',
     }
 
     const state = buildOverrideReviewHighlightState({
@@ -166,7 +166,7 @@ describe('buildOverrideReviewHighlightState', () => {
         issues: [{
           severity: 'high',
           issueType: 'low_fit_target_role',
-          message: 'A vaga exige experiencia distante do curriculo.',
+          message: 'A vaga exige experiência distante do currículo.',
         }],
       },
     })

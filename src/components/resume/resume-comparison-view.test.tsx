@@ -312,6 +312,17 @@ describe('ResumeComparisonView', () => {
   })
 
   it('repairs mojibake in review issue copy before rendering', () => {
+    const brokenMessage = [
+      'Revise o curr',
+      '\u00c3\u00ad',
+      'culo com aten',
+      '\u00c3\u00a7\u00c3\u00a3',
+      'o para evitar aproxima',
+      '\u00c3\u00a7\u00c3\u00a3',
+      'o sem evid',
+      '\u00c3\u00aa',
+      'ncia.',
+    ].join('')
     const highlightState: CvHighlightState = {
       source: 'rewritten_cv_state',
       version: CV_HIGHLIGHT_ARTIFACT_VERSION,
@@ -322,7 +333,7 @@ describe('ResumeComparisonView', () => {
       resolvedHighlights: [],
       reviewItems: [{
         severity: 'risk',
-        message: 'Revise o currÃ­culo com atenÃ§Ã£o para evitar aproximaÃ§Ã£o sem evidÃªncia.',
+        message: brokenMessage,
         issueType: 'review_copy',
         inline: false,
         section: 'summary',

@@ -71,7 +71,7 @@ describe('core requirement coverage', () => {
         targetRole: 'Desenvolvedor Java',
         permission: 'must_not_claim_target_role',
         reason: 'career_fit_high_risk',
-        safeRolePositioning: 'Profissional com experiencia em BI, SQL e APIs REST.',
+        safeRolePositioning: 'Profissional com experiência em BI, SQL e APIs REST.',
         forbiddenRoleClaims: ['Desenvolvedor Java'],
       },
     })
@@ -265,7 +265,7 @@ describe('core requirement coverage', () => {
 
   it('extracts both the technology and the years-of-experience requirement', () => {
     const coverage = buildCoreRequirementCoverage({
-      targetJobDescription: 'Profissional com mais de 5 anos de experiencia em Java',
+      targetJobDescription: 'Profissional com mais de 5 anos de experiência em Java',
       targetRole: 'Desenvolvedor Java',
       targetEvidence: buildTargetEvidence(),
       missingButCannotInvent: [],

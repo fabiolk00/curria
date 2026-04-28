@@ -969,7 +969,7 @@ export default function UserDataPage({
       if (response.ok && data.status === "already_completed" && data.sessionId) {
         applyGenerationSuccess(
           data,
-          "Esta adaptaÃ§Ã£o jÃ¡ estava pronta. Abrindo a sessÃ£o existente.",
+          "Esta adaptação já estava pronta. Abrindo a sessão existente.",
         )
         return
       }

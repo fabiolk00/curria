@@ -228,6 +228,7 @@ Baseline carried forward from earlier shipped milestones:
 | 260427-v3b | Hardening lock backend consistency, core display cleanup, override N+1 reduction, and override observability | 2026-04-28 | working-tree | Validated | [260427-v3b-hardening-lock-backend-consistency-core-](./quick/260427-v3b-hardening-lock-backend-consistency-core-/) |
 | 260427-val | UX hardening review warning panel for generated resumes with override | 2026-04-28 | working-tree | Validated | [260427-val-ux-hardening-review-warning-panel-for-ge](./quick/260427-val-ux-hardening-review-warning-panel-for-ge/) |
 | 260427-vo5 | UX + Core Requirement Hardening: dynamic review panel and domain-agnostic requirement display | 2026-04-28 | working-tree | Validated | [260427-vo5-ux-core-requirement-hardening-dynamic-re](./quick/260427-vo5-ux-core-requirement-hardening-dynamic-re/) |
+| 260428-82i | Fix copy regression audit mojibake findings | 2026-04-28 | working-tree | Validated | [260428-82i-fix-copy-regression-audit-mojibake-findi](./quick/260428-82i-fix-copy-regression-audit-mojibake-findi/) |
 
 ## Session Continuity
 

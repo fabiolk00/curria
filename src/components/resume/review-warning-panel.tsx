@@ -14,17 +14,29 @@ type ReviewWarningPanelProps = {
   className?: string
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function corruptUtf8AsLatin1(value: string): string {
+  return Array.from(new TextEncoder().encode(value), (byte) => String.fromCharCode(byte)).join("")
+}
+
 const MOJIBAKE_REPAIRS: Array<[RegExp, string]> = [
-  [/currÃƒÂ­culo|currÃ­culo/gi, "currículo"],
-  [/atenÃƒÂ§ÃƒÂ£o|atenÃ§Ã£o/gi, "atenção"],
-  [/aproximaÃƒÂ§ÃƒÂ£o|aproximaÃ§Ã£o/gi, "aproximação"],
-  [/evidÃƒÂªncia|evidÃªncia/gi, "evidência"],
-  [/experiÃƒÂªncia|experiÃªncia/gi, "experiência"],
-  [/geraÃƒÂ§ÃƒÂ£o|geraÃ§Ã£o/gi, "geração"],
-  [/adaptaÃƒÂ§ÃƒÂ£o|adaptaÃ§Ã£o/gi, "adaptação"],
-  [/vocÃƒÂª|vocÃª/gi, "você"],
-  [/nÃƒÂ£o|nÃ£o/gi, "não"],
-]
+  "currículo",
+  "atenção",
+  "aproximação",
+  "evidência",
+  "experiência",
+  "geração",
+  "adaptação",
+  "você",
+  "não",
+].map((replacement) => {
+  const once = corruptUtf8AsLatin1(replacement)
+  const twice = corruptUtf8AsLatin1(once)
+  return [new RegExp(`${escapeRegExp(twice)}|${escapeRegExp(once)}`, "gi"), replacement]
+})
 
 export function repairMojibakeForDisplay(text: string): string {
   return MOJIBAKE_REPAIRS.reduce(
