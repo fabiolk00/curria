@@ -939,7 +939,7 @@ describe('session route', () => {
 
     expect(response.status).toBe(200)
     expect(logWarn).toHaveBeenCalledWith(
-      'db.n_plus_one_threshold_exceeded',
+      'db.query_count_threshold_exceeded',
       expect.objectContaining({
         requestMethod: 'GET',
         requestPath: '/api/session/sess_diverse',

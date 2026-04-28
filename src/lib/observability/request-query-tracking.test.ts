@@ -105,7 +105,7 @@ describe('request-query-tracking', () => {
     )
 
     expect(logWarn).toHaveBeenCalledWith(
-      'db.n_plus_one_threshold_exceeded',
+      'db.query_count_threshold_exceeded',
       expect.objectContaining({
         queryCount: 3,
         threshold: 2,

@@ -252,6 +252,11 @@ describe('buildOverrideReviewHighlightState', () => {
       originalProfileLabel: expect.any(String),
       missingEvidence: expect.arrayContaining(['metas comerciais']),
     }))
+    expect(state.reviewItems?.[0]?.missingEvidence).not.toEqual(expect.arrayContaining([
+      'Responsabilidades Da Posição',
+      'precificando conforme padrão',
+      'pendências de produtos da sua área',
+    ]))
   })
 })
 

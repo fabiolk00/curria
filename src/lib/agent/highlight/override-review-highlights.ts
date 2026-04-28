@@ -185,13 +185,22 @@ function buildIssueReviewItem(params: {
 
   if (issue.issueType === 'target_role_overclaim' || issue.issueType === 'low_fit_target_role') {
     const missingEvidence = params.topUnsupportedSignalsForDisplay.slice(0, 6)
+    const hasMissingEvidence = missingEvidence.length > 0
     return {
       ...defaults,
       id: `warning-${issue.issueType}-${targetRole}`.slice(0, 120),
-      title: 'Cargo da vaga assumido com pouca evidência',
-      explanation: `A versão gerada pode estar se aproximando demais do cargo “${targetRole}”.`,
-      whyItMatters: `Seu currículo original comprova melhor uma trajetória em ${params.originalProfileLabel}. Se o resumo se apresentar diretamente como “${targetRole}”, pode parecer que você já atuou nessa função.`,
-      suggestedAction: 'Revise o resumo para manter sua identidade profissional real e usar a vaga apenas como direcionamento.',
+      title: hasMissingEvidence
+        ? 'Requisitos da vaga sem evidência suficiente'
+        : 'Cargo da vaga assumido com pouca evidência',
+      explanation: hasMissingEvidence
+        ? `A vaga “${targetRole}” exige pontos que ainda não aparecem com evidência forte no seu currículo original.`
+        : `A versão gerada pode estar se aproximando demais do cargo “${targetRole}”.`,
+      whyItMatters: hasMissingEvidence
+        ? `Seu perfil comprovado hoje está mais alinhado com ${params.originalProfileLabel}. Se os requisitos centrais da vaga não estiverem claros no histórico, o encaixe pode parecer artificial para recrutadores.`
+        : `Seu currículo original comprova melhor uma trajetória em ${params.originalProfileLabel}. Se o resumo se apresentar diretamente como “${targetRole}”, pode parecer que você já atuou nessa função.`,
+      suggestedAction: hasMissingEvidence
+        ? 'Use os requisitos sem evidência como plano de transição e ajuste o resumo para destacar somente competências já comprovadas.'
+        : 'Revise o resumo para manter sua identidade profissional real e usar a vaga apenas como direcionamento.',
       message: issue.userFacingExplanation ?? issue.message,
       issueType: issue.issueType,
       offendingSignal,

@@ -24,11 +24,15 @@ const SUPPORTED_CORE_LEVELS = new Set<EvidenceLevel>([
   'technical_equivalent',
 ])
 const SECTION_HEADING_PATTERNS = [
+  /^responsabilidades?\s+d[ae]\s+posicao$/i,
   /^requisitos$/i,
   /^qualificacoes$/i,
   /^requisitos e qualificacoes$/i,
   /^responsabilidades$/i,
   /^atividades$/i,
+  /^atribuicoes$/i,
+  /^descricao da vaga$/i,
+  /^sobre a posicao$/i,
   /^descricao$/i,
   /^diferenciais$/i,
   /^desejavel$/i,
@@ -56,6 +60,14 @@ const MAX_DISPLAY_REQUIREMENTS = 8
 const WEAK_DISPLAY_SIGNAL_PATTERNS = [
   /^atribuicoes$/i,
   /^atribuições$/i,
+  /^aplicar$/i,
+  /^demanda$/i,
+  /^gondolas$/i,
+  /^racks?(?:,\s*etc\.)?\)?$/i,
+  /^merchandising$/i,
+ /^[\p{L}\p{N}\s]+ndo\s+conforme\b.*$/iu,
+ /^reciprocidades?\s+dos\s+acordos\s+comerciais$/i,
+ /^pendencias?\s+de\s+produtos?\s+da\s+sua\s+area$/i,
   /^promocional$/i,
   /^externos$/i,
   /^institucionais$/i,
@@ -96,6 +108,17 @@ const ACTION_VERB_RE = /\b(acompanhar|analisar|apoiar|build|criar|define|definir
 const SEMANTIC_OBJECT_RE = /[A-Z]{2,}|[a-z]+(?:[/.-][a-z0-9]+)+|\b[\p{L}\p{N}]{3,}\b/iu
 const TECH_STACK_INTRO_RE = /^(?:experi[eê]ncia|conhecimento|viv[eê]ncia)\s+com\s+/iu
 const INCOMPLETE_FRAGMENT_SUFFIX_RE = /(?:\bde|\bda|\bdo|\bdos|\bdas|\bem|\bna|\bno|\bnas|\bnos|\bpara|\bcom)\s*$/iu
+const LIST_COMPLEMENT_PREFIX_RE = /^(?:e\s+)?(?:de|da|do|das|dos|em|na|no|nas|nos|para|com)\b/iu
+const TRAILING_AREA_CONTEXT_RE = /\s+d[ao]?\s+sua\s+[a-z\u00c0-\u024f]+(?:\s+[a-z\u00c0-\u024f]+){0,2}$/iu
+
+function isLikelyTechnicalSignal(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed) return false
+  if (/^[A-Z]{2,}(?:[/-][A-Z0-9]{2,})*$/u.test(trimmed)) return true
+  if (/[+#/]/u.test(trimmed)) return true
+  if (/^[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)*$/u.test(trimmed)) return true
+  return /\b(?:java|python|sql|docker|kafka|spring|node|react|angular|kubernetes|terraform|hibernate|rabbitmq)\b/iu.test(trimmed)
+}
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
@@ -113,6 +136,11 @@ function isGenericRequirement(text: string): boolean {
 
 function isWeakDisplaySignal(text: string): boolean {
   const normalized = normalizeSemanticText(text)
+  const words = normalized.split(/\s+/u).filter(Boolean)
+
+  if (isPureSectionHeading(text) || isIncompleteFragment(text)) return true
+  if (words.length === 1 && !isLikelyTechnicalSignal(text)) return true
+
   return normalized.length < 2
     || WEAK_DISPLAY_SIGNAL_PATTERNS.some((pattern) => pattern.test(normalized))
 }
@@ -143,10 +171,50 @@ export function normalizeRequirementForDisplay(text: string): string {
     .replace(/\bvisando\b.*$/iu, '')
     .replace(/^assegurar\s+(?:a|o)\s+correta\s+/iu, '')
     .replace(/^utiliza[cç][aã]o\s+dos\s+/iu, 'Utilização de ')
+    .replace(/^manter\s+os\s+/iu, 'Manter ')
+    .replace(/\b(?:da|do|das|dos)\s+sua\s+[a-z\u00c0-\u024f]+(?:\s+[a-z\u00c0-\u024f]+){0,2}$/iu, '')
+    .replace(/\bcadastros?\s+dos\s+/iu, 'cadastros de ')
+    .replace(/\bestrat[eé]gias?\s+de\s+repasse\s+de\s+pre[cç]o.*$/iu, 'estratégias de repasse de preço')
     .replace(/\b(cumprir|executar|negociar|assegurar)\s+(?:as|os|a|o)\b/giu, '$1')
+    .replace(/\b(?:as|os)\s+estrat[eé]gias\b/iu, 'estratégias')
+    .replace(/\bplanos\s+acordados\s+com\s+os\s+clientes\b/iu, 'planos acordados com clientes')
     .replace(/\s+/gu, ' ')
     .replace(/[,:;.-]+$/u, '')
     .trim()
+}
+
+function canMergeAsComplement(previous: string, current: string): boolean {
+  const previousNormalized = normalizeSemanticText(previous)
+  const currentNormalized = normalizeSemanticText(current)
+
+  if (!previousNormalized || !currentNormalized) return false
+  if (hasActionVerb(current) || isPureSectionHeading(current) || isWeakDisplaySignal(current)) return false
+
+  const previousLooksOpenList = previous.includes(',')
+    || INCOMPLETE_FRAGMENT_SUFFIX_RE.test(previousNormalized)
+  const currentLooksComplement = LIST_COMPLEMENT_PREFIX_RE.test(currentNormalized)
+    || TRAILING_AREA_CONTEXT_RE.test(currentNormalized)
+    || /^[a-z\u00c0-\u024f]/u.test(current.trim())
+
+  return hasActionVerb(previous) && previousLooksOpenList && currentLooksComplement
+}
+
+export function mergeComplementaryFragments(signals: string[]): string[] {
+  const merged: string[] = []
+
+  signals.forEach((signal) => {
+    const cleanedSignal = normalizeRequirementForDisplay(signal)
+    const previous = merged.at(-1)
+
+    if (previous && canMergeAsComplement(previous, cleanedSignal)) {
+      merged[merged.length - 1] = normalizeRequirementForDisplay(`${previous} e ${cleanedSignal}`)
+      return
+    }
+
+    merged.push(cleanedSignal)
+  })
+
+  return merged.filter((signal) => !isWeakDisplaySignal(signal))
 }
 
 export function isIncompleteFragment(text: string): boolean {
@@ -217,9 +285,10 @@ export function buildCoreRequirementDisplaySignals(requirements: CoreRequirement
     }
   })
 
-  return Array.from(strongestByCanonical.values())
+  const sortedSignals = Array.from(strongestByCanonical.values())
     .sort((left, right) => right.score - left.score || left.index - right.index)
     .map((entry) => entry.signal)
+  return mergeComplementaryFragments(sortedSignals)
     .slice(0, MAX_DISPLAY_REQUIREMENTS)
 }
 
@@ -307,6 +376,9 @@ function splitCommaFragments(fragment: string): string[] {
   }
 
   const parts = trimmed.split(/,\s*/u).map((part) => part.trim()).filter(Boolean)
+  if (parts.length === 2 && hasActionVerb(parts[0] ?? '') && !hasActionVerb(parts[1] ?? '')) {
+    return [trimmed]
+  }
   const hasLongClause = trimmed.split(/\s+/u).length > 8
   const looksTechnicalList = TECH_STACK_INTRO_RE.test(trimmed)
     || parts.every((part) => part.split(/\s+/u).length <= 3)
@@ -406,6 +478,23 @@ function extractRequirementFragments(line: string): string[] {
         && !isGenericRequirement(fragment)
       )),
   )
+}
+
+function mergeContinuationLines(lines: string[]): string[] {
+  const merged: string[] = []
+
+  lines.forEach((line) => {
+    const previous = merged.at(-1)
+    const isLowercaseContinuation = /^[a-z\u00c0-\u024f]/u.test(line.trim())
+    if (previous && isLowercaseContinuation && hasActionVerb(previous) && previous.includes(',')) {
+      merged[merged.length - 1] = `${previous} e ${line.trim()}`
+      return
+    }
+
+    merged.push(line)
+  })
+
+  return merged
 }
 
 function inferImportance(params: {
@@ -511,10 +600,10 @@ export function buildCoreRequirementCoverage(params: {
   targetRolePositioning?: TargetRolePositioning
 }): CoreRequirementCoverage {
   const shapedJobDescription = shapeTargetJobDescription(params.targetJobDescription).content
-  const lines = shapedJobDescription
+  const lines = mergeContinuationLines(shapedJobDescription
     .split('\n')
     .map((line) => line.trim())
-    .filter(Boolean)
+    .filter(Boolean))
 
   const requirements = new Map<string, CoreRequirement>()
   let activeHeading: 'core' | 'secondary' | 'differential' | undefined
