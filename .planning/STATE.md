@@ -8,7 +8,7 @@ current_plan: 01 completed
 status: in_progress
 stopped_at: Completed Phase 108 semantic evidence classification for targeted rewrite
 last_updated: "2026-04-27T09:31:30.0000000-03:00"
-last_activity: 2026-04-27
+last_activity: 2026-04-28
 progress:
   total_phases: 57
   completed_phases: 11
@@ -35,8 +35,8 @@ Current Phase Name: adicionar camada dinamica de evidencia semantica para target
 Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
-Last activity: 2026-04-27
-Last Activity Description: Locked Phase 108 semantic evidence to the enriched targeted-rewrite entrypoint with explicit contract comments, fail-fast wrapper semantics, trace regression proof, and acronym-context tests.
+Last activity: 2026-04-28
+Last Activity Description: Completed quick hardening for session history access, job-targeting start idempotency, and override review highlights.
 
 Progress: [##########] 100%
 
@@ -224,6 +224,7 @@ Baseline carried forward from earlier shipped milestones:
 | 260426-qct | Remove ATS Readiness from the chat header and chat-generated assistant messages while preserving the current approval gate | 2026-04-26 | working-tree | Scoped Validated | [260426-qct-remover-ats-readiness-do-chat](./quick/260426-qct-remover-ats-readiness-do-chat/) |
 | 260427-qse | Harden semantic evidence isolation so enrichment runs only in job_targeting targeted rewrite, with acronym, grounding, and cross-domain safeguards | 2026-04-27 | working-tree | Validated | [260427-qse-hardening-semantic-evidence-targeted-rewrite-isolation](./quick/260427-qse-hardening-semantic-evidence-targeted-rewrite-isolation/) |
 | 260427-qtr | Final hardening to lock semantic evidence to the enriched targeted-rewrite entrypoint with explicit contract, trace semantics, and acronym-context regression proof | 2026-04-27 | working-tree | Validated | [260427-qtr-final-hardening-semantic-evidence-targeted-rewrite-regression-safety](./quick/260427-qtr-final-hardening-semantic-evidence-targeted-rewrite-regression-safety/) |
+| 260427-trm | Hardening session history access, job targeting start idempotency, and override review highlights | 2026-04-28 | working-tree | Validated | [260427-trm-hardening-session-history-access-job-tar](./quick/260427-trm-hardening-session-history-access-job-tar/) |
 
 ## Session Continuity
 

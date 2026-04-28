@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fingerprintJD } from '@/lib/agent/jd-fingerprint'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
 import { getResumeTargetsForSession } from '@/lib/db/resume-targets'
 import { getSession } from '@/lib/db/sessions'
 import { listJobsForSession } from '@/lib/jobs/repository'
@@ -27,10 +26,6 @@ vi.mock('@/lib/ats/scoring', async () => {
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
-}))
-
-vi.mock('@/lib/billing/ai-chat-access.server', () => ({
-  getAiChatAccess: vi.fn(),
 }))
 
 vi.mock('@/lib/db/sessions', () => ({
@@ -57,22 +52,13 @@ vi.mock('@/lib/observability/structured-log', () => ({
 describe('session route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getAiChatAccess).mockResolvedValue({
-      allowed: true,
-      feature: 'ai_chat',
-      reason: 'active_pro',
-      plan: 'pro',
-      status: 'active',
-      renewsAt: '2026-05-20T00:00:00.000Z',
-      asaasSubscriptionId: 'sub_123',
-    })
     vi.mocked(getResumeTargetsForSession).mockResolvedValue([])
     vi.mocked(listJobsForSession).mockResolvedValue([])
   })
 
-  it('returns 403 when the authenticated user is not entitled to AI chat', async () => {
+  it('allows a non-Pro owner to load the history/editor snapshot legacy assertion', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({ id: 'usr_123' } as never)
-    vi.mocked(getAiChatAccess).mockResolvedValue({
+    vi.mocked(getSession).mockResolvedValue({
       allowed: false,
       feature: 'ai_chat',
       reason: 'plan_not_pro',
@@ -84,14 +70,54 @@ describe('session route', () => {
       title: 'Chat com IA exclusivo do plano PRO',
       message: 'Este recurso está disponível apenas para usuários do plano PRO. Faça upgrade para acessar o chat com IA.',
       upgradeUrl: '/finalizar-compra?plan=pro',
-    })
+    } as never)
+    vi.mocked(getSession).mockResolvedValue({
+      id: 'sess_123',
+      userId: 'usr_123',
+      phase: 'dialog',
+      stateVersion: 1,
+      cvState: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '555-0100',
+        summary: 'Resumo base.',
+        experience: [],
+        skills: ['SQL'],
+        education: [],
+      },
+      agentState: {
+        workflowMode: 'job_targeting',
+        optimizedCvState: {
+          fullName: 'Ana Silva',
+          email: 'ana@example.com',
+          phone: '555-0100',
+          summary: 'Resumo otimizado.',
+          experience: [],
+          skills: ['SQL'],
+          education: [],
+        },
+      },
+      generatedOutput: {
+        status: 'ready',
+      },
+      messageCount: 1,
+      creditConsumed: true,
+      createdAt: '2026-04-21T00:00:00.000Z',
+      updatedAt: '2026-04-21T00:00:00.000Z',
+    } as never)
 
     const response = await GET(
       new NextRequest('https://example.com/api/session/sess_123'),
       { params: { id: 'sess_123' } },
     )
 
-    expect(response.status).toBe(403)
+    const body = await response.json()
+    expect(response.status).toBe(200)
+    expect(body.session.id).toBe('sess_123')
+    expect(body.session.agentState.optimizedCvState).toBeDefined()
+    return
+
+    expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       error: 'Este recurso está disponível apenas para usuários do plano PRO. Faça upgrade para acessar o chat com IA.',
       title: 'Chat com IA exclusivo do plano PRO',
@@ -108,6 +134,77 @@ describe('session route', () => {
       aiChatAccessCode: 'PRO_PLAN_REQUIRED',
       success: false,
     }))
+  })
+
+  it('allows a non-Pro owner to load the history/editor snapshot', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({ id: 'usr_123' } as never)
+    vi.mocked(getSession).mockResolvedValue({
+      id: 'sess_123',
+      userId: 'usr_123',
+      phase: 'dialog',
+      stateVersion: 1,
+      cvState: {
+        fullName: 'Ana Silva',
+        email: 'ana@example.com',
+        phone: '555-0100',
+        summary: 'Resumo base.',
+        experience: [],
+        skills: ['SQL'],
+        education: [],
+      },
+      agentState: {
+        workflowMode: 'job_targeting',
+        optimizedCvState: {
+          fullName: 'Ana Silva',
+          email: 'ana@example.com',
+          phone: '555-0100',
+          summary: 'Resumo otimizado.',
+          experience: [],
+          skills: ['SQL'],
+          education: [],
+        },
+      },
+      generatedOutput: {
+        status: 'ready',
+      },
+      messageCount: 1,
+      creditConsumed: true,
+      createdAt: '2026-04-21T00:00:00.000Z',
+      updatedAt: '2026-04-21T00:00:00.000Z',
+    } as never)
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/session/sess_123'),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.session.id).toBe('sess_123')
+    expect(body.session.agentState.optimizedCvState).toBeDefined()
+    expect(logWarn).not.toHaveBeenCalledWith('api.session.snapshot_forbidden', expect.anything())
+    expect(logInfo).toHaveBeenCalledWith('api.session.snapshot_loaded', expect.objectContaining({
+      accessScope: 'history_editor',
+      requestedSessionId: 'sess_123',
+      appUserId: 'usr_123',
+      success: true,
+    }))
+  })
+
+  it('blocks session snapshots when the authenticated user is not the owner', async () => {
+    vi.mocked(getCurrentAppUser).mockResolvedValue({ id: 'usr_other' } as never)
+    vi.mocked(getSession).mockResolvedValue(null)
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/session/sess_123'),
+      { params: { id: 'sess_123' } },
+    )
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'Forbidden',
+      code: 'forbidden_owner_mismatch',
+    })
   })
 
   it('returns a derived careerFitCheckpoint when the current target still requires confirmation', async () => {

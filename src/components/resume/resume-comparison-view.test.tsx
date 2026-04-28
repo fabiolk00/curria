@@ -215,6 +215,47 @@ describe('ResumeComparisonView', () => {
     expect(bullet).toHaveTextContent('Reduced processing time by 40% with Azure Databricks.')
   })
 
+  it('renders warning generations as review highlights instead of normal match copy', () => {
+    const highlightState: CvHighlightState = {
+      source: 'rewritten_cv_state',
+      version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+      highlightSource: 'job_targeting',
+      highlightMode: 'override_review',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [{
+        itemId: 'summary_0',
+        section: 'summary',
+        ranges: [{ start: 0, end: 18, reason: 'risk' }],
+      }],
+      reviewItems: [{
+        severity: 'risk',
+        message: 'Trecho aceito com aviso para revisao manual.',
+        issueType: 'low_fit_target_role',
+        offendingText: 'Desenvolvedor Java',
+        inline: true,
+      }],
+    }
+
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Desenvolvedor Java com foco em eventos.')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_review"
+        highlightState={highlightState}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByText('Pontos para revisar').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Match da vaga')).not.toBeInTheDocument()
+    expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Trecho aceito com aviso')
+    const highlighted = screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')
+    expect(highlighted).toHaveTextContent('Desenvolvedor Java')
+    expect(highlighted).toHaveAttribute('data-highlight-reason', 'risk')
+  })
+
   it('renders plain text when no highlight artifact exists', () => {
     render(
       <ResumeComparisonView

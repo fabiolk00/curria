@@ -701,6 +701,7 @@ export async function generateCvHighlightState(
     version: CV_HIGHLIGHT_ARTIFACT_VERSION,
     resolvedHighlights: await detectCvHighlights(flattenCvStateForHighlight(cvState), context),
     highlightSource: resolveHighlightSource(context?.workflowMode),
+    ...(context?.workflowMode === 'job_targeting' ? { highlightMode: 'normal_job_match' as const } : {}),
     highlightGeneratedAt: generatedAt,
     generatedAt,
   }

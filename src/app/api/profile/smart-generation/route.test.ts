@@ -8,6 +8,7 @@ import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import { applyToolPatchWithVersion, checkUserQuota, createSession } from '@/lib/db/sessions'
+import { resetJobTargetingStartLocksForTests } from '@/lib/agent/job-targeting-start-lock'
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
@@ -34,6 +35,11 @@ vi.mock('@/lib/agent/ats-enhancement-pipeline', () => ({
 vi.mock('@/lib/agent/job-targeting-pipeline', () => ({
   runJobTargetingPipeline: vi.fn(),
 }))
+
+vi.mock('@/lib/agent/job-targeting-start-lock', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/agent/job-targeting-start-lock')>('@/lib/agent/job-targeting-start-lock')
+  return actual
+})
 
 function buildCvState() {
   return {
@@ -98,6 +104,7 @@ let latestCvVersionSource = 'ats-enhancement'
 describe('POST /api/profile/smart-generation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetJobTargetingStartLocksForTests()
     latestCvVersionSnapshot = buildCvState()
     latestCvVersionSource = 'ats-enhancement'
     vi.mocked(getCurrentAppUser).mockResolvedValue({
@@ -269,6 +276,58 @@ describe('POST /api/profile/smart-generation', () => {
       }),
       expect.objectContaining({ id: 'sess_generation_123' }),
     )
+  })
+
+  it('dedupes simultaneous job-targeting starts for the same user and target', async () => {
+    latestCvVersionSnapshot = {
+      ...buildCvState(),
+      summary: 'Analista de dados orientada a produto e indicadores para a vaga alvo.',
+    }
+    latestCvVersionSource = 'job-targeting'
+
+    let releasePipeline: (() => void) | undefined
+    vi.mocked(runJobTargetingPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = latestCvVersionSnapshot
+      await new Promise<void>((resolve) => {
+        releasePipeline = resolve
+      })
+
+      return {
+        success: true,
+        optimizedCvState: latestCvVersionSnapshot,
+      } as never
+    })
+
+    const body = JSON.stringify({
+      ...buildCvState(),
+      targetJobDescription: 'Vaga para analista de dados senior com foco em produto e SQL.',
+    })
+    const firstRequest = POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+    await vi.waitFor(() => {
+      expect(createSession).toHaveBeenCalledTimes(1)
+    })
+    const secondResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+
+    expect(secondResponse.status).toBe(202)
+    expect(await secondResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      status: 'already_running',
+      sessionId: 'sess_generation_123',
+      message: 'Essa adaptação já está em andamento.',
+    }))
+    expect(createSession).toHaveBeenCalledTimes(1)
+    expect(runJobTargetingPipeline).toHaveBeenCalledTimes(1)
+
+    releasePipeline?.()
+    await firstRequest
   })
 
   it('keeps ATS readiness validation before starting any generation mode', async () => {
@@ -743,8 +802,4 @@ describe('POST /api/profile/smart-generation', () => {
     })
   })
 })
-
-
-
-
 

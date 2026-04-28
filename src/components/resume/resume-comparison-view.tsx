@@ -85,9 +85,13 @@ function HighlightText({
           data-highlighted={enabled && segment.highlighted ? "true" : "false"}
           data-highlight-reason={enabled && segment.highlighted ? (segment.reason ?? "unknown") : "none"}
           className={cn(
-            enabled && segment.highlighted
-              ? "text-emerald-900 underline decoration-emerald-500/70 decoration-2 underline-offset-2 dark:text-emerald-200 dark:decoration-emerald-400/60"
-              : undefined,
+            enabled && segment.highlighted && segment.reason === "risk"
+              ? "text-red-900 underline decoration-red-500/80 decoration-2 underline-offset-2 dark:text-red-200 dark:decoration-red-400/70"
+              : enabled && segment.highlighted && segment.reason === "caution"
+                ? "text-amber-900 underline decoration-amber-500/80 decoration-2 underline-offset-2 dark:text-amber-200 dark:decoration-amber-400/70"
+                : enabled && segment.highlighted
+                  ? "text-emerald-900 underline decoration-emerald-500/70 decoration-2 underline-offset-2 dark:text-emerald-200 dark:decoration-emerald-400/60"
+                  : undefined,
           )}
         >
           {segment.text}
@@ -515,6 +519,7 @@ export function ResumeComparisonView({
     || (!downloadState.pdfUrl && downloadState.generationStatus !== "ready")
   const isDownloadPending = isRefreshingDownloadState
     || (downloadState.generationStatus === "generating" && !downloadState.pdfUrl)
+  const isOverrideReviewHighlight = currentHighlightState?.highlightMode === "override_review"
 
   const handleDownload = async () => {
     try {
@@ -621,6 +626,16 @@ export function ResumeComparisonView({
         </div>
       </header>
 
+      {isOverrideReviewHighlight ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
+          <div className="mx-auto max-w-7xl">
+            <p className="text-sm text-amber-900 dark:text-amber-100">
+              Este currÃ­culo foi gerado com pontos de atenÃ§Ã£o. Revise os trechos marcados antes de enviar.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {previewLock?.locked ? (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
           <div className="mx-auto max-w-7xl">
@@ -655,7 +670,7 @@ export function ResumeComparisonView({
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
-                  Otimizado
+                  {isOverrideReviewHighlight ? "Pontos para revisar" : "Otimizado"}
                 </span>
                 {!previewLock?.locked ? (
                   <button
@@ -669,6 +684,15 @@ export function ResumeComparisonView({
                 ) : null}
               </div>
             </div>
+            {isOverrideReviewHighlight ? (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-zinc-700 shadow-sm dark:border-amber-900/50 dark:bg-zinc-950 dark:text-zinc-200">
+                <div className="flex flex-wrap gap-3">
+                  <span><strong>Comprovado:</strong> trecho sustentado pelo currÃ­culo original</span>
+                  <span><strong>AtenÃ§Ã£o:</strong> aproximaÃ§Ã£o cautelosa</span>
+                  <span><strong>Revisar:</strong> ponto aceito com aviso</span>
+                </div>
+              </div>
+            ) : null}
             <ResumeDocument
               cvState={currentOptimizedCvState}
               variant="optimized"
@@ -693,6 +717,24 @@ export function ResumeComparisonView({
                 )}
               >
                 {downloadStatusMessage}
+              </div>
+            ) : null}
+            {isOverrideReviewHighlight && currentHighlightState.reviewItems?.length ? (
+              <div
+                data-testid="override-review-panel"
+                className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                <p className="font-semibold">Pontos para revisar</p>
+                <ul className="mt-2 space-y-1.5">
+                  {currentHighlightState.reviewItems.map((item, index) => (
+                    <li key={`${item.severity}-${index}`}>
+                      <span className="font-medium">
+                        {item.severity === "supported" ? "Comprovado" : item.severity === "caution" ? "AtenÃ§Ã£o" : "Revisar"}:
+                      </span>{" "}
+                      {item.message}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
           </div>

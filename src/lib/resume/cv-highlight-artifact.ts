@@ -88,6 +88,9 @@ export type CvHighlightReason =
   | 'action_result'
   | 'ats_strength'
   | 'tool_context'
+  | 'supported'
+  | 'caution'
+  | 'risk'
 
 export type CvHighlightRange = {
   start: number
@@ -113,6 +116,14 @@ export type CvHighlightState = {
   version: typeof CV_HIGHLIGHT_ARTIFACT_VERSION
   resolvedHighlights: CvResolvedHighlight[]
   highlightSource: 'ats_enhancement' | 'job_targeting'
+  highlightMode?: 'normal_job_match' | 'override_review'
+  reviewItems?: Array<{
+    severity: 'supported' | 'caution' | 'risk'
+    message: string
+    issueType?: string
+    offendingText?: string
+    inline: boolean
+  }>
   highlightGeneratedAt: string
   generatedAt: string
 }
@@ -134,6 +145,9 @@ const cvHighlightReasonSchema = z.enum([
   'action_result',
   'ats_strength',
   'tool_context',
+  'supported',
+  'caution',
+  'risk',
 ])
 
 const cvHighlightRangeSchema = z.object({
@@ -195,6 +209,14 @@ const cvHighlightStateSchema = z.object({
   version: z.literal(CV_HIGHLIGHT_ARTIFACT_VERSION),
   resolvedHighlights: z.array(cvResolvedHighlightSchema),
   highlightSource: z.enum(['ats_enhancement', 'job_targeting']).optional(),
+  highlightMode: z.enum(['normal_job_match', 'override_review']).optional(),
+  reviewItems: z.array(z.object({
+    severity: z.enum(['supported', 'caution', 'risk']),
+    message: z.string().min(1),
+    issueType: z.string().min(1).optional(),
+    offendingText: z.string().min(1).optional(),
+    inline: z.boolean(),
+  })).optional(),
   highlightGeneratedAt: z.string().min(1).optional(),
   generatedAt: z.string().min(1),
 })

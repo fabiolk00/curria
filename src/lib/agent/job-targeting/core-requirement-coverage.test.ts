@@ -106,6 +106,38 @@ describe('core requirement coverage', () => {
     ]))
   })
 
+  it('extracts core requirements from non-technical marketing and events vacancies', () => {
+    const coverage = buildCoreRequirementCoverage({
+      targetJobDescription: [
+        'Cargo: Analista de Marketing e Eventos',
+        'Responsabilidades',
+        '- Planejar campanhas de marketing e comunicacao.',
+        '- Sera responsavel por producao de eventos, briefing e relacionamento com fornecedores.',
+        '- Atuara com midias sociais, trade marketing e relacionamento com areas internas.',
+        'Requisitos',
+        '- Vivencia em eventos corporativos e campanhas digitais.',
+      ].join('\n'),
+      targetRole: 'Analista de Marketing e Eventos',
+      targetEvidence: [],
+      missingButCannotInvent: [],
+    })
+
+    expect(coverage.total).toBeGreaterThan(0)
+    expect(coverage.unsupportedSignals).toEqual(expect.arrayContaining([
+      'Planejar campanhas de marketing',
+      'comunicacao',
+      'briefing',
+      'relacionamento com fornecedores',
+      'midias sociais',
+      'trade marketing',
+      'eventos corporativos',
+    ]))
+    expect(coverage.requirements.map((requirement) => requirement.signal)).not.toEqual(expect.arrayContaining([
+      'Requisitos',
+      'Responsabilidades',
+    ]))
+  })
+
   it('breaks compound technical requirements into clean atomic signals', () => {
     const coverage = buildCoreRequirementCoverage({
       targetJobDescription: 'Experiência com Spring Boot, construção e manutenção de APIs REST, JPA/Hibernate, bancos relacionais e mensageria (Kafka/RabbitMQ)',

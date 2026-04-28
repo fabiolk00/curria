@@ -146,6 +146,7 @@ vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
   },
 }))
 
@@ -704,6 +705,78 @@ describe("UserDataPage", () => {
       method: "POST",
       body: expect.stringContaining("\"targetJobDescription\":\"Vaga para analista de dados senior com foco em produto e SQL.\""),
     }))
+  })
+
+  it("blocks a fast double-click before a second target-job start request is sent", async () => {
+    const user = userEvent.setup()
+    let resolveGeneration: (response: ReturnType<typeof createJsonResponse>) => void = () => {}
+    const generationResponse = new Promise<ReturnType<typeof createJsonResponse>>((resolve) => {
+      resolveGeneration = resolve
+    })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(createJsonResponse(buildProfileResponse()))
+      .mockResolvedValueOnce(createJsonResponse(buildProfileResponse()))
+      .mockImplementationOnce(() => generationResponse)
+
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    await user.type(
+      screen.getByTestId("target-job-description-input"),
+      "Vaga para analista de marketing e eventos.",
+    )
+
+    const cta = screen.getByTestId("ats-panel-cta")
+    await user.dblClick(cta)
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/profile/smart-generation", expect.objectContaining({
+      method: "POST",
+    }))
+    expect(cta).toBeDisabled()
+
+    resolveGeneration(createJsonResponse({
+      success: true,
+      sessionId: "sess_target_once",
+    }))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_target_once")
+    })
+  })
+
+  it("reuses the backend running session instead of surfacing a generic error", async () => {
+    const user = userEvent.setup()
+    const fetchMock = buildFetchMock(
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse(buildProfileResponse()),
+      createJsonResponse({
+        status: "already_running",
+        sessionId: "sess_existing_running",
+        message: "Essa adaptacao ja esta em andamento.",
+      }, { status: 202 }),
+    )
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    await user.type(
+      screen.getByTestId("target-job-description-input"),
+      "Vaga para analista de marketing e eventos.",
+    )
+    await user.click(screen.getByTestId("ats-panel-cta"))
+
+    await waitFor(() => {
+      expect(toast.info).toHaveBeenCalledWith("Essa adaptacao ja esta em andamento.")
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
   it("surfaces success warnings in the completion toast when job targeting saves with observations", async () => {

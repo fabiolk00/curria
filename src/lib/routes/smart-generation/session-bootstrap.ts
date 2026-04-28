@@ -1,4 +1,5 @@
 import type { CVState } from '@/types/cv'
+import { markJobTargetingStartLockRunningSessionDurable } from '@/lib/agent/job-targeting-start-lock'
 import { applyToolPatchWithVersion, createSession } from '@/lib/db/sessions'
 import { buildResumeTextFromCvState } from '@/lib/profile/ats-enhancement'
 
@@ -29,10 +30,20 @@ export function buildPatchedSession(
 
 export async function bootstrapSmartGenerationSession(
   context: SmartGenerationContext,
+  options?: {
+    jobTargetingStartIdempotencyKey?: string
+  },
 ) {
   const workflowMode = resolveWorkflowMode(context.targetJobDescription)
   const sourceResumeText = buildResumeTextFromCvState(context.cvState)
   const session = await createSession(context.appUser.id)
+
+  if (workflowMode === 'job_targeting' && options?.jobTargetingStartIdempotencyKey) {
+    await markJobTargetingStartLockRunningSessionDurable({
+      idempotencyKey: options.jobTargetingStartIdempotencyKey,
+      sessionId: session.id,
+    })
+  }
 
   await applyToolPatchWithVersion(session, {
     cvState: context.cvState,

@@ -121,6 +121,8 @@ type ValidationMessage = {
 
 type SmartGenerationResponse = {
   success?: boolean
+  status?: "already_running" | "already_completed"
+  message?: string
   sessionId?: string
   workflowMode?: SetupGenerationMode
   rewriteValidation?: {
@@ -616,6 +618,7 @@ export default function UserDataPage({
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isRunningAtsEnhancement, setIsRunningAtsEnhancement] = useState(false)
+  const isRunningAtsEnhancementRef = useRef(false)
   const [targetJobDescription, setTargetJobDescription] = useState("")
   const [enhancementIntent, setEnhancementIntent] = useState<EnhancementIntent>("ats")
   const [targetJobValidationMessage, setTargetJobValidationMessage] = useState<string | null>(null)
@@ -882,14 +885,21 @@ export default function UserDataPage({
   }
 
   const handleSetupGeneration = async (): Promise<void> => {
+    if (isRunningAtsEnhancementRef.current) {
+      return
+    }
+
+    isRunningAtsEnhancementRef.current = true
+    setIsRunningAtsEnhancement(true)
+
     const missingItems = getAtsEnhancementBlockingItems(sanitizeResumeData(resumeData))
     if (missingItems.length > 0) {
       setAtsMissingItems(missingItems)
       setIsAtsRequirementsOpen(true)
+      isRunningAtsEnhancementRef.current = false
+      setIsRunningAtsEnhancement(false)
       return
     }
-
-    setIsRunningAtsEnhancement(true)
 
     try {
       await persistProfile()
@@ -947,6 +957,23 @@ export default function UserDataPage({
         return
       }
 
+      if (response.ok && data.status === "already_running") {
+        toast.info(data.message ?? "Essa adaptação já está em andamento.")
+        if (data.sessionId) {
+          storeLastGeneratedProfileSessionId(data.sessionId, currentAppUserId)
+          setLastGeneratedSessionId(data.sessionId)
+        }
+        return
+      }
+
+      if (response.ok && data.status === "already_completed" && data.sessionId) {
+        applyGenerationSuccess(
+          data,
+          "Esta adaptaÃ§Ã£o jÃ¡ estava pronta. Abrindo a sessÃ£o existente.",
+        )
+        return
+      }
+
       if (!response.ok || !data.success || !data.sessionId) {
         throw new Error(extractErrorMessage(data.error, generationCopy.failure))
       }
@@ -960,6 +987,7 @@ export default function UserDataPage({
     } catch (error) {
       toast.error(extractErrorMessage(error, generationCopy.failure))
     } finally {
+      isRunningAtsEnhancementRef.current = false
       setIsRunningAtsEnhancement(false)
     }
   }

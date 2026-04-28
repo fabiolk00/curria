@@ -80,6 +80,9 @@ export type JobTargetingTrace = {
     generated: boolean
     highlightSource?: 'job_targeting' | 'ats_enhancement'
     jobKeywordsCount: number
+    overrideReviewHighlightGenerated?: boolean
+    overrideReviewHighlightCount?: number
+    overrideReviewHighlightStatus?: 'pending' | 'completed' | 'failed'
   }
   error?: string
 }

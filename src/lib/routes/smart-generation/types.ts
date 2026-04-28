@@ -41,8 +41,11 @@ export type SmartGenerationDecision =
     }
   | {
       kind: 'success'
+      status?: number
       body: {
         success: true
+        status?: 'already_running' | 'already_completed'
+        message?: string
         sessionId: string
         creditsUsed?: number
         resumeGenerationId?: string

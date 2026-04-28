@@ -1,4 +1,5 @@
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
+import { buildOverrideReviewHighlightState } from '@/lib/agent/highlight/override-review-highlights'
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
 import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
 import { evaluateCareerFitRisk } from '@/lib/agent/profile-review'
@@ -1079,11 +1080,88 @@ export async function runJobTargetingPipeline(
       })
     }
   }
+  const shouldGenerateOverrideReviewHighlights = highlightGenerationGate === 'skipped_after_override'
+  if (shouldGenerateOverrideReviewHighlights) {
+    logInfo('agent.highlight_state.override_review.started', {
+      sessionId: session.id,
+      cvVersionId: undefined,
+      acceptedLowFit: options?.userAcceptedLowFit === true,
+      fallbackUsed: acceptedLowFitFallbackUsed,
+      issueCount: validation.issues.length,
+    })
+
+    try {
+      nextHighlightState = buildOverrideReviewHighlightState({
+        session: {
+          ...session,
+          agentState: {
+            ...session.agentState,
+            targetingPlan,
+            rewriteValidation: validation,
+            validationOverride: {
+              enabled: true,
+              acceptedAt: new Date().toISOString(),
+              acceptedByUserId: session.userId,
+              validationIssueCount: validation.issues.length,
+              hardIssueCount: validation.hardIssues.length,
+              issueTypes: getIssueTypeList(validation.issues),
+              issues: validation.issues,
+              targetRole: targetingPlan.targetRole,
+              acceptedLowFit: options?.userAcceptedLowFit === true,
+              fallbackUsed: acceptedLowFitFallbackUsed,
+            },
+          },
+        },
+        cvState: finalizedOptimizedCvState,
+      })
+      const summary = summarizeHighlightState(nextHighlightState)
+      logInfo('agent.highlight_state.override_review.completed', {
+        sessionId: session.id,
+        cvVersionId: undefined,
+        acceptedLowFit: options?.userAcceptedLowFit === true,
+        fallbackUsed: acceptedLowFitFallbackUsed,
+        issueCount: validation.issues.length,
+        supportedCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'supported').length ?? 0,
+        cautionCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'caution').length ?? 0,
+        riskCount: nextHighlightState.reviewItems?.filter((item) => item.severity === 'risk').length ?? 0,
+        overrideReviewHighlightCount: summary.highlightStateResolvedRangeCount,
+      })
+    } catch (error) {
+      nextHighlightState = {
+        source: 'rewritten_cv_state',
+        version: 2,
+        resolvedHighlights: [],
+        highlightSource: 'job_targeting',
+        highlightMode: 'override_review',
+        reviewItems: validation.issues.map((issue) => ({
+          severity: 'risk' as const,
+          message: issue.userFacingExplanation ?? issue.message,
+          issueType: issue.issueType,
+          offendingText: issue.offendingText ?? issue.offendingSignal,
+          inline: false,
+        })),
+        highlightGeneratedAt: new Date().toISOString(),
+        generatedAt: new Date().toISOString(),
+      }
+      logWarn('agent.highlight_state.override_review.failed', {
+        sessionId: session.id,
+        cvVersionId: undefined,
+        acceptedLowFit: options?.userAcceptedLowFit === true,
+        fallbackUsed: acceptedLowFitFallbackUsed,
+        issueCount: validation.issues.length,
+        ...serializeError(error),
+      })
+    }
+  }
   trace.highlight = {
     gate: highlightGenerationGate,
     generated: shouldGenerateHighlights && Boolean(nextHighlightState),
     highlightSource: shouldGenerateHighlights ? nextHighlightState?.highlightSource : undefined,
     jobKeywordsCount: jobKeywords.length,
+    overrideReviewHighlightGenerated: shouldGenerateOverrideReviewHighlights && nextHighlightState?.highlightMode === 'override_review',
+    overrideReviewHighlightCount: shouldGenerateOverrideReviewHighlights
+      ? summarizeHighlightState(nextHighlightState).highlightStateResolvedRangeCount
+      : undefined,
   }
 
   const blockedDraft = !options?.skipLowFitRecoverableBlocking

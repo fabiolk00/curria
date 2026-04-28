@@ -1,4 +1,10 @@
 import { TOOL_ERROR_CODES, getHttpStatusForToolError } from '@/lib/agent/tool-errors'
+import {
+  JobTargetingStartLockBackendError,
+  markJobTargetingStartLockCompletedDurable,
+  markJobTargetingStartLockFailedDurable,
+  tryAcquireJobTargetingStartLockDurable,
+} from '@/lib/agent/job-targeting-start-lock'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import type { CVState } from '@/types/cv'
 
@@ -75,11 +81,64 @@ export async function executeSmartGenerationDecision(
     return validationError
   }
 
-  const { session, patchedSession } = await bootstrapSmartGenerationSession(context)
+  let jobTargetingStartIdempotencyKey: string | undefined
+  if (workflowMode === 'job_targeting' && context.targetJobDescription) {
+    let lock: Awaited<ReturnType<typeof tryAcquireJobTargetingStartLockDurable>>
+    try {
+      lock = await tryAcquireJobTargetingStartLockDurable({
+        userId: context.appUser.id,
+        cvState: context.cvState,
+        targetJobDescription: context.targetJobDescription,
+      })
+    } catch (error) {
+      if (error instanceof JobTargetingStartLockBackendError) {
+        return {
+          kind: 'validation_error',
+          status: 503,
+          body: {
+            error: error.message,
+            code: error.code,
+          },
+        }
+      }
+
+      throw error
+    }
+
+    if (!lock.acquired) {
+      return {
+        kind: 'success',
+        status: lock.status === 'already_running' ? 202 : 200,
+        body: {
+          success: true,
+          status: lock.status,
+          sessionId: lock.sessionId ?? '',
+          generationType: copy.generationType,
+          message: lock.message,
+        },
+      }
+    }
+
+    jobTargetingStartIdempotencyKey = lock.idempotencyKey
+  }
+
+  const { session, patchedSession } = await bootstrapSmartGenerationSession(context, {
+    jobTargetingStartIdempotencyKey,
+  })
   const workflow = { workflowMode, copy, session, patchedSession } as const
   const pipeline = await runSmartGenerationPipeline(patchedSession, workflowMode)
 
   if (!pipeline.success || !pipeline.optimizedCvState) {
+    const recoverableBlock = 'recoverableBlock' in pipeline ? pipeline.recoverableBlock : undefined
+    if (jobTargetingStartIdempotencyKey && !recoverableBlock) {
+      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
+    } else if (jobTargetingStartIdempotencyKey) {
+      await markJobTargetingStartLockCompletedDurable({
+        idempotencyKey: jobTargetingStartIdempotencyKey,
+        sessionId: session.id,
+      })
+    }
+
     return normalizeSmartGenerationPipelineFailure({
       pipeline,
       workflow,
@@ -94,6 +153,9 @@ export async function executeSmartGenerationDecision(
     optimizedCvState: pipeline.optimizedCvState,
   })
   if (handoffFailure) {
+    if (jobTargetingStartIdempotencyKey) {
+      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
+    }
     return handoffFailure
   }
 
@@ -104,7 +166,17 @@ export async function executeSmartGenerationDecision(
   })
 
   if (generationResult.outputFailure) {
+    if (jobTargetingStartIdempotencyKey) {
+      await markJobTargetingStartLockFailedDurable(jobTargetingStartIdempotencyKey)
+    }
     return normalizeSmartGenerationDispatchFailure(generationResult)
+  }
+
+  if (jobTargetingStartIdempotencyKey) {
+    await markJobTargetingStartLockCompletedDurable({
+      idempotencyKey: jobTargetingStartIdempotencyKey,
+      sessionId: session.id,
+    })
   }
 
   return normalizeSmartGenerationSuccess({

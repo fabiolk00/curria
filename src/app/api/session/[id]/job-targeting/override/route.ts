@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { buildOverrideReviewHighlightState } from '@/lib/agent/highlight/override-review-highlights'
 import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import {
   hashOverrideToken,
@@ -509,7 +510,7 @@ export async function POST(
         resumeGenerationId?: string
       }
       const validationIssues = pipelineResult.validation?.issues ?? lockedDraft.validationIssues
-      const completedAgentState: typeof lockedSession.agentState = {
+      let completedAgentState: typeof lockedSession.agentState = {
         ...generationSession.agentState,
         rewriteStatus: 'completed' as const,
         validationOverride: buildValidationOverrideMetadata({
@@ -525,6 +526,16 @@ export async function POST(
         }),
         blockedTargetedRewriteDraft: undefined,
         recoverableValidationBlock: undefined,
+      }
+      completedAgentState = {
+        ...completedAgentState,
+        highlightState: buildOverrideReviewHighlightState({
+          session: {
+            ...generationSession,
+            agentState: completedAgentState,
+          },
+          cvState: generationSession.agentState.optimizedCvState ?? lockedSession.cvState,
+        }),
       }
 
       await persistAgentState(lockedSession, completedAgentState)
@@ -665,7 +676,7 @@ export async function POST(
       creditsUsed?: number
       resumeGenerationId?: string
     }
-    const completedAgentState: typeof lockedSession.agentState = {
+    let completedAgentState: typeof lockedSession.agentState = {
       ...generationSession.agentState,
       rewriteStatus: 'completed' as const,
       validationOverride: buildValidationOverrideMetadata({
@@ -679,6 +690,16 @@ export async function POST(
       }),
       blockedTargetedRewriteDraft: undefined,
       recoverableValidationBlock: undefined,
+    }
+    completedAgentState = {
+      ...completedAgentState,
+      highlightState: buildOverrideReviewHighlightState({
+        session: {
+          ...generationSession,
+          agentState: completedAgentState,
+        },
+        cvState: generationSession.agentState.optimizedCvState ?? lockedSession.cvState,
+      }),
     }
 
     await persistAgentState(lockedSession, completedAgentState)
