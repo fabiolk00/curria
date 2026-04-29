@@ -7,8 +7,6 @@ import {
   FileText,
   HelpCircle,
   LogOut,
-  MessageSquare,
-  Plus,
   Settings,
   Sparkles,
   User,
@@ -46,21 +44,16 @@ import {
   getDashboardGuideTargetProps,
   type DashboardWelcomeGuideTargetId,
 } from "@/lib/dashboard/welcome-guide"
-import { AI_CHAT_UPGRADE_URL } from "@/lib/billing/ai-chat-access"
 import { PLANS, PlanSlug } from "@/lib/plans"
 import {
-  CHAT_PATH,
   DASHBOARD_RESUMES_HISTORY_PATH,
-  DASHBOARD_SESSIONS_PATH,
   PROFILE_SETUP_PATH,
 } from "@/lib/routes/app"
 import { cn } from "@/lib/utils"
-import { NEW_CONVERSATION_EVENT } from "./events"
 
 const COLLAPSED_WIDTH = 56
 
 interface DashboardSidebarProps {
-  canAccessAiChat?: boolean
   creditsRemaining?: number
   maxCredits?: number
   renewsIn?: string
@@ -75,7 +68,6 @@ type NavItem = {
   label: string
   href: string
   icon: typeof User
-  requiresAiChatAccess?: boolean
   isActive: (pathname: string) => boolean
 }
 
@@ -95,13 +87,6 @@ const navItems: NavItem[] = [
       || pathname.startsWith(`${PROFILE_SETUP_PATH}/`)
       || pathname === "/profile"
       || pathname.startsWith("/profile/"),
-  },
-  {
-    label: "Sessões",
-    href: DASHBOARD_SESSIONS_PATH,
-    icon: MessageSquare,
-    requiresAiChatAccess: true,
-    isActive: (pathname) => pathname === DASHBOARD_SESSIONS_PATH,
   },
   {
     label: "Currículos",
@@ -188,7 +173,6 @@ function SidebarContent({
   isOpen,
   isMobile,
   onCloseMobile,
-  canAccessAiChat = false,
   creditsRemaining,
   maxCredits,
   renewsIn,
@@ -207,7 +191,6 @@ function SidebarContent({
   const router = useRouter()
   const { signOut } = useClerk()
   const { user } = useUser()
-  const visibleNavItems = navItems.filter((item) => canAccessAiChat || !item.requiresAiChatAccess)
   const hasBillingData = maxCredits !== undefined && creditsRemaining !== undefined
   const percentage =
     hasBillingData && maxCredits > 0 ? (creditsRemaining / maxCredits) * 100 : 0
@@ -269,15 +252,8 @@ function SidebarContent({
     }
   }
 
-  const handleNewConversation = () => {
-    if (!canAccessAiChat) {
-      router.push(AI_CHAT_UPGRADE_URL)
-      onCloseMobile?.()
-      return
-    }
-
-    window.dispatchEvent(new Event(NEW_CONVERSATION_EVENT))
-    router.replace(CHAT_PATH)
+  const handleNewResume = () => {
+    router.push(PROFILE_SETUP_PATH)
     onCloseMobile?.()
   }
 
@@ -315,12 +291,12 @@ function SidebarContent({
     </button>
   )
 
-  const newConversationButton = (
+  const newResumeButton = (
     <button
       type="button"
-      onClick={handleNewConversation}
-      aria-label="Nova conversa"
-      {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.newConversation)}
+      onClick={handleNewResume}
+      aria-label="Gerar currículo"
+      {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.profileAtsCta)}
       className={cn(
         "flex items-center rounded-lg text-sm font-medium transition-colors",
         isOpen || isMobile
@@ -329,8 +305,8 @@ function SidebarContent({
         "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
       )}
     >
-      <Plus className="h-4 w-4 shrink-0 text-sidebar-foreground/75" strokeWidth={1.75} />
-      {isOpen || isMobile ? <span>Nova Conversa</span> : null}
+      <Sparkles className="h-4 w-4 shrink-0 text-sidebar-foreground/75" strokeWidth={1.75} />
+      {isOpen || isMobile ? <span>Gerar currículo</span> : null}
     </button>
   )
 
@@ -339,7 +315,7 @@ function SidebarContent({
       <div className="flex h-full flex-col">
         {isMobile ? (
           <div className="flex items-center justify-between border-b border-border px-3 py-4">
-            <Logo size="sm" linkTo={CHAT_PATH} />
+            <Logo size="sm" linkTo={PROFILE_SETUP_PATH} />
             <Button
               variant="ghost"
               size="icon"
@@ -353,7 +329,7 @@ function SidebarContent({
 
         <ScrollArea className={cn("flex-1 px-2 pb-4", isMobile ? "pt-4" : "pt-3")}>
           <nav className="space-y-1">
-            {visibleNavItems.map((item) => (
+            {navItems.map((item) => (
               <SidebarNavItem
                 key={item.href}
                 item={item}
@@ -363,8 +339,8 @@ function SidebarContent({
                 guideTargetId={
                   item.label === "Perfil"
                     ? dashboardWelcomeGuideTargets.profileNav
-                    : item.label === "Sessões"
-                      ? dashboardWelcomeGuideTargets.sessionsNav
+                    : item.label === "Currículos"
+                      ? dashboardWelcomeGuideTargets.resumesNav
                       : undefined
                 }
               />
@@ -374,11 +350,11 @@ function SidebarContent({
           <div className="mt-2 border-t border-border/30 pt-2">
             {isCollapsedDesktop ? (
               <Tooltip>
-                <TooltipTrigger asChild>{newConversationButton}</TooltipTrigger>
-                <TooltipContent side="right">Nova conversa</TooltipContent>
+                <TooltipTrigger asChild>{newResumeButton}</TooltipTrigger>
+                <TooltipContent side="right">Gerar currículo</TooltipContent>
               </Tooltip>
             ) : (
-              newConversationButton
+              newResumeButton
             )}
           </div>
 
@@ -490,7 +466,6 @@ function SidebarContent({
 }
 
 export function DashboardSidebar({
-  canAccessAiChat = false,
   creditsRemaining,
   maxCredits,
   renewsIn,
@@ -514,7 +489,6 @@ export function DashboardSidebar({
             isOpen
             isMobile
             onCloseMobile={closeMobile}
-            canAccessAiChat={canAccessAiChat}
             creditsRemaining={creditsRemaining}
             maxCredits={maxCredits}
             renewsIn={renewsIn}
@@ -546,7 +520,6 @@ export function DashboardSidebar({
       <SidebarContent
         isOpen={false}
         isMobile={false}
-        canAccessAiChat={canAccessAiChat}
         creditsRemaining={creditsRemaining}
         maxCredits={maxCredits}
         renewsIn={renewsIn}

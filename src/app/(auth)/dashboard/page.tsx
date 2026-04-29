@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 
-import { buildChatPath } from "@/lib/routes/app"
+import { buildResumeComparisonPath, PROFILE_SETUP_PATH } from "@/lib/routes/app"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -17,5 +17,5 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? rawSessionParam[0]
     : rawSessionParam
 
-  redirect(buildChatPath(initialSessionId))
+  redirect(initialSessionId ? buildResumeComparisonPath(initialSessionId) : PROFILE_SETUP_PATH)
 }

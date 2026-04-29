@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { db } from '@/lib/db/sessions'
 import { logError, logWarn, serializeError } from '@/lib/observability/structured-log'
@@ -15,25 +14,6 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const aiChatAccess = await getAiChatAccess(appUser.id)
-  if (!aiChatAccess.allowed) {
-    logWarn('api.session.list_forbidden', {
-      requestMethod: req.method,
-      requestPath,
-      appUserId: appUser.id,
-      aiChatAccessReason: aiChatAccess.reason,
-      aiChatAccessCode: aiChatAccess.code,
-      success: false,
-    })
-
-    return NextResponse.json({
-      error: aiChatAccess.message,
-      title: aiChatAccess.title,
-      code: aiChatAccess.code,
-      upgradeUrl: aiChatAccess.upgradeUrl,
-    }, { status: 403 })
   }
 
   try {

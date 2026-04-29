@@ -1,13 +1,11 @@
 export const DASHBOARD_WELCOME_GUIDE_TARGET_ATTR = "data-dashboard-guide-target"
 export const DASHBOARD_WELCOME_GUIDE_PROFILE_PATH = "/profile-setup"
-export const DASHBOARD_WELCOME_GUIDE_CHAT_PATH = "/chat"
-export const DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH = "/dashboard/sessions"
+export const DASHBOARD_WELCOME_GUIDE_RESUMES_PATH = "/dashboard/resumes-history"
 
 export const dashboardWelcomeGuideTargets = {
   profileNav: "profile-nav",
   profileAtsCta: "profile-ats-cta",
-  sessionsNav: "sessions-nav",
-  newConversation: "new-conversation",
+  resumesNav: "resumes-nav",
 } as const
 
 export type DashboardWelcomeGuideTargetId =
@@ -44,22 +42,12 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
     preferredSide: "left",
   },
   {
-    id: "sessions",
-    title: "Suas sessões",
+    id: "resumes",
+    title: "Histórico de currículos",
     description:
-      "Aqui ficam suas conversas anteriores para retomar versões, revisar o histórico e continuar de onde parou.",
-    targetId: dashboardWelcomeGuideTargets.sessionsNav,
-    path: DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
-    preferredSide: "right",
-    requiresSidebar: true,
-  },
-  {
-    id: "new-conversation",
-    title: "Nova conversa",
-    description:
-      "Comece uma nova conversa para analisar, otimizar ou adaptar seu currículo com ajuda da IA.",
-    targetId: dashboardWelcomeGuideTargets.newConversation,
-    path: DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
+      "Aqui ficam as versões geradas para revisar, comparar e baixar seus currículos quando precisar.",
+    targetId: dashboardWelcomeGuideTargets.resumesNav,
+    path: DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
     preferredSide: "right",
     requiresSidebar: true,
   },

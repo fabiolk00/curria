@@ -4,8 +4,6 @@ import "@testing-library/jest-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardSidebar } from "./sidebar"
-import { NEW_CONVERSATION_EVENT } from "./events"
-import { AI_CHAT_UPGRADE_URL } from "@/lib/billing/ai-chat-access"
 
 const mockReplace = vi.fn()
 const mockPush = vi.fn()
@@ -73,19 +71,17 @@ describe("DashboardSidebar", () => {
     )
   })
 
-  it("keeps the desktop sidebar collapsed with Curriculos before Nova conversa", async () => {
-    render(<DashboardSidebar canAccessAiChat />)
+  it("keeps the desktop sidebar collapsed with guided generation navigation", async () => {
+    render(<DashboardSidebar />)
 
     const profileLink = screen.getByRole("link", { name: "Perfil" })
-    const sessionsLink = screen.getByRole("link", { name: "Sessões" })
     const resumesLink = screen.getByRole("link", { name: "Currículos" })
-    const newConversationButton = screen.getByRole("button", { name: "Nova conversa" })
+    const generateButton = screen.getByRole("button", { name: "Gerar currículo" })
     const accountButton = screen.getByRole("button", { name: "Abrir menu da conta" })
 
     expect(profileLink).toHaveAttribute("href", "/profile-setup")
-    expect(sessionsLink).toHaveAttribute("href", "/dashboard/sessions")
     expect(resumesLink).toHaveAttribute("href", "/dashboard/resumes-history")
-    expect(newConversationButton).toHaveClass(
+    expect(generateButton).toHaveClass(
       "h-10",
       "w-10",
       "justify-center",
@@ -99,8 +95,10 @@ describe("DashboardSidebar", () => {
       "rounded-lg",
     )
     expect(
-      resumesLink.compareDocumentPosition(newConversationButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+      resumesLink.compareDocumentPosition(generateButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0)
+    expect(screen.queryByRole("link", { name: "Sessões" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Nova conversa" })).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Expandir sidebar")).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Recolher sidebar")).not.toBeInTheDocument()
     expect(screen.getByTestId("session-documents-panel")).toHaveAttribute("data-open", "false")
@@ -109,7 +107,7 @@ describe("DashboardSidebar", () => {
   it("opens the existing account dropdown on avatar click in collapsed desktop mode", async () => {
     const user = userEvent.setup()
 
-    render(<DashboardSidebar canAccessAiChat />)
+    render(<DashboardSidebar />)
 
     await user.click(screen.getByRole("button", { name: "Abrir menu da conta" }))
 
@@ -117,36 +115,21 @@ describe("DashboardSidebar", () => {
     expect(screen.getByText("Ver planos")).toBeInTheDocument()
   })
 
-  it("dispatches the real new conversation event and routes back to chat", async () => {
+  it("routes the primary action to guided profile setup", async () => {
     const user = userEvent.setup()
-    const onNewConversation = vi.fn()
-    window.addEventListener(NEW_CONVERSATION_EVENT, onNewConversation)
 
-    render(<DashboardSidebar canAccessAiChat />)
+    render(<DashboardSidebar />)
 
-    await user.click(screen.getByRole("button", { name: "Nova conversa" }))
+    await user.click(screen.getByRole("button", { name: "Gerar currículo" }))
 
-    expect(mockReplace).toHaveBeenCalledWith("/chat")
-    expect(onNewConversation).toHaveBeenCalledTimes(1)
-
-    window.removeEventListener(NEW_CONVERSATION_EVENT, onNewConversation)
+    expect(mockPush).toHaveBeenCalledWith("/profile-setup")
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 
-  it("hides the sessions nav item and routes non-Pro users to upgrade when they click Nova conversa", async () => {
-    const user = userEvent.setup()
-    const onNewConversation = vi.fn()
-    window.addEventListener(NEW_CONVERSATION_EVENT, onNewConversation)
-
-    render(<DashboardSidebar canAccessAiChat={false} />)
+  it("shows history navigation without Pro chat access props", async () => {
+    render(<DashboardSidebar />)
 
     expect(screen.queryByRole("link", { name: "Sessões" })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "Nova conversa" }))
-
-    expect(mockPush).toHaveBeenCalledWith(AI_CHAT_UPGRADE_URL)
-    expect(mockReplace).not.toHaveBeenCalled()
-    expect(onNewConversation).not.toHaveBeenCalled()
-
-    window.removeEventListener(NEW_CONVERSATION_EVENT, onNewConversation)
+    expect(screen.getByRole("link", { name: "Currículos" })).toHaveAttribute("href", "/dashboard/resumes-history")
   })
 })

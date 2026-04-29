@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getCurrentAppUser } from '@/lib/auth/app-user'
-import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
 import { db } from '@/lib/db/sessions'
 import { logError, logWarn } from '@/lib/observability/structured-log'
 
@@ -10,10 +9,6 @@ import { GET, POST } from './route'
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
-}))
-
-vi.mock('@/lib/billing/ai-chat-access.server', () => ({
-  getAiChatAccess: vi.fn(),
 }))
 
 vi.mock('@/lib/db/sessions', () => ({
@@ -33,15 +28,6 @@ vi.mock('@/lib/observability/structured-log', () => ({
 describe('GET /api/session', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getAiChatAccess).mockResolvedValue({
-      allowed: true,
-      feature: 'ai_chat',
-      reason: 'active_pro',
-      plan: 'pro',
-      status: 'active',
-      renewsAt: '2026-05-20T00:00:00.000Z',
-      asaasSubscriptionId: 'sub_123',
-    })
   })
 
   it('logs unauthorized access attempts', async () => {
@@ -75,57 +61,25 @@ describe('GET /api/session', () => {
     }))
   })
 
-  it('returns 403 when the authenticated user is not entitled to AI chat', async () => {
+  it('returns owned sessions without AI chat entitlement', async () => {
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
     } as Awaited<ReturnType<typeof getCurrentAppUser>>)
-    vi.mocked(getAiChatAccess).mockResolvedValue({
-      allowed: false,
-      feature: 'ai_chat',
-      reason: 'plan_not_pro',
-      plan: 'monthly',
-      status: 'active',
-      renewsAt: '2026-05-20T00:00:00.000Z',
-      asaasSubscriptionId: 'sub_123',
-      code: 'PRO_PLAN_REQUIRED',
-      title: 'Chat com IA exclusivo do plano PRO',
-      message: 'Este recurso está disponível apenas para usuários do plano PRO. Faça upgrade para acessar o chat com IA.',
-      upgradeUrl: '/finalizar-compra?plan=pro',
-    })
+    vi.mocked(db.getUserSessions).mockResolvedValue([{ id: 'sess_123' }] as never)
 
     const response = await GET(new NextRequest('https://example.com/api/session'))
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
-      error: 'Este recurso está disponível apenas para usuários do plano PRO. Faça upgrade para acessar o chat com IA.',
-      title: 'Chat com IA exclusivo do plano PRO',
-      code: 'PRO_PLAN_REQUIRED',
-      upgradeUrl: '/finalizar-compra?plan=pro',
+      sessions: [{ id: 'sess_123' }],
     })
-    expect(db.getUserSessions).not.toHaveBeenCalled()
-    expect(logWarn).toHaveBeenCalledWith('api.session.list_forbidden', expect.objectContaining({
-      requestMethod: 'GET',
-      requestPath: '/api/session',
-      appUserId: 'usr_123',
-      aiChatAccessReason: 'plan_not_pro',
-      aiChatAccessCode: 'PRO_PLAN_REQUIRED',
-      success: false,
-    }))
+    expect(db.getUserSessions).toHaveBeenCalledWith('usr_123')
   })
 })
 
 describe('POST /api/session', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getAiChatAccess).mockResolvedValue({
-      allowed: true,
-      feature: 'ai_chat',
-      reason: 'active_pro',
-      plan: 'pro',
-      status: 'active',
-      renewsAt: '2026-05-20T00:00:00.000Z',
-      asaasSubscriptionId: 'sub_123',
-    })
   })
 
   it('logs the blocked direct-create path', async () => {

@@ -61,7 +61,14 @@ export function canonicalizeAppPath(candidate: string): string {
     }
 
     if (pathname === LEGACY_DASHBOARD_PATH) {
-      url.pathname = CHAT_PATH
+      const legacySessionId = url.searchParams.get("session")
+      if (legacySessionId) {
+        url.pathname = buildResumeComparisonPath(legacySessionId)
+        url.searchParams.delete("session")
+        return formatRelativeUrl(url)
+      }
+
+      url.pathname = PROFILE_SETUP_PATH
       return formatRelativeUrl(url)
     }
 

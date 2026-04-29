@@ -7,7 +7,6 @@ import AuthLayout, { dynamic } from './layout'
 
 const mockGetCurrentAppUser = vi.fn()
 const mockLoadOptionalBillingInfo = vi.fn()
-const mockGetAiChatAccess = vi.fn()
 const mockCurrentUser = vi.fn()
 const mockIsE2EAuthEnabled = vi.fn()
 const mockRedirect = vi.fn((path: string) => {
@@ -30,10 +29,6 @@ vi.mock('@/lib/asaas/optional-billing-info', () => ({
   loadOptionalBillingInfo: () => mockLoadOptionalBillingInfo(),
 }))
 
-vi.mock('@/lib/billing/ai-chat-access.server', () => ({
-  getAiChatAccess: () => mockGetAiChatAccess(),
-}))
-
 vi.mock('next/navigation', () => ({
   redirect: (path: string) => mockRedirect(path),
 }))
@@ -42,18 +37,15 @@ vi.mock('@/components/dashboard/dashboard-shell', () => ({
   default: ({
     children,
     billingNotice,
-    canAccessAiChat,
     currentPlan,
   }: {
     children: React.ReactNode
     billingNotice?: string | null
-    canAccessAiChat?: boolean
     currentPlan?: string | null
   }) => (
     <div
       data-testid="dashboard-shell"
       data-billing-notice={billingNotice ?? ''}
-      data-can-access-ai-chat={String(canAccessAiChat ?? false)}
       data-plan={currentPlan ?? ''}
     >
       {children}
@@ -65,7 +57,6 @@ describe('AuthLayout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsE2EAuthEnabled.mockReturnValue(false)
-    mockGetAiChatAccess.mockResolvedValue({ allowed: true })
     mockCurrentUser.mockResolvedValue({
       fullName: 'Fabio Kroker',
       firstName: 'Fabio',
@@ -123,7 +114,6 @@ describe('AuthLayout', () => {
 
     expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-plan', 'monthly')
-    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-can-access-ai-chat', 'true')
     expect(screen.getByText('Child')).toBeInTheDocument()
   })
 
@@ -152,37 +142,6 @@ describe('AuthLayout', () => {
     expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
     expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-billing-notice', 'Billing temporarily unavailable.')
     expect(screen.getByText('Child')).toBeInTheDocument()
-  })
-
-  it('passes a blocked chat state to the dashboard shell when the Pro entitlement is denied', async () => {
-    mockGetCurrentAppUser.mockResolvedValue({
-      id: 'usr_123',
-      creditAccount: {
-        id: 'cred_123',
-        userId: 'usr_123',
-        creditsRemaining: 20,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    })
-    mockLoadOptionalBillingInfo.mockResolvedValue({
-      billingNotice: null,
-      billingInfo: null,
-    })
-    mockGetAiChatAccess.mockResolvedValue({
-      allowed: false,
-      title: 'Chat com IA exclusivo do plano PRO',
-      message: 'Upgrade required',
-      code: 'PRO_PLAN_REQUIRED',
-    })
-
-    const jsx = await AuthLayout({
-      children: <div>Child</div>,
-    })
-
-    render(jsx)
-
-    expect(screen.getByTestId('dashboard-shell')).toHaveAttribute('data-can-access-ai-chat', 'false')
   })
 
   it('renders the protected auth layout with fallback identity data when E2E bypass mode is active', async () => {

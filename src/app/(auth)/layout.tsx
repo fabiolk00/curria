@@ -1,7 +1,6 @@
 import React from 'react'
 import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { isE2EAuthEnabled } from '@/lib/auth/e2e-auth'
 import { PreviewPanelProvider } from '@/context/preview-panel-context'
@@ -26,10 +25,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/entrar')
   }
 
-  const [{ billingInfo, billingNotice }, aiChatAccess] = await Promise.all([
-    loadOptionalBillingInfo(appUser.id, 'auth_layout'),
-    getAiChatAccess(appUser.id),
-  ])
+  const { billingInfo, billingNotice } = await loadOptionalBillingInfo(appUser.id, 'auth_layout')
 
   const renewsIn = billingInfo?.hasActiveRecurringSubscription
     ? formatRenewalCountdown(billingInfo.renewsAt)
@@ -53,7 +49,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <PreviewPanelProvider>
         <DashboardShell
           billingNotice={billingNotice}
-          canAccessAiChat={aiChatAccess.allowed}
           creditsRemaining={billingInfo?.creditsRemaining}
           maxCredits={billingInfo?.maxCredits}
           renewsIn={renewsIn}

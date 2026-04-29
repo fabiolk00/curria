@@ -17,4 +17,14 @@ describe("PricingComparisonTable", () => {
     expect(screen.getByText(String(PLANS.pro.credits))).toBeInTheDocument()
     expect(screen.queryByText("R$ 69,90")).not.toBeInTheDocument()
   })
+
+  it("does not advertise retired formats or chat in the pricing table", () => {
+    render(<PricingComparisonTable />)
+
+    const chatLabelPattern = new RegExp(["Chat", "com IA"].join(" "), "i")
+    const retiredFormatPattern = new RegExp(["DO", "CX"].join(""), "i")
+
+    expect(screen.queryByText(chatLabelPattern)).not.toBeInTheDocument()
+    expect(screen.queryByText(retiredFormatPattern)).not.toBeInTheDocument()
+  })
 })

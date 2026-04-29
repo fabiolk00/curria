@@ -19,19 +19,19 @@ describe("DashboardPage", () => {
     expect(revalidate).toBe(0)
   })
 
-  it("redirects /dashboard to /chat when no session query is present", async () => {
-    await expect(DashboardPage({})).rejects.toThrow("redirect:/chat")
-    expect(mockRedirect).toHaveBeenCalledWith("/chat")
+  it("redirects /dashboard to guided profile setup when no session query is present", async () => {
+    await expect(DashboardPage({})).rejects.toThrow("redirect:/profile-setup")
+    expect(mockRedirect).toHaveBeenCalledWith("/profile-setup")
   })
 
-  it("preserves the session query when redirecting to /chat", async () => {
+  it("routes a session query to resume comparison", async () => {
     await expect(DashboardPage({
       searchParams: {
         session: "sess_valid_123",
       },
-    })).rejects.toThrow("redirect:/chat?session=sess_valid_123")
+    })).rejects.toThrow("redirect:/dashboard/resume/compare/sess_valid_123")
 
-    expect(mockRedirect).toHaveBeenCalledWith("/chat?session=sess_valid_123")
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard/resume/compare/sess_valid_123")
   })
 
   it("normalizes repeated session params to the first value", async () => {
@@ -39,8 +39,8 @@ describe("DashboardPage", () => {
       searchParams: {
         session: ["sess_first", "sess_second"],
       },
-    })).rejects.toThrow("redirect:/chat?session=sess_first")
+    })).rejects.toThrow("redirect:/dashboard/resume/compare/sess_first")
 
-    expect(mockRedirect).toHaveBeenCalledWith("/chat?session=sess_first")
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard/resume/compare/sess_first")
   })
 })

@@ -7,9 +7,8 @@ import { usePathname, useRouter } from "next/navigation"
 import { useSidebarContext } from "@/context/sidebar-context"
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
-  DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
-  DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
+  DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
   DASHBOARD_WELCOME_GUIDE_TARGET_ATTR,
   dashboardWelcomeGuideSteps,
   type DashboardWelcomeGuideStepDefinition,
@@ -135,15 +134,9 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
     }
 
     const isGuidePath =
-      pathname === DASHBOARD_WELCOME_GUIDE_CHAT_PATH
-      || pathname.startsWith(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
-      || pathname === DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH
+      pathname.startsWith(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
+      || pathname === DASHBOARD_WELCOME_GUIDE_RESUMES_PATH
     if (!isGuidePath) {
-      return
-    }
-
-    if (currentStepIndex === 0 && pathname === DASHBOARD_WELCOME_GUIDE_CHAT_PATH) {
-      router.replace(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
       return
     }
 

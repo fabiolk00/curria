@@ -13,7 +13,6 @@ import { DashboardWelcomeGuide } from "./welcome-guide"
 interface DashboardShellProps {
   children: React.ReactNode
   billingNotice?: string | null
-  canAccessAiChat?: boolean
   creditsRemaining?: number
   maxCredits?: number
   renewsIn?: string | null
@@ -27,7 +26,6 @@ interface DashboardShellProps {
 export default function DashboardShell({
   children,
   billingNotice,
-  canAccessAiChat = false,
   creditsRemaining,
   maxCredits,
   renewsIn,
@@ -56,7 +54,6 @@ export default function DashboardShell({
         ) : null}
 
         <DashboardSidebar
-          canAccessAiChat={canAccessAiChat}
           creditsRemaining={creditsRemaining}
           maxCredits={maxCredits}
           renewsIn={renewsIn ?? undefined}

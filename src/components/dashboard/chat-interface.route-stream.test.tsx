@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 
 import { ChatInterface } from "./chat-interface"
+import { fingerprintJD } from "@/lib/agent/jd-fingerprint"
 
 Element.prototype.scrollIntoView = vi.fn()
 
@@ -538,6 +539,21 @@ describe("ChatInterface real /api/agent transcript integration", () => {
           reasons: ["Skill ausente ou pouco evidenciada: Kubernetes"],
           assessedAt: "2026-04-25T10:00:00.000Z",
         },
+        careerFitEvaluation: {
+          riskLevel: "high" as const,
+          needsExplicitConfirmation: true,
+          summary: "Desalinhamento estrutural para a vaga.",
+          reasons: ["Skill ausente ou pouco evidenciada: Kubernetes"],
+          riskPoints: 10,
+          assessedAt: "2026-04-25T10:00:00.000Z",
+          signals: {
+            matchScore: 34,
+            missingSkillsCount: 3,
+            weakAreasCount: 2,
+            familyDistance: "distant" as const,
+            seniorityGapMajor: false,
+          },
+        },
         gapAnalysis: {
           result: {
             matchScore: 34,
@@ -549,6 +565,8 @@ describe("ChatInterface real /api/agent transcript integration", () => {
         },
         phaseMeta: {
           careerFitWarningIssuedAt: "2026-04-25T10:05:00.000Z",
+          careerFitRiskLevelAtWarning: "high" as const,
+          careerFitWarningJDFingerprint: fingerprintJD("Senior Platform Engineer com foco em Kubernetes, Go e Terraform."),
           careerFitWarningTargetJobDescription: "Senior Platform Engineer com foco em Kubernetes, Go e Terraform.",
         },
       },

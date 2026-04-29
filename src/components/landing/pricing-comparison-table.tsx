@@ -31,7 +31,6 @@ const columns = [
   { label: "Currículos", key: "curriculos" },
   { label: "ATS Expert", key: "ats" },
   { label: "PDF", key: "pdf" },
-  { label: "Chat com IA", key: "chatIA" },
   { label: "Histórico", key: "historico" },
 ] as const
 
@@ -52,8 +51,8 @@ export default function PricingComparisonTable() {
       </div>
 
       <div className="w-full max-w-4xl overflow-x-auto">
-        <div className="min-w-[680px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-          <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50/80 px-6 py-4">
+        <div className="min-w-[620px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          <div className="grid grid-cols-6 border-b border-neutral-200 bg-neutral-50/80 px-6 py-4">
             {columns.map((col) => (
               <div
                 key={col.key}
@@ -80,7 +79,7 @@ export default function PricingComparisonTable() {
                 <div
                   key={config.name}
                   className={cn(
-                    "group grid grid-cols-7 items-center px-6 py-5 transition-all duration-200",
+                    "group grid grid-cols-6 items-center px-6 py-5 transition-all duration-200",
                     "hover:bg-neutral-50/50",
                     isBlack && "bg-neutral-900 hover:bg-neutral-800",
                     isGold
@@ -157,10 +156,6 @@ export default function PricingComparisonTable() {
 
                   <div className="col-span-1 flex justify-center">
                     <BoolCell value={comparison.pdf} />
-                  </div>
-
-                  <div className="col-span-1 flex justify-center">
-                    <BoolCell value={comparison.chatIA} highlight={isGold} />
                   </div>
 
                   <div className="col-span-1 flex justify-center">

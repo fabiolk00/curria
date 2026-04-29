@@ -4,7 +4,7 @@ import { logWarn, serializeError } from '@/lib/observability/structured-log'
 export const OPTIONAL_BILLING_INFO_NOTICE =
   'Não foi possível carregar seus créditos e plano agora. Atualize a página em instantes. O restante do workspace continua disponível.'
 
-type BillingInfoSurface = 'auth_layout' | 'dashboard_page' | 'chat_page' | 'settings_page'
+type BillingInfoSurface = 'auth_layout' | 'dashboard_page' | 'profile_setup' | 'chat_page' | 'settings_page'
 
 export async function loadOptionalBillingInfo(
   appUserId: string,

@@ -16,7 +16,7 @@ describe("getSafeRedirectPath", () => {
 
   it("canonicalizes legacy dashboard redirects", () => {
     expect(getSafeRedirectPath("/dashboard?session=sess_123", "/profile-setup")).toBe(
-      "/chat?session=sess_123",
+      "/dashboard/resume/compare/sess_123",
     )
     expect(getSafeRedirectPath("/dashboard/resumes/new", "/chat")).toBe("/profile-setup")
     expect(getSafeRedirectPath("/dashboard/resume/new?source=legacy", "/chat")).toBe(

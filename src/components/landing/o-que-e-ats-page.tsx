@@ -49,7 +49,7 @@ const timelineSteps = [
   {
     icon: Upload,
     title: "O Envio",
-    desc: "Você se candidata e faz o upload do seu currículo em formato PDF ou DOCX no portal da empresa.",
+    desc: "Você se candidata e faz o upload do seu currículo em formato PDF legível por texto no portal da empresa.",
   },
   {
     icon: FileSearch,

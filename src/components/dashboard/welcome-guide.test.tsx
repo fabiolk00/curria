@@ -6,9 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardWelcomeGuide } from "./welcome-guide"
 import {
-  DASHBOARD_WELCOME_GUIDE_CHAT_PATH,
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
-  DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH,
+  DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
   dashboardWelcomeGuideTargets,
   getDashboardGuideTargetProps,
 } from "@/lib/dashboard/welcome-guide"
@@ -42,13 +41,11 @@ vi.mock("@/context/sidebar-context", () => ({
 function TestTargets({
   showProfile = true,
   showAtsCta = true,
-  showSessions = true,
-  showNewConversation = true,
+  showResumes = true,
 }: {
   showProfile?: boolean
   showAtsCta?: boolean
-  showSessions?: boolean
-  showNewConversation?: boolean
+  showResumes?: boolean
 }) {
   return (
     <DashboardWelcomeGuide>
@@ -63,14 +60,9 @@ function TestTargets({
             Melhorar para ATS
           </button>
         ) : null}
-        {showSessions ? (
-          <button type="button" {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.sessionsNav)}>
-            Sessões
-          </button>
-        ) : null}
-        {showNewConversation ? (
-          <button type="button" {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.newConversation)}>
-            Nova conversa
+        {showResumes ? (
+          <button type="button" {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.resumesNav)}>
+            Currículos
           </button>
         ) : null}
       </div>
@@ -110,24 +102,17 @@ describe("DashboardWelcomeGuide", () => {
     }) as unknown as typeof fetch)
   })
 
-  it("redirects to Perfil before opening the first step when the user enters /chat", async () => {
-    mockPathname = DASHBOARD_WELCOME_GUIDE_CHAT_PATH
+  it("does not start the guide on the true chat route", async () => {
+    mockPathname = "/chat"
 
-    const { rerender } = render(<TestTargets showProfile={false} showAtsCta={false} showSessions={false} showNewConversation={false} />)
+    render(<TestTargets showProfile={false} showAtsCta={false} showResumes={false} />)
 
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
-    })
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    expect(mockReplace).not.toHaveBeenCalled()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-
-    mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
-    rerender(<TestTargets />)
-
-    const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getByRole("heading", { name: "Seu perfil" })).toBeInTheDocument()
   })
 
-  it("opens on Perfil and advances through ATS, sessões and nova conversa in the expected order", async () => {
+  it("opens on Perfil and advances through ATS and resume history in the expected order", async () => {
     const user = userEvent.setup()
     const { rerender } = render(<TestTargets />)
 
@@ -148,25 +133,14 @@ describe("DashboardWelcomeGuide", () => {
     )
 
     await user.click(within(secondDialog).getByRole("button", { name: "Próximo" }))
-    mockPathname = DASHBOARD_WELCOME_GUIDE_SESSIONS_PATH
+    mockPathname = DASHBOARD_WELCOME_GUIDE_RESUMES_PATH
     rerender(<TestTargets />)
 
     const thirdDialog = await screen.findByRole("dialog")
-    expect(within(thirdDialog).getByRole("heading", { name: "Suas sessões" })).toBeInTheDocument()
+    expect(within(thirdDialog).getByRole("heading", { name: "Histórico de currículos" })).toBeInTheDocument()
     expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
       "data-target-id",
-      dashboardWelcomeGuideTargets.sessionsNav,
-    )
-
-    await user.click(within(thirdDialog).getByRole("button", { name: "Próximo" }))
-    mockPathname = DASHBOARD_WELCOME_GUIDE_CHAT_PATH
-    rerender(<TestTargets />)
-
-    const finalDialog = await screen.findByRole("dialog")
-    expect(within(finalDialog).getByRole("heading", { name: "Nova conversa" })).toBeInTheDocument()
-    expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
-      "data-target-id",
-      dashboardWelcomeGuideTargets.newConversation,
+      dashboardWelcomeGuideTargets.resumesNav,
     )
   })
 

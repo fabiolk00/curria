@@ -24,10 +24,13 @@ describe("PricingSection", () => {
     expect(screen.getAllByText("ATS Expert")).toHaveLength(4)
     expect(screen.getAllByLabelText("PDF: incluído")).toHaveLength(3)
     expect(screen.getAllByLabelText("PDF: não incluído")).toHaveLength(1)
-    expect(screen.getAllByLabelText("Chat com IA: incluído")).toHaveLength(1)
-    expect(screen.getAllByLabelText("Chat com IA: não incluído")).toHaveLength(3)
     expect(screen.getAllByLabelText("Histórico: incluído")).toHaveLength(3)
     expect(screen.getAllByLabelText("Histórico: não incluído")).toHaveLength(1)
+    const chatLabelPattern = new RegExp(["Chat", "com IA"].join(" "), "i")
+    const retiredFormatPattern = new RegExp(["DO", "CX"].join(""), "i")
+
+    expect(screen.queryByText(chatLabelPattern)).not.toBeInTheDocument()
+    expect(screen.queryByText(retiredFormatPattern)).not.toBeInTheDocument()
     expect(screen.queryByText("Incluído")).not.toBeInTheDocument()
     expect(screen.queryByText("Não")).not.toBeInTheDocument()
 
