@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 
 import { repairUtf8Mojibake } from '@/lib/text/repair-utf8-mojibake'
+import { normalizeSemanticText } from '@/lib/agent/job-targeting/semantic-normalization'
 import type {
   BlockedTargetedRewriteDraft,
   RecoverableValidationBlockKind,
@@ -49,6 +50,64 @@ function listToSentence(values: string[]): string {
   }
 
   return `${values.slice(0, -1).join(', ')} e ${values[values.length - 1]}`
+}
+
+const WEAK_LOW_FIT_CAREER_EVIDENCE_SIGNALS = new Set([
+  'bitbucket',
+  'controle de versão',
+  'controle de versão de código',
+  'git',
+  'github',
+  'gitlab',
+  'svn',
+  'versionamento',
+  'versionamento de código',
+].map(normalizeSemanticText))
+
+const GENERIC_LOW_FIT_PROFILE_LABEL_PATTERNS = [
+  /^profissional com historico comprovado\b/u,
+  /^profissional com trajetoria comprovada\b/u,
+  /^tecnica aderente\b/u,
+]
+
+function isWeakLowFitCareerEvidenceSignal(value: string): boolean {
+  const normalized = normalizeSemanticText(value)
+  return WEAK_LOW_FIT_CAREER_EVIDENCE_SIGNALS.has(normalized)
+}
+
+function splitLowFitCareerEvidenceSignals(value: string): string[] {
+  return value
+    .split(/\s*,\s*|\s+\be\b\s+/iu)
+    .map((signal) => signal.trim())
+    .filter(Boolean)
+}
+
+function normalizeLowFitProfileLabel(value: string | undefined): string | undefined {
+  const stripped = sanitizeText(value ?? '')
+    .replace(/^Profissional com experi[êe]ncia em\s*/iu, '')
+    .replace(/^experi[êe]ncia em\s*/iu, '')
+    .replace(/[.]$/u, '')
+    .trim()
+
+  if (!stripped) {
+    return undefined
+  }
+
+  const normalized = normalizeSemanticText(stripped)
+  if (GENERIC_LOW_FIT_PROFILE_LABEL_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return undefined
+  }
+
+  const signals = splitLowFitCareerEvidenceSignals(stripped)
+  const filteredSignals = signals.filter((signal) => !isWeakLowFitCareerEvidenceSignal(signal))
+
+  if (signals.length > 0 && filteredSignals.length === 0) {
+    return undefined
+  }
+
+  return filteredSignals.length > 0
+    ? listToSentence(filteredSignals)
+    : stripped
 }
 
 export function sanitizeText(value: string): string {
@@ -118,7 +177,9 @@ function findStrongestAnchors(params: {
   return dedupe([
     ...(params.directClaimsAllowed ?? []),
     ...(params.mustEmphasize ?? []),
-  ]).slice(0, 4)
+  ])
+    .filter((signal) => !isWeakLowFitCareerEvidenceSignal(signal))
+    .slice(0, 4)
 }
 
 export function buildTargetRolePositioning(params: {
@@ -146,7 +207,7 @@ export function buildTargetRolePositioning(params: {
 
   const safeRolePositioning = anchors.length > 0
     ? `Profissional com experiência em ${listToSentence(anchors)}.`
-    : 'Profissional com experiência técnica aderente às principais responsabilidades da vaga.'
+    : 'Profissional com histórico comprovado no currículo original.'
 
   const riskLevel = params.careerFitEvaluation?.riskLevel
   const familyDistance = params.careerFitEvaluation?.signals.familyDistance
@@ -252,9 +313,7 @@ function buildOriginalProfileLabel(targetEvidence?: TargetEvidence[]): string | 
     .map((evidence) => evidence.canonicalSignal)
     .slice(0, 4)
 
-  return strongestSignals.length > 0
-    ? listToSentence(strongestSignals)
-    : undefined
+  return normalizeLowFitProfileLabel(listToSentence(strongestSignals))
 }
 
 export function buildUserFacingValidationBlockModal(args: {
@@ -270,7 +329,8 @@ export function buildUserFacingValidationBlockModal(args: {
     ?? sanitizedIssues.find((issue) => issue.issueType === 'unsupported_claim')
     ?? sanitizedIssues[0]
   const targetRole = args.targetRole?.trim()
-  const originalProfileLabel = args.originalProfileLabel ?? buildOriginalProfileLabel(args.targetEvidence)
+  const originalProfileLabel = normalizeLowFitProfileLabel(args.originalProfileLabel)
+    ?? buildOriginalProfileLabel(args.targetEvidence)
   const nearbySignals = dedupe([
     ...(args.directClaimsAllowed ?? []),
     ...(args.targetEvidence ?? [])
@@ -278,7 +338,9 @@ export function buildUserFacingValidationBlockModal(args: {
         evidence.rewritePermission === 'can_claim_directly'
         || evidence.rewritePermission === 'can_claim_normalized')
       .map((evidence) => evidence.canonicalSignal),
-  ]).slice(0, 4)
+  ])
+    .filter((signal) => !isWeakLowFitCareerEvidenceSignal(signal))
+    .slice(0, 4)
 
   if (args.lowFitWarningGate?.triggered) {
     const unsupportedSignals = args.lowFitWarningGate.coreRequirementCoverage.topUnsupportedSignalsForDisplay

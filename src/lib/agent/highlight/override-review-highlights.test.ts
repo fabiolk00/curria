@@ -329,7 +329,7 @@ describe('buildOverrideReviewHighlightState', () => {
     expect(cards).toHaveLength(1)
     expect(cards[0]).toEqual(expect.objectContaining({
       kind: 'low_fit_target_mismatch',
-      title: expect.stringMatching(/vaga.*distante|ader[eÃª]ncia/i),
+      title: expect.stringMatching(/vaga.*distante|ader[e?]ncia/i),
       targetRole: 'Executivo De Vendas',
     }))
     expect(cards[0]?.message).not.toMatch(/skill sem evid[êe]ncia|cargo alvo sem evid[êe]ncia/i)

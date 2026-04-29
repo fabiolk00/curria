@@ -221,7 +221,7 @@ describe('smart-generation helpers', () => {
           title: 'Esta vaga parece muito distante do seu currículo atual',
           description: 'Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.',
           primaryProblem: 'A vaga pede Java, Spring Boot e CI/CD, mas seu histórico atual sustenta melhor outra trajetória profissional.',
-          problemBullets: ['Encontramos alguns pontos próximos, como Git e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.'],
+          problemBullets: ['Encontramos alguns pontos próximos, como SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.'],
           reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.',
           recommendation: 'Você pode gerar mesmo assim e revisar manualmente antes de enviar.',
           actions: {
@@ -332,7 +332,7 @@ describe('smart-generation helpers', () => {
               action: 'close',
             },
             primary: {
-              label: 'Gerar mesmo assim (1 credito)',
+              label: 'Gerar mesmo assim (1 crédito)',
               action: 'override_generate',
               creditCost: 1,
             },

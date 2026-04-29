@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
@@ -40,6 +41,16 @@ function getExpectedWebhookToken(): string {
   return trimmed
 }
 
+function getSafeTokenFingerprint(token: string | null | undefined): string | undefined {
+  const trimmed = token?.trim()
+
+  if (!trimmed) {
+    return undefined
+  }
+
+  return createHash('sha256').update(trimmed).digest('hex').slice(0, 12)
+}
+
 async function processAsaasEvent(
   event: HandledAsaasWebhookEvent,
   eventFingerprint: string,
@@ -80,7 +91,8 @@ async function reconcileDuplicateEventState(
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('asaas-access-token')
+  const rawToken = req.headers.get('asaas-access-token')
+  const token = rawToken?.trim()
   let expectedToken: string
 
   try {
@@ -110,6 +122,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       success: false,
       errorCode: failure.code,
       errorMessage: failure.error,
+      tokenPresent: Boolean(rawToken),
+      tokenTrimmedPresent: Boolean(token),
+      tokenLength: rawToken?.length ?? 0,
+      tokenTrimmedLength: token?.length ?? 0,
+      tokenFingerprint: getSafeTokenFingerprint(rawToken),
+      expectedTokenLength: expectedToken.length,
+      expectedTokenFingerprint: getSafeTokenFingerprint(expectedToken),
     })
 
     return NextResponse.json(failure, {

@@ -2924,7 +2924,7 @@ describe('ATS enhancement reliability hardening', () => {
     }))
     expect(result.recoverableBlock?.modal).toMatchObject({
       problemBullets: expect.arrayContaining([
-        expect.stringContaining('Git, APIs REST e SQL'),
+        expect.stringContaining('APIs REST e SQL'),
       ]),
     })
     expect(result.recoverableBlock?.modal.title).toMatch(/vaga parece muito distante/i)

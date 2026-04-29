@@ -163,23 +163,23 @@ export type TargetRecommendation = {
   priority: TargetRecommendationPriority
   jobRequirement: string
   /**
-   * Evidencias existentes no curriculo original/otimizado que sao proximas,
-   * mas nao suficientes para afirmar o requisito diretamente.
+   * Evidências existentes no currículo original/otimizado que são próximas,
+   * mas não suficientes para afirmar o requisito diretamente.
    */
   currentEvidence: string[]
   /**
-   * Texto humano, seguro e acionavel.
-   * Deve sempre orientar o usuario a adicionar apenas se for verdadeiro.
+   * Texto humano, seguro e acionável.
+   * Deve sempre orientar o usuário a adicionar apenas se for verdadeiro.
    */
   suggestedUserAction: string
   /**
-   * Exemplo seguro de redacao.
-   * Nunca deve afirmar algo sem condicional quando o requisito nao tem evidencia.
+   * Exemplo seguro de redação.
+   * Nunca deve afirmar algo sem condicional quando o requisito não tem evidência.
    */
   safeExample?: string
   /**
    * Quando true, a UI deve exibir aviso tipo:
-   * "Adicione apenas se isso fizer parte da sua experiencia real."
+   * "Adicione apenas se isso fizer parte da sua experiência real."
    */
   mustNotInvent: boolean
   relatedResumeSection?: 'summary' | 'experience' | 'skills' | 'education' | 'certifications'

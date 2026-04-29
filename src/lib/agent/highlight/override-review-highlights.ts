@@ -135,10 +135,17 @@ export function buildOriginalProfileLabel(cvState: CVState): string {
   cvState.experience.slice(0, 3).forEach((item) => pushCSV(item.title))
   cvState.skills.slice(0, 8).forEach((skill) => candidates.add(skill.trim()))
 
-  const ignore = new Set(['profissional', 'experiencia', 'experiência', 'atuacao', 'atuação', 'resumo'])
+  const ignore = new Set(['profissional', 'experiência', 'atuação', 'resumo']
+    .map((item) => item.normalize('NFD').replace(/[\u0300-\u036f]/gu, '')))
   const picked = Array.from(candidates)
     .map((item) => item.replace(/[.]+$/u, '').trim())
-    .filter((item) => item && !ignore.has(item.toLocaleLowerCase('pt-BR')))
+    .filter((item) => {
+      const normalizedItem = item
+        .toLocaleLowerCase('pt-BR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/gu, '')
+      return item && !ignore.has(normalizedItem)
+    })
     .slice(0, 7)
 
   return picked.length > 0

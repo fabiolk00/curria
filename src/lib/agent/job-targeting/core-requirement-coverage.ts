@@ -418,7 +418,7 @@ function normalizeRequirementSignal(value: string): string {
     const isShortTechnicalListItem = remainderWords.length <= 3 && isLikelyTechnicalSignal(remainder)
     if (!isShortTechnicalListItem && remainderWords.length > 1) {
       return `${prefix} ${remainder}`
-    .replace(/^[\-â€¢*]\s*/u, '')
+    .replace(/^[\-\u2022*]\s*/u, '')
     .replace(/^essencial\s+/iu, '')
         .replace(/\s+(?:obrigatorio|obrigatoria|required)$/iu, '')
         .replace(/[.]+$/u, '')

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 type ReviewItem = NonNullable<CvHighlightState["reviewItems"]>[number]
 
-const MOJIBAKE_MARKER_RE = /(?:Ã|Â|â|�)/u
+const MOJIBAKE_MARKER_RE = new RegExp("(?:\\u00c3|\\u00c2|\\u00e2|\\ufffd)", "u")
 const FALLBACK_PROFILE = "O currículo original não deixou claro um perfil diretamente alinhado a esta vaga."
 
 function markerCount(value: string): number {
@@ -71,10 +71,10 @@ function isGenericProvenProfile(value: string): boolean {
 
   return normalized === "profissional"
     || normalized === "perfil profissional"
-    || normalized === "experiencia anterior"
-    || normalized.includes("profissional com experiencia tecnica aderente")
-    || normalized.includes("profissional com experiencia anterior")
-    || normalized.includes("experiencia tecnica comprovada no curriculo original")
+    || normalized === normalizeForComparison("experiência anterior")
+    || normalized.includes(normalizeForComparison("profissional com experiência técnica aderente"))
+    || normalized.includes(normalizeForComparison("profissional com experiência anterior"))
+    || normalized.includes(normalizeForComparison("experiência técnica comprovada no currículo original"))
 }
 
 function resolveProvenProfile(item: ReviewItem): string {

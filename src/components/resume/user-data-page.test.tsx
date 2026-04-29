@@ -1003,9 +1003,14 @@ describe("UserDataPage", () => {
     await user.click(screen.getByTestId("ats-panel-cta"))
 
     const overrideButton = await screen.findByRole("button", { name: "Gerar mesmo assim (1 crédito)" })
+    const validationDialog = screen.getByRole("dialog")
     const scrollContainer = await screen.findByTestId("rewrite-validation-dialog-scroll")
+    expect(validationDialog.className).toContain("!flex")
+    expect(validationDialog.className).toContain("max-h-[85vh]")
+    expect(validationDialog.className).toContain("overflow-hidden")
     expect(scrollContainer.className).toContain("overflow-y-auto")
     expect(scrollContainer.className).toContain("min-h-0")
+    expect(scrollContainer.className).toContain("flex-1")
     expect(screen.getByText("Você usará 1 crédito para gerar esta versão.")).toBeInTheDocument()
 
     await user.click(overrideButton)
@@ -1055,7 +1060,7 @@ describe("UserDataPage", () => {
             primaryProblem: "A vaga pede Java, Spring Boot, JPA/Hibernate, mensageria, Docker e CI/CD, mas seu histórico atual sustenta melhor outra trajetória profissional.",
             problemBullets: [
               "Seu currículo comprova melhor experiência em BI, Engenharia de Dados, SQL e Python.",
-              "Encontramos alguns pontos próximos, como Git, APIs REST e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.",
+              "Encontramos alguns pontos próximos, como APIs REST e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.",
             ],
             reassurance: "Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.",
             recommendation: "Você pode gerar mesmo assim e revisar manualmente antes de enviar.",
@@ -1085,7 +1090,7 @@ describe("UserDataPage", () => {
     expect(await screen.findByText("Esta vaga parece muito distante do seu currículo atual")).toBeInTheDocument()
     expect(screen.getByText(/Java, Spring Boot, JPA\/Hibernate, mensageria, Docker e CI\/CD/i)).toBeInTheDocument()
     expect(screen.getByText(/BI, Engenharia de Dados, SQL e Python/i)).toBeInTheDocument()
-    expect(screen.getByText(/Git, APIs REST e SQL/i)).toBeInTheDocument()
+    expect(screen.getByText(/APIs REST e SQL/i)).toBeInTheDocument()
     expect(screen.queryByText(/unsupported_gap|targetEvidence|hardIssue|pipeline/i)).not.toBeInTheDocument()
   })
 

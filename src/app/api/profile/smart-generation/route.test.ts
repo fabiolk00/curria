@@ -282,7 +282,7 @@ describe('POST /api/profile/smart-generation', () => {
     vi.mocked(checkUserQuota).mockResolvedValue(false)
     const optimizedCvState = {
       ...buildCvState(),
-      summary: 'Resumo otimizado depois da recarga de creditos.',
+      summary: 'Resumo otimizado depois da recarga de créditos.',
     }
     latestCvVersionSnapshot = optimizedCvState
     latestCvVersionSource = 'ats-enhancement'

@@ -107,41 +107,41 @@ function buildSectionInstruction(params: {
   targetRole?: string
   targetRoleConfidence?: 'low' | 'medium' | 'high'
 }): SectionRewriteInstruction {
-  const allowed = params.allowedClaims.join(', ') || 'nenhum claim novo alem do curriculo original'
-  const bridge = params.bridgeClaims.join(', ') || 'nenhuma ponte semantica relevante'
+  const allowed = params.allowedClaims.join(', ') || 'nenhum claim novo além do currículo original'
+  const bridge = params.bridgeClaims.join(', ') || 'nenhuma ponte semântica relevante'
   const forbidden = params.forbiddenClaims.join(', ') || 'nenhum requisito bloqueado identificado'
   const targetRoleInstruction = params.targetRole && params.targetRoleConfidence !== 'low'
-    ? `Posicione a secao para ${params.targetRole} usando somente evidencias reais.`
-    : 'Ancora a secao nos requisitos da vaga sem forcar um cargo alvo literal.'
+    ? `Posicione a seção para ${params.targetRole} usando somente evidências reais.`
+    : 'Ancora a seção nos requisitos da vaga sem forçar um cargo alvo literal.'
 
   const sectionSpecific: Record<RewriteChangeSection, string> = {
     summary: [
       targetRoleInstruction,
       `Destaque diretamente apenas: ${allowed}.`,
-      `Quando houver evidencia adjacente, aproxime com linguagem cuidadosa para: ${bridge}.`,
-      `Nao declare dominio, cargo, ferramenta ou metodologia sem evidencia para: ${forbidden}.`,
-      'Evite resumo generico; abra com identidade profissional real, foco da vaga e sinais comprovados.',
+      `Quando houver evidência adjacente, aproxime com linguagem cuidadosa para: ${bridge}.`,
+      `Não declare domínio, cargo, ferramenta ou metodologia sem evidência para: ${forbidden}.`,
+      'Evite resumo genérico; abra com identidade profissional real, foco da vaga e sinais comprovados.',
     ].join(' '),
     experience: [
       'Reordene e reescreva bullets para aproximar responsabilidades da vaga mantendo fatos originais.',
       `Claims diretos permitidos: ${allowed}.`,
-      `Pontes cuidadosas permitidas quando ancoradas em evidencias reais: ${bridge}.`,
-      `Nao invente ferramentas, dominios, senioridade, stakeholders ou escopo para: ${forbidden}.`,
-      'Torne explicito impacto, indicador, tomada de decisao ou stakeholder apenas quando isso ja estiver sustentado.',
+      `Pontes cuidadosas permitidas quando ancoradas em evidências reais: ${bridge}.`,
+      `Não invente ferramentas, domínios, senioridade, stakeholders ou escopo para: ${forbidden}.`,
+      'Torne explícito impacto, indicador, tomada de decisão ou stakeholder apenas quando isso já estiver sustentado.',
     ].join(' '),
     skills: [
-      'Reordene skills por prioridade da vaga e mantenha apenas competencias comprovadas.',
+      'Reordene skills por prioridade da vaga e mantenha apenas competências comprovadas.',
       `Skills/claims permitidos: ${allowed}.`,
-      `Nao adicione como skill direta: ${forbidden}.`,
-      `Itens adjacentes devem ficar fora de Skills, salvo se ja existirem no curriculo: ${bridge}.`,
+      `Não adicione como skill direta: ${forbidden}.`,
+      `Itens adjacentes devem ficar fora de Skills, salvo se já existirem no currículo: ${bridge}.`,
     ].join(' '),
     education: [
-      'Mantenha formacao factual e apenas melhore consistencia.',
-      `Nao transforme requisitos sem evidencia em formacao ou certificacao: ${forbidden}.`,
+      'Mantenha formação factual e apenas melhore consistência.',
+      `Não transforme requisitos sem evidência em formação ou certificação: ${forbidden}.`,
     ].join(' '),
     certifications: [
-      'Reordene certificacoes por relevancia para a vaga preservando nomes, emissores e datas.',
-      `Nao criar certificacoes nem equivalencias para: ${forbidden}.`,
+      'Reordene certificações por relevância para a vaga preservando nomes, emissores e datas.',
+      `Não criar certificações nem equivalências para: ${forbidden}.`,
     ].join(' '),
   }
 

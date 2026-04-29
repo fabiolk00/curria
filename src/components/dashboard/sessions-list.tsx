@@ -66,7 +66,7 @@ export function SessionsList() {
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <FileText className="h-12 w-12 text-sidebar-foreground/30 mb-4" />
         <p className="text-lg text-sidebar-foreground/70">Nenhuma sessão encontrada</p>
-        <p className="text-sm text-sidebar-foreground/50 mt-2">Gere um currÃ­culo para visualizar seu histÃ³rico aqui.</p>
+        <p className="text-sm text-sidebar-foreground/50 mt-2">Gere um currículo para visualizar seu histórico aqui.</p>
       </div>
     )
   }

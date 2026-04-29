@@ -18,21 +18,25 @@ const repeatedRequirements = [
   "Gestão de carteira de clientes",
 ]
 
+function encodeUtf8AsMojibake(value: string): string {
+  return Array.from(new TextEncoder().encode(value), (byte) => String.fromCharCode(byte)).join("")
+}
+
 const reviewItem: ReviewItem = {
   id: "low-fit-1",
   kind: "low_fit_target_mismatch",
   severity: "risk",
   section: "general",
-  sectionLabel: "DiagnÃ³stico da vaga",
+  sectionLabel: encodeUtf8AsMojibake("Diagn\u00f3stico da vaga"),
   issueType: "low_fit_target_mismatch",
-  title: "Esta vaga parece distante do seu currÃ­culo atual",
-  summary: "A geraÃ§Ã£o foi feita apÃ³s seu aceite, mas a aderÃªncia entre a vaga e o histÃ³rico original exige revisÃ£o.",
-  explanation: "A vaga exige responsabilidades e requisitos que ainda nÃ£o aparecem com evidÃªncia suficiente.",
-  whyItMatters: "A versÃ£o gerada pode aproximar seu currÃ­culo de uma funÃ§Ã£o sem sustentaÃ§Ã£o direta.",
-  suggestedAction: "Revise antes de enviar e destaque habilidades transferÃ­veis comprovadas.",
+  title: encodeUtf8AsMojibake("Esta vaga parece distante do seu curr\u00edculo atual"),
+  summary: encodeUtf8AsMojibake("A gera\u00e7\u00e3o foi feita ap\u00f3s seu aceite, mas a ader\u00eancia entre a vaga e o hist\u00f3rico original exige revis\u00e3o."),
+  explanation: encodeUtf8AsMojibake("A vaga exige responsabilidades e requisitos que ainda n\u00e3o aparecem com evid\u00eancia suficiente."),
+  whyItMatters: encodeUtf8AsMojibake("A vers\u00e3o gerada pode aproximar seu curr\u00edculo de uma fun\u00e7\u00e3o sem sustenta\u00e7\u00e3o direta."),
+  suggestedAction: encodeUtf8AsMojibake("Revise antes de enviar e destaque habilidades transfer\u00edveis comprovadas."),
   message: "A vaga parece distante.",
   targetRole: "Executivo De Vendas",
-  provenProfile: "Profissional com experiÃªncia tÃ©cnica aderente ao currÃ­culo original.",
+  provenProfile: encodeUtf8AsMojibake("Profissional com experi\u00eancia t\u00e9cnica aderente ao curr\u00edculo original."),
   jobRequirements: repeatedRequirements,
   preferredRequirements: ["Python", "APIs", "Microsoft Fabric"],
   missingEvidence: repeatedRequirements,

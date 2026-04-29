@@ -2197,8 +2197,8 @@ export default function UserDataPage({
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="!flex max-h-[85vh] flex-col overflow-hidden sm:max-w-2xl">
+          <DialogHeader className="shrink-0">
             <DialogTitle>
               {validationModalPayload?.title ?? (rewriteValidationFailure?.workflowMode === "job_targeting"
                 ? "Não concluímos essa adaptação automaticamente"

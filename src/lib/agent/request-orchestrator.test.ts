@@ -264,7 +264,7 @@ describe('handleAgentPost', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        message: 'analise meu curriculo',
+        message: 'analise meu currículo',
         file: Buffer.from('fake docx').toString('base64'),
         fileMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       }),

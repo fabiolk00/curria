@@ -16,6 +16,7 @@ import {
 const mockWebhookLimiter = vi.hoisted(() => ({
   limit: vi.fn(async () => ({ success: true })),
 }))
+const mockLogWarn = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/rate-limit', () => ({
   webhookLimiter: mockWebhookLimiter,
@@ -35,6 +36,15 @@ vi.mock('@/lib/asaas/event-handlers', () => ({
   handleSubscriptionUpdated: vi.fn(),
   handleSubscriptionRenewed: vi.fn(),
   handleSubscriptionCanceled: vi.fn(),
+}))
+
+vi.mock('@/lib/observability/structured-log', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: mockLogWarn,
+  serializeError: (error: unknown) => (
+    error instanceof Error ? { errorMessage: error.message } : {}
+  ),
 }))
 
 function createRequest(payload: unknown, token = 'test-token'): NextRequest {
@@ -74,6 +84,27 @@ describe('Asaas webhook route', () => {
       code: 'UNAUTHORIZED',
       error: 'Unauthorized',
     })
+    expect(mockLogWarn).toHaveBeenCalledWith('asaas.webhook.unauthorized', expect.objectContaining({
+      tokenPresent: true,
+      tokenTrimmedPresent: true,
+      tokenLength: 'wrong-token'.length,
+      tokenTrimmedLength: 'wrong-token'.length,
+      tokenFingerprint: expect.any(String),
+      expectedTokenLength: 'test-token'.length,
+      expectedTokenFingerprint: expect.any(String),
+    }))
+  })
+
+  it('accepts webhook requests when the provider token has surrounding whitespace', async () => {
+    const response = await POST(createRequest({
+      event: 'PAYMENT_RECEIVED',
+      payment: { id: 'pay_123', externalReference: 'curria:v1:c:chk_123', value: 19.9 },
+    }, ' test-token '))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ success: true })
+    expect(handlePaymentSettlement).toHaveBeenCalledTimes(1)
+    expect(mockWebhookLimiter.limit).toHaveBeenCalledWith('test-token')
   })
 
   it('rejects webhook requests when the auth token header is missing', async () => {
