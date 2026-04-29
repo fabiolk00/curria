@@ -299,7 +299,7 @@ export async function getCheckoutByAsaasSessionId(
       created_at,
       updated_at
     `)
-    .ilike('asaas_link', `%show?id=${asaasSessionId}`)
+    .ilike('asaas_link', `%${asaasSessionId}%`)
     .maybeSingle<BillingCheckoutRow>()
 
   if (error) {

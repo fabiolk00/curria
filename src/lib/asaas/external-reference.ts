@@ -32,7 +32,7 @@ export function formatExternalReference(appUserId: string, checkoutReference: st
     throw new Error(`Invalid checkout reference for externalReference: ${checkoutReference}`)
   }
 
-  return `curria:v1:u:${appUserId}:c:${checkoutReference}`
+  return `curria:v1:c:${checkoutReference}`
 }
 
 export function parseExternalReference(value: string): ParsedExternalReference | null {

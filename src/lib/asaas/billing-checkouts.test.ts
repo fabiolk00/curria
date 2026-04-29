@@ -124,6 +124,6 @@ describe('billing checkout lifecycle helpers', () => {
     const result = await getCheckoutByAsaasSessionId('session_123')
 
     expect(result?.checkoutReference).toBe('chk_123')
-    expect(selectIlike).toHaveBeenCalledWith('asaas_link', '%show?id=session_123')
+    expect(selectIlike).toHaveBeenCalledWith('asaas_link', '%session_123%')
   })
 })

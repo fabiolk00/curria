@@ -21,7 +21,10 @@ describe('Asaas checkout link creation', () => {
   })
 
   it('creates one-time hosted checkouts with PIX + CREDIT_CARD and full billing info', async () => {
-    mockPost.mockResolvedValueOnce({ id: 'checkout_unit_123' })
+    mockPost.mockResolvedValueOnce({
+      id: 'checkout_unit_123',
+      link: 'https://sandbox.asaas.com/checkoutSession/show/checkout_unit_123',
+    })
 
     await expect(createCheckoutLink({
       appUserId: 'usr_123',
@@ -29,7 +32,7 @@ describe('Asaas checkout link creation', () => {
       userEmail: 'test@example.com',
       plan: 'unit',
       checkoutReference: 'chk_unit',
-      externalReference: 'curria:v1:u:usr_123:c:chk_unit',
+      externalReference: 'curria:v1:c:chk_unit',
       successUrl: 'https://curria.test/#pricing',
       cancelUrl: 'https://curria.test/#pricing',
       expiredUrl: 'https://curria.test/#pricing',
@@ -41,13 +44,13 @@ describe('Asaas checkout link creation', () => {
         postalCode: '01234567',
         province: 'SP',
       },
-    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show?id=checkout_unit_123')
+    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show/checkout_unit_123')
 
     expect(mockPost).toHaveBeenCalledWith('/checkouts', {
       billingTypes: ['PIX', 'CREDIT_CARD'],
       chargeTypes: ['DETACHED'],
       minutesToExpire: 60,
-      externalReference: 'curria:v1:u:usr_123:c:chk_unit',
+      externalReference: 'curria:v1:c:chk_unit',
       callback: {
         successUrl: 'https://curria.test/#pricing',
         cancelUrl: 'https://curria.test/#pricing',
@@ -83,17 +86,17 @@ describe('Asaas checkout link creation', () => {
       userEmail: 'test@example.com',
       plan: 'unit',
       checkoutReference: 'chk_unit_2',
-      externalReference: 'curria:v1:u:usr_123:c:chk_unit_2',
+      externalReference: 'curria:v1:c:chk_unit_2',
       successUrl: 'https://curria.test/#pricing',
       cancelUrl: 'https://curria.test/#pricing',
       expiredUrl: 'https://curria.test/#pricing',
-    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show?id=checkout_unit_456')
+    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show/checkout_unit_456')
 
     expect(mockPost).toHaveBeenCalledWith('/checkouts', {
       billingTypes: ['PIX', 'CREDIT_CARD'],
       chargeTypes: ['DETACHED'],
       minutesToExpire: 60,
-      externalReference: 'curria:v1:u:usr_123:c:chk_unit_2',
+      externalReference: 'curria:v1:c:chk_unit_2',
       callback: {
         successUrl: 'https://curria.test/#pricing',
         cancelUrl: 'https://curria.test/#pricing',
@@ -123,7 +126,7 @@ describe('Asaas checkout link creation', () => {
       userEmail: 'test@example.com',
       plan: 'monthly',
       checkoutReference: 'chk_monthly',
-      externalReference: 'curria:v1:u:usr_123:c:chk_monthly',
+      externalReference: 'curria:v1:c:chk_monthly',
       successUrl: 'https://curria.test/profile-setup',
       cancelUrl: 'https://curria.test/#pricing',
       expiredUrl: 'https://curria.test/#pricing',
@@ -135,7 +138,7 @@ describe('Asaas checkout link creation', () => {
         postalCode: '01234567',
         province: 'SP',
       },
-    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show?id=checkout_123')
+    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show/checkout_123')
 
     expect(mockPost).toHaveBeenCalledWith('/checkouts', {
       billingTypes: ['CREDIT_CARD'],
@@ -168,7 +171,7 @@ describe('Asaas checkout link creation', () => {
         cycle: 'MONTHLY',
         nextDueDate: expect.any(String),
       },
-      externalReference: 'curria:v1:u:usr_123:c:chk_monthly',
+      externalReference: 'curria:v1:c:chk_monthly',
     })
   })
 
@@ -181,11 +184,11 @@ describe('Asaas checkout link creation', () => {
       userEmail: 'test@example.com',
       plan: 'pro',
       checkoutReference: 'chk_pro',
-      externalReference: 'curria:v1:u:usr_123:c:chk_pro',
+      externalReference: 'curria:v1:c:chk_pro',
       successUrl: 'https://curria.test/profile-setup',
       cancelUrl: 'https://curria.test/#pricing',
       expiredUrl: 'https://curria.test/#pricing',
-    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show?id=checkout_pro_123')
+    })).resolves.toBe('https://sandbox.asaas.com/checkoutSession/show/checkout_pro_123')
 
     expect(mockPost).toHaveBeenCalledWith('/checkouts', {
       billingTypes: ['CREDIT_CARD'],
@@ -212,7 +215,7 @@ describe('Asaas checkout link creation', () => {
         cycle: 'MONTHLY',
         nextDueDate: expect.any(String),
       },
-      externalReference: 'curria:v1:u:usr_123:c:chk_pro',
+      externalReference: 'curria:v1:c:chk_pro',
     })
   })
 })

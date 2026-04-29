@@ -72,7 +72,7 @@ describe('Asaas billing event handlers', () => {
       amountMinor: 1990,
       currency: 'BRL',
       status: 'created',
-      asaasLink: 'https://www.asaas.com/checkoutSession/show?id=d7b9e334-9351-4fe1-83d1-852dc23b2e89',
+      asaasLink: 'https://www.asaas.com/checkoutSession/show/d7b9e334-9351-4fe1-83d1-852dc23b2e89',
       asaasPaymentId: null,
       asaasSubscriptionId: null,
       createdAt: '2026-03-29T00:00:00.000Z',

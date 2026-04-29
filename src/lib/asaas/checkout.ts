@@ -25,8 +25,13 @@ function getAsaasHostedOrigin(): string {
     : 'https://www.asaas.com'
 }
 
+type AsaasCheckoutResponse = {
+  id: string
+  link?: string | null
+}
+
 function buildCheckoutSessionUrl(checkoutId: string): string {
-  return `${getAsaasHostedOrigin()}/checkoutSession/show?id=${encodeURIComponent(checkoutId)}`
+  return `${getAsaasHostedOrigin()}/checkoutSession/show/${encodeURIComponent(checkoutId)}`
 }
 
 function buildCustomerData(
@@ -71,7 +76,7 @@ export async function createCheckoutLink({
   void checkoutReference
 
   if (planConfig.billing === 'once') {
-    const detachedCheckout = await asaas.post<{ id: string }>('/checkouts', {
+    const detachedCheckout = await asaas.post<AsaasCheckoutResponse>('/checkouts', {
       billingTypes: ['PIX', 'CREDIT_CARD'],
       chargeTypes: ['DETACHED'],
       minutesToExpire: 60,
@@ -92,10 +97,10 @@ export async function createCheckoutLink({
       externalReference,
     })
 
-    return buildCheckoutSessionUrl(detachedCheckout.id)
+    return detachedCheckout.link ?? buildCheckoutSessionUrl(detachedCheckout.id)
   }
 
-  const recurringCheckout = await asaas.post<{ id: string }>('/checkouts', {
+  const recurringCheckout = await asaas.post<AsaasCheckoutResponse>('/checkouts', {
     billingTypes: ['CREDIT_CARD'],
     chargeTypes: ['RECURRENT'],
     minutesToExpire: 60,
@@ -120,5 +125,5 @@ export async function createCheckoutLink({
     externalReference,
   })
 
-  return buildCheckoutSessionUrl(recurringCheckout.id)
+  return recurringCheckout.link ?? buildCheckoutSessionUrl(recurringCheckout.id)
 }
