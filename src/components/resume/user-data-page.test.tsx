@@ -598,7 +598,7 @@ describe("UserDataPage", () => {
     expect(screen.getByRole("button", { name: /Melhorar curr/i })).toBeInTheDocument()
   })
 
-  it("keeps the ATS enhancement flow wired to the existing endpoint and compare redirect", async () => {
+  it("keeps the ATS enhancement flow wired to Smart Generation and compare redirect", async () => {
     const user = userEvent.setup()
     const fetchMock = buildFetchMock(
       createJsonResponse(buildProfileResponse()),
@@ -618,9 +618,11 @@ describe("UserDataPage", () => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_ats_123")
     })
 
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/profile/ats-enhancement", expect.objectContaining({
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/profile/smart-generation", expect.objectContaining({
       method: "POST",
+      body: expect.not.stringContaining("targetJobDescription"),
     }))
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/profile/ats-enhancement", expect.anything())
     expect(toast.success).toHaveBeenCalled()
     expect(window.localStorage.getItem("curria:last-profile-generation-session-id")).toBe("sess_ats_123")
   })
@@ -1563,9 +1565,11 @@ describe("UserDataPage", () => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard/resume/compare/sess_scoped_123")
     })
 
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/profile/ats-enhancement", expect.objectContaining({
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/profile/smart-generation", expect.objectContaining({
       method: "POST",
+      body: expect.not.stringContaining("targetJobDescription"),
     }))
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/profile/ats-enhancement", expect.anything())
     expect(window.localStorage.getItem("curria:last-profile-generation-session-id:usr_scoped")).toBe("sess_scoped_123")
     expect(window.localStorage.getItem("curria:last-profile-generation-session-id")).toBeNull()
   })

@@ -400,7 +400,8 @@ test.describe("manual profile setup", () => {
 
   test("starts ATS enhancement from a ready base profile and lands on the compare page", async ({ page }) => {
     const sessionId = "sess_ats_profile_setup"
-    let atsPayload: Record<string, unknown> | null = null
+    let smartGenerationPayload: Record<string, unknown> | null = null
+    let legacyAtsRouteCalled = false
 
     await bootstrapProfileSetupPage(page, {
       creditsRemaining: 2,
@@ -411,8 +412,8 @@ test.describe("manual profile setup", () => {
       generationType: "ATS_ENHANCEMENT",
     })
 
-    await page.route("**/api/profile/ats-enhancement", async (route) => {
-      atsPayload = route.request().postDataJSON() as Record<string, unknown>
+    await page.route("**/api/profile/smart-generation", async (route) => {
+      smartGenerationPayload = route.request().postDataJSON() as Record<string, unknown>
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -422,6 +423,14 @@ test.describe("manual profile setup", () => {
         }),
       })
     })
+    await page.route("**/api/profile/ats-enhancement", async (route) => {
+      legacyAtsRouteCalled = true
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Legacy ATS route should not be called from profile setup." }),
+      })
+    })
 
     await openEnhancement(page)
     await page.getByTestId("ats-panel-cta").click()
@@ -429,7 +438,8 @@ test.describe("manual profile setup", () => {
     await expect(page).toHaveURL(new RegExp(`/dashboard/resume/compare/${sessionId}$`))
     await expect(page.getByTestId("resume-comparison-view")).toBeVisible()
 
-    expect(atsPayload).toEqual({
+    expect(legacyAtsRouteCalled).toBe(false)
+    expect(smartGenerationPayload).toEqual({
       certifications: [
         {
           issuer: "Amazon",

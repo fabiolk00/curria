@@ -904,20 +904,20 @@ export default function UserDataPage({
     try {
       await persistProfile()
 
-      const generationEndpoint = generationMode === "job_targeting"
-        ? "/api/profile/smart-generation"
-        : "/api/profile/ats-enhancement"
+      const generationPayload = {
+        ...sanitizeResumeData(resumeData),
+        ...(generationMode === "job_targeting"
+          ? { targetJobDescription: targetJobDescription.trim() }
+          : {}),
+      }
 
-      const response = await fetch(generationEndpoint, {
+      const response = await fetch("/api/profile/smart-generation", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...sanitizeResumeData(resumeData),
-          targetJobDescription: trimOptional(targetJobDescription),
-        }),
+        body: JSON.stringify(generationPayload),
       })
 
       const data = (await response.json()) as SmartGenerationResponse
