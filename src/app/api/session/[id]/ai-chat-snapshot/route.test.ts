@@ -87,6 +87,7 @@ describe('GET /api/session/[id]/ai-chat-snapshot', () => {
       code: 'PRO_PLAN_REQUIRED',
       upgradeUrl: '/finalizar-compra?plan=pro',
     })
+    expect(getAiChatAccess).toHaveBeenCalledWith('usr_123')
     expect(logWarn).toHaveBeenCalledWith('api.session.ai_chat_snapshot_forbidden', expect.objectContaining({
       requestPath: '/api/session/sess_123/ai-chat-snapshot',
       aiChatAccessReason: 'plan_not_pro',

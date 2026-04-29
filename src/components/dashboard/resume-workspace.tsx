@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/resizable"
 
 import { ChatInterface } from "./chat-interface"
-import { AiChatAccessCard } from "./ai-chat-access-card"
+import { ChatUpgradeCard } from "./ai-chat-access-card"
 import { ManualEditDialog } from "./manual-edit-dialog"
 import { PlanUpdateDialog } from "./plan-update-dialog"
 import { PreviewPanel } from "./preview-panel"
@@ -762,7 +762,7 @@ export function ResumeWorkspace({
         data-target-count="0"
         className="flex h-[calc(107svh-4rem)] items-center justify-center bg-[#faf9f5] px-4 py-8"
       >
-        <AiChatAccessCard
+        <ChatUpgradeCard
           title={aiChatAccessTitle ?? AI_CHAT_PRO_REQUIRED_TITLE}
           message={aiChatAccessMessage ?? AI_CHAT_PRO_REQUIRED_MESSAGE}
           ctaHref={aiChatUpgradeUrl}

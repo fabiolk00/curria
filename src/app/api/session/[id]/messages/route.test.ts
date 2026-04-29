@@ -75,6 +75,7 @@ describe('GET /api/session/[id]/messages', () => {
     })
     expect(getSession).not.toHaveBeenCalled()
     expect(getMessages).not.toHaveBeenCalled()
+    expect(getAiChatAccess).toHaveBeenCalledWith('usr_123')
     expect(logWarn).toHaveBeenCalledWith('api.session.messages_forbidden', expect.objectContaining({
       requestMethod: 'GET',
       requestPath: '/api/session/sess_123/messages',

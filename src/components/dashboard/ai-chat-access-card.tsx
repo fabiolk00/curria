@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-type AiChatAccessCardProps = {
+type ChatUpgradeCardProps = {
   eyebrow?: string
   title: string
   message: string
@@ -14,14 +14,14 @@ type AiChatAccessCardProps = {
   className?: string
 }
 
-export function AiChatAccessCard({
+export function ChatUpgradeCard({
   eyebrow = "Plano PRO",
   title,
   message,
   ctaHref,
   ctaLabel = "Fazer upgrade",
   className,
-}: AiChatAccessCardProps) {
+}: ChatUpgradeCardProps) {
   return (
     <div
       data-testid="ai-chat-access-card"

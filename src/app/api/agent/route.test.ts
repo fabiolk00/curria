@@ -241,8 +241,11 @@ describe('/api/agent route', () => {
       code: 'PRO_PLAN_REQUIRED',
       upgradeUrl: '/finalizar-compra?plan=pro',
     })
+    expect(getAiChatAccess).toHaveBeenCalledWith('usr_123')
     expect(agentLimiter.limit).not.toHaveBeenCalled()
+    expect(getSession).not.toHaveBeenCalled()
     expect(createSession).not.toHaveBeenCalled()
+    expect(appendMessage).not.toHaveBeenCalled()
   })
 
   it('emits the request query summary without a warning when DB activity stays under threshold', async () => {
