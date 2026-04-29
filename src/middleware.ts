@@ -141,9 +141,18 @@ const clerkAuthMiddleware = clerkMiddleware(async (auth, req) => {
   return addSecurityHeaders(NextResponse.next())
 })
 
-export default function middleware(req: NextRequest, event: NextFetchEvent) {
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
   if (isE2EAuthEnabled()) {
     return handleE2EMiddleware(req)
+  }
+
+  // Skip Clerk middleware for public routes
+  if (isPublicRoute(req)) {
+    const canonicalRedirect = await handleCanonicalHostRedirect(req)
+    if (canonicalRedirect) {
+      return canonicalRedirect
+    }
+    return addSecurityHeaders(NextResponse.next())
   }
 
   return clerkAuthMiddleware(req, event)
