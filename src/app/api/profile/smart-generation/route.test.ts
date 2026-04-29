@@ -212,7 +212,7 @@ describe('POST /api/profile/smart-generation', () => {
       'generate_file',
       expect.objectContaining({
         cv_state: optimizedCvState,
-        idempotency_key: 'profile-ats:sess_generation_123',
+        idempotency_key: expect.stringMatching(/^ats-enhancement-start:usr_123:[a-f0-9]{32}:artifact$/),
       }),
       expect.objectContaining({
         id: 'sess_generation_123',
@@ -272,10 +272,82 @@ describe('POST /api/profile/smart-generation', () => {
     expect(dispatchToolWithContext).toHaveBeenCalledWith(
       'generate_file',
       expect.objectContaining({
-        idempotency_key: 'profile-target:sess_generation_123',
+        idempotency_key: expect.stringMatching(/^job-targeting-start:usr_123:[a-f0-9]{32}:[a-f0-9]{32}:artifact$/),
       }),
       expect.objectContaining({ id: 'sess_generation_123' }),
     )
+  })
+
+  it('rejects generation before acquiring a lock when credits are exhausted', async () => {
+    vi.mocked(checkUserQuota).mockResolvedValue(false)
+
+    const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(response.status).toBe(402)
+    expect(await response.json()).toEqual(expect.objectContaining({
+      error: expect.stringContaining('saldo'),
+    }))
+    expect(createSession).not.toHaveBeenCalled()
+    expect(runAtsEnhancementPipeline).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
+  })
+
+  it('dedupes simultaneous ATS starts for the same user and CV snapshot', async () => {
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado para ATS com foco em BI e SQL.',
+    }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
+
+    let releasePipeline: (() => void) | undefined
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+      await new Promise<void>((resolve) => {
+        releasePipeline = resolve
+      })
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+
+    const body = JSON.stringify(buildCvState())
+    const firstRequest = POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+    await vi.waitFor(() => {
+      expect(createSession).toHaveBeenCalledTimes(1)
+    })
+
+    const secondResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+
+    expect(secondResponse.status).toBe(202)
+    expect(await secondResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      status: 'already_running',
+      sessionId: 'sess_generation_123',
+      generationType: 'ATS_ENHANCEMENT',
+      message: expect.any(String),
+    }))
+    expect(createSession).toHaveBeenCalledTimes(1)
+    expect(runAtsEnhancementPipeline).toHaveBeenCalledTimes(1)
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
+
+    releasePipeline?.()
+    await firstRequest
   })
 
   it('dedupes simultaneous job-targeting starts for the same user and target', async () => {
@@ -321,10 +393,11 @@ describe('POST /api/profile/smart-generation', () => {
       success: true,
       status: 'already_running',
       sessionId: 'sess_generation_123',
-      message: 'Essa adaptação já está em andamento.',
+      message: expect.any(String),
     }))
     expect(createSession).toHaveBeenCalledTimes(1)
     expect(runJobTargetingPipeline).toHaveBeenCalledTimes(1)
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
 
     releasePipeline?.()
     await firstRequest
@@ -558,7 +631,7 @@ describe('POST /api/profile/smart-generation', () => {
       'generate_file',
       expect.objectContaining({
         cv_state: optimizedCvState,
-        idempotency_key: 'profile-ats:sess_generation_123',
+        idempotency_key: expect.stringMatching(/^ats-enhancement-start:usr_123:[a-f0-9]{32}:artifact$/),
       }),
       expect.objectContaining({
         id: 'sess_generation_123',
@@ -754,7 +827,44 @@ describe('POST /api/profile/smart-generation', () => {
     })
   })
 
-  it('preserves typed generate_file handoff failures instead of flattening them to generic 500s', async () => {
+  it('returns normalized artifact metadata without signed PDF or DOCX URLs', async () => {
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado para ATS sem expor URL assinada.',
+    }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
+
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+
+    const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify(buildCvState()),
+    }))
+
+    expect(response.status).toBe(200)
+    const payload = await response.json()
+    expect(payload).toEqual(expect.objectContaining({
+      success: true,
+      sessionId: 'sess_generation_123',
+      creditsUsed: 1,
+      resumeGenerationId: 'gen_123',
+      generationType: 'ATS_ENHANCEMENT',
+    }))
+    expect(payload).not.toHaveProperty('pdfUrl')
+    expect(payload).not.toHaveProperty('docxUrl')
+  })
+
+  it('marks the start lock failed after generate_file failure so the same request can retry', async () => {
     const optimizedCvState = {
       ...buildCvState(),
       summary: 'Resumo otimizado para ATS com contexto atualizado.',
@@ -789,10 +899,11 @@ describe('POST /api/profile/smart-generation', () => {
       },
     } as never)
 
+    const requestBody = JSON.stringify(buildCvState())
     const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
       method: 'POST',
       headers: buildTrustedHeaders(),
-      body: JSON.stringify(buildCvState()),
+      body: requestBody,
     }))
 
     expect(response.status).toBe(409)
@@ -800,6 +911,35 @@ describe('POST /api/profile/smart-generation', () => {
       error: 'The requested resume snapshot no longer matches the authoritative optimized source for this session.',
       code: 'PRECONDITION_FAILED',
     })
+
+    vi.mocked(dispatchToolWithContext).mockResolvedValue({
+      output: {
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        creditsUsed: 1,
+        resumeGenerationId: 'gen_retry_123',
+      },
+      outputJson: JSON.stringify({
+        success: true,
+        pdfUrl: 'https://example.com/resume.pdf',
+        creditsUsed: 1,
+        resumeGenerationId: 'gen_retry_123',
+      }),
+    } as never)
+
+    const retryResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: requestBody,
+    }))
+
+    expect(retryResponse.status).toBe(200)
+    expect(await retryResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      sessionId: 'sess_generation_123',
+      resumeGenerationId: 'gen_retry_123',
+    }))
+    expect(createSession).toHaveBeenCalledTimes(2)
+    expect(runAtsEnhancementPipeline).toHaveBeenCalledTimes(2)
   })
 })
-
