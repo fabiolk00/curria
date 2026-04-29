@@ -21,6 +21,7 @@ const isPublicRoute = createRouteMatcher([
   '/finalizar-compra(.*)',
   '/curriculo-(.*)-ats(.*)',
   '/sso-callback(.*)',
+  '/resume-result-demo(.*)',
   '/api/webhook/asaas(.*)',
   '/api/webhook/clerk(.*)',
 ])
