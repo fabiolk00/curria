@@ -202,6 +202,41 @@ describe('generateFile', () => {
     expect(pdfText.indexOf('CERTIFICACOES')).toBeLessThan(pdfText.indexOf('IDIOMAS'))
   }, 45_000)
 
+  it('keeps the active generation dependency surface PDF-only', async () => {
+    expect('generateDOCX' in generateFileDeps).toBe(false)
+
+    const upload = vi.fn().mockResolvedValue(undefined)
+
+    vi.spyOn(generateFileDeps, 'getSupabase').mockReturnValue(
+      buildSupabase() as unknown as ReturnType<typeof generateFileDeps.getSupabase>,
+    )
+    vi.spyOn(generateFileDeps, 'generatePDF').mockResolvedValue(Buffer.from('pdf'))
+    vi.spyOn(generateFileDeps, 'upload').mockImplementation(upload)
+
+    const result = await generateFile({
+      cv_state: buildCvState(),
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output).toEqual({
+      success: true,
+      pdfUrl: 'https://cdn.example.com/usr_123/sess_123/resume.pdf',
+      docxUrl: null,
+      warnings: undefined,
+    })
+    expect(upload).toHaveBeenCalledTimes(1)
+    expect(upload).toHaveBeenCalledWith(
+      expect.anything(),
+      'usr_123/sess_123/resume.pdf',
+      Buffer.from('pdf'),
+      'application/pdf',
+    )
+    expect(result.generatedOutput).toMatchObject({
+      status: 'ready',
+      docxPath: undefined,
+      pdfPath: 'usr_123/sess_123/resume.pdf',
+    })
+  })
+
   it('renders accented pt-BR and technical strings without broken glyphs in the PDF', async () => {
     const pdfBuffer = await generateFileDeps.generatePDF({
       ...buildCvState(),
