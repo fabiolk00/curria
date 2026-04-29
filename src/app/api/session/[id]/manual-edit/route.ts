@@ -315,6 +315,7 @@ export async function POST(
           agentState: {
             optimizedCvState: body.data.cvState,
             highlightState: undefined,
+            jobTargetingExplanation: undefined,
             optimizedAt: new Date().toISOString(),
             rewriteStatus: 'completed',
           },

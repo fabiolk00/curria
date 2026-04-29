@@ -7,6 +7,8 @@ import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
 import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
+import { RewriteDiffPanel } from "@/components/resume/rewrite-diff-panel"
+import { TargetRecommendationsCard } from "@/components/resume/target-recommendations-card"
 import { Button } from "@/components/ui/button"
 import {
   buildExperienceBulletHighlightItemIds,
@@ -19,7 +21,7 @@ import {
 import { getDownloadUrls, isRetryableDownloadLookupError } from "@/lib/dashboard/workspace-client"
 import { PROFILE_SETUP_PATH } from "@/lib/routes/app"
 import { cn } from "@/lib/utils"
-import type { ResumeGenerationType } from "@/types/agent"
+import type { JobTargetingExplanation, ResumeGenerationType } from "@/types/agent"
 import type { CVState } from "@/types/cv"
 import type { DownloadUrlsResponse, PreviewLockSummary } from "@/types/dashboard"
 
@@ -31,6 +33,7 @@ type ResumeComparisonViewProps = {
   previewLock?: PreviewLockSummary
   targetJobDescription?: string
   highlightState?: CvHighlightState
+  jobTargetingExplanation?: JobTargetingExplanation
   optimizationNotes?: string[]
   backHref?: string
   onContinue: () => void
@@ -425,6 +428,7 @@ export function ResumeComparisonView({
   previewLock,
   targetJobDescription,
   highlightState,
+  jobTargetingExplanation,
   optimizationNotes = [],
   backHref = PROFILE_SETUP_PATH,
   onContinue,
@@ -541,6 +545,9 @@ export function ResumeComparisonView({
     .reduce((total, item) => total + item.ranges.length, 0) ?? 0
   const hasInlineHighlights = inlineHighlightCount > 0
   const shouldShowHighlightToggle = !previewLock?.locked && hasInlineHighlights
+  const shouldShowJobTargetingExplanation = generationType === "JOB_TARGETING"
+    && !previewLock?.locked
+    && Boolean(jobTargetingExplanation)
 
   const handleReviewItemSelect = (item: NonNullable<CvHighlightState["reviewItems"]>[number]) => {
     const section = item.section ?? "summary"
@@ -677,15 +684,29 @@ export function ResumeComparisonView({
       ) : null}
 
       <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
-        <div
-          className={cn(
-            "mx-auto grid max-w-7xl gap-8 transition-all duration-700 sm:gap-6",
-            isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length
-              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
-              : "lg:grid-cols-2",
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
-          )}
-        >
+        <div className="mx-auto max-w-7xl space-y-6">
+          {shouldShowJobTargetingExplanation && jobTargetingExplanation ? (
+            <div
+              data-testid="job-targeting-explanation"
+              className={cn(
+                "grid gap-4 transition-all duration-700 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]",
+                isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+              )}
+            >
+              <RewriteDiffPanel changes={jobTargetingExplanation.rewriteChanges} />
+              <TargetRecommendationsCard recommendations={jobTargetingExplanation.targetRecommendations} />
+            </div>
+          ) : null}
+
+          <div
+            className={cn(
+              "grid gap-8 transition-all duration-700 sm:gap-6",
+              isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length
+                ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
+                : "lg:grid-cols-2",
+              isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+            )}
+          >
           <div>
             <div className="mb-2 flex items-center justify-between sm:mb-3">
               <div className="flex items-center gap-2">
@@ -761,6 +782,7 @@ export function ResumeComparisonView({
               className="lg:sticky lg:top-4 lg:self-start"
             />
           ) : null}
+          </div>
         </div>
       </div>
 

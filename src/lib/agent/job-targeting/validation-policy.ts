@@ -184,6 +184,7 @@ export function buildTargetedRewritePermissionIssues(params: {
 
     if (evidence.rewritePermission === 'must_not_claim') {
       issues.push({
+        code: 'unsupported_claim_added',
         severity: 'high',
         message: 'A versão targetizada declarou um requisito sem suporte factual no currículo original.',
         section: 'summary',

@@ -216,6 +216,30 @@ function buildDefaultTargetingPlan(overrides: Partial<TargetingPlan> = {}): Targ
       forbiddenClaims: ['BigQuery'],
       skillsSurfaceAllowed: ['SQL'],
     },
+    coreRequirementCoverage: {
+      requirements: [
+        {
+          signal: 'SQL',
+          importance: 'core',
+          requirementKind: 'required',
+          evidenceLevel: 'explicit',
+          rewritePermission: 'can_claim_directly',
+        },
+        {
+          signal: 'BigQuery',
+          importance: 'core',
+          requirementKind: 'required',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+      ],
+      total: 2,
+      supported: 1,
+      unsupported: 1,
+      unsupportedSignals: ['BigQuery'],
+      topUnsupportedSignalsForDisplay: ['BigQuery'],
+      preferredSignalsForDisplay: [],
+    },
     sectionStrategy: {
       summary: ['Aproxime o posicionamento da vaga sem inventar experiência.'],
       experience: ['Priorize stack e contexto relevantes.'],
@@ -1768,6 +1792,24 @@ describe('ATS enhancement reliability hardening', () => {
     })
     expect(session.agentState.lastRewriteMode).toBe('job_targeting')
     expect(session.agentState.highlightState?.highlightSource).toBe('job_targeting')
+    expect(session.agentState.jobTargetingExplanation).toMatchObject({
+      source: 'job_targeting',
+      version: 1,
+      targetRole: 'Analytics Engineer',
+      rewriteChanges: expect.arrayContaining([
+        expect.objectContaining({
+          section: 'summary',
+          changed: true,
+        }),
+      ]),
+      targetRecommendations: expect.arrayContaining([
+        expect.objectContaining({
+          jobRequirement: 'BigQuery',
+          mustNotInvent: true,
+        }),
+      ]),
+    })
+    expect(result.jobTargetingExplanation).toBe(session.agentState.jobTargetingExplanation)
     expect(mockGenerateCvHighlightState).toHaveBeenCalledTimes(1)
     expect(mockGenerateCvHighlightState).toHaveBeenCalledWith(
       expect.any(Object),

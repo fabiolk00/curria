@@ -132,6 +132,7 @@ describe('buildTargetedRewritePermissionIssues', () => {
     })
 
     expect(issues).toContainEqual(expect.objectContaining({
+      code: 'unsupported_claim_added',
       severity: 'high',
       message: expect.stringContaining('requisito sem suporte factual'),
     }))

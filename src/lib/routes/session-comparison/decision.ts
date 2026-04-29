@@ -72,6 +72,9 @@ export async function decideSessionComparison(
         highlightState: highlightStateResponse.highlightStateReturned
           ? context.session.agentState.highlightState
           : undefined,
+        jobTargetingExplanation: previewLocked
+          ? undefined
+          : context.session.agentState.jobTargetingExplanation,
         previewLock: getPreviewLockSummary(context.session.generatedOutput),
         optimizationSummary: context.session.agentState.optimizationSummary,
       },

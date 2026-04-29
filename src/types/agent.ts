@@ -88,6 +88,7 @@ export type AtsAnalysisResult = {
 }
 
 export type ValidationIssue = {
+  code?: string
   severity: 'high' | 'medium'
   message: string
   section?: string
@@ -142,6 +143,89 @@ export type ReviewWarningCard = {
   missingEvidence: string[]
   whyItMatters: string
   suggestedAction: string
+}
+
+export type TargetRecommendationKind =
+  | 'missing_explicit_skill'
+  | 'adjacent_skill'
+  | 'missing_context'
+  | 'needs_quantification'
+  | 'missing_business_domain'
+  | 'missing_tooling_detail'
+  | 'missing_methodology'
+  | 'missing_stakeholder_context'
+
+export type TargetRecommendationPriority = 'high' | 'medium' | 'low'
+
+export type TargetRecommendation = {
+  id: string
+  kind: TargetRecommendationKind
+  priority: TargetRecommendationPriority
+  jobRequirement: string
+  /**
+   * Evidencias existentes no curriculo original/otimizado que sao proximas,
+   * mas nao suficientes para afirmar o requisito diretamente.
+   */
+  currentEvidence: string[]
+  /**
+   * Texto humano, seguro e acionavel.
+   * Deve sempre orientar o usuario a adicionar apenas se for verdadeiro.
+   */
+  suggestedUserAction: string
+  /**
+   * Exemplo seguro de redacao.
+   * Nunca deve afirmar algo sem condicional quando o requisito nao tem evidencia.
+   */
+  safeExample?: string
+  /**
+   * Quando true, a UI deve exibir aviso tipo:
+   * "Adicione apenas se isso fizer parte da sua experiencia real."
+   */
+  mustNotInvent: boolean
+  relatedResumeSection?: 'summary' | 'experience' | 'skills' | 'education' | 'certifications'
+  relatedEvidenceLevel?: 'explicit' | 'adjacent' | 'unsupported_gap'
+}
+
+export type RewriteChangeSection =
+  | 'summary'
+  | 'experience'
+  | 'skills'
+  | 'education'
+  | 'certifications'
+
+export type RewriteChangeSummary = {
+  id: string
+  section: RewriteChangeSection
+  sectionLabel: string
+  changed: boolean
+  beforeText: string
+  afterText: string
+  /**
+   * Requisitos da vaga que motivaram a mudanca.
+   */
+  relatedJobRequirements: string[]
+  /**
+   * Explicacoes curtas e humanas.
+   */
+  changeReasons: string[]
+  /**
+   * Coisas que o sistema NAO afirmou por seguranca.
+   */
+  safetyNotes: string[]
+  /**
+   * Metrica simples para QA/observabilidade.
+   */
+  changeIntensity: 'none' | 'light' | 'moderate' | 'strong'
+}
+
+export type JobTargetingExplanation = {
+  targetRole?: string
+  targetRoleConfidence?: 'low' | 'medium' | 'high'
+  rewriteChanges: RewriteChangeSummary[]
+  targetRecommendations: TargetRecommendation[]
+  generatedAt: string
+  source: 'job_targeting'
+  version: 1
 }
 
 export type EvidenceLevel =
@@ -401,6 +485,7 @@ export type AgentState = {
   atsWorkflowRun?: AtsWorkflowRun
   optimizedCvState?: CVState
   highlightState?: CvHighlightState
+  jobTargetingExplanation?: JobTargetingExplanation
   optimizedAt?: string
   optimizationSummary?: {
     changedSections: RewriteSectionInput['section'][]

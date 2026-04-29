@@ -83,6 +83,7 @@ export function ResumeComparisonPage({ sessionId }: { sessionId: string }) {
       previewLock={comparison.previewLock}
       targetJobDescription={comparison.targetJobDescription}
       highlightState={comparison.highlightState}
+      jobTargetingExplanation={comparison.jobTargetingExplanation}
       optimizationNotes={comparison.optimizationSummary?.notes ?? []}
       backHref={PROFILE_SETUP_PATH}
       onContinue={() => router.push(PROFILE_SETUP_PATH)}

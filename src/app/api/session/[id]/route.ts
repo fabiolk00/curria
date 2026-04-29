@@ -121,6 +121,9 @@ export async function GET(
             highlightState: highlightStateResponse.highlightStateReturned
               ? session.agentState.highlightState
               : undefined,
+            jobTargetingExplanation: previewLocked
+              ? undefined
+              : session.agentState.jobTargetingExplanation,
             optimizedAt: session.agentState.optimizedAt,
             optimizationSummary: session.agentState.optimizationSummary,
             lastRewriteMode: session.agentState.lastRewriteMode,

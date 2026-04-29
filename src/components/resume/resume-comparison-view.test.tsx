@@ -10,6 +10,7 @@ import {
   createExperienceBulletHighlightItemId,
   type CvHighlightState,
 } from '@/lib/resume/cv-highlight-artifact'
+import type { JobTargetingExplanation } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
 import { ResumeComparisonView } from './resume-comparison-view'
@@ -120,6 +121,40 @@ function buildReviewItem(overrides: Partial<NonNullable<CvHighlightState["review
     message: "Revise o texto antes de enviar.",
     inline: false,
     ...overrides,
+  }
+}
+
+function buildJobTargetingExplanation(): JobTargetingExplanation {
+  return {
+    targetRole: "Analista de BI",
+    targetRoleConfidence: "high",
+    generatedAt: "2026-04-29T12:00:00.000Z",
+    source: "job_targeting",
+    version: 1,
+    rewriteChanges: [{
+      id: "rewrite-change-summary",
+      section: "summary",
+      sectionLabel: "Resumo",
+      changed: true,
+      beforeText: "Original summary",
+      afterText: "Optimized summary",
+      relatedJobRequirements: ["Power BI"],
+      changeReasons: ["Destacou requisito relevante da vaga: Power BI."],
+      safetyNotes: ["Não adicionamos DAX como experiência direta porque não havia evidência suficiente no currículo original."],
+      changeIntensity: "light",
+    }],
+    targetRecommendations: [{
+      id: "target-rec-dax",
+      kind: "adjacent_skill",
+      priority: "high",
+      jobRequirement: "DAX",
+      currentEvidence: ["Power BI"],
+      suggestedUserAction: "A vaga pede DAX. Seu currículo mostra Power BI. Se você realmente tem experiência com DAX, adicione isso explicitamente.",
+      safeExample: "Se for verdadeiro: use DAX em uma experiência real.",
+      mustNotInvent: true,
+      relatedResumeSection: "skills",
+      relatedEvidenceLevel: "adjacent",
+    }],
   }
 }
 
@@ -276,6 +311,24 @@ describe('ResumeComparisonView', () => {
     const highlighted = screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')
     expect(highlighted).toHaveTextContent('Desenvolvedor Java')
     expect(highlighted).toHaveAttribute('data-highlight-reason', 'risk')
+  })
+
+  it('renders job targeting explanation panels on successful target generations', async () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_explanation"
+        jobTargetingExplanation={buildJobTargetingExplanation()}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('job-targeting-explanation')).toBeInTheDocument()
+    expect(screen.getByText('Entenda o que mudou')).toBeInTheDocument()
+    expect(screen.getByText('Sugestões para melhorar sua aderência')).toBeInTheDocument()
+    expect(screen.getByText('Adicione apenas se for verdadeiro')).toBeInTheDocument()
   })
 
   it('shows a review panel outside the resume body when override has no inline highlights', () => {

@@ -9,12 +9,13 @@ import { buildBaseGuardrails } from '@/lib/agent/context/base/build-base-guardra
 import { buildBaseSystemContext } from '@/lib/agent/context/base/build-base-system-context'
 import { buildOutputContractContext } from '@/lib/agent/context/schemas/build-output-contract-context'
 import { buildWorkflowContext } from '@/lib/agent/context/workflows/build-workflow-context'
+import { buildRewriteTargetPlan } from '@/lib/agent/job-targeting/rewrite-target-plan'
 import { buildTargetedRewritePermissions } from '@/lib/agent/job-targeting/rewrite-permissions'
 import { buildRewritePlan } from '@/lib/agent/tools/build-rewrite-plan'
 import { formatResumeRewriteGuardrails } from '@/lib/agent/tools/resume-rewrite-guidelines'
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
 import { rewriteSection } from '@/lib/agent/tools/rewrite-section'
-import type { AtsAnalysisResult, RewriteSectionInput, TargetingPlan } from '@/types/agent'
+import type { AtsAnalysisResult, CoreRequirement, RewriteSectionInput, TargetingPlan } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 type RewriteSectionName = RewriteSectionInput['section']
@@ -222,6 +223,69 @@ function buildTargetedPermissionInstructions(targetingPlan: TargetingPlan): stri
   return lines
 }
 
+function splitTargetRequirements(targetingPlan: TargetingPlan): {
+  coreRequirements: CoreRequirement[]
+  preferredRequirements: CoreRequirement[]
+} {
+  const requirements = targetingPlan.coreRequirementCoverage?.requirements ?? []
+
+  return {
+    coreRequirements: requirements.filter((requirement) => requirement.importance === 'core'),
+    preferredRequirements: requirements.filter((requirement) => (
+      requirement.importance === 'differential'
+      || requirement.requirementKind === 'preferred'
+      || requirement.requirementKind === 'nice_to_have'
+    )),
+  }
+}
+
+function buildSectionTargetPlanInstructions(
+  targetingPlan: TargetingPlan,
+  section: RewriteSectionName,
+): string[] {
+  const { coreRequirements, preferredRequirements } = splitTargetRequirements(targetingPlan)
+  const targetPlan = buildRewriteTargetPlan({
+    targetRole: targetingPlan.targetRole,
+    targetRoleConfidence: targetingPlan.targetRoleConfidence,
+    coreRequirements,
+    preferredRequirements,
+    supportedSignals: targetingPlan.safeTargetingEmphasis?.safeDirectEmphasis
+      ?? targetingPlan.rewritePermissions?.directClaimsAllowed
+      ?? [],
+    adjacentSignals: targetingPlan.safeTargetingEmphasis?.cautiousBridgeEmphasis.flatMap((bridge) => [
+      bridge.jobSignal,
+      ...bridge.supportingTerms,
+    ]) ?? [],
+    unsupportedSignals: targetingPlan.safeTargetingEmphasis?.forbiddenDirectClaims
+      ?? targetingPlan.rewritePermissions?.forbiddenClaims
+      ?? targetingPlan.coreRequirementCoverage?.unsupportedSignals
+      ?? [],
+  })
+  const instruction = targetPlan.sectionInstructions.find((item) => item.section === section)
+
+  if (!instruction) {
+    return []
+  }
+
+  return [
+    'Job Targeting 2.0 section rewrite plan:',
+    `- Section priority: ${instruction.priority}.`,
+    instruction.focusRequirements.length > 0
+      ? `- Focus requirements: ${instruction.focusRequirements.join(', ')}.`
+      : '- Focus requirements: use the strongest proven overlap with the vacancy.',
+    instruction.allowedClaims.length > 0
+      ? `- Allowed direct claims: ${instruction.allowedClaims.join(', ')}.`
+      : '- Allowed direct claims: none beyond the original resume evidence.',
+    instruction.bridgeClaims.length > 0
+      ? `- Careful bridge claims: ${instruction.bridgeClaims.join(', ')}.`
+      : '- Careful bridge claims: none.',
+    instruction.forbiddenClaims.length > 0
+      ? `- Forbidden claims: ${instruction.forbiddenClaims.join(', ')}.`
+      : '- Forbidden claims: none identified.',
+    instruction.instruction,
+  ]
+}
+
 function buildAtsResumeStyleGuide(): string {
   return [
     buildBaseSystemContext(),
@@ -352,6 +416,7 @@ function buildTargetJobSectionInstructions(
       : '',
     `Gap snapshot: match score ${gapAnalysis.matchScore}/100; missing skills ${gapAnalysis.missingSkills.join(', ') || 'none'}; weak areas ${gapAnalysis.weakAreas.join(', ') || 'none'}.`,
     ...buildTargetedPermissionInstructions(targetingPlan),
+    ...buildSectionTargetPlanInstructions(targetingPlan, section),
   ].filter(Boolean)
 
   switch (section) {

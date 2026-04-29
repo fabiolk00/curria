@@ -4,6 +4,7 @@ import type {
   GeneratedOutput,
   JobProgress,
   JobStatusSnapshot,
+  JobTargetingExplanation,
   CareerFitCheckpoint,
   Phase,
   PreviewAccessReason,
@@ -175,6 +176,7 @@ export type SessionWorkspace = {
       rewriteStatus?: RewriteStatus
       optimizedCvState?: CVState
       highlightState?: CvHighlightState
+      jobTargetingExplanation?: JobTargetingExplanation
       optimizedAt?: string
       optimizationSummary?: {
         changedSections: Array<'summary' | 'experience' | 'skills' | 'education' | 'certifications'>
@@ -263,6 +265,7 @@ export type ResumeComparisonResponse = {
   originalCvState: CVState
   optimizedCvState: CVState
   highlightState?: CvHighlightState
+  jobTargetingExplanation?: JobTargetingExplanation
   previewLock?: PreviewLockSummary
   optimizationSummary?: {
     changedSections: Array<'summary' | 'experience' | 'skills' | 'education' | 'certifications'>

@@ -16,6 +16,8 @@ import {
   isRecoverableValidationBlock,
   isSummaryOnlyRecoverableValidation,
 } from '@/lib/agent/job-targeting/recoverable-validation'
+import { buildRewriteChangeSummary } from '@/lib/agent/job-targeting/rewrite-change-summary'
+import { buildTargetRecommendations } from '@/lib/agent/job-targeting/target-recommendations'
 import {
   applyLowFitWarningGateToValidation,
   shouldPreRewriteLowFitBlock,
@@ -28,8 +30,9 @@ import { updateSession } from '@/lib/db/sessions'
 import { deriveTargetFitAssessment } from '@/lib/agent/target-fit'
 import { executeWithStageRetry } from '@/lib/agent/job-targeting-retry'
 import { createJobTargetingLogContext } from '@/lib/agent/job-targeting-observability'
+import { recordMetricCounter } from '@/lib/observability/metric-events'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
-import type { Session } from '@/types/agent'
+import type { CoreRequirement, JobTargetingExplanation, Session, TargetEvidence } from '@/types/agent'
 import type { JobTargetingTrace } from '@/types/trace'
 
 type JobTargetingTraceDraft = Pick<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt'>
@@ -265,6 +268,91 @@ function countEvidenceLevels(targetEvidence: NonNullable<Session['agentState']['
   }, {})
 }
 
+function splitCoreAndPreferredRequirements(
+  requirements: CoreRequirement[] = [],
+): {
+  coreRequirements: CoreRequirement[]
+  preferredRequirements: CoreRequirement[]
+} {
+  return {
+    coreRequirements: requirements.filter((requirement) => requirement.importance === 'core'),
+    preferredRequirements: requirements.filter((requirement) => (
+      requirement.importance === 'differential'
+      || requirement.requirementKind === 'preferred'
+      || requirement.requirementKind === 'nice_to_have'
+    )),
+  }
+}
+
+function collectSupportedSignals(targetEvidence: TargetEvidence[] = []): string[] {
+  return Array.from(new Set(
+    targetEvidence
+      .filter((evidence) =>
+        evidence.rewritePermission === 'can_claim_directly'
+        || evidence.rewritePermission === 'can_claim_normalized')
+      .flatMap((evidence) => [
+        evidence.canonicalSignal,
+        ...evidence.matchedResumeTerms,
+        ...evidence.allowedRewriteForms,
+      ])
+      .map((value) => value.trim())
+      .filter(Boolean),
+  ))
+}
+
+function collectAdjacentSignals(targetEvidence: TargetEvidence[] = []): string[] {
+  return Array.from(new Set(
+    targetEvidence
+      .filter((evidence) =>
+        evidence.rewritePermission === 'can_bridge_carefully'
+        || evidence.rewritePermission === 'can_mention_as_related_context'
+        || evidence.evidenceLevel === 'strong_contextual_inference'
+        || evidence.evidenceLevel === 'semantic_bridge_only')
+      .flatMap((evidence) => [
+        ...evidence.matchedResumeTerms,
+        ...evidence.supportingResumeSpans,
+        evidence.canonicalSignal,
+      ])
+      .map((value) => value.includes(':') ? value.split(':').slice(1).join(':').trim() : value.trim())
+      .filter(Boolean),
+  ))
+}
+
+function buildJobTargetingExplanation(params: {
+  session: Session
+  optimizedCvState: Session['cvState']
+  targetingPlan: NonNullable<Session['agentState']['targetingPlan']>
+}): JobTargetingExplanation {
+  const { coreRequirements, preferredRequirements } = splitCoreAndPreferredRequirements(
+    params.targetingPlan.coreRequirementCoverage?.requirements ?? [],
+  )
+  const supportedSignals = collectSupportedSignals(params.targetingPlan.targetEvidence)
+  const adjacentSignals = collectAdjacentSignals(params.targetingPlan.targetEvidence)
+
+  return {
+    targetRole: params.targetingPlan.targetRole,
+    targetRoleConfidence: params.targetingPlan.targetRoleConfidence,
+    rewriteChanges: buildRewriteChangeSummary({
+      beforeCvState: params.session.cvState,
+      afterCvState: params.optimizedCvState,
+      coreRequirements,
+      preferredRequirements,
+      targetRole: params.targetingPlan.targetRole,
+    }),
+    targetRecommendations: buildTargetRecommendations({
+      targetRole: params.targetingPlan.targetRole,
+      coreRequirements,
+      preferredRequirements,
+      supportedSignals,
+      adjacentSignals,
+      resumeSkillSignals: params.session.cvState.skills,
+    }),
+    generatedAt: new Date().toISOString(),
+    source: 'job_targeting',
+    version: 1,
+  }
+}
+
 function resolveEvidenceRatios(targetEvidence: NonNullable<Session['agentState']['targetingPlan']>['targetEvidence'] = []) {
   const total = targetEvidence.length
   const explicitEvidenceCount = targetEvidence.filter((evidence) => evidence.evidenceLevel === 'explicit').length
@@ -347,6 +435,7 @@ export async function runJobTargetingPipeline(
   success: boolean
   optimizedCvState?: Session['agentState']['optimizedCvState']
   optimizationSummary?: Session['agentState']['optimizationSummary']
+  jobTargetingExplanation?: Session['agentState']['jobTargetingExplanation']
   validation?: Session['agentState']['rewriteValidation']
   recoverableBlock?: Session['agentState']['recoverableValidationBlock']
   acceptedLowFitFallbackUsed?: boolean
@@ -362,6 +451,9 @@ export async function runJobTargetingPipeline(
   const previousOptimizedAt = session.agentState.optimizedAt
   const previousOptimizationSummary = session.agentState.optimizationSummary
     ? structuredClone(session.agentState.optimizationSummary)
+    : undefined
+  const previousJobTargetingExplanation = session.agentState.jobTargetingExplanation
+    ? structuredClone(session.agentState.jobTargetingExplanation)
     : undefined
 
   const persistPipelineAgentState = (agentState: Session['agentState']): Promise<void> => (
@@ -742,6 +834,7 @@ export async function runJobTargetingPipeline(
       rewriteStatus: 'failed',
       optimizedCvState: previousOptimizedCvState,
       highlightState: previousHighlightState,
+      jobTargetingExplanation: previousJobTargetingExplanation,
       optimizedAt: previousOptimizedAt,
       optimizationSummary: previousOptimizationSummary,
       lastRewriteMode: previousLastRewriteMode,
@@ -1052,6 +1145,45 @@ export async function runJobTargetingPipeline(
   )
   const validationIssueMessages = validation.issues.map((issue) => issue.message)
   const validationIssueSections = Array.from(new Set(validation.issues.map((issue) => issue.section).filter(Boolean)))
+  const jobTargetingExplanation = !validation.blocked
+    ? buildJobTargetingExplanation({
+        session,
+        optimizedCvState: finalizedOptimizedCvState,
+        targetingPlan,
+      })
+    : undefined
+
+  if (jobTargetingExplanation) {
+    const changedSections = jobTargetingExplanation.rewriteChanges
+      .filter((change) => change.changed)
+      .map((change) => change.section)
+    const mustNotInventRecommendationCount = jobTargetingExplanation.targetRecommendations
+      .filter((recommendation) => recommendation.mustNotInvent).length
+
+    logInfo('agent.job_targeting.explanation_built', {
+      sessionId: session.id,
+      userId: session.userId,
+      targetRole: targetingPlan.targetRole,
+      rewriteChangeCount: changedSections.length,
+      targetRecommendationCount: jobTargetingExplanation.targetRecommendations.length,
+      mustNotInventRecommendationCount,
+      changedSections,
+    })
+    recordMetricCounter('architecture.job_targeting.recommendations.count', {
+      sessionId: session.id,
+      count: jobTargetingExplanation.targetRecommendations.length,
+    })
+    recordMetricCounter('architecture.job_targeting.rewrite_changes.count', {
+      sessionId: session.id,
+      count: changedSections.length,
+    })
+    changedSections.forEach((section) => {
+      recordMetricCounter('architecture.job_targeting.rewrite_changes.changed_sections', {
+        sessionId: session.id,
+        section,
+      })
+    })
+  }
   const highlightGenerationGate = classifyHighlightGenerationGate({
     acceptedLowFitOverride: options?.userAcceptedLowFit === true,
     validationBlocked: validation.blocked,
@@ -1263,6 +1395,7 @@ export async function runJobTargetingPipeline(
     rewriteStatus: validation.blocked ? 'failed' : 'completed',
     optimizedCvState: validation.blocked ? previousOptimizedCvState : finalizedOptimizedCvState,
     highlightState: validation.blocked ? previousHighlightState : nextHighlightState,
+    jobTargetingExplanation: validation.blocked ? previousJobTargetingExplanation : jobTargetingExplanation,
     optimizedAt: validation.blocked ? previousOptimizedAt : optimizedAt,
     optimizationSummary: validation.blocked ? previousOptimizationSummary : finalizedOptimizationSummary,
     lastRewriteMode: validation.blocked ? previousLastRewriteMode : 'job_targeting',
@@ -1467,6 +1600,7 @@ export async function runJobTargetingPipeline(
     success: true,
     optimizedCvState: finalizedOptimizedCvState,
     optimizationSummary: finalizedOptimizationSummary,
+    jobTargetingExplanation,
     validation,
     acceptedLowFitFallbackUsed,
     cvVersionId: persistedCvVersionId,
