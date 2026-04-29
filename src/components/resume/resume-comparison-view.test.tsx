@@ -313,7 +313,7 @@ describe('ResumeComparisonView', () => {
     expect(highlighted).toHaveAttribute('data-highlight-reason', 'risk')
   })
 
-  it('renders job targeting explanation panels on successful target generations', async () => {
+  it('renders only target recommendations beside the generated resume for successful target generations', async () => {
     render(
       <ResumeComparisonView
         originalCvState={buildCvState('Original summary')}
@@ -326,9 +326,28 @@ describe('ResumeComparisonView', () => {
     )
 
     expect(screen.getByTestId('job-targeting-explanation')).toBeInTheDocument()
-    expect(screen.getByText('Entenda o que mudou')).toBeInTheDocument()
+    expect(screen.queryByText('Entenda o que mudou')).not.toBeInTheDocument()
     expect(screen.getByText('Sugestões para melhorar sua aderência')).toBeInTheDocument()
     expect(screen.getByText('Adicione apenas se for verdadeiro')).toBeInTheDocument()
+    expect(screen.queryByText('Original')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('original-resume-document')).not.toBeInTheDocument()
+    expect(screen.getByText('Currículo gerado')).toBeInTheDocument()
+  })
+
+  it('keeps the original resume comparison for ATS enhancement generations', () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="ATS_ENHANCEMENT"
+        sessionId="sess_ats_compare"
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Original')).toBeInTheDocument()
+    expect(screen.getByTestId('original-resume-document')).toBeInTheDocument()
+    expect(screen.getAllByText('Compare as alterações lado a lado').length).toBeGreaterThan(0)
   })
 
   it('shows a review panel outside the resume body when override has no inline highlights', () => {

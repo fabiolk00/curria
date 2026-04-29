@@ -7,7 +7,6 @@ import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
 import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
-import { RewriteDiffPanel } from "@/components/resume/rewrite-diff-panel"
 import { TargetRecommendationsCard } from "@/components/resume/target-recommendations-card"
 import { Button } from "@/components/ui/button"
 import {
@@ -548,6 +547,9 @@ export function ResumeComparisonView({
   const shouldShowJobTargetingExplanation = generationType === "JOB_TARGETING"
     && !previewLock?.locked
     && Boolean(jobTargetingExplanation)
+  const isJobTargeting = generationType === "JOB_TARGETING"
+  const hasReviewItems = isOverrideReviewHighlight && Boolean(currentHighlightState?.reviewItems?.length)
+  const hasJobTargetingSidebar = isJobTargeting && (hasReviewItems || shouldShowJobTargetingExplanation)
 
   const handleReviewItemSelect = (item: NonNullable<CvHighlightState["reviewItems"]>[number]) => {
     const section = item.section ?? "summary"
@@ -635,7 +637,7 @@ export function ResumeComparisonView({
                 {title}
               </h1>
               <p className="truncate text-xs text-zinc-500 dark:text-zinc-400 lg:text-sm">
-                Compare as alterações lado a lado
+                {isJobTargeting ? "Revise o currículo gerado e os pontos de aderência" : "Compare as alterações lado a lado"}
               </p>
             </div>
           </div>
@@ -656,7 +658,7 @@ export function ResumeComparisonView({
             {title}
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Compare as alterações lado a lado
+            {isJobTargeting ? "Revise o currículo gerado" : "Compare as alterações lado a lado"}
           </p>
         </div>
       </header>
@@ -685,46 +687,39 @@ export function ResumeComparisonView({
 
       <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          {shouldShowJobTargetingExplanation && jobTargetingExplanation ? (
-            <div
-              data-testid="job-targeting-explanation"
-              className={cn(
-                "grid gap-4 transition-all duration-700 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]",
-                isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
-              )}
-            >
-              <RewriteDiffPanel changes={jobTargetingExplanation.rewriteChanges} />
-              <TargetRecommendationsCard recommendations={jobTargetingExplanation.targetRecommendations} />
-            </div>
-          ) : null}
-
           <div
             className={cn(
               "grid gap-8 transition-all duration-700 sm:gap-6",
-              isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length
-                ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
-                : "lg:grid-cols-2",
+              isJobTargeting
+                ? hasJobTargetingSidebar
+                  ? "lg:grid-cols-[minmax(0,0.98fr)_minmax(22rem,0.72fr)]"
+                  : "lg:grid-cols-[minmax(0,46rem)] lg:justify-center"
+                : hasReviewItems
+                  ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
+                  : "lg:grid-cols-2",
               isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
             )}
           >
-          <div>
-            <div className="mb-2 flex items-center justify-between sm:mb-3">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
-                <span className="text-xs font-medium text-red-600 dark:text-red-400 sm:text-sm">
-                  Original
-                </span>
+          {!isJobTargeting ? (
+            <div>
+              <div className="mb-2 flex items-center justify-between sm:mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="text-xs font-medium text-red-600 dark:text-red-400 sm:text-sm">
+                    Original
+                  </span>
+                </div>
               </div>
+              <ResumeDocument cvState={originalCvState} variant="original" />
             </div>
-            <ResumeDocument cvState={originalCvState} variant="original" />
-          </div>
+          ) : null}
 
           <div>
             <div className="mb-2 flex items-center justify-between sm:mb-3">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:text-sm">
-                  {isOverrideReviewHighlight ? "Revisão recomendada" : "Otimizado"}
+                  {isJobTargeting ? "Currículo gerado" : isOverrideReviewHighlight ? "Revisão recomendada" : "Otimizado"}
                 </span>
                 {shouldShowHighlightToggle ? (
                   <button
@@ -774,9 +769,24 @@ export function ResumeComparisonView({
               </div>
             ) : null}
           </div>
-          {isOverrideReviewHighlight && currentHighlightState?.reviewItems?.length ? (
+          {hasJobTargetingSidebar ? (
+            <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+              {hasReviewItems ? (
+                <ReviewWarningPanel
+                  items={currentHighlightState?.reviewItems ?? []}
+                  hasInlineHighlights={hasInlineHighlights}
+                  onItemSelect={handleReviewItemSelect}
+                />
+              ) : null}
+              {shouldShowJobTargetingExplanation && jobTargetingExplanation ? (
+                <div data-testid="job-targeting-explanation">
+                  <TargetRecommendationsCard recommendations={jobTargetingExplanation.targetRecommendations} />
+                </div>
+              ) : null}
+            </aside>
+          ) : hasReviewItems ? (
             <ReviewWarningPanel
-              items={currentHighlightState.reviewItems}
+              items={currentHighlightState?.reviewItems ?? []}
               hasInlineHighlights={hasInlineHighlights}
               onItemSelect={handleReviewItemSelect}
               className="lg:sticky lg:top-4 lg:self-start"

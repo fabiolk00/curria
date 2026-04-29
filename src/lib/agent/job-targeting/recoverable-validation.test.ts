@@ -119,7 +119,12 @@ describe('buildTargetRolePositioning', () => {
 
     expect(copy).not.toMatch(/\bGit\b/i)
     expect(copy).not.toMatch(/comprova melhor experi/i)
-    expect(copy).toContain('gestao de contas')
+    expect(modal.primaryProblem).toBe('A vaga exige requisitos que seu currículo ainda não comprova de forma direta.')
+    expect(modal.problemBullets).toEqual([
+      'Sem evidência direta de Gestao de contas.',
+      'Sem evidência direta de P&L.',
+      'Sem evidência direta de forecast e budget.',
+    ])
   })
 
   it('removes weak version-control bridge signals while keeping stronger adjacent evidence', () => {
@@ -155,8 +160,58 @@ describe('buildTargetRolePositioning', () => {
     })
 
     expect(modal.problemBullets).toEqual(expect.arrayContaining([
-      'Encontramos alguns pontos próximos, como APIs REST e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.',
+      'Há pontos próximos, como APIs REST e SQL, mas eles não sustentam uma apresentação direta como Desenvolvedor Java.',
     ]))
     expect(modal.problemBullets.join(' ')).not.toMatch(/\bGit\b/i)
+  })
+
+  it('keeps low-fit requirement copy concise and capped for long commercial vacancies', () => {
+    const modal = buildUserFacingValidationBlockModal({
+      targetRole: 'Gerente De Contas',
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'high_risk_off_target',
+        matchScore: 18,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 10,
+        unsupportedGapRatio: 0.9,
+        explicitEvidenceRatio: 0.1,
+        coreRequirementCoverage: {
+          total: 10,
+          supported: 1,
+          unsupported: 9,
+          unsupportedSignals: [],
+          topUnsupportedSignalsForDisplay: [
+            'Metodologias ágeis aplicadas à gestão de operação/produto',
+            'Vivência com gestão financeira de contas',
+            'P&L, margem, faturamento, forecast e budget',
+            'Estruturação de propostas comerciais, escopo e precificação',
+            'Gestão de contratos, renovações, aditivos e medições',
+            'Gestão de pessoas, alocação e desenvolvimento de times',
+            'Gestão de contas estratégicas e relacionamento executivo com clientes',
+          ],
+        },
+      },
+      validationIssues: [{
+        severity: 'high',
+        section: 'summary',
+        issueType: 'low_fit_target_role',
+        message: 'Pouca evidência para os requisitos centrais da vaga.',
+        userFacingExplanation: 'Encontramos poucos pontos comprovados para requisitos centrais como metodologias ágeis, P&L e propostas comerciais.',
+      }],
+    })
+
+    expect(modal.primaryProblem).not.toContain('Metodologias ágeis aplicadas')
+    expect(modal.problemBullets).toHaveLength(5)
+    expect(modal.problemBullets).toEqual([
+      'Sem evidência direta de Metodologias ágeis aplicadas à gestão de operação/produto.',
+      'Sem evidência direta de Vivência com gestão financeira de contas.',
+      'Sem evidência direta de P&L, margem, faturamento, forecast e budget.',
+      'Sem evidência direta de Estruturação de propostas comerciais, escopo e precificação.',
+      'Sem evidência direta de Gestão de contratos, renovações, aditivos e medições.',
+    ])
+    expect(modal.problemBullets.join(' ')).not.toContain('Encontramos poucos pontos comprovados')
   })
 })

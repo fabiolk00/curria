@@ -180,6 +180,8 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260429-ovc | Simplify generated resume review screen for Job Targeting while keeping ATS Enhancement comparison | 2026-04-29 | working-tree | Validated | [260429-ovc-simplify-generated-resume-review-screen-](./quick/260429-ovc-simplify-generated-resume-review-screen-/) |
+| 260429-os7 | Shorten low-fit Job Targeting warning into concise bullet list | 2026-04-29 | working-tree | Validated | [260429-os7-shorten-low-fit-job-targeting-warning-in](./quick/260429-os7-shorten-low-fit-job-targeting-warning-in/) |
 | 260422-suf | Normalize highlight span boundaries ignoring punctuation separators and refine broken mid-phrase highlights | 2026-04-22 | working-tree | Validated | [260422-suf-normalize-highlight-span-boundaries-igno](./quick/260422-suf-normalize-highlight-span-boundaries-igno/) |
 | 260422-vlo | Add end-to-end highlight outcome observability for silent zero-highlight cases | 2026-04-22 | working-tree | Validated | [260422-vlo-add-end-to-end-highlight-outcome-observa](./quick/260422-vlo-add-end-to-end-highlight-outcome-observa/) |
 | 260424-c9m | Alinhar user-data-page.tsx ao layout do zip de referência com fidelidade visual máxima sem regredir os fluxos existentes | 2026-04-24 | working-tree | Validated | [260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-](./quick/260424-c9m-alinhar-user-data-page-tsx-ao-layout-do-/) |

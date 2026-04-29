@@ -27,6 +27,7 @@ const RECOVERABLE_VALIDATION_ISSUE_TYPES = new Set<NonNullable<ValidationIssue['
   'summary_skill_without_evidence',
   'low_fit_target_role',
 ])
+const MAX_LOW_FIT_REQUIREMENT_BULLETS = 5
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
@@ -50,6 +51,44 @@ function listToSentence(values: string[]): string {
   }
 
   return `${values.slice(0, -1).join(', ')} e ${values[values.length - 1]}`
+}
+
+function ensureSentence(value: string): string {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return ''
+  }
+
+  return /[.!?]$/u.test(trimmed) ? trimmed : `${trimmed}.`
+}
+
+function dedupeRequirementSignals(values: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const value of values) {
+    const sanitized = sanitizeText(value).replace(/\s+/g, ' ').trim()
+    if (!sanitized) {
+      continue
+    }
+
+    const normalized = normalizeSemanticText(sanitized)
+    if (seen.has(normalized)) {
+      continue
+    }
+
+    seen.add(normalized)
+    result.push(sanitized)
+  }
+
+  return result
+}
+
+function buildMissingRequirementBullets(values: string[]): string[] {
+  return dedupeRequirementSignals(values)
+    .slice(0, MAX_LOW_FIT_REQUIREMENT_BULLETS)
+    .map((signal) => ensureSentence(`Sem evidência direta de ${signal}`))
 }
 
 const WEAK_LOW_FIT_CAREER_EVIDENCE_SIGNALS = new Set([
@@ -346,24 +385,28 @@ export function buildUserFacingValidationBlockModal(args: {
     const unsupportedSignals = args.lowFitWarningGate.coreRequirementCoverage.topUnsupportedSignalsForDisplay
       ?? args.lowFitWarningGate.coreRequirementCoverage.unsupportedSignals.slice(0, 6)
     const targetRoleLabel = targetRole ? ` como ${targetRole}` : ''
+    const missingRequirementBullets = buildMissingRequirementBullets(unsupportedSignals)
+    const contextBullets = [
+      originalProfileLabel
+        ? `Seu histórico atual parece mais próximo de ${originalProfileLabel}.`
+        : '',
+      nearbySignals.length > 0
+        ? `Há pontos próximos, como ${listToSentence(nearbySignals)}, mas eles não sustentam uma apresentação direta${targetRoleLabel}.`
+        : '',
+    ].filter(Boolean)
 
     return sanitizeModalPayload({
       title: 'Esta vaga parece muito distante do seu currículo atual',
       description: 'Encontramos poucos pontos comprovados no seu currículo para os requisitos principais desta vaga.',
       primaryProblem: unsupportedSignals.length > 0
-        ? `A vaga pede ${listToSentence(unsupportedSignals)}, mas seu histórico atual sustenta melhor outra trajetória profissional.`
+        ? 'A vaga exige requisitos que seu currículo ainda não comprova de forma direta.'
         : targetRole
-          ? `Não encontramos comprovação suficiente para sustentar uma apresentação direta como ${targetRole}.`
-          : 'Não encontramos comprovação suficiente para sustentar uma apresentação direta para esta vaga.',
+          ? `Não encontramos comprovação suficiente para uma apresentação direta como ${targetRole}.`
+          : 'Não encontramos comprovação suficiente para uma apresentação direta para esta vaga.',
       problemBullets: [
-        originalProfileLabel
-          ? `Seu currículo comprova melhor experiência em ${originalProfileLabel}.`
-          : '',
-        nearbySignals.length > 0
-          ? `Encontramos alguns pontos próximos, como ${listToSentence(nearbySignals)}, mas eles não sustentam uma apresentação direta${targetRoleLabel}.`
-          : '',
-        ...extractProblemBullets(sanitizedIssues),
-      ].filter(Boolean).slice(0, 3),
+        ...missingRequirementBullets,
+        ...contextBullets,
+      ].filter(Boolean).slice(0, MAX_LOW_FIT_REQUIREMENT_BULLETS + 1),
       reassurance: 'Isso não significa que você não pode se candidatar. Significa apenas que essa versão pode ficar pouco aderente ou parecer forçada.',
       recommendation: 'Você pode gerar mesmo assim e revisar manualmente antes de enviar.',
       actions: {
