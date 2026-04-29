@@ -1,4 +1,6 @@
 import React from "react"
+import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
@@ -27,7 +29,7 @@ vi.mock("@/lib/auth/app-user", () => ({
 }))
 
 vi.mock("@/lib/billing/ai-chat-access.server", () => ({
-  getAiChatAccess: () => mockGetAiChatAccess(),
+  getAiChatAccess: (appUserId: string) => mockGetAiChatAccess(appUserId),
 }))
 
 vi.mock("@/lib/auth/e2e-auth", () => ({
@@ -42,6 +44,8 @@ vi.mock("@/components/dashboard/resume-workspace", () => ({
     activeRecurringPlan,
     currentCredits,
     aiChatAccessTitle,
+    aiChatAccessMessage,
+    aiChatUpgradeUrl,
   }: {
     canAccessAiChat?: boolean
     initialSessionId?: string
@@ -49,6 +53,8 @@ vi.mock("@/components/dashboard/resume-workspace", () => ({
     activeRecurringPlan?: string | null
     currentCredits?: number
     aiChatAccessTitle?: string
+    aiChatAccessMessage?: string
+    aiChatUpgradeUrl?: string
   }) => (
     <div
       data-testid="resume-workspace"
@@ -58,6 +64,8 @@ vi.mock("@/components/dashboard/resume-workspace", () => ({
       data-plan={activeRecurringPlan ?? ""}
       data-credits={currentCredits ?? 0}
       data-chat-title={aiChatAccessTitle ?? ""}
+      data-chat-message={aiChatAccessMessage ?? ""}
+      data-chat-upgrade-url={aiChatUpgradeUrl ?? ""}
     />
   ),
 }))
@@ -80,7 +88,7 @@ describe("ChatPage", () => {
     expect(workspace).toHaveAttribute("data-credits", "0")
   })
 
-  it("passes through an active recurring monthly plan for blocked paid users", async () => {
+  it("keeps /chat behind the AI chat gate for blocked paid users", async () => {
     mockGetCurrentAppUser.mockResolvedValueOnce({
       id: "usr_123",
       creditAccount: {
@@ -103,9 +111,14 @@ describe("ChatPage", () => {
     const jsx = await ChatPage({})
     render(jsx)
 
-    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-plan", "monthly")
-    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-credits", "7")
-    expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-chat-title", "Chat com IA exclusivo do plano PRO")
+    const workspace = screen.getByTestId("resume-workspace")
+    expect(mockGetAiChatAccess).toHaveBeenCalledWith("usr_123")
+    expect(workspace).toHaveAttribute("data-can-access-ai-chat", "false")
+    expect(workspace).toHaveAttribute("data-plan", "monthly")
+    expect(workspace).toHaveAttribute("data-credits", "7")
+    expect(workspace).toHaveAttribute("data-chat-title", "Chat com IA exclusivo do plano PRO")
+    expect(workspace).toHaveAttribute("data-chat-message", "Upgrade required")
+    expect(workspace).toHaveAttribute("data-chat-upgrade-url", "/finalizar-compra?plan=pro")
   })
 
   it("passes through a valid-looking session id without server-side resolution", async () => {
@@ -139,5 +152,40 @@ describe("ChatPage", () => {
     render(jsx)
 
     expect(screen.getByTestId("resume-workspace")).toHaveAttribute("data-session-id", "sess_first")
+  })
+
+  it("keeps AI chat entitlement references on the normalized true-chat allowlist", () => {
+    const allowed = [
+      "src/app/(auth)/chat/page.tsx",
+      "src/lib/agent/request-orchestrator.ts",
+      "src/app/api/session/[id]/messages/route.ts",
+      "src/app/api/session/[id]/ai-chat-snapshot/route.ts",
+      "src/lib/billing/ai-chat-access.ts",
+      "src/lib/billing/ai-chat-access.server.ts",
+    ]
+
+    const output = execFileSync("rg", [
+      "-n",
+      "getAiChatAccess|AiChatAccessCard",
+      "src/app",
+      "src/components",
+      "src/lib",
+      "--glob",
+      "!**/*.test.ts",
+      "--glob",
+      "!**/*.test.tsx",
+    ], {
+      encoding: "utf8",
+    })
+    const hits = output
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => line.replace(/\\/g, "/"))
+    const unexpected = hits.filter((line) => !allowed.some((path) => line.startsWith(`${path}:`)))
+
+    expect(unexpected).toEqual([])
+    for (const path of allowed.slice(0, 4)) {
+      expect(readFileSync(path, "utf8")).toMatch(/getAiChatAccess|AiChatAccessCard/)
+    }
   })
 })
