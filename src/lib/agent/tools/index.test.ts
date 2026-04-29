@@ -264,6 +264,43 @@ describe('agent tool dispatch', () => {
     expect(confirmTools).not.toContain('rewrite_section')
   })
 
+  it('advertises parse_file as a PDF-only upload tool', () => {
+    const intakeTools = getToolDefinitionsForPhase('intake')
+    const parseFileTool = intakeTools.find((tool) => (
+      tool.type === 'function' && tool.function.name === 'parse_file'
+    ))
+
+    expect(parseFileTool?.type).toBe('function')
+    if (!parseFileTool || parseFileTool.type !== 'function') {
+      throw new Error('Expected parse_file tool definition.')
+    }
+
+    expect(parseFileTool.function.description).toBe('Extract text from an uploaded resume PDF.')
+    expect(parseFileTool.function.parameters).toMatchObject({
+      properties: {
+        mime_type: {
+          enum: ['application/pdf'],
+        },
+      },
+    })
+  })
+
+  it('rejects DOCX parse_file tool input before dispatching to the parser', async () => {
+    const session = buildSession()
+
+    const execution = await executeTool('parse_file', {
+      file_base64: 'abc',
+      mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }, session)
+
+    expect(execution.output).toEqual({
+      success: false,
+      code: 'VALIDATION_ERROR',
+      error: 'Invalid input for parse_file: Invalid enum value. Expected \'application/pdf\', received \'application/vnd.openxmlformats-officedocument.wordprocessingml.document\'',
+    })
+    expect(parseFile).not.toHaveBeenCalled()
+  })
+
   it('persists the produced patch exactly once through the dispatcher', async () => {
     const session = buildSession()
     const atsResult = {

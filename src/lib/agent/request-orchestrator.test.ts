@@ -259,6 +259,34 @@ describe('handleAgentPost', () => {
     expect(createSession).not.toHaveBeenCalled()
   })
 
+  it('rejects DOCX uploads at request validation after preserving the chat entitlement gate', async () => {
+    const response = await handleAgentPost(new NextRequest('http://localhost/api/agent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: 'analise meu curriculo',
+        file: Buffer.from('fake docx').toString('base64'),
+        fileMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      }),
+    }))
+
+    expect(response.status).toBe(400)
+    expect(getAiChatAccess).toHaveBeenCalledWith('usr_123')
+    expect(agentLimiter.limit).toHaveBeenCalledWith('usr_123')
+    expect(await response.json()).toEqual({
+      error: {
+        formErrors: [],
+        fieldErrors: {
+          fileMime: [
+            "Invalid enum value. Expected 'application/pdf', received 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
+          ],
+        },
+      },
+    })
+    expect(getSession).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
+  })
+
   it('creates a new session, persists target detection, and returns text-only async acknowledgement ordering', async () => {
     const response = await handleAgentPost(new NextRequest('http://localhost/api/agent', {
       method: 'POST',
