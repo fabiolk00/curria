@@ -4,9 +4,6 @@ const ParseFileInputSchema = z.object({
   file_base64: z.string(),
   mime_type: z.enum([
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'image/png',
-    'image/jpeg',
   ]),
 })
 

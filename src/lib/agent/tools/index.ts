@@ -71,7 +71,7 @@ const TOOL_DEFINITIONS: OpenAITool[] = [
     type: 'function',
     function: {
       name: 'parse_file',
-      description: 'Extract text from an uploaded resume file (PDF, DOCX, or image).',
+      description: 'Extract text from an uploaded resume PDF.',
       parameters: {
         type: 'object',
         properties: {
@@ -80,9 +80,6 @@ const TOOL_DEFINITIONS: OpenAITool[] = [
             type: 'string',
             enum: [
               'application/pdf',
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-              'image/png',
-              'image/jpeg',
             ],
           },
         },

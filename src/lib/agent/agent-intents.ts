@@ -31,7 +31,7 @@ export function isGenerationRequest(message: string): boolean {
     /\b(pode gerar|gerar agora|gere o arquivo|gere os arquivos|gere o curriculo|gere meu curriculo)\b/.test(normalized)
     || (
       /\b(gere|gerar|gera|exporte|exportar|baixar|baixe|download)\b/.test(normalized)
-      && /\b(arquivo|arquivos|curriculo|pdf|docx|versao final)\b/.test(normalized)
+      && /\b(arquivo|arquivos|curriculo|pdf|versao final)\b/.test(normalized)
     )
   )
 }

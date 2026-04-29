@@ -192,13 +192,13 @@ describe('agent tool dispatch', () => {
     vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: true,
-        docxUrl: 'https://example.com/resume.docx',
+        docxUrl: null,
         pdfUrl: 'https://example.com/resume.pdf',
       },
       patch: {
         generatedOutput: {
           status: 'ready',
-          docxPath: 'usr_123/sess_123/resume.docx',
+          docxPath: undefined,
           pdfPath: 'usr_123/sess_123/resume.pdf',
           generatedAt: '2026-03-27T12:00:00.000Z',
         },
@@ -763,13 +763,13 @@ describe('agent tool dispatch', () => {
     vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: true,
-        docxUrl: 'https://example.com/resume.docx',
+        docxUrl: null,
         pdfUrl: 'https://example.com/resume.pdf',
       },
       patch: {
         generatedOutput: {
           status: 'ready',
-          docxPath: 'usr_123/sess_123/resume.docx',
+          docxPath: undefined,
           pdfPath: 'usr_123/sess_123/resume.pdf',
           generatedAt: '2026-03-27T12:00:00.000Z',
         },
@@ -810,7 +810,7 @@ describe('agent tool dispatch', () => {
     expect(execution.patch).toEqual({
       generatedOutput: {
         status: 'ready',
-        docxPath: 'usr_123/sess_123/resume.docx',
+        docxPath: undefined,
         pdfPath: 'usr_123/sess_123/resume.pdf',
         generatedAt: '2026-03-27T12:00:00.000Z',
       },
@@ -969,12 +969,12 @@ describe('agent tool dispatch', () => {
     vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
         success: true,
-        docxUrl: 'https://example.com/target-resume.docx',
+        docxUrl: null,
         pdfUrl: 'https://example.com/target-resume.pdf',
       },
       generatedOutput: {
         status: 'ready',
-        docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
+        docxPath: undefined,
         pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
         generatedAt: '2026-03-27T12:30:00.000Z',
       },
@@ -1010,14 +1010,14 @@ describe('agent tool dispatch', () => {
       'target_123',
       {
         status: 'ready',
-        docxPath: 'usr_123/sess_123/targets/target_123/resume.docx',
+        docxPath: undefined,
         pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
         generatedAt: '2026-03-27T12:30:00.000Z',
       },
     )
     expect(execution.output).toEqual({
       success: true,
-      docxUrl: 'https://example.com/target-resume.docx',
+      docxUrl: null,
       pdfUrl: 'https://example.com/target-resume.pdf',
     })
     expect(execution.patch).toBeUndefined()

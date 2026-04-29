@@ -41,9 +41,6 @@ const BodySchema = z.object({
   file: z.string().optional(),
   fileMime: z.enum([
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'image/png',
-    'image/jpeg',
   ]).optional(),
 }).superRefine((value, ctx) => {
   if (!value.message.trim() && !value.file) {
