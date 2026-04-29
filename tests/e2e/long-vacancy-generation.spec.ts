@@ -28,37 +28,55 @@ function buildLongVacancyText(targetLength = 7600): string {
 }
 
 test.describe('long vacancy generation stress', () => {
-  test('handles a near-limit vacancy, repeated generation, and template rendering stability', async ({ page }) => {
+  test('submits a near-limit vacancy through Smart Generation and opens comparison', async ({ page }) => {
     const sessionId = 'sess_e2e_long_vacancy'
     const workspace = buildMockWorkspace(sessionId)
+    workspace.session.cvState.experience = [
+      {
+        title: 'Analista de BI',
+        company: 'Dados Brasil',
+        location: 'Sao Paulo, BR',
+        startDate: '2021-01',
+        endDate: 'present',
+        bullets: [
+          'Construiu dashboards executivos em Power BI para operacoes, vendas e controladoria.',
+          'Automatizou pipelines SQL e ETL para indicadores de performance comercial.',
+        ],
+      },
+    ]
+    workspace.session.cvState.education = [
+      {
+        degree: 'Bacharelado em Sistemas de Informacao',
+        institution: 'Universidade Exemplo',
+        year: '2020',
+      },
+    ]
     const longVacancyText = buildLongVacancyText()
-
-    workspace.session.generatedOutput = {
-      status: 'idle',
-    }
-    workspace.session.messageCount = 0
-    workspace.session.agentState.targetJobDescription = undefined
-    workspace.session.agentState.gapAnalysis = undefined
+    let submittedTargetJobDescription = ''
 
     await installCoreFunnelApiMocks(page, {
       sessionId,
       workspace,
-      messages: [],
-      streamChunks: [
-        { type: 'sessionCreated', sessionId },
-        {
-          type: 'text',
-          content: 'Recebi a vaga longa, salvei a referencia e preparei a analise inicial. ',
-        },
-        {
-          type: 'done',
+    })
+    await page.route('**/api/profile/smart-generation', async (route) => {
+      const body = route.request().postDataJSON() as { targetJobDescription?: string }
+      submittedTargetJobDescription = body.targetJobDescription ?? ''
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
           sessionId,
-          phase: 'analysis',
-          atsScore: workspace.session.atsScore,
-          messageCount: 2,
-          isNewSession: true,
-        },
-      ],
+          creditsUsed: 1,
+          resumeGenerationId: 'gen_e2e_long_vacancy',
+          generationType: 'JOB_TARGETING',
+          originalCvState: workspace.session.cvState,
+          optimizedCvState: {
+            ...workspace.session.cvState,
+            summary: 'Analista de BI Senior com foco em Power BI, SQL, ETL e storytelling executivo.',
+          },
+        }),
+      })
     })
 
     await authenticateE2EUser(page, {
@@ -67,71 +85,15 @@ test.describe('long vacancy generation stress', () => {
       email: 'long-vacancy@example.com',
     })
 
-    await page.goto('/chat')
-    await expect(page.getByTestId('resume-workspace')).toHaveAttribute('data-base-output-ready', 'false')
+    await page.goto('/profile-setup')
+    await page.getByRole('button', { name: /Melhorar curr/i }).click()
+    await page.getByTestId('enhancement-intent-target-job').click()
+    await page.getByTestId('target-job-description-input').fill(longVacancyText)
+    await page.getByTestId('ats-panel-cta').click()
 
-    await page.getByTestId('chat-input').fill(longVacancyText)
-    await page.getByTestId('chat-send-button').click()
-
-    await expect(page).toHaveURL(new RegExp(`/chat\\?session=${sessionId}$`))
-    await expect(page.getByTestId('chat-interface')).toHaveAttribute('data-session-id', sessionId)
-    await expect(page.getByTestId('chat-interface')).toHaveAttribute('data-message-count', '2')
-    await expect(
-      page.getByText(/Recebi a vaga longa, salvei a referencia e preparei a analise inicial\./i),
-    ).toHaveCount(1)
-    await expect(page.getByText(/Gere um arquivo\./i)).toBeVisible()
-
-    const revisitWorkspace = async () => {
-      await page.goto(`/chat?session=${sessionId}`, { waitUntil: 'domcontentloaded' })
-    }
-
-    for (let iteration = 1; iteration <= 3; iteration += 1) {
-      const generationResult = await page.evaluate(async ({ targetSessionId }) => {
-        const response = await fetch(`/api/session/${targetSessionId}/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ scope: 'base' }),
-        })
-
-        return {
-          ok: response.ok,
-          status: response.status,
-          body: await response.json(),
-        }
-      }, { targetSessionId: sessionId })
-
-      expect(generationResult.ok).toBe(true)
-      expect(generationResult.status).toBe(200)
-      expect(generationResult.body).toMatchObject({
-        success: true,
-        scope: 'base',
-      })
-
-      await revisitWorkspace()
-
-      await expect(
-        page.getByTestId('resume-workspace'),
-        `base output should stay ready after generation cycle ${iteration}`,
-      ).toHaveAttribute('data-base-output-ready', 'true')
-      await expect(
-        page.getByTestId('preview-panel'),
-        `preview should stay ready after generation cycle ${iteration}`,
-      ).toHaveAttribute('data-state', 'ready')
-      await expect(
-        page.getByTestId('preview-panel-frame'),
-        `template viewer should keep the generated PDF mounted after cycle ${iteration}`,
-      ).toHaveAttribute('src', /__e2e-assets\/resume\.pdf/)
-      await expect(page.getByTestId('preview-download-pdf')).toBeVisible()
-    }
-
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByTestId('preview-download-pdf').click(),
-    ])
-
-    expect(download.suggestedFilename()).toBe('Resume.pdf')
-    expect(longVacancyText.length).toBeGreaterThan(7000)
+    await expect(page).toHaveURL(new RegExp(`/dashboard/resume/compare/${sessionId}$`))
+    await expect(page.getByTestId('resume-comparison-view')).toBeVisible()
+    expect(submittedTargetJobDescription.length).toBeGreaterThan(7000)
+    expect(submittedTargetJobDescription).toBe(longVacancyText)
   })
 })

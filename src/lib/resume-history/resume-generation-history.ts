@@ -83,8 +83,8 @@ export function buildResumeGenerationHistoryMetadata(
     case 'chat':
       return {
         historyKind,
-        historyTitle: 'Currículo gerado no chat',
-        historyDescription: 'Versão criada a partir da conversa com a IA.',
+        historyTitle: 'Currículo gerado',
+        historyDescription: 'Versão legada preservada no histórico.',
         targetRole,
         targetJobSnippet,
       }

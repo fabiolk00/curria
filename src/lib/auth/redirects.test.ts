@@ -27,13 +27,13 @@ describe("getSafeRedirectPath", () => {
     )
   })
 
-  it("canonicalizes profile and chat aliases", () => {
+  it("canonicalizes profile and retired chat aliases", () => {
     expect(getSafeRedirectPath("/profile", "/chat")).toBe("/profile-setup")
 
     const redirectTarget = getSafeRedirectPath("/chat/sess_encoded%20123", "/profile-setup")
     const redirectUrl = new URL(redirectTarget, "http://curria.local")
 
-    expect(redirectUrl.pathname).toBe("/chat")
-    expect(redirectUrl.searchParams.get("session")).toBe("sess_encoded 123")
+    expect(redirectUrl.pathname).toBe("/dashboard/resume/compare/sess_encoded%20123")
+    expect(redirectUrl.searchParams.get("session")).toBeNull()
   })
 })

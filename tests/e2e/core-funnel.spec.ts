@@ -4,7 +4,7 @@ import { authenticateE2EUser } from './fixtures/auth-session'
 import { buildMockWorkspace, installCoreFunnelApiMocks } from './fixtures/api-mocks'
 
 test.describe('dashboard core funnel', () => {
-  test('creates a session, exposes target state, and delivers artifacts', async ({ page }) => {
+  test('opens generated resume comparison and downloads the PDF artifact', async ({ page }) => {
     const sessionId = 'sess_e2e_core'
     const workspace = buildMockWorkspace(sessionId)
     workspace.targets = [
@@ -12,7 +12,10 @@ test.describe('dashboard core funnel', () => {
         id: 'target_001',
         sessionId,
         targetJobDescription: 'Platform engineer role with Kubernetes ownership',
-        derivedCvState: workspace.session.cvState,
+        derivedCvState: {
+          ...workspace.session.cvState,
+          summary: 'Platform engineer focused on Kubernetes, AWS, and reliability.',
+        },
         generatedOutput: {
           status: 'ready',
           pdfPath: `${sessionId}/targets/target_001/resume.pdf`,
@@ -26,18 +29,6 @@ test.describe('dashboard core funnel', () => {
     await installCoreFunnelApiMocks(page, {
       sessionId,
       workspace,
-      streamChunks: [
-        { type: 'sessionCreated', sessionId },
-        { type: 'text', content: 'Analise iniciada. ' },
-        {
-          type: 'done',
-          sessionId,
-          phase: 'dialog',
-          atsScore: workspace.session.atsScore,
-          messageCount: 2,
-          isNewSession: true,
-        },
-      ],
     })
     await authenticateE2EUser(page, {
       appUserId: 'usr_e2e_core',
@@ -45,27 +36,17 @@ test.describe('dashboard core funnel', () => {
       email: 'core@example.com',
     })
 
-    await page.goto('/chat')
-    await expect(page.getByTestId('chat-interface')).toHaveAttribute('data-session-id', '')
+    await page.goto(`/dashboard/resume/compare/${sessionId}`)
 
-    await page.getByTestId('chat-input').fill('Platform engineer role focused on Kubernetes and AWS')
-    await page.getByTestId('chat-send-button').click()
-
-    await expect(page).toHaveURL(new RegExp(`/chat\\?session=${sessionId}$`))
-    await expect(page.getByTestId('chat-interface')).toHaveAttribute('data-session-id', sessionId)
-    await expect(page.getByTestId('resume-workspace')).toHaveAttribute('data-session-id', sessionId)
-    await expect(page.getByTestId('resume-workspace')).toHaveAttribute('data-target-count', '1')
-    await expect(page.getByTestId('resume-workspace')).toHaveAttribute('data-base-output-ready', 'true')
-
-    await expect(page.getByTestId('preview-panel')).toHaveAttribute('data-state', 'ready')
-    await expect(page.getByTestId('preview-panel-frame')).toHaveAttribute('src', /__e2e-assets\/resume\.pdf/)
-    await expect(page.getByTestId('preview-download-pdf')).toBeVisible()
+    await expect(page.getByTestId('resume-comparison-view')).toBeVisible()
+    await expect(page.getByTestId('original-resume-document')).toBeVisible()
+    await expect(page.getByTestId('optimized-resume-document')).toContainText('Kubernetes')
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByTestId('preview-download-pdf').click(),
+      page.getByTitle('Baixar PDF').click(),
     ])
 
-    expect(download.suggestedFilename()).toBe('Resume.pdf')
+    expect(download.suggestedFilename()).toBe('Curriculo_Usuario_Vaga.pdf')
   })
 })

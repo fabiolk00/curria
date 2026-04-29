@@ -62,7 +62,7 @@ describe('resume generation history service', () => {
       idempotencyKey: 'generation:sess_1:chat:ats_enhancement:abc',
     })).toMatchObject({
       historyKind: 'chat',
-      historyTitle: 'Currículo gerado no chat',
+      historyTitle: 'Currículo gerado',
     })
 
     expect(buildResumeGenerationHistoryMetadata({
@@ -111,8 +111,8 @@ describe('resume generation history service', () => {
         sessionId: 'sess_chat',
         idempotencyKey: 'generation:sess_chat:chat:ats_enhancement:abc',
         historyKind: 'chat',
-        historyTitle: 'Currículo gerado no chat',
-        historyDescription: 'Versão criada a partir da conversa com a IA.',
+        historyTitle: 'Currículo gerado',
+        historyDescription: 'Versão legada preservada no histórico.',
         createdAt: new Date('2026-04-24T11:50:00.000Z'),
         completedAt: new Date('2026-04-24T11:51:00.000Z'),
       }),

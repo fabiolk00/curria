@@ -7,9 +7,9 @@ import {
 import type { SmartGenerationContext, SmartGenerationDecision } from './types'
 import { buildGenerationCopy, resolveWorkflowMode } from './workflow-mode'
 
-export async function evaluateSmartGenerationReadiness(
+export function evaluateSmartGenerationResumeReadiness(
   context: SmartGenerationContext,
-): Promise<Extract<SmartGenerationDecision, { kind: 'validation_error' }> | null> {
+): Extract<SmartGenerationDecision, { kind: 'validation_error' }> | null {
   const copy = buildGenerationCopy(resolveWorkflowMode(context.targetJobDescription))
   const readiness = assessAtsEnhancementReadiness(context.cvState)
   const missingItems = getAtsEnhancementBlockingItems(context.cvState)
@@ -25,6 +25,13 @@ export async function evaluateSmartGenerationReadiness(
     }
   }
 
+  return null
+}
+
+export async function evaluateSmartGenerationQuotaReadiness(
+  context: SmartGenerationContext,
+): Promise<Extract<SmartGenerationDecision, { kind: 'validation_error' }> | null> {
+  const copy = buildGenerationCopy(resolveWorkflowMode(context.targetJobDescription))
   const hasCredits = await checkUserQuota(context.appUser.id)
   if (!hasCredits) {
     return {
@@ -35,4 +42,11 @@ export async function evaluateSmartGenerationReadiness(
   }
 
   return null
+}
+
+export async function evaluateSmartGenerationReadiness(
+  context: SmartGenerationContext,
+): Promise<Extract<SmartGenerationDecision, { kind: 'validation_error' }> | null> {
+  return evaluateSmartGenerationResumeReadiness(context)
+    ?? await evaluateSmartGenerationQuotaReadiness(context)
 }

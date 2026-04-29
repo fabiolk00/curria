@@ -4,7 +4,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test"
 
 import type { RecoverableValidationBlock } from "../../src/types/agent"
 import { authenticateE2EUser } from "./fixtures/auth-session"
-import { buildMockWorkspace, installCoreFunnelApiMocks } from "./fixtures/api-mocks"
+import { installCoreFunnelApiMocks } from "./fixtures/api-mocks"
 
 function buildReadyProfileResponse() {
   return {
@@ -18,18 +18,18 @@ function buildReadyProfileResponse() {
         phone: "+55 11 99999-0000",
         linkedin: "https://linkedin.com/in/ana-silva",
         location: "Sao Paulo, BR",
-        summary: "Profissional de BI com foco em dados e automação.",
+        summary: "Profissional de BI com foco em dados e automacao.",
         experience: [{
           title: "Analista de Dados",
           company: "Acme",
           location: "Sao Paulo, BR",
           startDate: "2022",
           endDate: "Atual",
-          bullets: ["Criei dashboards e integrações para áreas de negócio."],
+          bullets: ["Criei dashboards e integracoes para areas de negocio."],
         }],
         skills: ["SQL", "Power BI", "Power Automate"],
         education: [{
-          degree: "Bacharel em Sistemas de Informação",
+          degree: "Bacharel em Sistemas de Informacao",
           institution: "USP",
           year: "2020",
         }],
@@ -54,15 +54,7 @@ function buildComparisonResponse(sessionId: string) {
     originalCvState,
     optimizedCvState: {
       ...originalCvState,
-      summary: "Profissional de BI e dados com experiência em dashboards, automação e integração de dados.",
-    },
-    originalScore: {
-      total: 72,
-      label: "72",
-    },
-    optimizedScore: {
-      total: 85,
-      label: "85",
+      summary: "Profissional de BI e dados com experiencia em dashboards, automacao e integracao de dados.",
     },
     optimizationSummary: {
       changedSections: ["summary"],
@@ -77,13 +69,13 @@ function buildRecoverableBlock(overrideToken: string): RecoverableValidationBloc
     overrideToken,
     expiresAt: "2099-04-27T16:30:00.000Z",
     modal: {
-      title: "Encontramos pontos que podem exagerar sua experiência",
-      description: "A adaptação para esta vaga ficou mais agressiva do que o seu currículo original comprova.",
+      title: "Encontramos pontos que podem exagerar sua experiencia",
+      description: "A adaptacao para esta vaga ficou mais agressiva do que o seu curriculo original comprova.",
       primaryProblem: "O resumo tentou assumir diretamente o cargo alvo.",
       problemBullets: [
-        "A versão pode ter declarado requisitos da vaga como experiência direta.",
+        "A versao pode ter declarado requisitos da vaga como experiencia direta.",
       ],
-      reassurance: "Você ainda pode gerar o currículo, mas recomendamos revisar.",
+      reassurance: "Voce ainda pode gerar o curriculo, mas recomendamos revisar.",
       actions: {
         secondary: { label: "Fechar", action: "close" as const },
         primary: {
@@ -269,120 +261,6 @@ test.describe("recoverable validation credit refresh", () => {
     await saveEvidence(page, testInfo, "profile-setup-override-success", {
       billingCredits,
       smartGenerationCalls,
-      overrideCalls,
-      overrideTokens,
-      analyticsEvents,
-    })
-  })
-
-  test("workspace refreshes the CTA from pricing back to override without rerunning targeting", async ({ page }, testInfo) => {
-    const sessionId = "sess_e2e_recoverable_workspace"
-    const overrideToken = "override_workspace_token"
-    let billingCredits = 0
-    let overrideCalls = 0
-    const overrideTokens: string[] = []
-    const workspace = buildMockWorkspace(sessionId)
-
-    workspace.session.agentState.workflowMode = "job_targeting"
-    workspace.session.agentState.rewriteStatus = "failed"
-    workspace.session.agentState.rewriteValidation = {
-      blocked: true,
-      valid: false,
-      hardIssues: [{
-        severity: "high",
-        section: "summary",
-        issueType: "target_role_overclaim",
-        message: "O resumo assumiu o cargo alvo diretamente.",
-      }],
-      softWarnings: [],
-      issues: [{
-        severity: "high",
-        section: "summary",
-        issueType: "target_role_overclaim",
-        message: "O resumo assumiu o cargo alvo diretamente.",
-      }],
-    }
-    workspace.session.agentState.recoverableValidationBlock = buildRecoverableBlock(overrideToken)
-
-    await installAnalyticsCapture(page)
-    await installCoreFunnelApiMocks(page, {
-      sessionId,
-      workspace,
-    })
-    await page.route("**/api/billing/summary", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          currentCredits: billingCredits,
-          currentPlan: "plus",
-          activeRecurringPlan: null,
-        }),
-      })
-    })
-    await page.route(`**/api/session/${sessionId}/job-targeting/override`, async (route) => {
-      overrideCalls += 1
-      const body = route.request().postDataJSON() as {
-        overrideToken: string
-        consumeCredit: boolean
-      }
-      overrideTokens.push(body.overrideToken)
-      workspace.session.agentState.recoverableValidationBlock = undefined
-      workspace.session.agentState.rewriteStatus = "completed"
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          sessionId,
-          creditsUsed: 1,
-          resumeGenerationId: "gen_e2e_workspace_override",
-          generationType: "JOB_TARGETING",
-        }),
-      })
-    })
-
-    await authenticateE2EUser(page, {
-      appUserId: "usr_e2e_workspace_recoverable",
-      displayName: "Recoverable Workspace User",
-      email: "recoverable-workspace@example.com",
-      creditsRemaining: 0,
-    })
-
-    await page.goto(`/chat?session=${sessionId}`)
-    await expect(page.getByRole("button", { name: "Adicionar créditos" })).toBeVisible()
-    await page.getByRole("button", { name: "Adicionar créditos" }).click()
-    await expect(page.getByRole("dialog").filter({ hasText: "Escolha seu novo plano" })).toBeVisible()
-
-    await saveEvidence(page, testInfo, "workspace-pricing-open", {
-      billingCredits,
-      overrideCalls,
-    })
-
-    billingCredits = 1
-    await page.keyboard.press("Escape")
-    await page.evaluate(() => {
-      window.dispatchEvent(new Event("focus"))
-    })
-
-    await expect(page.getByRole("button", { name: "Gerar mesmo assim (1 crédito)" })).toBeVisible()
-    await page.getByRole("button", { name: "Gerar mesmo assim (1 crédito)" }).click()
-
-    await expect(page.getByText("Geramos a versão com sua confirmação.")).toBeVisible()
-
-    const analyticsEvents = await readAnalyticsEvents(page)
-    expect(overrideCalls).toBe(1)
-    expect(overrideTokens).toEqual([overrideToken])
-    expect(analyticsEvents).toContainEqual([
-      "event",
-      "agent.job_targeting.validation_override_credit_added",
-      expect.objectContaining({
-        source: "workspace",
-      }),
-    ])
-
-    await saveEvidence(page, testInfo, "workspace-override-success", {
-      billingCredits,
       overrideCalls,
       overrideTokens,
       analyticsEvents,

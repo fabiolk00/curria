@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // SECURITY: Do NOT allow direct session creation via this endpoint
-  // Sessions must be created through /api/agent which handles credit consumption
-  // Allowing direct session creation bypasses the credit system
+  // SECURITY: Do not allow direct session creation via this endpoint.
+  // Guided generation must go through /api/profile/smart-generation so
+  // readiness, idempotency, and credit accounting stay centralized.
   logWarn('api.session.create_blocked', {
     requestMethod: req.method,
     requestPath,
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json({
-    error: 'Direct session creation not allowed. Send a message to /api/agent to start a session.',
+    error: 'Direct session creation not allowed. Use /api/profile/smart-generation to generate a resume.',
   }, { status: 403 })
 
   /* DISABLED - Credit bypass vulnerability

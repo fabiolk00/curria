@@ -6,6 +6,8 @@ import { getSession } from '@/lib/db/sessions'
 import { logInfo, logWarn } from '@/lib/observability/structured-log'
 import { withRequestQueryTracking } from '@/lib/observability/request-query-tracking'
 
+// Deprecated compatibility route for legacy AI-chat snapshots.
+// Guided generation and generated resume access use ownership/artifact rules instead.
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } },

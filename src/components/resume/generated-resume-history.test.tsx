@@ -108,7 +108,7 @@ describe("GeneratedResumeHistory", () => {
     expect(screen.getByText("Vaga alvo")).toBeInTheDocument()
     expect(screen.getAllByText("Concluído")).toHaveLength(3)
 
-    await user.click(screen.getByRole("button", { name: /Baixar PDF de Currículo gerado no chat/i }))
+    await user.click(screen.getByRole("button", { name: /Baixar PDF de Currículo gerado/i }))
     expect(onDownloadPdf).toHaveBeenCalledWith(mockGeneratedResumeHistory[0])
 
     await user.click(screen.getByRole("button", { name: /Visualizar Currículo para Data Analyst/i }))
@@ -171,6 +171,6 @@ describe("GeneratedResumeHistory", () => {
 
     expect(screen.getByText("Página 2 de 2")).toBeInTheDocument()
     expect(screen.getByText("Currículo adaptado para vaga")).toBeInTheDocument()
-    expect(screen.getByText("Currículo gerado no chat")).toBeInTheDocument()
+    expect(screen.getByText("Currículo gerado")).toBeInTheDocument()
   })
 })

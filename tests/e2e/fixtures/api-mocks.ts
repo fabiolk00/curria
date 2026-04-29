@@ -1,15 +1,7 @@
 import type { Page, Route } from '@playwright/test'
 
-import type { SessionWorkspace } from '../../../src/types/dashboard'
+import type { ResumeComparisonResponse, SessionWorkspace } from '../../../src/types/dashboard'
 import type { CVState } from '../../../src/types/cv'
-import type { AgentStreamChunk } from '../../../src/types/agent'
-import { buildSsePayload } from '../helpers/sse'
-
-type SessionMessage = {
-  role: 'user' | 'assistant'
-  content: string
-  createdAt: string
-}
 
 type FileResponse = {
   available?: boolean
@@ -42,17 +34,13 @@ type ProfileResponse = {
 type ApiMockOptions = {
   file?: FileResponse
   onGenerate?: (payload: { scope: 'base' } | { scope: 'target'; targetId: string }) => void | Promise<void>
-  messages?: SessionMessage[]
   onProfileSave?: (payload: CVState) => void | Promise<void>
   profile?: ProfileResponse
   sessionId?: string
-  streamChunks?: AgentStreamChunk[]
   workspace?: SessionWorkspace
 }
 
 const DEFAULT_ASSET_BASE_URL = 'http://127.0.0.1:3000/__e2e-assets'
-const EMPTY_ASSISTANT_RESPONSE_FALLBACK =
-  'Analisei sua mensagem, mas nao consegui concluir a resposta desta vez. Tente enviar novamente.'
 
 function buildDefaultArtifactResponse(isReady: boolean): FileResponse {
   if (!isReady) {
@@ -167,19 +155,31 @@ function markGeneratedOutputReady(workspace: SessionWorkspace, sessionId: string
   }
 }
 
+function buildComparisonResponse(workspace: SessionWorkspace): ResumeComparisonResponse {
+  const optimizedCvState = workspace.targets[0]?.derivedCvState ?? {
+    ...workspace.session.cvState,
+    summary: `${workspace.session.cvState.summary} ATS-ready`,
+  }
+
+  return {
+    sessionId: workspace.session.id,
+    generationType: workspace.targets.length > 0 ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT',
+    targetJobDescription: workspace.targets[0]?.targetJobDescription,
+    originalCvState: workspace.session.cvState,
+    optimizedCvState,
+    optimizationSummary: {
+      changedSections: ['summary'],
+      notes: ['Resumo ajustado para o fluxo de geração guiada.'],
+    },
+  }
+}
+
 export async function installCoreFunnelApiMocks(
   page: Page,
   options: ApiMockOptions = {},
 ): Promise<void> {
   const sessionId = options.sessionId ?? options.workspace?.session.id ?? 'sess_e2e_browser'
   const workspace = options.workspace ?? buildMockWorkspace(sessionId)
-  let messages = [...(options.messages ?? [
-    {
-      role: 'assistant',
-      content: 'Ola! Vamos revisar a vaga.',
-      createdAt: '2026-04-10T12:00:00.000Z',
-    },
-  ])]
   let profile = options.profile ?? {
     profile: {
       id: 'profile_e2e_browser',
@@ -193,18 +193,6 @@ export async function installCoreFunnelApiMocks(
     },
     dashboardWelcomeGuideSeen: true,
   }
-  const streamChunks = options.streamChunks ?? [
-    { type: 'sessionCreated', sessionId },
-    { type: 'text', content: 'Analise iniciada. ' },
-    {
-      type: 'done',
-      sessionId,
-      phase: workspace.session.phase,
-      atsScore: workspace.session.atsScore,
-      messageCount: workspace.session.messageCount,
-      isNewSession: true,
-    },
-  ]
 
   await page.route('**/api/profile', async (route) => {
     if (route.request().method() === 'PUT') {
@@ -232,12 +220,11 @@ export async function installCoreFunnelApiMocks(
     await jsonResponse(route, profile)
   })
 
-  await page.route('**/api/session/*/messages', async (route) => {
-    await jsonResponse(route, { messages })
+  await page.route('**/api/session/*/comparison', async (route) => {
+    await jsonResponse(route, buildComparisonResponse(workspace))
   })
 
   await page.route('**/api/session/*', async (route) => {
-    workspace.session.messageCount = messages.length
     await jsonResponse(route, workspace)
   })
 
@@ -259,61 +246,6 @@ export async function installCoreFunnelApiMocks(
       creditsUsed: 0,
       generationType: payload.scope === 'target' ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT',
       jobId: 'job_e2e_generation',
-    })
-  })
-
-  await page.route('**/api/agent', async (route) => {
-    const body = route.request().postDataJSON() as { message?: string } | null
-    const userMessage = body?.message?.trim()
-
-    if (userMessage) {
-      messages = [
-        ...messages,
-        {
-          role: 'user',
-          content: userMessage,
-          createdAt: '2026-04-10T12:30:00.000Z',
-        },
-      ]
-    }
-
-    const assistantContent = streamChunks
-      .filter((chunk): chunk is Extract<AgentStreamChunk, { type: 'text' }> => chunk.type === 'text')
-      .map((chunk) => chunk.content)
-      .join('')
-      .trim()
-
-    const doneChunk = streamChunks.find(
-      (chunk): chunk is Extract<AgentStreamChunk, { type: 'done' }> => chunk.type === 'done',
-    )
-
-    if (assistantContent || doneChunk) {
-      messages = [
-        ...messages,
-        {
-          role: 'assistant',
-          content: assistantContent || EMPTY_ASSISTANT_RESPONSE_FALLBACK,
-          createdAt: '2026-04-10T12:30:01.000Z',
-        },
-      ]
-    }
-
-    if (doneChunk) {
-      workspace.session.phase = doneChunk.phase
-      workspace.session.messageCount = doneChunk.messageCount ?? messages.length
-
-      if (doneChunk.atsScore) {
-        workspace.session.atsScore = doneChunk.atsScore
-      }
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      headers: {
-        'cache-control': 'no-cache',
-      },
-      body: buildSsePayload(streamChunks),
     })
   })
 

@@ -48,6 +48,6 @@ describe('SessionsList', () => {
     expect(sessionButtons[2]).toHaveTextContent('Sessão #sess_o')
 
     await userEvent.click(sessionButtons[0])
-    expect(mockPush).toHaveBeenCalledWith('/chat?session=sess_new')
+    expect(mockPush).toHaveBeenCalledWith('/dashboard/resume/compare/sess_new')
   })
 })

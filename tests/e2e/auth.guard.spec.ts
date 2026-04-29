@@ -12,7 +12,7 @@ test.describe('protected dashboard access', () => {
     await expect(page).toHaveURL(/\/(entrar|login)(?:\?.*)?$/)
   })
 
-  test('allows E2E-authenticated users into the canonical chat route', async ({ page }) => {
+  test('redirects authenticated users from retired chat to profile setup', async ({ page }) => {
     await installCoreFunnelApiMocks(page)
     await authenticateE2EUser(page, {
       appUserId: 'usr_e2e_dashboard',
@@ -22,7 +22,7 @@ test.describe('protected dashboard access', () => {
 
     await page.goto('/chat')
 
-    await expect(page).toHaveURL(/\/chat(?:\?.*)?$/)
-    await expect(page.getByPlaceholder(/descri.*vaga/i)).toBeVisible()
+    await expect(page).toHaveURL(/\/profile-setup(?:\?.*)?$/)
+    await expect(page.getByTestId('user-data-page')).toBeVisible()
   })
 })

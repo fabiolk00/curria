@@ -5,6 +5,8 @@ import { getAiChatAccess } from '@/lib/billing/ai-chat-access.server'
 import { getSession, getMessages } from '@/lib/db/sessions'
 import { logError, logWarn, serializeError } from '@/lib/observability/structured-log'
 
+// Deprecated compatibility route for legacy AI-chat transcripts.
+// Generated resume history/preview/download must not call this endpoint.
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } },

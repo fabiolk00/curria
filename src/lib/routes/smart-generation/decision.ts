@@ -1,18 +1,21 @@
 import { TOOL_ERROR_CODES, getHttpStatusForToolError } from '@/lib/agent/tool-errors'
 import {
-  JobTargetingStartLockBackendError,
+  SmartGenerationStartLockBackendError,
   markSmartGenerationStartLockCompletedDurable,
   markSmartGenerationStartLockFailedDurable,
   tryAcquireSmartGenerationStartLockDurable,
   type SmartGenerationStartLockBackend,
-} from '@/lib/agent/job-targeting-start-lock'
+} from '@/lib/agent/smart-generation-start-lock'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import type { CVState } from '@/types/cv'
 
 import type { PatchedSmartGenerationSession, SmartGenerationContext, SmartGenerationDecision } from './types'
 import { dispatchSmartGenerationArtifact, runSmartGenerationPipeline } from './dispatch'
 import { evaluateSmartGenerationValidation } from './generation-validation'
-import { evaluateSmartGenerationReadiness } from './readiness'
+import {
+  evaluateSmartGenerationQuotaReadiness,
+  evaluateSmartGenerationResumeReadiness,
+} from './readiness'
 import {
   normalizeSmartGenerationDispatchFailure,
   normalizeSmartGenerationPipelineFailure,
@@ -66,13 +69,15 @@ export async function executeSmartGenerationDecision(
 ): Promise<SmartGenerationDecision> {
   // Execution order:
   // 1. resolve workflow mode and copy
-  // 2. validate readiness and quota
-  // 3. bootstrap the session with the request snapshot
-  // 4. run the selected pipeline and artifact generation
-  // 5. normalize the public outcome
+  // 2. validate non-billing readiness and request shape
+  // 3. acquire the stable start lock so duplicate replay bypasses fresh quota checks
+  // 4. check quota for newly acquired work only
+  // 5. bootstrap the session with the request snapshot
+  // 6. run the selected pipeline and artifact generation
+  // 7. normalize the public outcome
   const workflowMode = resolveWorkflowMode(context.targetJobDescription)
   const copy = buildGenerationCopy(workflowMode)
-  const readinessError = await evaluateSmartGenerationReadiness(context)
+  const readinessError = evaluateSmartGenerationResumeReadiness(context)
   if (readinessError) {
     return readinessError
   }
@@ -82,9 +87,9 @@ export async function executeSmartGenerationDecision(
     return validationError
   }
 
-  let smartGenerationStartIdempotencyKey: string | undefined
-  let smartGenerationArtifactIdempotencyKey: string | undefined
-  let smartGenerationStartLockBackend: SmartGenerationStartLockBackend | undefined
+  let smartGenerationStartIdempotencyKey: string
+  let smartGenerationArtifactIdempotencyKey: string
+  let smartGenerationStartLockBackend: SmartGenerationStartLockBackend
   {
     let lock: Awaited<ReturnType<typeof tryAcquireSmartGenerationStartLockDurable>>
     try {
@@ -101,7 +106,7 @@ export async function executeSmartGenerationDecision(
             cvState: context.cvState,
           })
     } catch (error) {
-      if (error instanceof JobTargetingStartLockBackendError) {
+      if (error instanceof SmartGenerationStartLockBackendError) {
         return {
           kind: 'validation_error',
           status: 503,
@@ -132,6 +137,15 @@ export async function executeSmartGenerationDecision(
     smartGenerationStartIdempotencyKey = lock.idempotencyKey
     smartGenerationArtifactIdempotencyKey = `${lock.idempotencyKey}:artifact`
     smartGenerationStartLockBackend = lock.backend
+  }
+
+  const quotaError = await evaluateSmartGenerationQuotaReadiness(context)
+  if (quotaError) {
+    await markSmartGenerationStartLockFailedDurable({
+      idempotencyKey: smartGenerationStartIdempotencyKey,
+      backend: smartGenerationStartLockBackend,
+    })
+    return quotaError
   }
 
   let startLockClosed = false
@@ -189,7 +203,7 @@ export async function executeSmartGenerationDecision(
     const generationResult = await dispatchSmartGenerationArtifact({
       patchedSession,
       optimizedCvState: pipeline.optimizedCvState,
-      idempotencyKey: smartGenerationArtifactIdempotencyKey ?? `${copy.idempotencyKeyPrefix}:${session.id}`,
+      idempotencyKey: smartGenerationArtifactIdempotencyKey,
     })
 
     if (generationResult.outputFailure) {

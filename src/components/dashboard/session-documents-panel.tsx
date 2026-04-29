@@ -11,7 +11,6 @@ import { getArtifactStageLabel } from '@/lib/jobs/stage-labels'
 import { cn } from '@/lib/utils'
 
 import { useSessionDocuments } from '@/hooks/use-session-documents'
-import { NEW_CONVERSATION_EVENT, SESSION_SYNC_EVENT, type SessionSyncDetail } from './events'
 
 type SectionKey = 'files'
 
@@ -178,25 +177,6 @@ export function SessionDocumentsPanel({ isSidebarOpen }: { isSidebarOpen: boolea
   useEffect(() => {
     setSessionId(searchParams.get('session'))
   }, [searchParams])
-
-  useEffect(() => {
-    const handleSessionSync = (event: Event) => {
-      const detail = (event as CustomEvent<SessionSyncDetail>).detail
-      setSessionId(detail?.sessionId ?? null)
-    }
-
-    const handleNewConversation = () => {
-      setSessionId(null)
-    }
-
-    window.addEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener)
-    window.addEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
-
-    return () => {
-      window.removeEventListener(SESSION_SYNC_EVENT, handleSessionSync as EventListener)
-      window.removeEventListener(NEW_CONVERSATION_EVENT, handleNewConversation)
-    }
-  }, [])
 
   const hasFiles = Boolean(files.pdfUrl)
   const reconciliationMessage = artifactStatus.reconciliation?.required

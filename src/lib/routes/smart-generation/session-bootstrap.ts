@@ -2,7 +2,7 @@ import type { CVState } from '@/types/cv'
 import {
   markSmartGenerationStartLockRunningSessionDurable,
   type SmartGenerationStartLockBackend,
-} from '@/lib/agent/job-targeting-start-lock'
+} from '@/lib/agent/smart-generation-start-lock'
 import { applyToolPatchWithVersion, createSession } from '@/lib/db/sessions'
 import { buildResumeTextFromCvState } from '@/lib/profile/ats-enhancement'
 import { buildGenerationStatePatch } from '@/lib/resume-generation/generation-state'

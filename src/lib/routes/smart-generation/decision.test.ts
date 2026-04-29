@@ -4,9 +4,11 @@ import { executeSmartGenerationDecision } from './decision'
 import { buildGenerationCopy, resolveWorkflowMode } from './decision'
 import { dispatchSmartGenerationArtifact, runSmartGenerationPipeline } from './dispatch'
 import { bootstrapSmartGenerationSession } from './session-bootstrap'
-import { resetJobTargetingStartLocksForTests } from '@/lib/agent/job-targeting-start-lock'
+import { resetSmartGenerationStartLocksForTests } from '@/lib/agent/smart-generation-start-lock'
 
 vi.mock('./readiness', () => ({
+  evaluateSmartGenerationResumeReadiness: vi.fn(() => null),
+  evaluateSmartGenerationQuotaReadiness: vi.fn(async () => null),
   evaluateSmartGenerationReadiness: vi.fn(async () => null),
 }))
 
@@ -65,7 +67,7 @@ vi.mock('@/lib/db/cv-versions', () => ({
 describe('smart-generation helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetJobTargetingStartLocksForTests()
+    resetSmartGenerationStartLocksForTests()
   })
 
   it('resolves workflow mode from target job description presence', () => {

@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation"
 
-import { buildChatPath } from "@/lib/routes/app"
+import { buildResumeComparisonPath } from "@/lib/routes/app"
 
 interface ChatPageProps {
   params: { sessionId: string }
 }
 
+// Deprecated compatibility route.
+// Legacy chat URLs now open the generated resume comparison surface.
 export default function LegacyChatPage({ params }: ChatPageProps) {
-  redirect(buildChatPath(params.sessionId))
+  redirect(buildResumeComparisonPath(params.sessionId))
 }

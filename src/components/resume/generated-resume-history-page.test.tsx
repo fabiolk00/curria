@@ -53,7 +53,7 @@ describe("GeneratedResumeHistoryPage", () => {
 
     render(<GeneratedResumeHistoryPage />)
 
-    expect(await screen.findByText("Currículo gerado no chat")).toBeInTheDocument()
+    expect(await screen.findByText("Currículo gerado")).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Próxima" }))
 
@@ -72,7 +72,7 @@ describe("GeneratedResumeHistoryPage", () => {
     render(<GeneratedResumeHistoryPage />)
 
     await user.click(await screen.findByRole("button", {
-      name: /Baixar PDF de Currículo gerado no chat/i,
+      name: /Baixar PDF de Currículo gerado/i,
     }))
 
     expect(window.open).toHaveBeenCalledWith(

@@ -8,7 +8,7 @@ import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
 import { applyToolPatchWithVersion, checkUserQuota, createSession } from '@/lib/db/sessions'
-import { resetJobTargetingStartLocksForTests } from '@/lib/agent/job-targeting-start-lock'
+import { resetSmartGenerationStartLocksForTests } from '@/lib/agent/smart-generation-start-lock'
 
 vi.mock('@/lib/auth/app-user', () => ({
   getCurrentAppUser: vi.fn(),
@@ -36,8 +36,8 @@ vi.mock('@/lib/agent/job-targeting-pipeline', () => ({
   runJobTargetingPipeline: vi.fn(),
 }))
 
-vi.mock('@/lib/agent/job-targeting-start-lock', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/agent/job-targeting-start-lock')>('@/lib/agent/job-targeting-start-lock')
+vi.mock('@/lib/agent/smart-generation-start-lock', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/agent/smart-generation-start-lock')>('@/lib/agent/smart-generation-start-lock')
   return actual
 })
 
@@ -104,7 +104,7 @@ let latestCvVersionSource = 'ats-enhancement'
 describe('POST /api/profile/smart-generation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetJobTargetingStartLocksForTests()
+    resetSmartGenerationStartLocksForTests()
     latestCvVersionSnapshot = buildCvState()
     latestCvVersionSource = 'ats-enhancement'
     vi.mocked(getCurrentAppUser).mockResolvedValue({
@@ -278,13 +278,20 @@ describe('POST /api/profile/smart-generation', () => {
     )
   })
 
-  it('rejects generation before acquiring a lock when credits are exhausted', async () => {
+  it('marks a newly acquired lock failed when credits are exhausted so the same request can retry', async () => {
     vi.mocked(checkUserQuota).mockResolvedValue(false)
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado depois da recarga de creditos.',
+    }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
 
+    const body = JSON.stringify(buildCvState())
     const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
       method: 'POST',
       headers: buildTrustedHeaders(),
-      body: JSON.stringify(buildCvState()),
+      body,
     }))
 
     expect(response.status).toBe(402)
@@ -294,6 +301,33 @@ describe('POST /api/profile/smart-generation', () => {
     expect(createSession).not.toHaveBeenCalled()
     expect(runAtsEnhancementPipeline).not.toHaveBeenCalled()
     expect(dispatchToolWithContext).not.toHaveBeenCalled()
+
+    vi.mocked(checkUserQuota).mockResolvedValue(true)
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+
+    const retryResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+
+    expect(retryResponse.status).toBe(200)
+    expect(await retryResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      sessionId: 'sess_generation_123',
+      resumeGenerationId: 'gen_123',
+    }))
+    expect(createSession).toHaveBeenCalledTimes(1)
+    expect(runAtsEnhancementPipeline).toHaveBeenCalledTimes(1)
+    expect(dispatchToolWithContext).toHaveBeenCalledTimes(1)
   })
 
   it('dedupes simultaneous ATS starts for the same user and CV snapshot', async () => {
@@ -350,6 +384,54 @@ describe('POST /api/profile/smart-generation', () => {
     await firstRequest
   })
 
+  it('replays a completed ATS duplicate without a fresh quota check', async () => {
+    const optimizedCvState = {
+      ...buildCvState(),
+      summary: 'Resumo otimizado para ATS com foco em BI e SQL.',
+    }
+    latestCvVersionSnapshot = optimizedCvState
+    latestCvVersionSource = 'ats-enhancement'
+    vi.mocked(runAtsEnhancementPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = optimizedCvState
+      session.agentState.rewriteStatus = 'completed'
+
+      return {
+        success: true,
+        optimizedCvState,
+      } as never
+    })
+
+    const body = JSON.stringify(buildCvState())
+    const firstResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+    expect(firstResponse.status).toBe(200)
+
+    vi.clearAllMocks()
+    vi.mocked(checkUserQuota).mockResolvedValue(false)
+
+    const secondResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+
+    expect(secondResponse.status).toBe(200)
+    expect(await secondResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      status: 'already_completed',
+      sessionId: 'sess_generation_123',
+      generationType: 'ATS_ENHANCEMENT',
+      message: expect.any(String),
+    }))
+    expect(checkUserQuota).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
+    expect(runAtsEnhancementPipeline).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
+  })
+
   it('dedupes simultaneous job-targeting starts for the same user and target', async () => {
     latestCvVersionSnapshot = {
       ...buildCvState(),
@@ -401,6 +483,55 @@ describe('POST /api/profile/smart-generation', () => {
 
     releasePipeline?.()
     await firstRequest
+  })
+
+  it('replays a completed job-targeting duplicate without a fresh quota check', async () => {
+    latestCvVersionSnapshot = {
+      ...buildCvState(),
+      summary: 'Analista de dados orientada a produto e indicadores para a vaga alvo.',
+    }
+    latestCvVersionSource = 'job-targeting'
+    vi.mocked(runJobTargetingPipeline).mockImplementation(async (session) => {
+      session.agentState.optimizedCvState = latestCvVersionSnapshot
+
+      return {
+        success: true,
+        optimizedCvState: latestCvVersionSnapshot,
+      } as never
+    })
+
+    const body = JSON.stringify({
+      ...buildCvState(),
+      targetJobDescription: 'Vaga para analista de dados senior com foco em produto e SQL.',
+    })
+    const firstResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+    expect(firstResponse.status).toBe(200)
+
+    vi.clearAllMocks()
+    vi.mocked(checkUserQuota).mockResolvedValue(false)
+
+    const secondResponse = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body,
+    }))
+
+    expect(secondResponse.status).toBe(200)
+    expect(await secondResponse.json()).toEqual(expect.objectContaining({
+      success: true,
+      status: 'already_completed',
+      sessionId: 'sess_generation_123',
+      generationType: 'JOB_TARGETING',
+      message: expect.any(String),
+    }))
+    expect(checkUserQuota).not.toHaveBeenCalled()
+    expect(createSession).not.toHaveBeenCalled()
+    expect(runJobTargetingPipeline).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
   })
 
   it('keeps ATS readiness validation before starting any generation mode', async () => {

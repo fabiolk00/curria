@@ -1,5 +1,4 @@
 export const PROFILE_SETUP_PATH = "/profile-setup"
-export const CHAT_PATH = "/chat"
 export const DASHBOARD_SESSIONS_PATH = "/dashboard/sessions"
 export const DASHBOARD_RESUMES_HISTORY_PATH = "/dashboard/resumes-history"
 
@@ -11,14 +10,6 @@ export const LEGACY_RESUMES_HISTORY_ALIAS_PATH = "/dashboard/resume/history"
 export const LEGACY_PROFILE_PATH = "/profile"
 
 const APP_URL_BASE = "http://curria.local"
-
-export function buildChatPath(sessionId?: string | null): string {
-  if (!sessionId) {
-    return CHAT_PATH
-  }
-
-  return `${CHAT_PATH}?session=${encodeURIComponent(sessionId)}`
-}
 
 export function buildResumeComparisonPath(sessionId: string): string {
   return `/dashboard/resume/compare/${encodeURIComponent(sessionId)}`
@@ -53,10 +44,22 @@ export function canonicalizeAppPath(candidate: string): string {
     const url = new URL(candidate, APP_URL_BASE)
     const pathname = normalizePathname(url.pathname)
     const chatSessionMatch = pathname.match(/^\/chat\/([^/]+)$/)
+    const chatSessionSearchParam = pathname === "/chat" ? url.searchParams.get("session") : null
 
     if (chatSessionMatch) {
-      url.pathname = CHAT_PATH
-      url.searchParams.set("session", decodePathSegment(chatSessionMatch[1]))
+      url.pathname = buildResumeComparisonPath(decodePathSegment(chatSessionMatch[1]))
+      url.search = ""
+      return formatRelativeUrl(url)
+    }
+
+    if (chatSessionSearchParam) {
+      url.pathname = buildResumeComparisonPath(chatSessionSearchParam)
+      url.searchParams.delete("session")
+      return formatRelativeUrl(url)
+    }
+
+    if (pathname === "/chat") {
+      url.pathname = PROFILE_SETUP_PATH
       return formatRelativeUrl(url)
     }
 

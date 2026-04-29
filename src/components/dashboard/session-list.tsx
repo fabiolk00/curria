@@ -5,7 +5,7 @@ import ATSScoreBadge from "@/components/ats-score-badge"
 import { AtsReadinessStatusBadge } from "@/components/ats-readiness-status-badge"
 import PhaseBadge from "@/components/phase-badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { buildChatPath } from "@/lib/routes/app"
+import { buildResumeComparisonPath } from "@/lib/routes/app"
 
 type Phase = "intake" | "analysis" | "dialog" | "confirm" | "generation"
 
@@ -27,7 +27,7 @@ export default function SessionList({ sessions }: SessionListProps) {
   return (
     <div className="space-y-4">
       {sessions.map((session) => (
-        <Link key={session.id} href={buildChatPath(session.id)}>
+        <Link key={session.id} href={buildResumeComparisonPath(session.id)}>
           <Card className="cursor-pointer rounded-2xl border border-border/60 py-0 shadow-none transition-colors hover:bg-muted/50">
             <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
