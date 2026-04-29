@@ -167,12 +167,14 @@ export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanI
     sessionId: params.sessionId,
   })
   const rewritePermissions = buildTargetedRewritePermissions(targetEvidence)
-  const targetRolePositioning = buildTargetRolePositioning({
+  const initialTargetRolePositioning = buildTargetRolePositioning({
     targetRole: basePlan.targetRole,
     targetEvidence,
     mustEmphasize: basePlan.mustEmphasize,
     directClaimsAllowed: rewritePermissions.directClaimsAllowed,
     careerFitEvaluation: params.careerFitEvaluation,
+    matchScore: params.gapAnalysis.matchScore,
+    targetRoleConfidence: basePlan.targetRoleConfidence,
   })
   const safeTargetingEmphasis = buildSafeTargetingEmphasis({
     targetEvidence,
@@ -184,7 +186,17 @@ export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanI
     targetRole: basePlan.targetRole,
     targetEvidence,
     missingButCannotInvent: basePlan.missingButCannotInvent,
-    targetRolePositioning,
+    targetRolePositioning: initialTargetRolePositioning,
+  })
+  const targetRolePositioning = buildTargetRolePositioning({
+    targetRole: basePlan.targetRole,
+    targetEvidence,
+    mustEmphasize: basePlan.mustEmphasize,
+    directClaimsAllowed: rewritePermissions.directClaimsAllowed,
+    careerFitEvaluation: params.careerFitEvaluation,
+    matchScore: params.gapAnalysis.matchScore,
+    targetRoleConfidence: basePlan.targetRoleConfidence,
+    coreRequirementCoverage,
   })
   const lowFitWarningGate = buildLowFitWarningGate({
     matchScore: params.gapAnalysis.matchScore,
@@ -192,6 +204,7 @@ export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanI
     targetEvidence,
     targetRolePositioning,
     coreRequirementCoverage,
+    targetRoleConfidence: basePlan.targetRoleConfidence,
   })
 
   return {

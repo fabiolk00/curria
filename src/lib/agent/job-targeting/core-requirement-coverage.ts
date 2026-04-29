@@ -121,7 +121,7 @@ const STANDALONE_MODIFIER_TOKENS = new Set([
   'tecnico',
   'tecnicos',
 ])
-const ACTION_VERB_RE = /\b(acompanhar|adaptar|analisar|apoiar|atualizar|build|comunicar|criar|define|definir|develop|desenvolver|elaborar|evitar|execute|executar|fechar|garantir|gerenciar|identificar|implement|implementar|integrar|lead|liderar|maintain|manter|mapear|manage|negociar|optimize|otimizar|planejar|prospectar|realizar|support)\b/iu
+const ACTION_VERB_RE = /\b(acompanhar|adaptar|analisar|apoiar|atuar|automatizar|atualizar|build|comunicar|contribuir|criar|define|definir|develop|desenvolver|elaborar|evitar|execute|executar|fechar|garantir|gerenciar|identificar|implement|implementar|integrar|lead|levantar|liderar|maintain|manter|mapear|manage|modelar|negociar|optimize|otimizar|planejar|prospectar|realizar|support|trabalhar|traduzir|tratar)\b/iu
 const SEMANTIC_OBJECT_RE = /[A-Z]{2,}|[a-z]+(?:[/.-][a-z0-9]+)+|\b[\p{L}\p{N}]{3,}\b/iu
 const TECH_STACK_INTRO_RE = /^(?:experi[eê]ncia|conhecimento|viv[eê]ncia)\s+com\s+/iu
 const LIST_PRESERVING_REQUIREMENT_RE = /\b(?:bacharelado|curso|forma[cç][aã]o|gradua[cç][aã]o|licenciatura|superior)\b/iu
@@ -782,6 +782,25 @@ function upsertRequirement(bucket: Map<string, CoreRequirement>, requirement: Co
   }
 }
 
+function shouldAddMissingCannotInventSignal(params: {
+  signal: string
+  normalizedJobDescription: string
+  existingRequirement?: CoreRequirement
+}): boolean {
+  if (params.existingRequirement?.importance === 'differential') {
+    return false
+  }
+
+  const normalizedSignal = normalizeSemanticText(params.signal)
+  if (!normalizedSignal) return false
+  if (includesNormalizedPhrase(params.normalizedJobDescription, normalizedSignal)) {
+    return true
+  }
+
+  const likelyDerivedEnglish = /\b(?:api integrations?|consultative|data storytelling|financial|metrics?|requirements gathering)\b/iu.test(params.signal)
+  return !likelyDerivedEnglish
+}
+
 function resolveRoleRequirement(params: {
   targetRole: string
   targetRolePositioning?: TargetRolePositioning
@@ -805,6 +824,7 @@ export function buildCoreRequirementCoverage(params: {
   targetRolePositioning?: TargetRolePositioning
 }): CoreRequirementCoverage {
   const shapedJobDescription = shapeTargetJobDescription(params.targetJobDescription).content
+  const normalizedJobDescription = normalizeSemanticText(shapedJobDescription)
   const lines = mergeContinuationLines(shapedJobDescription
     .split('\n')
     .map((line) => line.trim())
@@ -868,6 +888,12 @@ export function buildCoreRequirementCoverage(params: {
   })
 
   params.missingButCannotInvent.forEach((signal) => {
+    const canonical = buildCanonicalSignal(signal)
+    const existingRequirement = canonical ? requirements.get(canonical) : undefined
+    if (!shouldAddMissingCannotInventSignal({ signal, normalizedJobDescription, existingRequirement })) {
+      return
+    }
+
     const evidence = findMatchingEvidence(signal, params.targetEvidence)
     upsertRequirement(requirements, {
       signal,

@@ -53,6 +53,7 @@ export function buildLowFitWarningGate(params: {
   }
   targetEvidence: TargetEvidence[]
   targetRolePositioning?: TargetRolePositioning
+  targetRoleConfidence?: 'high' | 'medium' | 'low'
   coreRequirementCoverage: {
     requirements?: LowFitWarningGate['coreRequirementCoverage']['requirements']
     total: number
@@ -83,10 +84,19 @@ export function buildLowFitWarningGate(params: {
     : 0
   const lowCoreCoverage = coreCoverage.total >= 5
     && coreCoverage.supported / coreCoverage.total < 0.35
+  const hasStrongOverallFit = matchScore >= 65
+  const hasAnyCoreSupport = coreCoverage.supported >= 2
+  const hasHighRoleConfidence = params.targetRoleConfidence === 'high'
+  const hasStrongPositiveFit = hasStrongOverallFit && hasAnyCoreSupport && hasHighRoleConfidence
+  const effectiveFamilyDistance = familyDistance === 'distant' && hasStrongOverallFit && hasAnyCoreSupport
+    ? 'adjacent'
+    : familyDistance
 
   let reason: LowFitWarningGate['reason']
 
-  if (riskLevel === 'high' && matchScore < 45 && lowCoreCoverage) {
+  if (hasStrongPositiveFit) {
+    reason = undefined
+  } else if (riskLevel === 'high' && matchScore < 45 && lowCoreCoverage) {
     reason = 'very_low_match_score'
   } else if (coreCoverage.total >= 5 && coreUnsupportedRatio >= 0.7) {
     reason = 'too_many_unsupported_core_requirements'
@@ -104,7 +114,7 @@ export function buildLowFitWarningGate(params: {
     reason = 'explicit_evidence_too_low'
   } else if (
     (riskLevel === 'high' && lowCoreCoverage)
-    || (missingSkillsCount >= 10 && unsupportedGapRatio >= 0.6)
+    || (!hasStrongPositiveFit && missingSkillsCount >= 10 && unsupportedGapRatio >= 0.6)
   ) {
     reason = 'high_risk_off_target'
   }
@@ -113,14 +123,15 @@ export function buildLowFitWarningGate(params: {
     triggered: Boolean(
       reason
       || (riskLevel === 'high' && matchScore < 45 && lowCoreCoverage)
-      || (unsupportedGapRatio >= 0.7 && supportedClaimEvidenceRatio <= 0.2)
-      || (missingSkillsCount >= 10 && unsupportedGapRatio >= 0.6)
+      || (!hasStrongPositiveFit && unsupportedGapRatio >= 0.7 && supportedClaimEvidenceRatio <= 0.2)
+      || (!hasStrongPositiveFit && missingSkillsCount >= 10 && unsupportedGapRatio >= 0.6)
       || (
-        params.targetRolePositioning?.permission === 'must_not_claim_target_role'
+        !hasStrongPositiveFit
+        && params.targetRolePositioning?.permission === 'must_not_claim_target_role'
         && supportedClaimEvidenceRatio <= 0.25
         && lowCoreCoverage
       )
-      || (riskLevel === 'high' && lowCoreCoverage)
+      || (!hasStrongPositiveFit && riskLevel === 'high' && effectiveFamilyDistance === 'distant' && lowCoreCoverage)
     ),
     reason,
     matchScore,

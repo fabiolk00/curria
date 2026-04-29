@@ -547,7 +547,13 @@ describe('core requirement coverage', () => {
       targetJobDescription: vacancy,
       targetRole: 'Analista de BI',
       targetEvidence,
-      missingButCannotInvent: [],
+      missingButCannotInvent: [
+        'API integrations',
+        'financial/controladoria metrics',
+        'data storytelling',
+        'consultative requirements gathering',
+        'Microsoft Fabric',
+      ],
     })
     const allSignals = coverage.requirements.map((requirement) => requirement.signal)
     const coreSignals = coverage.requirements
@@ -594,6 +600,19 @@ describe('core requirement coverage', () => {
       expect(coverage.topUnsupportedSignalsForDisplay.join('|')).not.toContain(signal)
       expect((coverage.preferredSignalsForDisplay ?? []).join('|')).not.toContain(signal)
     })
+    expect(coreSignals).not.toEqual(expect.arrayContaining([
+      'Microsoft Fabric',
+      'API integrations',
+      'financial/controladoria metrics',
+      'data storytelling',
+      'consultative requirements gathering',
+      'transformação e disponibilização de dados',
+      'garantindo alinhamento e qualidade das informações',
+    ]))
+    expect(coreSignals).toEqual(expect.arrayContaining([
+      'Automatizar processos de coleta, transformação e disponibilização de dados',
+      'Trabalhar em parceria com diferentes áreas internas, garantindo alinhamento e qualidade das informações',
+    ]))
     expect(coverage.supported).toBeGreaterThan(0)
   })
 })

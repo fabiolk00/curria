@@ -232,6 +232,80 @@ describe('low-fit warning gate', () => {
     expect(gate.reason).toBeUndefined()
   })
 
+  it('does not trigger low-fit block when match score is high and core coverage is partial', () => {
+    const gate = buildLowFitWarningGate({
+      matchScore: 79,
+      careerFitEvaluation: {
+        riskLevel: 'high',
+        signals: {
+          matchScore: 79,
+          missingSkillsCount: 14,
+          familyDistance: 'distant',
+        },
+      },
+      targetRoleConfidence: 'high',
+      targetRolePositioning: {
+        targetRole: 'Analista De BI',
+        permission: 'must_not_claim_target_role',
+        reason: 'career_fit_high_risk',
+        safeRolePositioning: 'Profissional com experiÃªncia em SQL e dashboards.',
+        forbiddenRoleClaims: ['Analista De BI'],
+      },
+      targetEvidence: [
+        {
+          jobSignal: 'SQL',
+          canonicalSignal: 'SQL',
+          evidenceLevel: 'explicit',
+          rewritePermission: 'can_claim_directly',
+          matchedResumeTerms: ['SQL'],
+          supportingResumeSpans: ['SQL'],
+          rationale: 'Existe no currÃ­culo.',
+          confidence: 1,
+          allowedRewriteForms: ['SQL'],
+          forbiddenRewriteForms: [],
+          validationSeverityIfViolated: 'none',
+        },
+        {
+          jobSignal: 'Dashboards',
+          canonicalSignal: 'Dashboards',
+          evidenceLevel: 'explicit',
+          rewritePermission: 'can_claim_directly',
+          matchedResumeTerms: ['Dashboards'],
+          supportingResumeSpans: ['dashboards'],
+          rationale: 'Existe no currÃ­culo.',
+          confidence: 1,
+          allowedRewriteForms: ['Dashboards'],
+          forbiddenRewriteForms: [],
+          validationSeverityIfViolated: 'none',
+        },
+        ...Array.from({ length: 13 }, (_, index): TargetEvidence => ({
+          jobSignal: `Gap ${index + 1}`,
+          canonicalSignal: `Gap ${index + 1}`,
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+          matchedResumeTerms: [],
+          supportingResumeSpans: [],
+          rationale: 'Sem evidÃªncia real.',
+          confidence: 0.98,
+          allowedRewriteForms: [],
+          forbiddenRewriteForms: [`Gap ${index + 1}`],
+          validationSeverityIfViolated: 'critical',
+        })),
+      ],
+      coreRequirementCoverage: {
+        total: 23,
+        supported: 4,
+        unsupported: 19,
+        unsupportedSignals: ['DAX', 'tratamento e integraÃ§Ã£o de dados'],
+        topUnsupportedSignalsForDisplay: ['DAX', 'Tratamento e integraÃ§Ã£o de dados'],
+      },
+    })
+
+    expect(gate.triggered).toBe(false)
+    expect(gate.reason).toBeUndefined()
+    expect(gate.reason).not.toBe('too_many_unsupported_core_requirements')
+  })
+
   it('flags an extreme off-target case for pre-rewrite blocking', () => {
     expect(shouldPreRewriteLowFitBlock({
       lowFitWarningGate: buildLowFitGate({

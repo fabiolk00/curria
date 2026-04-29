@@ -127,6 +127,12 @@ export function buildTargetRolePositioning(params: {
   mustEmphasize?: string[]
   directClaimsAllowed?: string[]
   careerFitEvaluation?: Session['agentState']['careerFitEvaluation']
+  matchScore?: number
+  targetRoleConfidence?: 'high' | 'medium' | 'low'
+  coreRequirementCoverage?: {
+    supported: number
+    unsupported: number
+  }
 }): TargetRolePositioning {
   const targetEvidence = params.targetEvidence ?? []
   const unsupportedGapCount = targetEvidence.filter((evidence) => evidence.evidenceLevel === 'unsupported_gap').length
@@ -144,6 +150,21 @@ export function buildTargetRolePositioning(params: {
 
   const riskLevel = params.careerFitEvaluation?.riskLevel
   const familyDistance = params.careerFitEvaluation?.signals.familyDistance
+  const matchScore = params.careerFitEvaluation?.signals.matchScore ?? params.matchScore ?? 0
+  const hasStrongOverallFit = matchScore >= 65
+  const hasAnyCoreSupport = (params.coreRequirementCoverage?.supported ?? 0) >= 2
+  const hasHighRoleConfidence = params.targetRoleConfidence === 'high'
+  const canPositionWithCaution = hasStrongOverallFit && hasAnyCoreSupport && hasHighRoleConfidence
+
+  if (canPositionWithCaution) {
+    return {
+      targetRole: params.targetRole,
+      permission: 'can_bridge_to_target_role',
+      reason: 'partial_fit_supported_by_core_evidence',
+      safeRolePositioning,
+      forbiddenRoleClaims: [],
+    }
+  }
 
   if (
     riskLevel === 'high'
