@@ -8,7 +8,7 @@ current_plan: 01 completed
 status: in_progress
 stopped_at: Completed Phase 108 semantic evidence classification for targeted rewrite
 last_updated: "2026-04-27T09:31:30.0000000-03:00"
-last_activity: 2026-04-28
+last_activity: 2026-04-29
 progress:
   total_phases: 57
   completed_phases: 11
@@ -35,8 +35,8 @@ Current Phase Name: adicionar camada dinamica de evidencia semantica para target
 Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
-Last activity: 2026-04-28
-Last Activity Description: Completed quick hardening for lock backend consistency, core display cleanup, override write reduction, and override observability.
+Last activity: 2026-04-29
+Last Activity Description: Completed quick task 260428-u03: Job Targeting 2.0 explanations, safe recommendations, and rewrite diff.
 
 Progress: [##########] 100%
 
@@ -232,6 +232,7 @@ Baseline carried forward from earlier shipped milestones:
 | 260428-ovr | Hardening final do Override Review Card com base no pipeline trace | 2026-04-28 | working-tree | Validated | [260428-ovr-override-review-card-hardening](./quick/260428-ovr-override-review-card-hardening/) |
 | 260428-uxr | Hardening UX do Review Warning Panel com scroll interno e accordion | 2026-04-28 | working-tree | Validated | [260428-ux-review-warning-panel-scroll-accordion](./quick/260428-ux-review-warning-panel-scroll-accordion/) |
 | 260428-oqb | Hardening tecnico do log do fluxo /job-targeting/override | 2026-04-28 | working-tree | Validated | [260428-oqb-hardening-t-cnico-do-log-do-fluxo-job-ta](./quick/260428-oqb-hardening-t-cnico-do-log-do-fluxo-job-ta/) |
+| 260428-u03 | Job Targeting 2.0 explanations, safe recommendations, and rewrite diff | 2026-04-29 | e487795 | Validated | [260428-u03-job-targeting-2-0-explanations-safe-reco](./quick/260428-u03-job-targeting-2-0-explanations-safe-reco/) |
 
 ## Session Continuity
 
