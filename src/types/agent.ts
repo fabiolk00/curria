@@ -686,11 +686,7 @@ export type { ToolErrorCode, ToolFailure }
 
 export type ParseFileInput = {
   file_base64: string
-  mime_type:
-    | 'application/pdf'
-    | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    | 'image/png'
-    | 'image/jpeg'
+  mime_type: 'application/pdf'
 }
 
 export type ParseFileOutput =
