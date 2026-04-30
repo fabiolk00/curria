@@ -7,7 +7,6 @@ import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import { JobTargetingScoreCard } from "@/components/resume/job-targeting-score-card"
 import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
-import { TargetRecommendationsCard } from "@/components/resume/target-recommendations-card"
 import { Button } from "@/components/ui/button"
 import {
   buildExperienceBulletHighlightItemIds,
@@ -421,80 +420,42 @@ function ResumeDocument({
 
 type ReviewItems = NonNullable<CvHighlightState["reviewItems"]>
 
-function JobTargetingDiagnosticBlock({
+function JobTargetingDiagnosticColumn({
   jobTargetingExplanation,
   reviewItems,
   hasInlineHighlights,
+  isResumeOpen,
   onReviewItemSelect,
 }: {
   jobTargetingExplanation?: JobTargetingExplanation
   reviewItems: ReviewItems
   hasInlineHighlights: boolean
+  isResumeOpen: boolean
   onReviewItemSelect: (item: ReviewItems[number]) => void
 }) {
-  const [isOpen, setIsOpen] = useState(true)
   const hasScore = Boolean(jobTargetingExplanation?.scoreBreakdown)
-  const hasRecommendations = Boolean(jobTargetingExplanation?.targetRecommendations.length)
   const hasReviewItems = reviewItems.length > 0
-  const hasDetails = hasReviewItems || hasRecommendations
 
-  if (!hasScore && !hasDetails) {
+  if (!hasScore && !hasReviewItems) {
     return null
   }
 
   return (
     <section
-      data-testid="job-targeting-diagnostic-block"
-      className="mx-auto w-full max-w-[58rem] space-y-3"
+      data-testid="job-targeting-diagnostic-column"
+      className="space-y-4 lg:sticky lg:top-4 lg:self-start"
     >
       {jobTargetingExplanation?.scoreBreakdown ? (
         <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
       ) : null}
 
-      {hasDetails ? (
-        <div className="space-y-3">
-          <button
-            type="button"
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen((value) => !value)}
-            className="flex w-full items-center justify-between gap-4 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
-          >
-            <span>
-              <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                Diagnóstico da vaga
-              </span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Aderência, pontos para revisar e sugestões seguras antes de enviar.
-              </span>
-            </span>
-            <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-              {isOpen ? "Ocultar" : "Abrir"}
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  isOpen ? "rotate-180" : undefined,
-                )}
-              />
-            </span>
-          </button>
-
-          {isOpen ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {hasReviewItems ? (
-                <ReviewWarningPanel
-                  items={reviewItems}
-                  hasInlineHighlights={hasInlineHighlights}
-                  onItemSelect={onReviewItemSelect}
-                />
-              ) : null}
-              {hasRecommendations && jobTargetingExplanation ? (
-                <div data-testid="job-targeting-explanation">
-                  <TargetRecommendationsCard recommendations={jobTargetingExplanation.targetRecommendations} />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+      {hasReviewItems ? (
+        <ReviewWarningPanel
+          items={reviewItems}
+          hasInlineHighlights={hasInlineHighlights}
+          onItemSelect={onReviewItemSelect}
+          scrollClassName={isResumeOpen ? "lg:max-h-[min(52vh,32rem)]" : "lg:max-h-[min(76vh,46rem)]"}
+        />
       ) : null}
     </section>
   )
@@ -621,16 +582,13 @@ export function ResumeComparisonView({
     .reduce((total, item) => total + item.ranges.length, 0) ?? 0
   const hasInlineHighlights = inlineHighlightCount > 0
   const shouldShowHighlightToggle = !previewLock?.locked && hasInlineHighlights
-  const shouldShowJobTargetingExplanation = generationType === "JOB_TARGETING"
-    && !previewLock?.locked
-    && Boolean(jobTargetingExplanation)
   const isJobTargeting = generationType === "JOB_TARGETING"
   const hasReviewItems = isOverrideReviewHighlight && Boolean(currentHighlightState?.reviewItems?.length)
   const reviewItems = currentHighlightState?.reviewItems ?? []
   const visibleReviewItems = hasReviewItems ? reviewItems : []
   const hasJobTargetingDiagnostics = isJobTargeting
     && !previewLock?.locked
-    && (Boolean(jobTargetingExplanation?.scoreBreakdown) || hasReviewItems || shouldShowJobTargetingExplanation)
+    && (Boolean(jobTargetingExplanation?.scoreBreakdown) || hasReviewItems)
 
   const handleReviewItemSelect = (item: NonNullable<CvHighlightState["reviewItems"]>[number]) => {
     const section = item.section ?? "summary"
@@ -707,7 +665,7 @@ export function ResumeComparisonView({
           isVisible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0",
         )}
       >
-        <div className="mx-auto flex max-w-6xl justify-end">
+        <div className="flex w-full justify-end">
           <Button
             onClick={onContinue}
             size="sm"
@@ -718,18 +676,6 @@ export function ResumeComparisonView({
           </Button>
         </div>
       </div>
-
-      {isOverrideReviewHighlight ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
-          <div className="mx-auto max-w-7xl">
-            <p className="text-sm text-amber-900 dark:text-amber-100">
-              {hasInlineHighlights
-                ? "Este currículo foi gerado com pontos de atenção. Revise os trechos marcados antes de enviar."
-                : "Este currículo foi gerado com pontos de atenção. Revise os itens abaixo antes de enviar."}
-            </p>
-          </div>
-        </div>
-      ) : null}
 
       {previewLock?.locked ? (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30 sm:px-6">
@@ -742,22 +688,15 @@ export function ResumeComparisonView({
       ) : null}
 
       <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
-        <div className="mx-auto max-w-6xl space-y-6">
-          {hasJobTargetingDiagnostics ? (
-            <JobTargetingDiagnosticBlock
-              jobTargetingExplanation={jobTargetingExplanation}
-              reviewItems={visibleReviewItems}
-              hasInlineHighlights={hasInlineHighlights}
-              onReviewItemSelect={handleReviewItemSelect}
-            />
-          ) : null}
-
+        <div className="w-full space-y-6">
           <div
             className={cn(
               "grid gap-6 transition-all duration-700",
               isJobTargeting
-                ? "lg:grid-cols-[minmax(0,42rem)] lg:justify-center"
-                : "lg:grid-cols-[minmax(0,32rem)_minmax(0,32rem)] lg:justify-center",
+                ? hasJobTargetingDiagnostics
+                  ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start"
+                  : "lg:grid-cols-[minmax(0,46rem)] lg:justify-center"
+                : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
               isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
             )}
           >
@@ -800,7 +739,7 @@ export function ResumeComparisonView({
                   onClick={() => setIsJobTargetResumeOpen((value) => !value)}
                   className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
                 >
-                  {isJobTargetResumeOpen ? "Ocultar" : "Abrir"}
+                  {isJobTargetResumeOpen ? "Ocultar currículo" : "Abrir currículo"}
                   <ChevronDown
                     className={cn(
                       "h-3.5 w-3.5 transition-transform",
@@ -856,6 +795,15 @@ export function ResumeComparisonView({
               </>
             ) : null}
           </div>
+          {hasJobTargetingDiagnostics ? (
+            <JobTargetingDiagnosticColumn
+              jobTargetingExplanation={jobTargetingExplanation}
+              reviewItems={visibleReviewItems}
+              hasInlineHighlights={hasInlineHighlights}
+              isResumeOpen={isJobTargetResumeOpen}
+              onReviewItemSelect={handleReviewItemSelect}
+            />
+          ) : null}
           </div>
         </div>
       </div>

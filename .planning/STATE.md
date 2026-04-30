@@ -180,6 +180,11 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260429-uy6 | Garantir ATS Enhancement sem sidebar global e com header limpo na comparação | 2026-04-29 | working-tree | Validated | [260429-uy6-garantir-ats-enhancement-sem-sidebar-glo](./quick/260429-uy6-garantir-ats-enhancement-sem-sidebar-glo/) |
+| 260429-uwz | Restaurar sticky do diagnóstico da tela de comparação mantendo sidebar global removida | 2026-04-29 | working-tree | Validated | [260429-uwz-restaurar-sticky-do-diagnostico-da-tela-](./quick/260429-uwz-restaurar-sticky-do-diagnostico-da-tela-/) |
+| 260429-uv1 | Remover sidebar global da tela de resultado de currículo | 2026-04-29 | working-tree | Validated | [260429-uv1-remover-sidebar-global-da-tela-de-result](./quick/260429-uv1-remover-sidebar-global-da-tela-de-result/) |
+| 260429-utb | Remover faixa amarela de override e expandir layout de Job Targeting sem sidebar | 2026-04-29 | working-tree | Validated | [260429-utb-remover-faixa-amarela-de-override-e-expa](./quick/260429-utb-remover-faixa-amarela-de-override-e-expa/) |
+| 260429-upq | Corrigir layout de Job Targeting para currículo à esquerda e diagnóstico à direita sem sugestões | 2026-04-29 | working-tree | Validated | [260429-upq-corrigir-layout-de-job-targeting-para-cu](./quick/260429-upq-corrigir-layout-de-job-targeting-para-cu/) |
 | 260429-uex | Refinar tela de currículo otimizado: remover sidebar, compactar currículo, simplificar header e diagnóstico | 2026-04-29 | working-tree | Validated | [260429-uex-refinar-tela-de-curr-culo-otimizado-remo](./quick/260429-uex-refinar-tela-de-curr-culo-otimizado-remo/) |
 | 260429-zsb | Add Job Targeting score breakdown card inspired by the zip reference layout | 2026-04-29 | working-tree | Validated | [260429-zsb-add-job-targeting-score-breakdown-card](./quick/260429-zsb-add-job-targeting-score-breakdown-card/) |
 | 260429-vrb | Shorten and normalize Job Targeting recommendation card copy | 2026-04-29 | working-tree | Validated | [260429-vrb-shorten-target-recommendation-copy](./quick/260429-vrb-shorten-target-recommendation-copy/) |

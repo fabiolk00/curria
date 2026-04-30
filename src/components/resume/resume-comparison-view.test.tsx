@@ -303,7 +303,7 @@ describe('ResumeComparisonView', () => {
     )
 
     expect(screen.getAllByText('Pontos para revisar').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Revise os trechos marcados antes de enviar/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Revise os trechos marcados antes de enviar/i)).not.toBeInTheDocument()
     expect(screen.queryByText('Match da vaga')).not.toBeInTheDocument()
     expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Cargo da vaga assumido com pouca evidência')
     const highlighted = screen.getByTestId('optimized-summary-highlight').querySelector('[data-highlighted="true"]')
@@ -311,7 +311,7 @@ describe('ResumeComparisonView', () => {
     expect(highlighted).toHaveAttribute('data-highlight-reason', 'risk')
   })
 
-  it('renders only target recommendations beside the generated resume for successful target generations', async () => {
+  it('renders job targeting score beside the generated resume without adherence suggestions', async () => {
     render(
       <ResumeComparisonView
         originalCvState={buildCvState('Original summary')}
@@ -323,12 +323,11 @@ describe('ResumeComparisonView', () => {
       />,
     )
 
-    expect(screen.getByTestId('job-targeting-explanation')).toBeInTheDocument()
+    expect(screen.queryByTestId('job-targeting-explanation')).not.toBeInTheDocument()
     expect(screen.queryByText('Entenda o que mudou')).not.toBeInTheDocument()
-    expect(screen.getByText('Sugestões para melhorar sua aderência')).toBeInTheDocument()
-    expect(screen.getByText('Só se for verdadeiro')).toBeInTheDocument()
-    expect(screen.getByTestId('job-targeting-diagnostic-block')).toBeInTheDocument()
-    expect(screen.getByText('Diagnóstico da vaga')).toBeInTheDocument()
+    expect(screen.queryByText('Sugestões para melhorar sua aderência')).not.toBeInTheDocument()
+    expect(screen.queryByText('Só se for verdadeiro')).not.toBeInTheDocument()
+    expect(screen.getByTestId('job-targeting-diagnostic-column')).toHaveClass('lg:sticky', 'lg:top-4', 'lg:self-start')
     expect(screen.getByTestId('job-targeting-score-card')).toBeInTheDocument()
     expect(screen.getByText('Compatibilidade com a vaga')).toBeInTheDocument()
     expect(screen.getByText('Composição da nota')).toBeInTheDocument()
@@ -337,6 +336,7 @@ describe('ResumeComparisonView', () => {
     expect(screen.queryByTestId('original-resume-document')).not.toBeInTheDocument()
     expect(screen.getByText('Currículo ATS Otimizado')).toBeInTheDocument()
     expect(screen.getByText('Use as dicas de ATS para ajustar seu currículo e, em seguida, baixe a versão editada em PDF.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /ocultar currículo/i })).toBeInTheDocument()
   })
 
   it('keeps the original resume comparison for ATS enhancement generations', () => {
@@ -353,7 +353,8 @@ describe('ResumeComparisonView', () => {
     expect(screen.getByText('Original')).toBeInTheDocument()
     expect(screen.getByTestId('original-resume-document')).toBeInTheDocument()
     expect(screen.getByTestId('optimized-resume-document')).toBeInTheDocument()
-    expect(screen.queryByTestId('job-targeting-diagnostic-block')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('job-targeting-diagnostic-column')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Voltar ao Perfil' })).toBeInTheDocument()
   })
 
   it('shows a review panel outside the resume body when override has no inline highlights', () => {
@@ -399,8 +400,8 @@ describe('ResumeComparisonView', () => {
     )
 
     const panel = screen.getByTestId('override-review-panel')
-    expect(screen.getByText(/Este currículo foi gerado com pontos de atenção/i)).toBeInTheDocument()
-    expect(screen.getByText(/Revise os itens abaixo antes de enviar/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Este currículo foi gerado com pontos de atenção/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Revise os itens abaixo antes de enviar/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Revise os trechos marcados antes de enviar/i)).not.toBeInTheDocument()
     expect(panel).toHaveTextContent('Pontos para revisar')
     expect(panel).toHaveTextContent('Skill sem comprovação clara')
@@ -410,6 +411,54 @@ describe('ResumeComparisonView', () => {
     expect(screen.queryByRole('button', { name: /ocultar destaques/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/trecho sustentado pelo currículo original/i)).not.toBeInTheDocument()
     expect(screen.getByTestId('optimized-resume-document')).not.toContainElement(panel)
+  })
+
+  it('collapses only the job targeting resume while review points keep their own scroll area', async () => {
+    const user = userEvent.setup()
+    const highlightState: CvHighlightState = {
+      source: 'rewritten_cv_state',
+      version: CV_HIGHLIGHT_ARTIFACT_VERSION,
+      highlightSource: 'job_targeting',
+      highlightMode: 'override_review',
+      highlightGeneratedAt: '2026-04-22T12:00:00.000Z',
+      generatedAt: '2026-04-22T12:00:00.000Z',
+      resolvedHighlights: [],
+      reviewItems: [
+        buildReviewItem({
+          id: "review-scroll-area",
+          title: "Gestão financeira sem evidência",
+          explanation: "Revise antes de enviar.",
+          message: "Revise antes de enviar.",
+        }),
+      ],
+    }
+
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_collapse"
+        highlightState={highlightState}
+        jobTargetingExplanation={buildJobTargetingExplanation()}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('optimized-resume-document')).toBeInTheDocument()
+    expect(screen.getByTestId('override-review-panel-scroll')).toHaveClass('overflow-y-auto')
+
+    await user.click(screen.getByRole('button', { name: /ocultar currículo/i }))
+
+    expect(screen.queryByTestId('optimized-resume-document')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /abrir currículo/i })).toBeInTheDocument()
+    expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Pontos para revisar')
+    expect(screen.getByTestId('override-review-panel-scroll')).toHaveClass('overflow-y-auto')
+
+    await user.click(screen.getByRole('button', { name: /abrir currículo/i }))
+
+    expect(screen.getByTestId('optimized-resume-document')).toBeInTheDocument()
+    expect(screen.getByTestId('override-review-panel')).toHaveTextContent('Pontos para revisar')
   })
 
   it('repairs mojibake in review issue copy before rendering', () => {

@@ -13,6 +13,7 @@ type ReviewWarningPanelProps = {
   hasInlineHighlights: boolean
   onItemSelect?: (item: ReviewItem) => void
   className?: string
+  scrollClassName?: string
 }
 
 function inferHumanCopy(item: ReviewItem): { sectionLabel: string } {
@@ -108,6 +109,7 @@ export function ReviewWarningPanel({
   hasInlineHighlights,
   onItemSelect,
   className,
+  scrollClassName,
 }: ReviewWarningPanelProps) {
   const displayItems = items.filter((item) => item.severity === "risk" || item.severity === "caution" || item.severity === "review")
 
@@ -145,7 +147,10 @@ export function ReviewWarningPanel({
 
       <div
         data-testid="override-review-panel-scroll"
-        className="mt-4 max-h-[min(70vh,42rem)] space-y-3 overflow-y-auto pr-1"
+        className={cn(
+          "mt-4 max-h-[min(70vh,42rem)] space-y-3 overflow-y-auto pr-1",
+          scrollClassName,
+        )}
       >
         {displayItems.map((item, index) => (
           item.kind === "low_fit_target_mismatch"
