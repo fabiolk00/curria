@@ -625,12 +625,17 @@ export function ResumeComparisonView({
   const shouldShowHighlightToggle = !previewLock?.locked && hasInlineHighlights
   const isJobTargeting = generationType === "JOB_TARGETING"
   const hasReviewItems = isOverrideReviewHighlight && Boolean(currentHighlightState?.reviewItems?.length)
+  const reviewCardCount = currentHighlightState?.reviewCardCount ?? currentHighlightState?.reviewItems?.length ?? 0
+  const highlightRangeCount = currentHighlightState?.highlightRangeCount ?? inlineHighlightCount
+  const compatibilityStatus = currentHighlightState?.compatibilityStatus
   const reviewItems = currentHighlightState?.reviewItems ?? []
-  const visibleReviewItems = hasReviewItems ? reviewItems : []
+  const hasOverrideReviewBoard = isOverrideReviewHighlight
+    && (reviewCardCount > 0 || compatibilityStatus === "likely_with_gaps")
+  const visibleReviewItems = hasOverrideReviewBoard ? reviewItems : []
   const hasJobTargetingScore = isJobTargeting && !previewLock?.locked && Boolean(jobTargetingExplanation?.scoreBreakdown)
   const hasJobTargetingDiagnostics = isJobTargeting
     && !previewLock?.locked
-    && (hasJobTargetingScore || hasReviewItems)
+    && (hasJobTargetingScore || hasOverrideReviewBoard)
   const reviewPanelScrollClassName = cn(
     "lg:overflow-y-auto",
     isJobTargetResumeOpen ? "lg:max-h-[min(52vh,32rem)]" : "lg:max-h-[min(76vh,46rem)]",
@@ -854,7 +859,7 @@ export function ResumeComparisonView({
               </div>
             ) : null}
           </div>
-          {hasReviewItems ? (
+          {hasOverrideReviewBoard ? (
             <section
               data-testid="job-targeting-diagnostic-column"
               className={cn(
@@ -862,10 +867,13 @@ export function ResumeComparisonView({
                 hasJobTargetingScore ? "lg:row-start-2" : "lg:row-start-1",
               )}
             >
-              {hasReviewItems ? (
+              {hasOverrideReviewBoard ? (
                 <ReviewWarningPanel
                   items={visibleReviewItems}
                   hasInlineHighlights={hasInlineHighlights}
+                  reviewCardCount={reviewCardCount}
+                  highlightRangeCount={highlightRangeCount}
+                  compatibilityStatus={compatibilityStatus}
                   scrollClassName={reviewPanelScrollClassName}
                 />
               ) : null}

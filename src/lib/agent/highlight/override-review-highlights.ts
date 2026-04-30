@@ -222,6 +222,9 @@ function buildLowFitTargetMismatchReviewItem(params: {
     ? 'Quando existem pontos comprovados e gaps ao mesmo tempo, a versão gerada precisa preservar o que é real sem transformar diferenciais ou lacunas em experiência direta.'
     : 'A versão gerada pode aproximar seu currículo de uma função que o histórico original não comprova diretamente. Isso pode fazer o currículo parecer artificial ou sugerir experiência sem sustentação no documento original.'
 
+  const dedupedReviewItems = dedupeReviewItems(reviewItems)
+  const highlightRangeCount = Array.from(highlights.values()).reduce((total, highlight) => total + highlight.ranges.length, 0)
+
   return {
     id: `review-low-fit-target-mismatch-${params.targetRole ?? 'target-role'}`.slice(0, 120),
     kind: 'low_fit_target_mismatch',
@@ -500,7 +503,10 @@ export function buildOverrideReviewHighlightState(params: {
     })),
     highlightSource: 'job_targeting',
     highlightMode: 'override_review',
-    reviewItems: dedupeReviewItems(reviewItems),
+    reviewItems: dedupedReviewItems,
+    reviewCardCount: dedupedReviewItems.length,
+    highlightRangeCount,
+    compatibilityStatus: dedupedReviewItems.length > 0 ? 'likely_with_gaps' : 'compatible',
     highlightGeneratedAt: generatedAt,
     generatedAt,
   }

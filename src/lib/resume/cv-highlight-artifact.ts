@@ -262,6 +262,9 @@ const cvHighlightStateSchema = z.object({
     originalProfileLabel: z.string().min(1).optional(),
     inline: z.boolean(),
   })).optional(),
+  reviewCardCount: z.number().int().nonnegative().optional(),
+  highlightRangeCount: z.number().int().nonnegative().optional(),
+  compatibilityStatus: z.enum(['compatible', 'likely_with_gaps', 'incompatible']).optional(),
   highlightGeneratedAt: z.string().min(1).optional(),
   generatedAt: z.string().min(1),
 })

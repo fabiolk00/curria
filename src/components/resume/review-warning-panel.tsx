@@ -10,6 +10,9 @@ type ReviewItem = NonNullable<CvHighlightState["reviewItems"]>[number]
 type ReviewWarningPanelProps = {
   items: ReviewItem[]
   hasInlineHighlights: boolean
+  reviewCardCount?: number
+  highlightRangeCount?: number
+  compatibilityStatus?: CvHighlightState["compatibilityStatus"]
   className?: string
   scrollClassName?: string
 }
@@ -160,14 +163,19 @@ function AmberBulletList({
 }
 
 export function ReviewWarningPanel(props: ReviewWarningPanelProps) {
-  const { items, className, scrollClassName } = props
+  const { items, className, scrollClassName, reviewCardCount, highlightRangeCount, compatibilityStatus } = props
   const displayItems = items.filter((item) => item.severity === "risk" || item.severity === "caution" || item.severity === "review")
 
-  if (displayItems.length === 0) {
+  if (displayItems.length === 0 && (reviewCardCount ?? 0) === 0) {
     return null
   }
 
-  const content = resolvePanelContent(displayItems)
+  const content = displayItems.length > 0 ? resolvePanelContent(displayItems) : {
+    relevantExperience: ["Evidência inferida"],
+    provenProfile: "Evidência não encontrada no texto",
+    missingEvidence: ["Como melhorar score ATS"],
+    whyReview: "A análise sugere lacunas prováveis. Revise o texto para manter aderência real ao seu histórico.",
+  }
 
   return (
     <section
@@ -180,8 +188,13 @@ export function ReviewWarningPanel(props: ReviewWarningPanelProps) {
       <div className="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-amber-800">
-          Esta versão foi gerada mesmo com avisos de aderência à vaga. Recomendamos revisar os pontos abaixo antes de enviar.
+          {compatibilityStatus === "likely_with_gaps"
+            ? "Compatibilidade provável com lacunas: revise os pontos abaixo antes de enviar."
+            : "Esta versão foi gerada mesmo com avisos de aderência à vaga. Recomendamos revisar os pontos abaixo antes de enviar."}
         </p>
+      </div>
+      <div className="px-6 py-2 text-xs text-amber-900 bg-amber-100/60 border-b border-amber-100">
+        Cards: {reviewCardCount ?? displayItems.length} · Destaques: {highlightRangeCount ?? 0}
       </div>
 
       <div className="px-6 pt-8 pb-2 flex items-center gap-4">
