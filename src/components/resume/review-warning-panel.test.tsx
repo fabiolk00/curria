@@ -108,4 +108,12 @@ describe("ReviewWarningPanel", () => {
     expect(screen.queryByText(/Não há trechos destacados automaticamente/i)).not.toBeInTheDocument()
     expect(screen.queryByText("Ponto para revisar")).not.toBeInTheDocument()
   })
+
+  it("keeps the review board visible with guidance even when there are no inline highlights", () => {
+    render(<ReviewWarningPanel items={[reviewItem]} hasInlineHighlights={false} />)
+
+    expect(screen.getByTestId("override-review-panel")).toBeInTheDocument()
+    expect(screen.getByText("Pontos para revisar")).toBeInTheDocument()
+    expect(screen.getByText(/Recomendamos revisar os pontos abaixo antes de enviar/i)).toBeInTheDocument()
+  })
 })
