@@ -232,6 +232,60 @@ describe('low-fit warning gate', () => {
     expect(gate.reason).toBeUndefined()
   })
 
+  it('keeps BI-adjacent scenarios recoverable when Power BI evidence exists but DAX is still missing', () => {
+    const targetEvidence: TargetEvidence[] = [
+      {
+        jobSignal: 'Power BI',
+        canonicalSignal: 'Power BI',
+        evidenceLevel: 'explicit',
+        rewritePermission: 'can_claim_directly',
+        matchedResumeTerms: ['Power BI'],
+        supportingResumeSpans: ['dashboards em Power BI'],
+        rationale: 'Existe no currículo.',
+        confidence: 1,
+        allowedRewriteForms: ['Power BI'],
+        forbiddenRewriteForms: [],
+        validationSeverityIfViolated: 'none',
+      },
+      {
+        jobSignal: 'DAX',
+        canonicalSignal: 'DAX',
+        evidenceLevel: 'unsupported_gap',
+        rewritePermission: 'must_not_claim',
+        matchedResumeTerms: [],
+        supportingResumeSpans: [],
+        rationale: 'Sem evidência real.',
+        confidence: 0.98,
+        allowedRewriteForms: [],
+        forbiddenRewriteForms: ['DAX'],
+        validationSeverityIfViolated: 'critical',
+      },
+    ]
+
+    const gate = buildLowFitWarningGate({
+      matchScore: 58,
+      careerFitEvaluation: {
+        riskLevel: 'medium',
+        signals: {
+          matchScore: 58,
+          missingSkillsCount: 3,
+          familyDistance: 'adjacent',
+        },
+      },
+      targetEvidence,
+      coreRequirementCoverage: {
+        total: 4,
+        supported: 2,
+        unsupported: 2,
+        unsupportedSignals: ['DAX', 'Modelagem semântica'],
+        topUnsupportedSignalsForDisplay: ['DAX', 'Modelagem semântica'],
+      },
+    })
+
+    expect(gate.triggered).toBe(false)
+    expect(shouldPreRewriteLowFitBlock({ lowFitWarningGate: gate })).toBe(false)
+  })
+
   it('does not trigger low-fit block when match score is high and core coverage is partial', () => {
     const gate = buildLowFitWarningGate({
       matchScore: 79,

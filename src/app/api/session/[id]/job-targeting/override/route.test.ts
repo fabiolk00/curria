@@ -536,6 +536,51 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     expect(generateBillableResume).not.toHaveBeenCalled()
   })
 
+  it('keeps hard non-recoverable mismatches blocked and does not proceed with override generation', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      ...buildSession(),
+      agentState: {
+        ...buildSession().agentState,
+        blockedTargetedRewriteDraft: {
+          ...buildSession().agentState.blockedTargetedRewriteDraft,
+          recoverable: false,
+        },
+        rewriteValidation: {
+          blocked: true,
+          valid: false,
+          hardIssues: [{
+            severity: 'high',
+            section: 'summary',
+            issueType: 'low_fit_target_role',
+            message: 'Mismatch real sem override permitido.',
+          }],
+          softWarnings: [],
+          issues: [{
+            severity: 'high',
+            section: 'summary',
+            issueType: 'low_fit_target_role',
+            message: 'Mismatch real sem override permitido.',
+          }],
+        },
+      },
+    } as never)
+
+    const response = await POST(buildRequest({
+      overrideToken: 'override_token_123',
+      consumeCredit: true,
+    }), {
+      params: { id: 'sess_123' },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Este bloqueio não pode ser liberado com override pago.',
+    })
+    expect(tryAcquireOverrideProcessingLock).not.toHaveBeenCalled()
+    expect(createCvVersion).not.toHaveBeenCalled()
+    expect(generateBillableResume).not.toHaveBeenCalled()
+  })
+
   it('does not charge or finalize the override when the billable generation fails', async () => {
     vi.mocked(generateBillableResume).mockResolvedValue({
       output: {
