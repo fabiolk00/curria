@@ -196,10 +196,25 @@ export type RewriteChangeSection =
 export type JobTargetingExplanation = {
   targetRole?: string
   targetRoleConfidence?: 'low' | 'medium' | 'high'
+  scoreBreakdown?: JobTargetingScoreBreakdown
   targetRecommendations: TargetRecommendation[]
   generatedAt: string
   source: 'job_targeting'
   version: 1
+}
+
+export type JobTargetingScoreBreakdownItem = {
+  id: 'skills' | 'experience' | 'education'
+  label: 'Habilidades' | 'Experiência' | 'Formação'
+  score: number
+  max: 100
+}
+
+export type JobTargetingScoreBreakdown = {
+  total: number
+  maxTotal: 100
+  items: JobTargetingScoreBreakdownItem[]
+  criticalGaps: string[]
 }
 
 export type EvidenceLevel =

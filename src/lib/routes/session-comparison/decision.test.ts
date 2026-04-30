@@ -218,6 +218,129 @@ describe('session-comparison decision', () => {
     }))
   })
 
+  it('backfills job-targeting score breakdown for existing generated sessions', async () => {
+    const decision = await decideSessionComparison({
+      request: new Request('https://example.com/api/session/sess_legacy_target/comparison') as never,
+      params: { id: 'sess_legacy_target' },
+      appUser: { id: 'usr_1' } as never,
+      session: {
+        id: 'sess_legacy_target',
+        userId: 'usr_1',
+        cvState: {
+          fullName: 'Ana',
+          email: 'ana@example.com',
+          phone: '1',
+          summary: 'base summary',
+          experience: [{
+            title: 'Analista de BI',
+            company: 'Acme',
+            startDate: '2022',
+            endDate: 'present',
+            bullets: ['Construí dashboards executivos em Power BI.'],
+          }],
+          skills: ['SQL', 'Power BI'],
+          education: [{
+            degree: 'Sistemas de Informação',
+            institution: 'USP',
+            year: '2020',
+          }],
+        },
+        agentState: {
+          workflowMode: 'job_targeting',
+          lastRewriteMode: 'job_targeting',
+          targetJobDescription: 'Data role',
+          targetingPlan: {
+            targetRole: 'Analista de BI',
+            targetRoleConfidence: 'high',
+            targetRoleSource: 'heuristic',
+            focusKeywords: ['Power BI'],
+            mustEmphasize: ['Power BI'],
+            shouldDeemphasize: [],
+            missingButCannotInvent: ['Gestão financeira de contas'],
+            targetEvidence: [{
+              jobSignal: 'Power BI',
+              canonicalSignal: 'power bi',
+              evidenceLevel: 'explicit',
+              rewritePermission: 'can_claim_directly',
+              matchedResumeTerms: ['Power BI'],
+              supportingResumeSpans: ['Power BI'],
+              rationale: 'Supported by skills.',
+              confidence: 0.95,
+              allowedRewriteForms: ['Power BI'],
+              forbiddenRewriteForms: [],
+              validationSeverityIfViolated: 'none',
+            }],
+            coreRequirementCoverage: {
+              requirements: [
+                {
+                  signal: 'Power BI',
+                  importance: 'core',
+                  requirementKind: 'required',
+                  evidenceLevel: 'explicit',
+                  rewritePermission: 'can_claim_directly',
+                },
+                {
+                  signal: 'Gestão financeira de contas',
+                  importance: 'core',
+                  requirementKind: 'required',
+                  evidenceLevel: 'unsupported_gap',
+                  rewritePermission: 'must_not_claim',
+                },
+              ],
+              total: 2,
+              supported: 1,
+              unsupported: 1,
+              unsupportedSignals: ['Gestão financeira de contas'],
+              topUnsupportedSignalsForDisplay: ['Gestão financeira de contas'],
+            },
+            sectionStrategy: {
+              summary: [],
+              experience: [],
+              skills: [],
+              education: [],
+              certifications: [],
+            },
+          },
+          jobTargetingExplanation: {
+            targetRole: 'Analista de BI',
+            targetRoleConfidence: 'high',
+            targetRecommendations: [],
+            generatedAt: '2026-04-29T12:00:00.000Z',
+            source: 'job_targeting',
+            version: 1,
+          },
+          optimizedCvState: {
+            fullName: 'Ana',
+            email: 'ana@example.com',
+            phone: '1',
+            summary: 'optimized summary',
+            experience: [],
+            skills: ['SQL', 'Power BI'],
+            education: [],
+          },
+        },
+        generatedOutput: {
+          status: 'ready',
+        },
+      } as never,
+    })
+
+    expect(decision.kind).toBe('success')
+    if (decision.kind !== 'success') {
+      throw new Error('expected success decision')
+    }
+
+    expect(decision.body.jobTargetingExplanation?.scoreBreakdown).toMatchObject({
+      maxTotal: 100,
+      items: expect.arrayContaining([
+        expect.objectContaining({ id: 'skills', max: 100 }),
+        expect.objectContaining({ id: 'experience', max: 100 }),
+        expect.objectContaining({ id: 'education', max: 100 }),
+      ]),
+      criticalGaps: ['Gestão financeira de contas'],
+    })
+  })
+
   it('returns renderable highlightState for ATS enhancement flows', async () => {
     const highlightState = {
       source: 'rewritten_cv_state',

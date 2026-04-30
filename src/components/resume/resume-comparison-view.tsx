@@ -6,6 +6,7 @@ import { ArrowLeft, Download, Highlighter, Loader2, Pencil } from "lucide-react"
 import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components/dashboard/events"
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
+import { JobTargetingScoreCard } from "@/components/resume/job-targeting-score-card"
 import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
 import { TargetRecommendationsCard } from "@/components/resume/target-recommendations-card"
 import { Button } from "@/components/ui/button"
@@ -692,7 +693,7 @@ export function ResumeComparisonView({
               "grid gap-8 transition-all duration-700 sm:gap-6",
               isJobTargeting
                 ? hasJobTargetingSidebar
-                  ? "lg:grid-cols-[minmax(0,0.98fr)_minmax(22rem,0.72fr)]"
+                  ? "lg:grid-cols-[minmax(0,1fr)_300px]"
                   : "lg:grid-cols-[minmax(0,46rem)] lg:justify-center"
                 : hasReviewItems
                   ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]"
@@ -771,6 +772,9 @@ export function ResumeComparisonView({
           </div>
           {hasJobTargetingSidebar ? (
             <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+              {jobTargetingExplanation?.scoreBreakdown ? (
+                <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
+              ) : null}
               {hasReviewItems ? (
                 <ReviewWarningPanel
                   items={currentHighlightState?.reviewItems ?? []}

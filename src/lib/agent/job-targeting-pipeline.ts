@@ -17,6 +17,7 @@ import {
   isSummaryOnlyRecoverableValidation,
 } from '@/lib/agent/job-targeting/recoverable-validation'
 import { buildTargetRecommendations } from '@/lib/agent/job-targeting/target-recommendations'
+import { buildJobTargetingScoreBreakdownFromPlan } from '@/lib/agent/job-targeting/score-breakdown'
 import {
   applyLowFitWarningGateToValidation,
   shouldPreRewriteLowFitBlock,
@@ -331,6 +332,10 @@ function buildJobTargetingExplanation(params: {
   return {
     targetRole: params.targetingPlan.targetRole,
     targetRoleConfidence: params.targetingPlan.targetRoleConfidence,
+    scoreBreakdown: buildJobTargetingScoreBreakdownFromPlan({
+      targetingPlan: params.targetingPlan,
+      cvState: params.session.cvState,
+    }),
     targetRecommendations: buildTargetRecommendations({
       targetRole: params.targetingPlan.targetRole,
       coreRequirements,

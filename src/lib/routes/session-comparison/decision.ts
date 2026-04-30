@@ -1,4 +1,5 @@
 import { buildHighlightStateResponseOutcome } from '@/lib/agent/highlight-observability'
+import { buildJobTargetingScoreBreakdownFromPlan } from '@/lib/agent/job-targeting/score-breakdown'
 import { logInfo } from '@/lib/observability/structured-log'
 import {
   isLockedPreview,
@@ -12,6 +13,29 @@ function resolveGenerationType(
   lastRewriteMode?: string,
 ): Extract<SessionComparisonDecision, { kind: 'success' }>['body']['generationType'] {
   return lastRewriteMode === 'job_targeting' ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT'
+}
+
+function resolveJobTargetingExplanationForClient(
+  context: SessionComparisonContext,
+  previewLocked: boolean,
+) {
+  const explanation = context.session.agentState.jobTargetingExplanation
+
+  if (previewLocked || !explanation) {
+    return undefined
+  }
+
+  if (explanation.scoreBreakdown || !context.session.agentState.targetingPlan) {
+    return explanation
+  }
+
+  return {
+    ...explanation,
+    scoreBreakdown: buildJobTargetingScoreBreakdownFromPlan({
+      targetingPlan: context.session.agentState.targetingPlan,
+      cvState: context.session.cvState,
+    }),
+  }
 }
 
 export async function decideSessionComparison(
@@ -72,9 +96,7 @@ export async function decideSessionComparison(
         highlightState: highlightStateResponse.highlightStateReturned
           ? context.session.agentState.highlightState
           : undefined,
-        jobTargetingExplanation: previewLocked
-          ? undefined
-          : context.session.agentState.jobTargetingExplanation,
+        jobTargetingExplanation: resolveJobTargetingExplanationForClient(context, previewLocked),
         previewLock: getPreviewLockSummary(context.session.generatedOutput),
         optimizationSummary: context.session.agentState.optimizationSummary,
       },

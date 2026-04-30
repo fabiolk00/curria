@@ -131,6 +131,16 @@ function buildJobTargetingExplanation(): JobTargetingExplanation {
     generatedAt: "2026-04-29T12:00:00.000Z",
     source: "job_targeting",
     version: 1,
+    scoreBreakdown: {
+      total: 72,
+      maxTotal: 100,
+      items: [
+        { id: "skills", label: "Habilidades", score: 82, max: 100 },
+        { id: "experience", label: "Experiência", score: 61, max: 100 },
+        { id: "education", label: "Formação", score: 90, max: 100 },
+      ],
+      criticalGaps: ["P&L, margem, faturamento, forecast e budget"],
+    },
     targetRecommendations: [{
       id: "target-rec-dax",
       kind: "adjacent_skill",
@@ -316,7 +326,10 @@ describe('ResumeComparisonView', () => {
     expect(screen.getByTestId('job-targeting-explanation')).toBeInTheDocument()
     expect(screen.queryByText('Entenda o que mudou')).not.toBeInTheDocument()
     expect(screen.getByText('Sugestões para melhorar sua aderência')).toBeInTheDocument()
-    expect(screen.getByText('Adicione apenas se for verdadeiro')).toBeInTheDocument()
+    expect(screen.getByText('Só se for verdadeiro')).toBeInTheDocument()
+    expect(screen.getByTestId('job-targeting-score-card')).toBeInTheDocument()
+    expect(screen.getByText('Composição da nota')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nota de Habilidades')).toHaveAttribute('aria-valuenow', '82')
     expect(screen.queryByText('Original')).not.toBeInTheDocument()
     expect(screen.queryByTestId('original-resume-document')).not.toBeInTheDocument()
     expect(screen.getByText('Currículo gerado')).toBeInTheDocument()

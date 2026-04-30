@@ -1796,6 +1796,14 @@ describe('ATS enhancement reliability hardening', () => {
       source: 'job_targeting',
       version: 1,
       targetRole: 'Analytics Engineer',
+      scoreBreakdown: expect.objectContaining({
+        maxTotal: 100,
+        items: expect.arrayContaining([
+          expect.objectContaining({ id: 'skills', max: 100 }),
+          expect.objectContaining({ id: 'experience', max: 100 }),
+          expect.objectContaining({ id: 'education', max: 100 }),
+        ]),
+      }),
       targetRecommendations: expect.arrayContaining([
         expect.objectContaining({
           jobRequirement: 'BigQuery',
