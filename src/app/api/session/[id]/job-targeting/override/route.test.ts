@@ -445,6 +445,35 @@ describe('POST /api/session/[id]/job-targeting/override', () => {
     }))
   })
 
+
+  it('returns a non-blocking decision when status is PROBABLE_MATCH_NEEDS_EVIDENCE', async () => {
+    const probableSession = buildSession()
+    probableSession.agentState.recoverableValidationBlock.status = 'PROBABLE_MATCH_NEEDS_EVIDENCE'
+    vi.mocked(getSession).mockResolvedValue(probableSession as never)
+
+    const response = await POST(buildRequest({
+      overrideToken: 'override_token_123',
+      consumeCredit: true,
+    }), {
+      params: { id: 'sess_123' },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      canProceed: true,
+      needsEvidenceBoost: true,
+      suggestedComplements: [
+        'Informe seu nível de DAX',
+        'Descreva uso de Power Query',
+        'Cite RLS/drill-through/bookmarks',
+      ],
+      actionOptions: ['proceed_anyway', 'improve_match_first'],
+    })
+    expect(tryAcquireOverrideProcessingLock).not.toHaveBeenCalled()
+    expect(generateBillableResume).not.toHaveBeenCalled()
+  })
+
   it('rejects override tokens that do not belong to the blocked draft', async () => {
     const response = await POST(buildRequest({
       overrideToken: 'wrong_token',

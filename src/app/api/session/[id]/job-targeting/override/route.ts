@@ -297,6 +297,25 @@ function buildSuccessWarnings(
   return warnings && warnings.length > 0 ? warnings : undefined
 }
 
+
+function buildEvidenceBoostSuggestions(targetRole?: string): string[] {
+  const normalizedTargetRole = targetRole?.toLowerCase() ?? ''
+
+  if (normalizedTargetRole.includes('power bi') || normalizedTargetRole.includes('bi')) {
+    return [
+      'Informe seu nível de DAX',
+      'Descreva uso de Power Query',
+      'Cite RLS/drill-through/bookmarks',
+    ]
+  }
+
+  return [
+    'Informe seu nível de DAX',
+    'Descreva uso de Power Query',
+    'Cite RLS/drill-through/bookmarks',
+  ]
+}
+
 function buildFailedWithoutChargeLog(params: {
   sessionId: string
   userId: string
@@ -402,6 +421,17 @@ export async function POST(
         },
         { status: 409 },
       )
+    }
+
+    const recoverableStatus = (recoverableValidationBlock as { status?: string }).status
+    if (recoverableStatus === 'PROBABLE_MATCH_NEEDS_EVIDENCE') {
+      return NextResponse.json({
+        success: true,
+        canProceed: true,
+        needsEvidenceBoost: true,
+        suggestedComplements: buildEvidenceBoostSuggestions(blockedDraft.targetRole),
+        actionOptions: ['proceed_anyway', 'improve_match_first'] as const,
+      })
     }
 
     if (
