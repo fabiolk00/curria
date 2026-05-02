@@ -383,6 +383,8 @@ const ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES = new Set([
   'summary_skill_without_evidence',
   'unsupported_claim',
   'unsupported_skill',
+  'unsupported_certification',
+  'unsupported_education',
   'seniority_inflation',
   'ungrounded_bridge',
   'forbidden_claim',
