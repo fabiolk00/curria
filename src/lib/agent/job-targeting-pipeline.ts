@@ -476,15 +476,41 @@ const ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES = new Set([
   'forbidden_claim',
 ] satisfies NonNullable<NonNullable<Session['agentState']['rewriteValidation']>['issues'][number]['issueType']>[])
 
+const NON_OVERRIDABLE_STRUCTURED_CLAIM_POLICY_CODES = new Set([
+  'forbidden_term',
+  'unsafe_direct_claim',
+  'unsupported_skill_added',
+  'unsupported_certification',
+  'unsupported_education_claim',
+  'target_role_asserted_without_permission',
+])
+
+type RewriteValidation = NonNullable<Session['agentState']['rewriteValidation']>
+type RewriteValidationIssue = RewriteValidation['issues'][number]
+
+function isNonOverridableStructuredIssue(issue: RewriteValidationIssue): boolean {
+  return issue.code !== undefined && NON_OVERRIDABLE_STRUCTURED_CLAIM_POLICY_CODES.has(issue.code)
+}
+
+function isAcceptedLowFitAuditOnlyIssue(issue: RewriteValidationIssue): boolean {
+  return Boolean(
+    issue.issueType
+    && ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES.has(issue.issueType)
+    && !isNonOverridableStructuredIssue(issue),
+  )
+}
+
 export function shouldBlockAfterAcceptedOverride(validation: NonNullable<Session['agentState']['rewriteValidation']>): boolean {
-  return validation.hardIssues.some((issue) => !issue.issueType || !ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES.has(issue.issueType))
+  return validation.hardIssues.some((issue) => !isAcceptedLowFitAuditOnlyIssue(issue))
 }
 
 export function relaxValidationForAcceptedLowFitOverride(
   validation: NonNullable<Session['agentState']['rewriteValidation']>,
 ): NonNullable<Session['agentState']['rewriteValidation']> {
+  const remainingHardIssues = validation.hardIssues
+    .filter((issue) => !isAcceptedLowFitAuditOnlyIssue(issue))
   const downgradedHardIssues = validation.hardIssues
-    .filter((issue) => issue.issueType && ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES.has(issue.issueType))
+    .filter(isAcceptedLowFitAuditOnlyIssue)
     .map((issue) => ({
       ...issue,
       severity: 'medium' as const,
@@ -497,12 +523,15 @@ export function relaxValidationForAcceptedLowFitOverride(
 
   return {
     ...validation,
-    blocked: false,
-    recoverable: false,
-    valid: remainingSoftWarnings.length === 0,
-    hardIssues: [],
+    blocked: remainingHardIssues.length > 0,
+    recoverable: remainingHardIssues.length > 0 ? validation.recoverable : false,
+    valid: remainingHardIssues.length === 0 && remainingSoftWarnings.length === 0,
+    hardIssues: remainingHardIssues,
     softWarnings: remainingSoftWarnings,
-    issues: remainingSoftWarnings,
+    issues: [
+      ...remainingHardIssues,
+      ...remainingSoftWarnings,
+    ],
   }
 }
 

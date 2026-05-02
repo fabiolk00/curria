@@ -3179,7 +3179,7 @@ describe('ATS enhancement reliability hardening', () => {
     }))
   })
 
-  it('blocks only technical hard issues after an accepted low-fit override', () => {
+  it('blocks non-recoverable hard issues after an accepted low-fit override', () => {
     expect(shouldBlockAfterAcceptedOverride(buildRewriteValidationResult({
       blocked: true,
       hardIssues: [{
@@ -3205,6 +3205,40 @@ describe('ATS enhancement reliability hardening', () => {
         severity: 'high',
         issueType: undefined,
         message: 'Erro estrutural sem classificação.',
+      }],
+    }) as never)).toBe(true)
+  })
+
+  it('blocks structured claim-policy issues after an accepted low-fit override', () => {
+    expect(shouldBlockAfterAcceptedOverride(buildRewriteValidationResult({
+      blocked: true,
+      hardIssues: [{
+        code: 'forbidden_term',
+        severity: 'high',
+        issueType: 'forbidden_claim',
+        message: 'A versÃ£o declarou um requisito proibido.',
+      }],
+      issues: [{
+        code: 'forbidden_term',
+        severity: 'high',
+        issueType: 'forbidden_claim',
+        message: 'A versÃ£o declarou um requisito proibido.',
+      }],
+    }) as never)).toBe(true)
+
+    expect(shouldBlockAfterAcceptedOverride(buildRewriteValidationResult({
+      blocked: true,
+      hardIssues: [{
+        code: 'unsafe_direct_claim',
+        severity: 'high',
+        issueType: 'unsupported_claim',
+        message: 'A versÃ£o transformou evidÃªncia cautelosa em claim direta.',
+      }],
+      issues: [{
+        code: 'unsafe_direct_claim',
+        severity: 'high',
+        issueType: 'unsupported_claim',
+        message: 'A versÃ£o transformou evidÃªncia cautelosa em claim direta.',
       }],
     }) as never)).toBe(true)
   })
@@ -3236,6 +3270,38 @@ describe('ATS enhancement reliability hardening', () => {
           severity: 'medium',
         }),
       ]),
+    }))
+  })
+
+  it('does not relax structured claim-policy issues for accepted low-fit overrides', () => {
+    const relaxed = relaxValidationForAcceptedLowFitOverride(buildRewriteValidationResult({
+      blocked: true,
+      valid: false,
+      recoverable: true,
+      hardIssues: [{
+        code: 'forbidden_term',
+        severity: 'high',
+        issueType: 'forbidden_claim',
+        message: 'Structured forbidden term.',
+      }],
+      issues: [{
+        code: 'forbidden_term',
+        severity: 'high',
+        issueType: 'forbidden_claim',
+        message: 'Structured forbidden term.',
+      }],
+    }) as never)
+
+    expect(relaxed).toEqual(expect.objectContaining({
+      blocked: true,
+      valid: false,
+      hardIssues: [
+        expect.objectContaining({
+          code: 'forbidden_term',
+          issueType: 'forbidden_claim',
+          severity: 'high',
+        }),
+      ],
     }))
   })
 
@@ -3392,6 +3458,89 @@ describe('ATS enhancement reliability hardening', () => {
       blockingSkipped: true,
       triggered: true,
     }))
+  })
+
+  it.each([
+    {
+      code: 'forbidden_term',
+      issueType: 'forbidden_claim',
+      message: 'Structured forbidden term.',
+    },
+    {
+      code: 'unsafe_direct_claim',
+      issueType: 'unsupported_claim',
+      message: 'Structured cautious claim promoted directly.',
+    },
+  ] as const)('keeps accepted low-fit override blocked for structured $code issues', async ({ code, issueType, message }) => {
+    const session = buildSession()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = 'Cargo: Especialista em plataforma sem evidencia'
+    session.agentState.rewriteStatus = 'pending'
+
+    mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
+      lowFitWarningGate: {
+        triggered: true,
+        reason: 'high_risk_off_target',
+        matchScore: 32,
+        riskLevel: 'high',
+        familyDistance: 'distant',
+        explicitEvidenceCount: 1,
+        unsupportedGapCount: 10,
+        unsupportedGapRatio: 10 / 11,
+        explicitEvidenceRatio: 1 / 11,
+        coreRequirementCoverage: {
+          total: 2,
+          supported: 1,
+          unsupported: 1,
+          unsupportedSignals: ['plataforma sem evidencia'],
+          topUnsupportedSignalsForDisplay: ['plataforma sem evidencia'],
+        },
+      },
+    }))
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Especialista em plataforma sem evidencia comprovada.',
+      }, section),
+    }))
+    const structuredIssue = {
+      code,
+      severity: 'high' as const,
+      section: 'summary',
+      issueType,
+      message,
+      offendingSignal: 'plataforma sem evidencia',
+      offendingText: 'Especialista em plataforma sem evidencia comprovada.',
+    }
+    mockValidateRewrite.mockReturnValue(buildRewriteValidationResult({
+      blocked: true,
+      valid: false,
+      recoverable: true,
+      hardIssues: [structuredIssue],
+      softWarnings: [],
+      issues: [structuredIssue],
+    }))
+
+    const result = await runJobTargetingPipeline(session, {
+      userAcceptedLowFit: true,
+      overrideReason: 'pre_rewrite_low_fit_block',
+      skipPreRewriteLowFitBlock: true,
+      skipLowFitRecoverableBlocking: true,
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.validation).toEqual(expect.objectContaining({
+      blocked: true,
+      hardIssues: [
+        expect.objectContaining({
+          code,
+          issueType,
+          severity: 'high',
+        }),
+      ],
+    }))
+    expect(mockCreateCvVersion).not.toHaveBeenCalled()
+    expect(mockGenerateCvHighlightState).not.toHaveBeenCalled()
   })
 
   it('creates a synthetic recoverable issue when a low-fit vacancy has no promotable warnings but still should not auto-generate', async () => {
