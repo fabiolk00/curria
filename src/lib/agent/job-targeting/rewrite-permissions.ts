@@ -1,5 +1,7 @@
 import type { BridgeClaimInstruction, TargetEvidence, TargetedRewritePermissions } from '@/types/agent'
 import { buildCanonicalSignal } from '@/lib/agent/job-targeting/semantic-normalization'
+import { buildRewritePermissionsFromAssessment as buildAdapterRewritePermissionsFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 
 function dedupe(values: string[]): string[] {
   const seen = new Set<string>()
@@ -88,4 +90,10 @@ export function buildTargetedRewritePermissions(targetEvidence: TargetEvidence[]
     forbiddenClaims,
     skillsSurfaceAllowed,
   }
+}
+
+export function buildTargetedRewritePermissionsFromAssessment(
+  assessment: JobCompatibilityAssessment,
+): TargetedRewritePermissions {
+  return buildAdapterRewritePermissionsFromAssessment(assessment)
 }

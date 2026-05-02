@@ -1,4 +1,6 @@
 import { buildCanonicalSignal } from '@/lib/agent/job-targeting/semantic-normalization'
+import { buildSafeTargetingEmphasisFromAssessment as buildAdapterSafeTargetingEmphasisFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import type { SafeTargetingEmphasis, TargetEvidence, TargetedRewritePermissions } from '@/types/agent'
 
 function dedupe(values: string[]): string[] {
@@ -119,4 +121,10 @@ export function buildSafeTargetingEmphasis(params: {
         ]),
     ]),
   }
+}
+
+export function buildSafeTargetingEmphasisFromAssessment(
+  assessment: JobCompatibilityAssessment,
+): SafeTargetingEmphasis {
+  return buildAdapterSafeTargetingEmphasisFromAssessment(assessment)
 }

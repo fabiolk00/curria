@@ -101,6 +101,8 @@ export type ValidationIssue = {
     | 'seniority_inflation'
     | 'ungrounded_bridge'
     | 'forbidden_claim'
+    | 'unsupported_certification'
+    | 'unsupported_education'
     | 'summary_skill_without_evidence'
   offendingSignal?: string
   offendingText?: string

@@ -1,7 +1,17 @@
 import { buildTargetedRewritePermissionIssues } from '@/lib/agent/job-targeting/validation-policy'
+import { buildTargetingPlanFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import { repairUtf8Mojibake } from '@/lib/text/repair-utf8-mojibake'
 import type { RewriteValidationResult, TargetingPlan, ValidationIssue, WorkflowMode } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
+
+type ValidateRewriteContext = {
+  mode?: WorkflowMode
+  targetJobDescription?: string
+  gapAnalysis?: GapAnalysisResult
+  targetingPlan?: TargetingPlan
+  jobCompatibilityAssessment?: JobCompatibilityAssessment
+}
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase()
@@ -91,12 +101,7 @@ function buildValidationResult(issues: ValidationIssue[]): RewriteValidationResu
 function enrichValidationIssues(params: {
   issues: ValidationIssue[]
   optimizedCvState: CVState
-  context?: {
-    mode?: WorkflowMode
-    targetJobDescription?: string
-    gapAnalysis?: GapAnalysisResult
-    targetingPlan?: TargetingPlan
-  }
+  context?: ValidateRewriteContext
 }): ValidationIssue[] {
   const targetRole = params.context?.targetingPlan?.targetRole
   const safeRolePositioning = params.context?.targetingPlan?.targetRolePositioning?.safeRolePositioning
@@ -191,14 +196,13 @@ function enrichValidationIssues(params: {
 export function validateRewrite(
   originalCvState: CVState,
   optimizedCvState: CVState,
-  context?: {
-    mode?: WorkflowMode
-    targetJobDescription?: string
-    gapAnalysis?: GapAnalysisResult
-    targetingPlan?: TargetingPlan
-  },
+  context?: ValidateRewriteContext,
 ): RewriteValidationResult {
   const issues: ValidationIssue[] = []
+  const effectiveTargetingPlan = context?.targetingPlan
+    ?? (context?.jobCompatibilityAssessment
+      ? buildTargetingPlanFromAssessment(context.jobCompatibilityAssessment)
+      : undefined)
   const originalEvidenceText = buildEvidenceText(originalCvState)
   const originalSummary = normalize(originalCvState.summary)
   const optimizedSummary = normalize(optimizedCvState.summary)
@@ -263,7 +267,8 @@ export function validateRewrite(
 
   const originalSkillSet = toSkillSet(originalCvState)
   const optimizedSkillSet = toSkillSet(optimizedCvState)
-  const hasTargetEvidence = context?.mode === 'job_targeting' && (context.targetingPlan?.targetEvidence?.length ?? 0) > 0
+  const hasTargetEvidence = context?.mode === 'job_targeting'
+    && (effectiveTargetingPlan?.targetEvidence?.length ?? 0) > 0
 
   if (!hasTargetEvidence && Array.from(optimizedSkillSet).some((skill) => !originalSkillSet.has(skill))) {
     issues.push({
@@ -284,7 +289,7 @@ export function validateRewrite(
   }
 
   const explicitlyAllowedSummaryClaims = new Set(
-    (context?.targetingPlan?.targetEvidence ?? [])
+    (effectiveTargetingPlan?.targetEvidence ?? [])
       .flatMap((evidence) => [
         evidence.jobSignal,
         evidence.canonicalSignal,
@@ -327,12 +332,13 @@ export function validateRewrite(
       issues.push(...buildTargetedRewritePermissionIssues({
         originalCvState,
         optimizedCvState,
-        targetingPlan: context.targetingPlan,
+        targetingPlan: effectiveTargetingPlan,
+        jobCompatibilityAssessment: context.jobCompatibilityAssessment,
       }))
 
       const claimedRoles = extractRoleClaimsFromSummary(optimizedCvState.summary)
       const normalizedAllowedRoleClaims = new Set(
-        (context.targetingPlan?.targetEvidence ?? [])
+        (effectiveTargetingPlan?.targetEvidence ?? [])
           .filter((evidence) =>
             evidence.rewritePermission === 'can_claim_directly'
             || evidence.rewritePermission === 'can_claim_normalized')
@@ -356,7 +362,7 @@ export function validateRewrite(
       return buildValidationResult(issues)
     }
 
-    const targetRole = normalize(context.targetingPlan?.targetRole)
+    const targetRole = normalize(effectiveTargetingPlan?.targetRole)
 
     if (
       isUsableTargetRole(targetRole)
@@ -370,7 +376,7 @@ export function validateRewrite(
       })
     }
 
-    const missingButCannotInvent = (context.targetingPlan?.missingButCannotInvent ?? context.gapAnalysis?.missingSkills ?? [])
+    const missingButCannotInvent = (effectiveTargetingPlan?.missingButCannotInvent ?? context.gapAnalysis?.missingSkills ?? [])
       .map(normalize)
       .filter(Boolean)
     const optimizedEvidenceText = buildEvidenceText(optimizedCvState)
@@ -391,6 +397,11 @@ export function validateRewrite(
   return buildValidationResult(enrichValidationIssues({
     issues,
     optimizedCvState,
-    context,
+    context: context
+      ? {
+        ...context,
+        targetingPlan: effectiveTargetingPlan,
+      }
+      : undefined,
   }))
 }

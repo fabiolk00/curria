@@ -1,5 +1,11 @@
 import type { TargetEvidence, TargetingPlan, ValidationIssue } from '@/types/agent'
 import type { CVState } from '@/types/cv'
+import { buildTargetingPlanFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
+import {
+  validateGeneratedClaims,
+  type StructuredValidationIssue,
+} from '@/lib/agent/job-targeting/compatibility/structured-validation'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import { buildCanonicalSignal, normalizeSemanticText } from '@/lib/agent/job-targeting/semantic-normalization'
 
 const BRIDGE_LANGUAGE_TERMS = [
@@ -51,6 +57,70 @@ function splitSentences(text: string): string[] {
 
 function getTargetEvidence(targetingPlan?: TargetingPlan): TargetEvidence[] {
   return targetingPlan?.targetEvidence ?? []
+}
+
+function mapStructuredIssueType(issue: StructuredValidationIssue): NonNullable<ValidationIssue['issueType']> {
+  switch (issue.type) {
+    case 'unsupported_skill_added':
+      return 'unsupported_skill'
+    case 'unsupported_certification':
+      return 'unsupported_certification'
+    case 'unsupported_education_claim':
+      return 'unsupported_education'
+    case 'target_role_asserted_without_permission':
+      return 'target_role_overclaim'
+    case 'unsafe_direct_claim':
+      return 'unsupported_claim'
+    case 'forbidden_term':
+      return 'forbidden_claim'
+  }
+}
+
+function messageForStructuredIssue(issue: StructuredValidationIssue): string {
+  switch (issue.type) {
+    case 'unsupported_skill_added':
+      return 'A lista de skills targetizada promoveu um requisito sem suporte factual como competÃªncia direta.'
+    case 'unsupported_certification':
+      return 'A versÃ£o targetizada incluiu certificaÃ§Ã£o nÃ£o comprovada pelo currÃ­culo original.'
+    case 'unsupported_education_claim':
+      return 'A versÃ£o targetizada incluiu formaÃ§Ã£o ou escolaridade nÃ£o comprovada pelo currÃ­culo original.'
+    case 'target_role_asserted_without_permission':
+      return 'O resumo targetizado assumiu o cargo alvo diretamente sem permissÃ£o da avaliaÃ§Ã£o de compatibilidade.'
+    case 'unsafe_direct_claim':
+      return 'A versÃ£o targetizada transformou uma evidÃªncia cautelosa em claim direta.'
+    case 'forbidden_term':
+      return 'A versÃ£o targetizada declarou um requisito proibido pela avaliaÃ§Ã£o de compatibilidade.'
+  }
+}
+
+function buildAssessmentClaimPolicyIssues(params: {
+  optimizedCvState: CVState
+  assessment: JobCompatibilityAssessment
+  targetingPlan?: TargetingPlan
+}): ValidationIssue[] {
+  const structuredValidation = validateGeneratedClaims({
+    generatedCvState: params.optimizedCvState,
+    claimPolicy: params.assessment.claimPolicy,
+    targetRole: {
+      value: params.assessment.targetRole,
+      permission: params.targetingPlan?.targetRolePositioning?.permission,
+    },
+  })
+
+  return structuredValidation.issues.map((issue) => ({
+    code: issue.type,
+    severity: 'high' as const,
+    message: messageForStructuredIssue(issue),
+    section: issue.section === 'full_text' ? undefined : issue.section,
+    issueType: mapStructuredIssueType(issue),
+    offendingSignal: issue.term,
+    offendingText: issue.generatedText,
+    suggestedReplacement: params.targetingPlan?.safeTargetingEmphasis?.safeDirectEmphasis[0],
+    userFacingTitle: issue.type === 'target_role_asserted_without_permission'
+      ? 'O resumo assumiu o cargo alvo diretamente'
+      : 'A versÃ£o declarou informaÃ§Ã£o sem comprovaÃ§Ã£o suficiente',
+    userFacingExplanation: 'A avaliaÃ§Ã£o de compatibilidade marcou este ponto como cauteloso ou proibido para claim direta.',
+  }))
 }
 
 function textContainsEvidenceSignal(text: string, evidence: TargetEvidence): boolean {
@@ -122,12 +192,26 @@ export function buildTargetedRewritePermissionIssues(params: {
   originalCvState: CVState
   optimizedCvState: CVState
   targetingPlan?: TargetingPlan
+  jobCompatibilityAssessment?: JobCompatibilityAssessment
 }): ValidationIssue[] {
   const issues: ValidationIssue[] = []
-  const targetEvidence = getTargetEvidence(params.targetingPlan)
+  const assessmentTargetingPlan = params.jobCompatibilityAssessment
+    ? buildTargetingPlanFromAssessment(params.jobCompatibilityAssessment, {
+      basePlan: params.targetingPlan,
+    })
+    : undefined
+  const targetingPlan = params.targetingPlan ?? assessmentTargetingPlan
+  const assessmentIssues = params.jobCompatibilityAssessment
+    ? buildAssessmentClaimPolicyIssues({
+      optimizedCvState: params.optimizedCvState,
+      assessment: params.jobCompatibilityAssessment,
+      targetingPlan,
+    })
+    : []
+  const targetEvidence = getTargetEvidence(targetingPlan)
 
   if (targetEvidence.length === 0) {
-    return issues
+    return assessmentIssues
   }
 
   const originalSkills = new Set(params.originalCvState.skills.map((skill) => buildCanonicalSignal(skill)))
@@ -138,7 +222,7 @@ export function buildTargetedRewritePermissionIssues(params: {
   })
 
   newlyIntroducedSkills.forEach((skill) => {
-    if (isAllowedOnSkillsSurface(skill, params.targetingPlan)) {
+    if (isAllowedOnSkillsSurface(skill, targetingPlan)) {
       return
     }
 
@@ -274,5 +358,8 @@ export function buildTargetedRewritePermissionIssues(params: {
     }
   })
 
-  return issues
+  return [
+    ...assessmentIssues,
+    ...issues,
+  ]
 }
