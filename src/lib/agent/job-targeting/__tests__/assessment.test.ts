@@ -50,6 +50,7 @@ type GoldenCase = {
       }>
     }
     job: {
+      title: string
       requirements: GoldenRequirement[]
     }
     gapAnalysis: {
@@ -208,5 +209,24 @@ describe('job compatibility assessment', () => {
       })
       expect(assessment.catalog.catalogIds.length, fixture.id).toBeGreaterThan(0)
     }
+  })
+
+  it('extracts an unlabeled first-line target role from golden fixture job titles', async () => {
+    const fixture = readGoldenCases().find((candidate) => candidate.id === 'data-bi-good-fit-with-specific-gaps')
+
+    expect(fixture).toBeDefined()
+
+    const assessment = await evaluateJobCompatibility({
+      cvState: toCvState(fixture!),
+      targetJobDescription: [
+        fixture!.input.job.title,
+        toTargetJobDescription(fixture!),
+      ].join('\n'),
+      gapAnalysis: fixture!.input.gapAnalysis,
+    })
+
+    expect(assessment.targetRole).toBe(fixture!.input.job.title)
+    expect(assessment.targetRoleConfidence).toBe('medium')
+    expect(assessment.targetRoleSource).toBe('heuristic')
   })
 })

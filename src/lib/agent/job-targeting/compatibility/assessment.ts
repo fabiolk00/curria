@@ -4,7 +4,6 @@ import type {
   JobCompatibilityAssessment,
   JobCompatibilityGap,
   RequirementEvidence,
-  RequirementKind,
 } from '@/lib/agent/job-targeting/compatibility/types'
 import type { CVState } from '@/types/cv'
 
@@ -31,6 +30,8 @@ import {
 
 export const JOB_COMPATIBILITY_ASSESSMENT_VERSION = 'job-compat-assessment-v1'
 const FALLBACK_TARGET_ROLE = 'Vaga Alvo'
+const TARGET_ROLE_MAX_LENGTH = 90
+const TARGET_ROLE_MAX_WORDS = 12
 
 export const DEFAULT_JOB_TARGETING_DOMAIN_PACK_PATHS = [
   'src/lib/agent/job-targeting/catalog/domain-packs/data-bi.json',
@@ -140,7 +141,7 @@ export async function evaluateJobCompatibility({
 function extractTargetRole(
   targetJobDescription: string,
 ): Pick<JobCompatibilityAssessment, 'targetRole' | 'targetRoleConfidence' | 'targetRoleSource'> {
-  const explicitLabelPattern = /^\s*(?:role|title|position|cargo|vaga|t[ií]tulo)\s*[:=-]\s*(.+?)\s*$/iu
+  const explicitLabelPattern = /^\s*(?:role|title|position|job\s*title|target\s*role|cargo|vaga|t[ií]tulo|nome\s+da\s+vaga)\s*[:=-]\s*(.+?)\s*$/iu
   const lines = targetJobDescription
     .split(/\r?\n/u)
     .map((line) => line.trim())
@@ -156,6 +157,15 @@ function extractTargetRole(
         targetRoleConfidence: 'high',
         targetRoleSource: 'heuristic',
       }
+    }
+  }
+
+  const titleLikeLine = lines.find(isTitleLikeTargetRoleLine)
+  if (titleLikeLine !== undefined) {
+    return {
+      targetRole: cleanTargetRole(titleLikeLine),
+      targetRoleConfidence: 'medium',
+      targetRoleSource: 'heuristic',
     }
   }
 
@@ -175,8 +185,30 @@ function cleanTargetRole(value: string): string {
 }
 
 function isGenericSectionLabel(value: string): boolean {
-  return /^(?:requirements?|responsabilidades?|requisitos?|qualifica[cç][oõ]es?|atividades|descri[cç][aã]o|about the role|about the job)$/iu
-    .test(normalize(value))
+  const normalizedValue = normalize(value)
+
+  return /^(?:requirements?|required qualifications?|preferred qualifications?|responsabilidades?|requisitos?|qualificacoes?|atividades|descricao|about the role|about the job|job description|sobre a vaga|sobre nos|quem somos|o que buscamos|beneficios?)$/iu
+    .test(normalizedValue)
+}
+
+function isTitleLikeTargetRoleLine(line: string): boolean {
+  const targetRole = cleanTargetRole(line)
+  const wordCount = targetRole.split(/\s+/u).filter(Boolean).length
+
+  if (!targetRole || isGenericSectionLabel(targetRole)) {
+    return false
+  }
+
+  if (targetRole.length > TARGET_ROLE_MAX_LENGTH || wordCount < 2 || wordCount > TARGET_ROLE_MAX_WORDS) {
+    return false
+  }
+
+  if (/^\s*(?:[-*]|\d+[.)])\s+/u.test(line) || /[:.!?]/u.test(targetRole)) {
+    return false
+  }
+
+  return !/^(?:we|we're|we are|looking for|somos|buscamos|procuramos|estamos)\b/iu
+    .test(normalize(targetRole))
 }
 
 function buildGaps({
