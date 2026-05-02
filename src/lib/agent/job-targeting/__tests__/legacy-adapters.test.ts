@@ -80,9 +80,10 @@ function requirement(
   overrides: Partial<RequirementEvidence> & Pick<RequirementEvidence, 'id' | 'productGroup' | 'rewritePermission'>,
 ): RequirementEvidence {
   const signal = overrides.extractedSignals?.[0] ?? overrides.originalRequirement ?? overrides.id
+  const { id, ...rest } = overrides
 
   return {
-    id: overrides.id,
+    id,
     originalRequirement: signal,
     normalizedRequirement: signal.toLowerCase(),
     extractedSignals: [signal],
@@ -111,7 +112,7 @@ function requirement(
       catalogTermIds: [],
       catalogCategoryIds: [],
     },
-    ...overrides,
+    ...rest,
   }
 }
 

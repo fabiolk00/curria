@@ -589,7 +589,7 @@ export function buildTargetRecommendationsFromAssessment(
     suggestedUserAction: `Adicione evidência real de ${displaySignal(gap.signal)} apenas se isso fizer parte da sua experiência.`,
     safeExample: `Mencione ${displaySignal(gap.signal)} somente com fatos comprováveis do seu histórico.`,
     mustNotInvent: true,
-    relatedEvidenceLevel: 'unsupported_gap',
+    relatedEvidenceLevel: 'unsupported_gap' as const,
   })).slice(0, 6)
 }
 
