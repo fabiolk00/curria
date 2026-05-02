@@ -174,7 +174,7 @@ describe('catalog-driven requirement evidence matcher', () => {
 
     expect(classifyRequirementEvidence({
       requirement: requirement({ id: 'alias', text: 'Advanced Power BI delivery' }),
-      resumeEvidence: precedenceEvidence,
+      resumeEvidence: evidence([{ id: 'alias', text: 'BI dashboards' }]),
       catalog,
     })).toMatchObject({
       productEvidenceGroup: 'supported',
