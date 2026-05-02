@@ -10,9 +10,24 @@ export const metadata: Metadata = buildPublicPageMetadata({
   canonicalPath: "/criar-conta",
 })
 
-export default function CriarContaPage() {
+type AuthPageProps = {
+  searchParams?: {
+    redirect_to?: string | string[]
+  }
+}
+
+function readRedirectTo(value: string | string[] | undefined): string | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+export default function CriarContaPage({ searchParams }: AuthPageProps) {
   return (
-    <AuthShell mode="signup" title="Criar conta" description="">
+    <AuthShell
+      mode="signup"
+      title="Criar conta"
+      description=""
+      redirectTo={readRedirectTo(searchParams?.redirect_to)}
+    >
       <SignupForm />
     </AuthShell>
   )

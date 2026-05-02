@@ -24,7 +24,7 @@ describe("HeroSection", () => {
     const heading = screen.getByRole("heading", { level: 1 })
     const section = heading.closest("section")
     const comparison = screen.getByTestId("before-after-comparison")
-    const primaryCta = screen.getByRole("link", { name: /ver meu score ats grátis/i })
+    const primaryCta = screen.getByRole("link", { name: /analisar meu currículo grátis/i })
     const secondaryCta = screen.getByRole("link", { name: /ver como melhorar/i })
 
     expect(section).toHaveClass("pt-28")

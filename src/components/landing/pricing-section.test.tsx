@@ -1,5 +1,5 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { describe, expect, it, vi } from "vitest"
 
@@ -37,9 +37,17 @@ describe("PricingSection", () => {
     expect(screen.queryByText("Enterprise")).not.toBeInTheDocument()
     expect(screen.queryByText("Plus")).not.toBeInTheDocument()
 
-    expect(screen.getByRole("link", { name: "Começar grátis" })).toHaveAttribute("href", "/criar-conta")
-    expect(screen.getByRole("link", { name: "Continuar com Unitário" })).toHaveAttribute("href", "/finalizar-compra?plan=unit")
-    expect(screen.getByRole("link", { name: "Continuar com Mensal" })).toHaveAttribute("href", "/finalizar-compra?plan=monthly")
-    expect(screen.getByRole("link", { name: "Continuar com Pro" })).toHaveAttribute("href", "/finalizar-compra?plan=pro")
+    expect(
+      within(screen.getByTestId("pricing-card-free")).getByRole("link", { name: "Começar com este plano" }),
+    ).toHaveAttribute("href", "/criar-conta")
+    expect(
+      within(screen.getByTestId("pricing-card-unit")).getByRole("link", { name: "Começar com este plano" }),
+    ).toHaveAttribute("href", "/finalizar-compra?plan=unit")
+    expect(
+      within(screen.getByTestId("pricing-card-monthly")).getByRole("link", { name: "Começar com este plano" }),
+    ).toHaveAttribute("href", "/finalizar-compra?plan=monthly")
+    expect(
+      within(screen.getByTestId("pricing-card-pro")).getByRole("link", { name: "Começar com este plano" }),
+    ).toHaveAttribute("href", "/finalizar-compra?plan=pro")
   })
 })

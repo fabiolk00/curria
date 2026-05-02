@@ -10,19 +10,19 @@ import { cn } from "@/lib/utils"
 
 const planActions: Record<PlanSlug, { cta: string; href: string }> = {
   free: {
-    cta: "Começar grátis",
+    cta: "Começar com este plano",
     href: PUBLIC_ROUTES.signup,
   },
   unit: {
-    cta: "Continuar com Unitário",
+    cta: "Começar com este plano",
     href: buildCheckoutPathWithPlan("unit"),
   },
   monthly: {
-    cta: "Continuar com Mensal",
+    cta: "Começar com este plano",
     href: buildCheckoutPathWithPlan("monthly"),
   },
   pro: {
-    cta: "Continuar com Pro",
+    cta: "Começar com este plano",
     href: buildCheckoutPathWithPlan("pro"),
   },
 }

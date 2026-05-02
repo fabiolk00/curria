@@ -4,6 +4,14 @@ import type { ReactNode } from "react"
 
 import Logo from "@/components/logo"
 
+function buildAuthModeHref(path: "/entrar" | "/criar-conta", redirectTo?: string | null): string {
+  if (!redirectTo || !redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    return path
+  }
+
+  return `${path}?redirect_to=${encodeURIComponent(redirectTo)}`
+}
+
 const features = [
   "Continue do ponto em que parou.",
   "Descubra o que melhorar no currículo com ajuda da IA.",
@@ -15,11 +23,13 @@ export default function AuthShell({
   title,
   description,
   children,
+  redirectTo,
 }: {
   mode: "login" | "signup"
   title: string
   description: string
   children: ReactNode
+  redirectTo?: string | null
 }) {
   return (
     <div className="min-h-screen flex">
@@ -76,7 +86,7 @@ export default function AuthShell({
 
             <div className="mb-8 flex items-center gap-2 rounded-xl bg-muted p-1.5">
               <Link
-                href="/entrar"
+                href={buildAuthModeHref("/entrar", redirectTo)}
                 className={`flex-1 rounded-lg px-4 py-3 text-center text-sm font-medium transition-all ${
                   mode === "login"
                     ? "bg-foreground text-background shadow-sm"
@@ -86,7 +96,7 @@ export default function AuthShell({
                 Entrar
               </Link>
               <Link
-                href="/criar-conta"
+                href={buildAuthModeHref("/criar-conta", redirectTo)}
                 className={`flex-1 rounded-lg px-4 py-3 text-center text-sm font-medium transition-all ${
                   mode === "signup"
                     ? "bg-foreground text-background shadow-sm"

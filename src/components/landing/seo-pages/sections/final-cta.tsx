@@ -29,7 +29,7 @@ export default function FinalCta({ theme, role }: { theme: SEOPageProps['theme']
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10">
               <a href="/criar-conta" className={`h-14 px-8 rounded-lg text-white font-semibold text-lg shadow-md transition-all hover:shadow-lg ${theme.accent} hover:opacity-90 flex items-center gap-2 w-full sm:w-auto justify-center`}>
-                Analisar Meu Currículo
+                Analisar Meu Currículo grátis
                 <ArrowRight className="w-5 h-5" />
               </a>
             </div>

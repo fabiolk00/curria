@@ -10,9 +10,24 @@ export const metadata: Metadata = buildPublicPageMetadata({
   canonicalPath: "/entrar",
 })
 
-export default function EntrarPage() {
+type AuthPageProps = {
+  searchParams?: {
+    redirect_to?: string | string[]
+  }
+}
+
+function readRedirectTo(value: string | string[] | undefined): string | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+export default function EntrarPage({ searchParams }: AuthPageProps) {
   return (
-    <AuthShell mode="login" title="Entrar na sua conta" description="">
+    <AuthShell
+      mode="login"
+      title="Entrar na sua conta"
+      description=""
+      redirectTo={readRedirectTo(searchParams?.redirect_to)}
+    >
       <LoginForm />
     </AuthShell>
   )

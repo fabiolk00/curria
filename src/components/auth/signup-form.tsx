@@ -15,7 +15,6 @@ import {
 import { getClerkErrorMessage } from "@/components/auth/clerk-error"
 import { Button } from "@/components/ui/button"
 import { getSafeRedirectPath } from "@/lib/auth/redirects"
-import { buildDefaultCheckoutOnboardingPath } from "@/lib/billing/checkout-navigation"
 import { navigateToUrl } from "@/lib/navigation/external"
 import { PROFILE_SETUP_PATH } from "@/lib/routes/app"
 
@@ -43,10 +42,7 @@ export default function SignupForm() {
   const { isLoaded: isSignUpLoaded, signUp, setActive } = useSignUp()
   const searchParams = useSearchParams()
   const requestedRedirectTo = searchParams.get("redirect_to")
-  const redirectTo = getSafeRedirectPath(
-    requestedRedirectTo,
-    buildDefaultCheckoutOnboardingPath(),
-  )
+  const redirectTo = getSafeRedirectPath(requestedRedirectTo, PROFILE_SETUP_PATH)
   const authenticatedRedirectTo = getSafeRedirectPath(requestedRedirectTo, PROFILE_SETUP_PATH)
 
   const [firstName, setFirstName] = useState("")

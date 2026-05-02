@@ -40,7 +40,7 @@ export default function HeroSection() {
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 lg:self-start">
             <Button asChild size="lg" className="gap-2 text-base font-semibold">
               <Link href="/criar-conta">
-                Ver meu score ATS grátis
+                Analisar meu currículo grátis
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

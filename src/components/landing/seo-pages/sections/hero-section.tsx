@@ -30,12 +30,12 @@ export default function HeroSection({ theme, content }: { theme: SEOPageProps['t
           
           <div className="flex flex-col sm:flex-row gap-4">
             <a href="/criar-conta" className={`h-12 px-6 rounded-md text-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all hover:shadow-md ${theme.accent} hover:opacity-90 flex items-center justify-center gap-2`}>
-              Otimizar meu Currículo
+              Analisar meu Currículo grátis
               <ArrowRight className="w-4 h-4" />
             </a>
             <a href="/criar-conta" className="h-12 px-6 rounded-md bg-white border border-zinc-200 text-zinc-700 font-medium hover:bg-zinc-50 transition-colors shadow-sm flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-zinc-400" />
-              Análise ATS Gratuita
+              Criar conta grátis
             </a>
           </div>
           

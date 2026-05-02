@@ -35,7 +35,7 @@ export default function FinalCta() {
             className="text-lg gap-3 h-14 px-8 font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
           >
             <Link href="/criar-conta">
-              Ver meu score ATS
+              Analisar meu currículo grátis
               <ArrowRight className="h-5 w-5" />
             </Link>
           </Button>

@@ -5,7 +5,6 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import SignupForm from "./signup-form"
-import { buildDefaultCheckoutOnboardingPath } from "@/lib/billing/checkout-navigation"
 
 const {
   mockSearchParamsGet,
@@ -140,7 +139,62 @@ describe("SignupForm", () => {
 
     await waitFor(() => {
       expect(mockSetActive).toHaveBeenCalledWith({ session: "sess_signup" })
-      expect(mockNavigateToUrl).toHaveBeenCalledWith(buildDefaultCheckoutOnboardingPath())
+      expect(mockNavigateToUrl).toHaveBeenCalledWith("/profile-setup")
+    })
+  })
+
+  it("respects redirect_to after email signup", async () => {
+    mockSearchParamsGet.mockImplementation((key: string) =>
+      key === "redirect_to" ? "/finalizar-compra?plan=monthly" : null,
+    )
+    const user = userEvent.setup()
+
+    render(<SignupForm />)
+
+    await user.type(screen.getByLabelText("Primeiro nome"), "Ana")
+    await user.type(screen.getByLabelText("Sobrenome"), "Teste")
+    await user.type(screen.getByLabelText("E-mail"), "ana@example.com")
+    await user.type(screen.getByLabelText("Senha"), "super-secret")
+    await user.click(screen.getByRole("button", { name: /^Continuar$/i }))
+
+    await waitFor(() => {
+      expect(mockSetActive).toHaveBeenCalledWith({ session: "sess_signup" })
+      expect(mockNavigateToUrl).toHaveBeenCalledWith("/finalizar-compra?plan=monthly")
+    })
+  })
+
+  it("starts the Google signup flow with profile setup by default", async () => {
+    const user = userEvent.setup()
+
+    render(<SignupForm />)
+
+    await user.click(screen.getByRole("button", { name: "Continuar com Google" }))
+
+    await waitFor(() => {
+      expect(mockSignUpAuthenticateWithRedirect).toHaveBeenCalledWith({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/profile-setup",
+      })
+    })
+  })
+
+  it("passes redirect_to to the Google signup flow", async () => {
+    mockSearchParamsGet.mockImplementation((key: string) =>
+      key === "redirect_to" ? "/finalizar-compra?plan=monthly" : null,
+    )
+    const user = userEvent.setup()
+
+    render(<SignupForm />)
+
+    await user.click(screen.getByRole("button", { name: "Continuar com Google" }))
+
+    await waitFor(() => {
+      expect(mockSignUpAuthenticateWithRedirect).toHaveBeenCalledWith({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/finalizar-compra?plan=monthly",
+      })
     })
   })
 
