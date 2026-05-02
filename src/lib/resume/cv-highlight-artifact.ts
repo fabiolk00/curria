@@ -118,6 +118,9 @@ export type CvHighlightState = {
   highlightSource: 'ats_enhancement' | 'job_targeting'
   highlightMode?: 'normal_job_match' | 'override_review'
   reviewItems?: ReviewWarningItem[]
+  reviewCardCount?: number
+  highlightRangeCount?: number
+  compatibilityStatus?: 'compatible' | 'likely_with_gaps' | 'incompatible'
   highlightGeneratedAt: string
   generatedAt: string
 }

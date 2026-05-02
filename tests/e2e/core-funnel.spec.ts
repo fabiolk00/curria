@@ -39,7 +39,8 @@ test.describe('dashboard core funnel', () => {
     await page.goto(`/dashboard/resume/compare/${sessionId}`)
 
     await expect(page.getByTestId('resume-comparison-view')).toBeVisible()
-    await expect(page.getByTestId('original-resume-document')).toBeVisible()
+    await expect(page.getByTestId('job-target-resume-frame')).toBeVisible()
+    await expect(page.getByTestId('original-resume-document')).toHaveCount(0)
     await expect(page.getByTestId('optimized-resume-document')).toContainText('Kubernetes')
 
     const [download] = await Promise.all([

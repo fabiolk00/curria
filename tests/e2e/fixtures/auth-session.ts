@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:3000'
+const e2ePort = process.env.E2E_PORT ?? '3000'
+const DEFAULT_BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${e2ePort}`
 
 type BootstrapOptions = {
   appUserId?: string

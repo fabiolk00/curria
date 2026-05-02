@@ -318,6 +318,13 @@ function collectAdjacentSignals(targetEvidence: TargetEvidence[] = []): string[]
   ))
 }
 
+function countInferredEvidence(targetEvidence: TargetEvidence[] = []): number {
+  return targetEvidence.filter((evidence) => (
+    evidence.evidenceLevel === 'strong_contextual_inference'
+    || evidence.evidenceLevel === 'semantic_bridge_only'
+  )).length
+}
+
 function buildJobTargetingExplanation(params: {
   session: Session
   optimizedCvState: Session['cvState']
@@ -719,7 +726,7 @@ export async function runJobTargetingPipeline(
       coreRequirementCoverageSupported: targetingPlan.coreRequirementCoverage?.supported,
       coreRequirementCoverageUnsupported: targetingPlan.coreRequirementCoverage?.unsupported,
       explicitSkillCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'explicit').length ?? 0,
-      inferredSkillCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'inferred').length ?? 0,
+      inferredSkillCount: countInferredEvidence(targetingPlan.targetEvidence),
       missingEvidenceCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'unsupported_gap').length ?? 0,
     }),
   )
@@ -741,7 +748,7 @@ export async function runJobTargetingPipeline(
     blockingSkipped: options?.skipLowFitRecoverableBlocking === true,
     coreUnsupportedSignals: targetingPlan.lowFitWarningGate?.coreRequirementCoverage.unsupportedSignals ?? [],
     explicitSkillCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'explicit').length ?? 0,
-    inferredSkillCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'inferred').length ?? 0,
+    inferredSkillCount: countInferredEvidence(targetingPlan.targetEvidence),
     missingEvidenceCount: targetingPlan.targetEvidence?.filter((evidence) => evidence.evidenceLevel === 'unsupported_gap').length ?? 0,
   })
 

@@ -40,7 +40,9 @@ type ApiMockOptions = {
   workspace?: SessionWorkspace
 }
 
-const DEFAULT_ASSET_BASE_URL = 'http://127.0.0.1:3000/__e2e-assets'
+const e2ePort = process.env.E2E_PORT ?? '3000'
+const DEFAULT_E2E_BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${e2ePort}`
+const DEFAULT_ASSET_BASE_URL = `${DEFAULT_E2E_BASE_URL}/__e2e-assets`
 
 function buildDefaultArtifactResponse(isReady: boolean): FileResponse {
   if (!isReady) {

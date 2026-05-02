@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-const baseURL = 'http://127.0.0.1:3000'
+const e2ePort = process.env.E2E_PORT ?? '3000'
+const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${e2ePort}`
 const command = process.execPath
 const nextBin = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url))
-const args = [nextBin, 'dev', '--hostname', '127.0.0.1', '--port', '3000']
+const args = [nextBin, 'dev', '--hostname', '127.0.0.1', '--port', e2ePort]
 const rawEnv = {
   ...process.env,
   ASAAS_ACCESS_TOKEN: process.env.ASAAS_ACCESS_TOKEN ?? 'dummy',
