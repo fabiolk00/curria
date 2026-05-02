@@ -1,10 +1,27 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
-type ShadowComparisonRecord = {
+type GapAnalysisSource = 'provided' | 'synthetic' | 'real_llm'
+type PipelineRepresentativeness = 'full' | 'partial'
+type RewriteValidationCoverage = 'none' | 'partial' | 'full'
+
+type ShadowRunConfigRecord = {
+  allowLlm?: boolean
+  useRealGapAnalysis?: boolean
+  includeRewriteValidation?: boolean
+  persist?: boolean
+  concurrency?: number
+  limit?: number
+  inputPathHash?: string
+  totalInputCases?: number
+}
+
+export type ShadowComparisonRecord = {
   caseId?: string
   domain?: string
   requirementType?: string
+  gapAnalysisSource?: GapAnalysisSource
+  runConfig?: ShadowRunConfigRecord
   legacyScore?: number
   assessmentScore?: number
   scoreDelta?: number
@@ -48,15 +65,35 @@ type ShadowComparisonRecord = {
     criticalGaps?: string[]
   }
   validation?: {
+    executed?: boolean
     blocked?: boolean
     issueTypes?: string[]
     factualViolation?: boolean
+    generatedClaimTraceCount?: number
+    missingTraceCount?: number
   }
 }
 
 export type ShadowDivergenceReport = {
   CUTOVER_READY: boolean
   cutoverReasons: string[]
+  runConfig: {
+    allowLlm: boolean
+    useRealGapAnalysis: boolean
+    includeRewriteValidation: boolean
+    persist: boolean
+    limit?: number
+    concurrency: number
+    totalInputCases: number
+    processedCases: number
+    gapAnalysisSources: {
+      provided: number
+      synthetic: number
+      realLlm: number
+    }
+    pipelineRepresentativeness: PipelineRepresentativeness
+    rewriteValidationCoverage: RewriteValidationCoverage
+  }
   totalCases: number
   successfulCases: number
   failedCases: number
@@ -71,6 +108,7 @@ export type ShadowDivergenceReport = {
   possibleFalsePositiveCandidates: number
   possibleFalseNegativeCandidates: number
   factualValidationViolations: number
+  rewriteValidationBlockedCases: number
   confirmedFalsePositiveForbiddenClaims: number
   confirmedFalseNegativeCoreExplicit: number
   top30LargestScoreDivergences: Array<{
@@ -144,6 +182,10 @@ function isSuccessful(record: ShadowComparisonRecord): boolean {
   return record.runtime?.success !== false
 }
 
+function everyRecord(records: ShadowComparisonRecord[], predicate: (record: ShadowComparisonRecord) => boolean): boolean {
+  return records.length > 0 && records.every(predicate)
+}
+
 function groupTop(
   records: ShadowComparisonRecord[],
   getKey: (record: ShadowComparisonRecord) => string | undefined,
@@ -191,11 +233,57 @@ export function parseShadowComparisonInput(source: string): ShadowComparisonReco
     .filter(shouldKeepRecord)
 }
 
+function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceReport['runConfig'] {
+  const processedCases = records.length
+  const successfulRecords = records.filter(isSuccessful)
+  const provided = records.filter((record) => record.gapAnalysisSource === 'provided').length
+  const synthetic = records.filter((record) => record.gapAnalysisSource === 'synthetic' || record.gapAnalysisSource === undefined).length
+  const realLlm = records.filter((record) => record.gapAnalysisSource === 'real_llm').length
+  const useRealGapAnalysis = everyRecord(records, (record) => record.runConfig?.useRealGapAnalysis === true)
+  const includeRewriteValidation = everyRecord(records, (record) => record.runConfig?.includeRewriteValidation === true)
+  const persist = everyRecord(records, (record) => record.runConfig?.persist === true)
+  const validationExecutedCount = successfulRecords.filter((record) => record.validation?.executed === true).length
+  const rewriteValidationCoverage: RewriteValidationCoverage = validationExecutedCount === 0
+    ? 'none'
+    : validationExecutedCount === successfulRecords.length
+      ? 'full'
+      : 'partial'
+  const pipelineRepresentativeness: PipelineRepresentativeness = processedCases > 0
+  && (useRealGapAnalysis || provided === processedCases)
+    ? 'full'
+    : 'partial'
+  const limits = new Set(records.map((record) => record.runConfig?.limit).filter((value): value is number => typeof value === 'number'))
+  const totalInputCases = Math.max(
+    processedCases,
+    ...records.map((record) => record.runConfig?.totalInputCases ?? 0),
+  )
+
+  return {
+    allowLlm: everyRecord(records, (record) => record.runConfig?.allowLlm === true),
+    useRealGapAnalysis,
+    includeRewriteValidation,
+    persist,
+    ...(limits.size === 1 ? { limit: [...limits][0] } : {}),
+    concurrency: Math.max(0, ...records.map((record) => record.runConfig?.concurrency ?? 0)),
+    totalInputCases,
+    processedCases,
+    gapAnalysisSources: {
+      provided,
+      synthetic,
+      realLlm,
+    },
+    pipelineRepresentativeness,
+    rewriteValidationCoverage,
+  }
+}
+
 export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): ShadowDivergenceReport {
   const successfulRecords = records.filter(isSuccessful)
   const failedCases = records.length - successfulRecords.length
   const deltas = successfulRecords.map((record) => Math.abs(readRecordScoreDelta(record)))
+  const runConfig = buildRunConfig(records)
   const factualValidationViolations = successfulRecords.filter((record) => record.validation?.factualViolation).length
+  const rewriteValidationBlockedCases = successfulRecords.filter((record) => record.validation?.blocked).length
   const confirmedFalsePositiveForbiddenClaims = successfulRecords.filter((record) => (
     record.validation?.issueTypes?.some((issueType) => /forbidden|unsupported|unsafe_direct_claim/u.test(issueType))
   )).length
@@ -215,8 +303,20 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
   if (p95 > 30) {
     cutoverReasons.push('p95_score_delta_above_30')
   }
+  if (runConfig.pipelineRepresentativeness === 'partial') {
+    cutoverReasons.push('pipeline_representativeness_partial')
+  }
+  if (runConfig.rewriteValidationCoverage !== 'full') {
+    cutoverReasons.push('rewrite_validation_not_executed')
+  }
+  if (!runConfig.persist) {
+    cutoverReasons.push('shadow_results_not_persisted')
+  }
   if (factualValidationViolations > 0) {
     cutoverReasons.push('factual_validation_violations_present')
+  }
+  if (rewriteValidationBlockedCases > 0) {
+    cutoverReasons.push('rewrite_validation_blocked_cases_present')
   }
   if (confirmedFalsePositiveForbiddenClaims > 0) {
     cutoverReasons.push('confirmed_false_positive_forbidden_claims_present')
@@ -231,6 +331,7 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
   return {
     CUTOVER_READY: cutoverReasons.length === 0,
     cutoverReasons,
+    runConfig,
     totalCases: records.length,
     successfulCases: successfulRecords.length,
     failedCases,
@@ -249,6 +350,7 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
       readRecordScoreDelta(record) < 0 && readUnsupportedDelta(record) > 0
     )).length,
     factualValidationViolations,
+    rewriteValidationBlockedCases,
     confirmedFalsePositiveForbiddenClaims,
     confirmedFalseNegativeCoreExplicit,
     top30LargestScoreDivergences: successfulRecords
@@ -279,6 +381,20 @@ export function renderShadowDivergenceMarkdown(report: ShadowDivergenceReport): 
     `- Low-fit divergent count: ${report.lowFitDivergentCount}`,
     `- Critical gap divergent count: ${report.criticalGapDivergentCount}`,
     `- Factual validation violations: ${report.factualValidationViolations}`,
+    `- Pipeline representativeness: ${report.runConfig.pipelineRepresentativeness}`,
+    `- Rewrite validation coverage: ${report.runConfig.rewriteValidationCoverage}`,
+    `- Persisted shadow results: ${report.runConfig.persist}`,
+    '',
+    '## Run Config',
+    '',
+    `- allowLlm: ${report.runConfig.allowLlm}`,
+    `- useRealGapAnalysis: ${report.runConfig.useRealGapAnalysis}`,
+    `- includeRewriteValidation: ${report.runConfig.includeRewriteValidation}`,
+    `- concurrency: ${report.runConfig.concurrency}`,
+    `- limit: ${report.runConfig.limit ?? 'none'}`,
+    `- totalInputCases: ${report.runConfig.totalInputCases}`,
+    `- processedCases: ${report.runConfig.processedCases}`,
+    `- gapAnalysisSources: provided=${report.runConfig.gapAnalysisSources.provided}, synthetic=${report.runConfig.gapAnalysisSources.synthetic}, realLlm=${report.runConfig.gapAnalysisSources.realLlm}`,
     '',
     '## Cutover Reasons',
     '',

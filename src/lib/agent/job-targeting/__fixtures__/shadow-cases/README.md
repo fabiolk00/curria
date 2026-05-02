@@ -23,6 +23,7 @@ type JobTargetingShadowCase = {
   domain?: string
   cvState: CVState
   targetJobDescription: string
+  gapAnalysis?: GapAnalysisResult
   metadata?: {
     originalSessionId?: string
     createdAt?: string
@@ -30,6 +31,8 @@ type JobTargetingShadowCase = {
   }
 }
 ```
+
+If `gapAnalysis` is omitted, the batch runner uses a deterministic synthetic fallback unless `--use-real-gap-analysis` is provided. Synthetic fallback runs are useful for smoke/regression, but the analyzer marks them as `pipelineRepresentativeness=partial`.
 
 Use the anonymizer for raw local exports:
 

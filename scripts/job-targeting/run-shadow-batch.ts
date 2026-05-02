@@ -14,6 +14,8 @@ type CliOptions = {
   concurrency?: number
   persist?: boolean
   disableLlm?: boolean
+  useRealGapAnalysis?: boolean
+  includeRewriteValidation?: boolean
   report?: boolean
 }
 
@@ -24,8 +26,9 @@ function readNumber(value: string | undefined, fallback: number): number {
 
 function parseArgs(args: string[]): CliOptions {
   const options: CliOptions = {
-    concurrency: 3,
     disableLlm: true,
+    useRealGapAnalysis: false,
+    includeRewriteValidation: false,
     report: true,
   }
 
@@ -66,6 +69,17 @@ function parseArgs(args: string[]): CliOptions {
       continue
     }
 
+    if (arg === '--use-real-gap-analysis') {
+      options.useRealGapAnalysis = true
+      continue
+    }
+
+    if (arg === '--include-rewrite-validation') {
+      options.includeRewriteValidation = true
+      options.disableLlm = false
+      continue
+    }
+
     if (arg === '--no-report') {
       options.report = false
     }
@@ -83,19 +97,41 @@ async function main() {
       '  --input .local/job-targeting-shadow-cases/cases.jsonl \\',
       '  --output .local/job-targeting-shadow-results/results.jsonl \\',
       '  --limit 500 \\',
-      '  --concurrency 3',
+      '  --concurrency 3 \\',
+      '  --persist',
     ].join('\n'))
     process.exitCode = 1
     return
+  }
+
+  const concurrency = options.concurrency ?? (
+    options.includeRewriteValidation
+      ? 1
+      : options.useRealGapAnalysis
+        ? 2
+        : 3
+  )
+
+  if (options.useRealGapAnalysis || options.includeRewriteValidation) {
+    console.warn(JSON.stringify({
+      event: 'job_targeting.shadow_batch.llm_mode_enabled',
+      useRealGapAnalysis: options.useRealGapAnalysis ?? false,
+      includeRewriteValidation: options.includeRewriteValidation ?? false,
+      allowLlm: !(options.disableLlm ?? true),
+      concurrency,
+      message: 'This run may incur OpenAI latency/cost. It does not generate artifacts or consume user credits.',
+    }))
   }
 
   const summary = await runShadowBatch({
     inputPath: options.input,
     outputPath: options.output,
     limit: options.limit ?? 500,
-    concurrency: options.concurrency ?? 3,
+    concurrency,
     persist: options.persist ?? false,
     disableLlm: options.disableLlm ?? true,
+    useRealGapAnalysis: options.useRealGapAnalysis ?? false,
+    includeRewriteValidation: options.includeRewriteValidation ?? false,
   })
 
   let cutoverReady: boolean | undefined

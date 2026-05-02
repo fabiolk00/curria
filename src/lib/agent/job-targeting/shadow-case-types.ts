@@ -1,6 +1,19 @@
 import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import type { TargetingPlan } from '@/types/agent'
-import type { CVState } from '@/types/cv'
+import type { CVState, GapAnalysisResult } from '@/types/cv'
+
+export type ShadowGapAnalysisSource = 'provided' | 'synthetic' | 'real_llm'
+
+export type ShadowBatchRunConfig = {
+  allowLlm: boolean
+  useRealGapAnalysis: boolean
+  includeRewriteValidation: boolean
+  persist: boolean
+  concurrency: number
+  limit?: number
+  inputPathHash?: string
+  totalInputCases?: number
+}
 
 export type JobTargetingShadowCase = {
   id: string
@@ -8,6 +21,7 @@ export type JobTargetingShadowCase = {
   domain?: string
   cvState: CVState
   targetJobDescription: string
+  gapAnalysis?: GapAnalysisResult
   expected?: {
     notes?: string
     knownStrongSignals?: string[]
@@ -50,15 +64,20 @@ export type ShadowComparisonSnapshot = {
 }
 
 export type ShadowValidationSnapshot = {
+  executed: boolean
   blocked: boolean
   issueTypes: string[]
   factualViolation: boolean
+  generatedClaimTraceCount?: number
+  missingTraceCount?: number
 }
 
 export type ShadowBatchResult = {
   caseId: string
   domain?: string
   source?: JobTargetingShadowCase['source']
+  gapAnalysisSource: ShadowGapAnalysisSource
+  runConfig: ShadowBatchRunConfig
   legacy: ShadowLegacySnapshot
   assessment: ShadowAssessmentSnapshot
   comparison: ShadowComparisonSnapshot

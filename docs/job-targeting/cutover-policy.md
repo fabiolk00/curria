@@ -18,7 +18,41 @@ tsx scripts/job-targeting/run-shadow-batch.ts \
   --input .local/job-targeting-shadow-cases/cases.jsonl \
   --output .local/job-targeting-shadow-results/results.jsonl \
   --limit 500 \
-  --concurrency 3
+  --concurrency 3 \
+  --persist
+```
+
+For the most representative compatibility cutover run, use real gap analysis instead of the deterministic synthetic fallback:
+
+```bash
+tsx scripts/job-targeting/run-shadow-batch.ts \
+  --input .local/job-targeting-shadow-cases/cases.jsonl \
+  --output .local/job-targeting-shadow-results/results-real-gap.jsonl \
+  --limit 500 \
+  --concurrency 2 \
+  --persist \
+  --use-real-gap-analysis
+```
+
+Generate or regenerate the cutover report from an existing result file:
+
+```bash
+tsx scripts/job-targeting/analyze-shadow-divergence.ts \
+  .local/job-targeting-shadow-results/results-real-gap.jsonl \
+  --output-dir .local/job-targeting-shadow-results
+```
+
+Run rewrite/trace validation on a smaller controlled sample:
+
+```bash
+tsx scripts/job-targeting/run-shadow-batch.ts \
+  --input .local/job-targeting-shadow-cases/cases.jsonl \
+  --output .local/job-targeting-shadow-results/results-rewrite-validation.jsonl \
+  --limit 100 \
+  --concurrency 1 \
+  --persist \
+  --use-real-gap-analysis \
+  --include-rewrite-validation
 ```
 
 The runner writes one JSONL result per case, persists shadow comparisons when `--persist` is used, and generates:
@@ -26,7 +60,7 @@ The runner writes one JSONL result per case, persists shadow comparisons when `-
 - `.local/job-targeting-shadow-results/report.json`
 - `.local/job-targeting-shadow-results/report.md`
 
-The report must contain `CUTOVER_READY=true` before `JOB_COMPATIBILITY_ASSESSMENT_CUTOVER_APPROVED=true` can be set.
+The report must contain `CUTOVER_READY=true` before `JOB_COMPATIBILITY_ASSESSMENT_CUTOVER_APPROVED=true` can be set. The analyzer is conservative: it returns `CUTOVER_READY=false` when the batch used synthetic gap analysis, did not persist shadow comparisons, or did not execute rewrite validation for the final cutover report.
 
 ## Promotion Criteria
 

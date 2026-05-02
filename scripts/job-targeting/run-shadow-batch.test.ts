@@ -9,17 +9,29 @@ import type { JobTargetingShadowCase } from '@/lib/agent/job-targeting/shadow-ca
 import type { CVState } from '@/types/cv'
 
 const {
+  mockAnalyzeGap,
   mockBuildTargetedRewritePlan,
   mockEvaluateJobCompatibility,
+  mockRewriteResumeFull,
   mockCreateJobCompatibilityShadowComparison,
 } = vi.hoisted(() => ({
+  mockAnalyzeGap: vi.fn(),
   mockBuildTargetedRewritePlan: vi.fn(),
   mockEvaluateJobCompatibility: vi.fn(),
+  mockRewriteResumeFull: vi.fn(),
   mockCreateJobCompatibilityShadowComparison: vi.fn(),
+}))
+
+vi.mock('@/lib/agent/tools/gap-analysis', () => ({
+  analyzeGap: mockAnalyzeGap,
 }))
 
 vi.mock('@/lib/agent/tools/build-targeting-plan', () => ({
   buildTargetedRewritePlan: mockBuildTargetedRewritePlan,
+}))
+
+vi.mock('@/lib/agent/tools/rewrite-resume-full', () => ({
+  rewriteResumeFull: mockRewriteResumeFull,
 }))
 
 vi.mock('@/lib/agent/job-targeting/compatibility/assessment', () => ({
@@ -39,6 +51,15 @@ const cvState: CVState = {
   skills: ['SQL'],
   education: [],
   certifications: [],
+}
+
+function buildGapAnalysis(matchScore = 88) {
+  return {
+    matchScore,
+    missingSkills: ['Ferramenta faltante'],
+    weakAreas: ['Resumo'],
+    improvementSuggestions: ['Priorizar evidencias reais.'],
+  }
 }
 
 function buildCase(id: string): JobTargetingShadowCase {
@@ -107,6 +128,7 @@ function buildPlan() {
 
 function buildAssessment() {
   return {
+    targetRole: 'Analista de Dados',
     scoreBreakdown: {
       total: 82,
       scoreVersion: 'job-compat-score-v1',
@@ -118,6 +140,8 @@ function buildAssessment() {
     criticalGaps: [],
     reviewNeededGaps: [],
     claimPolicy: {
+      allowedClaims: [],
+      cautiousClaims: [],
       forbiddenClaims: [],
     },
     audit: {
@@ -138,6 +162,36 @@ describe('runShadowBatch', () => {
     vi.clearAllMocks()
     mockBuildTargetedRewritePlan.mockResolvedValue(buildPlan())
     mockEvaluateJobCompatibility.mockResolvedValue(buildAssessment())
+    mockAnalyzeGap.mockResolvedValue({
+      output: { success: true, result: buildGapAnalysis(91) },
+      result: buildGapAnalysis(91),
+      repairAttempted: false,
+    })
+    mockRewriteResumeFull.mockResolvedValue({
+      success: true,
+      optimizedCvState: cvState,
+      generatedClaimTrace: [{
+        section: 'summary',
+        itemPath: 'summary',
+        generatedText: cvState.summary,
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'test',
+      }, {
+        section: 'skills',
+        itemPath: 'skills.0',
+        generatedText: 'SQL',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'test',
+      }],
+    })
     mockCreateJobCompatibilityShadowComparison.mockResolvedValue(undefined)
   })
 
@@ -162,6 +216,14 @@ describe('runShadowBatch', () => {
     expect(lines).toHaveLength(2)
     expect(JSON.parse(lines[0] ?? '{}')).toEqual(expect.objectContaining({
       caseId: 'case-1',
+      gapAnalysisSource: 'synthetic',
+      runConfig: expect.objectContaining({
+        allowLlm: false,
+        useRealGapAnalysis: false,
+        includeRewriteValidation: false,
+        persist: false,
+        concurrency: 2,
+      }),
       runtime: expect.objectContaining({ success: true }),
     }))
   })
@@ -173,6 +235,93 @@ describe('runShadowBatch', () => {
 
     expect(summary.total).toBe(1)
     expect(mockBuildTargetedRewritePlan).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses provided gap analysis when the case includes one', async () => {
+    const providedGapAnalysis = buildGapAnalysis(94)
+    const { input, output } = await writeCases([{
+      ...buildCase('case-provided'),
+      gapAnalysis: providedGapAnalysis,
+    }])
+
+    await runShadowBatch({ inputPath: input, outputPath: output })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(result.gapAnalysisSource).toBe('provided')
+    expect(mockBuildTargetedRewritePlan).toHaveBeenCalledWith(expect.objectContaining({
+      gapAnalysis: providedGapAnalysis,
+    }))
+    expect(mockAnalyzeGap).not.toHaveBeenCalled()
+  })
+
+  it('uses real LLM gap analysis when requested', async () => {
+    const { input, output } = await writeCases([buildCase('case-real-gap')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      useRealGapAnalysis: true,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(result.gapAnalysisSource).toBe('real_llm')
+    expect(result.runConfig).toEqual(expect.objectContaining({
+      allowLlm: true,
+      useRealGapAnalysis: true,
+      concurrency: 2,
+    }))
+    expect(mockAnalyzeGap).toHaveBeenCalledWith(
+      cvState,
+      'Cargo: Analista de Dados\nRequisitos: SQL',
+      'shadow_batch',
+      'shadow_case_case-real-gap',
+    )
+    expect(mockBuildTargetedRewritePlan).toHaveBeenCalledWith(expect.objectContaining({
+      gapAnalysis: buildGapAnalysis(91),
+    }))
+  })
+
+  it('persists shadow comparison only when requested', async () => {
+    const { input, output } = await writeCases([buildCase('case-persist')])
+
+    await runShadowBatch({ inputPath: input, outputPath: output })
+    expect(mockCreateJobCompatibilityShadowComparison).not.toHaveBeenCalled()
+
+    await runShadowBatch({ inputPath: input, outputPath: output, persist: true })
+    expect(mockCreateJobCompatibilityShadowComparison).toHaveBeenCalledWith(expect.objectContaining({
+      caseId: 'case-persist',
+      source: 'batch',
+    }))
+  })
+
+  it('runs rewrite validation when requested', async () => {
+    const { input, output } = await writeCases([buildCase('case-rewrite')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      disableLlm: false,
+      concurrency: 1,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(mockRewriteResumeFull).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'job_targeting',
+      userId: 'shadow_batch',
+      sessionId: 'shadow_case_case-rewrite',
+    }))
+    expect(result.runConfig).toEqual(expect.objectContaining({
+      includeRewriteValidation: true,
+      allowLlm: true,
+      concurrency: 1,
+    }))
+    expect(result.validation).toEqual(expect.objectContaining({
+      executed: true,
+      blocked: false,
+      factualViolation: false,
+      generatedClaimTraceCount: 2,
+    }))
   })
 
   it('marks a per-case error without killing the whole batch', async () => {

@@ -4,6 +4,7 @@ import {
   buildShadowDivergenceReport,
   parseShadowComparisonInput,
   percentile,
+  type ShadowComparisonRecord,
 } from './analyze-shadow-divergence'
 
 function result(index: number, delta: number) {
@@ -37,6 +38,29 @@ function result(index: number, delta: number) {
   }
 }
 
+function readyResult(index: number, overrides: Partial<ShadowComparisonRecord> = {}): ShadowComparisonRecord {
+  return {
+    ...result(index, 3),
+    gapAnalysisSource: 'provided',
+    runConfig: {
+      allowLlm: true,
+      useRealGapAnalysis: false,
+      includeRewriteValidation: true,
+      persist: true,
+      concurrency: 3,
+      limit: 500,
+      totalInputCases: 500,
+    },
+    validation: {
+      executed: true,
+      blocked: false,
+      factualViolation: false,
+      issueTypes: [],
+    },
+    ...overrides,
+  }
+}
+
 describe('analyze-shadow-divergence', () => {
   it('calculates p95 using nearest-rank percentile', () => {
     expect(percentile([1, 2, 3, 4, 100], 95)).toBe(100)
@@ -60,16 +84,125 @@ describe('analyze-shadow-divergence', () => {
 
   it('marks CUTOVER_READY=false when factual violations exist', () => {
     const records = Array.from({ length: 500 }, (_, index) => ({
-      ...result(index, 3),
+      ...readyResult(index),
       validation: index === 0
-        ? { factualViolation: true, issueTypes: ['forbidden_term'] }
-        : { factualViolation: false, issueTypes: [] },
+        ? { executed: true, blocked: true, factualViolation: true, issueTypes: ['forbidden_term'] }
+        : { executed: true, blocked: false, factualViolation: false, issueTypes: [] },
     }))
 
     const report = buildShadowDivergenceReport(records)
 
     expect(report.CUTOVER_READY).toBe(false)
     expect(report.cutoverReasons).toContain('factual_validation_violations_present')
+  })
+
+  it('includes aggregated run config and can mark ready when provided gap analysis covers all cases', () => {
+    const report = buildShadowDivergenceReport(Array.from({ length: 500 }, (_, index) => readyResult(index)))
+
+    expect(report.CUTOVER_READY).toBe(true)
+    expect(report.runConfig).toEqual(expect.objectContaining({
+      allowLlm: true,
+      useRealGapAnalysis: false,
+      includeRewriteValidation: true,
+      persist: true,
+      limit: 500,
+      concurrency: 3,
+      totalInputCases: 500,
+      processedCases: 500,
+      pipelineRepresentativeness: 'full',
+      rewriteValidationCoverage: 'full',
+      gapAnalysisSources: {
+        provided: 500,
+        synthetic: 0,
+        realLlm: 0,
+      },
+    }))
+  })
+
+  it('can mark ready when real gap analysis was used for all cases', () => {
+    const records = Array.from({ length: 500 }, (_, index) => readyResult(index, {
+      gapAnalysisSource: 'real_llm',
+      runConfig: {
+        allowLlm: true,
+        useRealGapAnalysis: true,
+        includeRewriteValidation: true,
+        persist: true,
+        concurrency: 2,
+        limit: 500,
+        totalInputCases: 500,
+      },
+    }))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(true)
+    expect(report.runConfig.pipelineRepresentativeness).toBe('full')
+    expect(report.runConfig.gapAnalysisSources.realLlm).toBe(500)
+  })
+
+  it('marks CUTOVER_READY=false when synthetic gap analysis is present', () => {
+    const records = Array.from({ length: 500 }, (_, index) => readyResult(index, index === 0
+      ? { gapAnalysisSource: 'synthetic' }
+      : {}))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.runConfig.pipelineRepresentativeness).toBe('partial')
+    expect(report.cutoverReasons).toContain('pipeline_representativeness_partial')
+  })
+
+  it('marks CUTOVER_READY=false when results were not persisted', () => {
+    const records = Array.from({ length: 500 }, (_, index) => readyResult(index, {
+      runConfig: {
+        allowLlm: true,
+        useRealGapAnalysis: false,
+        includeRewriteValidation: true,
+        persist: false,
+        concurrency: 3,
+        limit: 500,
+        totalInputCases: 500,
+      },
+    }))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.cutoverReasons).toContain('shadow_results_not_persisted')
+  })
+
+  it('marks CUTOVER_READY=false when rewrite validation was not executed', () => {
+    const records = Array.from({ length: 500 }, (_, index) => ({
+      ...readyResult(index),
+      validation: undefined,
+      runConfig: {
+        allowLlm: false,
+        useRealGapAnalysis: false,
+        includeRewriteValidation: false,
+        persist: true,
+        concurrency: 3,
+        limit: 500,
+        totalInputCases: 500,
+      },
+    }))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.runConfig.rewriteValidationCoverage).toBe('none')
+    expect(report.cutoverReasons).toContain('rewrite_validation_not_executed')
+  })
+
+  it('marks CUTOVER_READY=false when failed cases exist', () => {
+    const records = Array.from({ length: 500 }, (_, index) => readyResult(index, index === 0
+      ? { runtime: { success: false, error: 'case failed' } }
+      : {}))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.failedCases).toBe(1)
+    expect(report.cutoverReasons).toContain('failed_cases_present')
   })
 
   it('parses shadow comparison logs and batch JSONL results', () => {

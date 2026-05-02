@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 
 import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
+import { validateGeneratedClaims } from '@/lib/agent/job-targeting/compatibility/structured-validation'
 import {
   buildShadowBatchResult,
   snapshotAssessment,
@@ -9,11 +11,18 @@ import {
 import type {
   JobTargetingShadowCase,
   ShadowBatchResult,
+  ShadowBatchRunConfig,
+  ShadowGapAnalysisSource,
   ShadowLegacySnapshot,
+  ShadowValidationSnapshot,
 } from '@/lib/agent/job-targeting/shadow-case-types'
 import { buildJobTargetingScoreBreakdownFromPlan } from '@/lib/agent/job-targeting/score-breakdown'
+import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
+import { rewriteResumeFull } from '@/lib/agent/tools/rewrite-resume-full'
 import { createJobCompatibilityShadowComparison } from '@/lib/db/job-compatibility-shadow-comparison'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
+import type { TargetingPlan } from '@/types/agent'
 import type { GapAnalysisResult } from '@/types/cv'
 
 export type RunShadowBatchOptions = {
@@ -23,6 +32,8 @@ export type RunShadowBatchOptions = {
   concurrency?: number
   persist?: boolean
   disableLlm?: boolean
+  useRealGapAnalysis?: boolean
+  includeRewriteValidation?: boolean
 }
 
 export type RunShadowBatchSummary = {
@@ -30,6 +41,13 @@ export type RunShadowBatchSummary = {
   successful: number
   failed: number
   outputPath: string
+}
+
+function hashInputPath(inputPath: string): string {
+  return createHash('sha256')
+    .update(path.resolve(inputPath))
+    .digest('hex')
+    .slice(0, 16)
 }
 
 function parseJsonLines(source: string): unknown[] {
@@ -106,7 +124,10 @@ async function runLegacyCompatibilityPath(params: {
   testCase: JobTargetingShadowCase
   gapAnalysis: GapAnalysisResult
   disableLlm: boolean
-}): Promise<ShadowLegacySnapshot> {
+}): Promise<{
+  legacy: ShadowLegacySnapshot
+  targetingPlan: TargetingPlan
+}> {
   const targetingPlan = await buildTargetedRewritePlan({
     cvState: params.testCase.cvState,
     targetJobDescription: params.testCase.targetJobDescription,
@@ -122,16 +143,122 @@ async function runLegacyCompatibilityPath(params: {
   })
 
   return {
-    score: scoreBreakdown.total,
-    lowFitTriggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
-    unsupportedCount: targetingPlan.targetEvidence?.filter((item) => item.evidenceLevel === 'unsupported_gap').length ?? 0,
-    criticalGaps: scoreBreakdown.criticalGaps,
+    legacy: {
+      score: scoreBreakdown.total,
+      lowFitTriggered: targetingPlan.lowFitWarningGate?.triggered ?? false,
+      unsupportedCount: targetingPlan.targetEvidence?.filter((item) => item.evidenceLevel === 'unsupported_gap').length ?? 0,
+      criticalGaps: scoreBreakdown.criticalGaps,
+    },
+    targetingPlan,
+  }
+}
+
+async function resolveGapAnalysis(params: {
+  testCase: JobTargetingShadowCase
+  useRealGapAnalysis: boolean
+}): Promise<{
+  gapAnalysis: GapAnalysisResult
+  gapAnalysisSource: ShadowGapAnalysisSource
+}> {
+  if (params.useRealGapAnalysis) {
+    const execution = await analyzeGap(
+      params.testCase.cvState,
+      params.testCase.targetJobDescription,
+      'shadow_batch',
+      `shadow_case_${params.testCase.id}`,
+    )
+
+    if (!execution.result) {
+      throw new Error(execution.output.success ? 'Real gap analysis returned no result.' : execution.output.error)
+    }
+
+    return {
+      gapAnalysis: execution.result,
+      gapAnalysisSource: 'real_llm',
+    }
+  }
+
+  if (params.testCase.gapAnalysis) {
+    return {
+      gapAnalysis: params.testCase.gapAnalysis,
+      gapAnalysisSource: 'provided',
+    }
+  }
+
+  return {
+    gapAnalysis: buildBatchGapAnalysis(params.testCase),
+    gapAnalysisSource: 'synthetic',
+  }
+}
+
+async function runRewriteValidation(params: {
+  testCase: JobTargetingShadowCase
+  gapAnalysis: GapAnalysisResult
+  targetingPlan: TargetingPlan
+  assessment: JobCompatibilityAssessment
+  allowLlm: boolean
+}): Promise<ShadowValidationSnapshot> {
+  if (!params.allowLlm) {
+    return {
+      executed: true,
+      blocked: true,
+      issueTypes: ['rewrite_validation_requires_llm'],
+      factualViolation: false,
+      generatedClaimTraceCount: 0,
+      missingTraceCount: 0,
+    }
+  }
+
+  const rewrite = await rewriteResumeFull({
+    mode: 'job_targeting',
+    cvState: params.testCase.cvState,
+    targetJobDescription: params.testCase.targetJobDescription,
+    gapAnalysis: params.gapAnalysis,
+    targetingPlan: params.targetingPlan,
+    jobCompatibilityAssessment: params.assessment,
+    userId: 'shadow_batch',
+    sessionId: `shadow_case_${params.testCase.id}`,
+  })
+
+  if (!rewrite.success || !rewrite.optimizedCvState) {
+    return {
+      executed: true,
+      blocked: true,
+      issueTypes: ['rewrite_failed'],
+      factualViolation: false,
+      generatedClaimTraceCount: rewrite.generatedClaimTrace?.length ?? 0,
+      missingTraceCount: 0,
+    }
+  }
+
+  const validation = validateGeneratedClaims({
+    generatedCvState: rewrite.optimizedCvState,
+    generatedClaimTraces: rewrite.generatedClaimTrace,
+    requireClaimTrace: true,
+    claimPolicy: params.assessment.claimPolicy,
+    targetRole: {
+      value: params.assessment.targetRole,
+      permission: params.targetingPlan.targetRolePositioning?.permission,
+    },
+  })
+  const issueTypes = Array.from(new Set(validation.issues.map((issue) => issue.type)))
+  const missingTraceCount = validation.issues.filter((issue) => issue.type === 'missing_claim_trace').length
+
+  return {
+    executed: true,
+    blocked: validation.blocked,
+    issueTypes,
+    factualViolation: validation.blocked,
+    generatedClaimTraceCount: rewrite.generatedClaimTrace?.length ?? 0,
+    missingTraceCount,
   }
 }
 
 function errorResult(params: {
   testCase: JobTargetingShadowCase
   startedAt: string
+  gapAnalysisSource: ShadowGapAnalysisSource
+  runConfig: ShadowBatchRunConfig
   error: unknown
 }): ShadowBatchResult {
   const completedAt = new Date().toISOString()
@@ -141,6 +268,8 @@ function errorResult(params: {
     caseId: params.testCase.id,
     ...(params.testCase.domain === undefined ? {} : { domain: params.testCase.domain }),
     source: params.testCase.source,
+    gapAnalysisSource: params.gapAnalysisSource,
+    runConfig: params.runConfig,
     legacy: {},
     assessment: {
       score: 0,
@@ -173,14 +302,27 @@ function errorResult(params: {
 
 export async function processShadowCase(params: {
   testCase: JobTargetingShadowCase
+  runConfig: ShadowBatchRunConfig
   persist?: boolean
   disableLlm?: boolean
+  useRealGapAnalysis?: boolean
+  includeRewriteValidation?: boolean
 }): Promise<ShadowBatchResult> {
   const startedAt = new Date().toISOString()
+  let gapAnalysisSource: ShadowGapAnalysisSource = params.useRealGapAnalysis
+    ? 'real_llm'
+    : params.testCase.gapAnalysis
+      ? 'provided'
+      : 'synthetic'
 
   try {
-    const gapAnalysis = buildBatchGapAnalysis(params.testCase)
-    const legacy = await runLegacyCompatibilityPath({
+    const resolvedGapAnalysis = await resolveGapAnalysis({
+      testCase: params.testCase,
+      useRealGapAnalysis: params.useRealGapAnalysis ?? false,
+    })
+    const gapAnalysis = resolvedGapAnalysis.gapAnalysis
+    gapAnalysisSource = resolvedGapAnalysis.gapAnalysisSource
+    const { legacy, targetingPlan } = await runLegacyCompatibilityPath({
       testCase: params.testCase,
       gapAnalysis,
       disableLlm: params.disableLlm ?? true,
@@ -191,6 +333,15 @@ export async function processShadowCase(params: {
       gapAnalysis,
       sessionId: `shadow_case_${params.testCase.id}`,
     })
+    const validation = params.includeRewriteValidation
+      ? await runRewriteValidation({
+          testCase: params.testCase,
+          gapAnalysis,
+          targetingPlan,
+          assessment,
+          allowLlm: !(params.disableLlm ?? true),
+        })
+      : undefined
 
     if (params.persist) {
       await createJobCompatibilityShadowComparison({
@@ -205,8 +356,11 @@ export async function processShadowCase(params: {
       caseId: params.testCase.id,
       domain: params.testCase.domain,
       source: params.testCase.source,
+      gapAnalysisSource,
+      runConfig: params.runConfig,
       legacy,
       assessment: snapshotAssessment(assessment),
+      validation,
       startedAt,
       completedAt: new Date().toISOString(),
     })
@@ -214,6 +368,8 @@ export async function processShadowCase(params: {
     return errorResult({
       testCase: params.testCase,
       startedAt,
+      gapAnalysisSource,
+      runConfig: params.runConfig,
       error,
     })
   }
@@ -259,13 +415,33 @@ export async function writeShadowBatchResults(
 export async function runShadowBatch(options: RunShadowBatchOptions): Promise<RunShadowBatchSummary> {
   const cases = await loadShadowCases(options.inputPath)
   const selectedCases = cases.slice(0, options.limit ?? cases.length)
+  const effectiveConcurrency = Math.max(1, options.concurrency ?? (
+    options.includeRewriteValidation
+      ? 1
+      : options.useRealGapAnalysis
+        ? 2
+        : 3
+  ))
+  const runConfig: ShadowBatchRunConfig = {
+    allowLlm: !(options.disableLlm ?? true) || (options.useRealGapAnalysis ?? false),
+    useRealGapAnalysis: options.useRealGapAnalysis ?? false,
+    includeRewriteValidation: options.includeRewriteValidation ?? false,
+    persist: options.persist ?? false,
+    concurrency: effectiveConcurrency,
+    ...(options.limit === undefined ? {} : { limit: options.limit }),
+    inputPathHash: hashInputPath(options.inputPath),
+    totalInputCases: cases.length,
+  }
   const results = await runWithConcurrency(
     selectedCases,
-    options.concurrency ?? 3,
+    effectiveConcurrency,
     (testCase) => processShadowCase({
       testCase,
+      runConfig,
       persist: options.persist ?? false,
       disableLlm: options.disableLlm ?? true,
+      useRealGapAnalysis: options.useRealGapAnalysis ?? false,
+      includeRewriteValidation: options.includeRewriteValidation ?? false,
     }),
   )
 

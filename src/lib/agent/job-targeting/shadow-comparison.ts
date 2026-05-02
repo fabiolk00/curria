@@ -2,7 +2,9 @@ import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compa
 import type {
   ShadowAssessmentSnapshot,
   ShadowBatchResult,
+  ShadowBatchRunConfig,
   ShadowComparisonSnapshot,
+  ShadowGapAnalysisSource,
   ShadowLegacySnapshot,
 } from '@/lib/agent/job-targeting/shadow-case-types'
 
@@ -46,6 +48,8 @@ export function buildShadowBatchResult(params: {
   caseId: string
   domain?: string
   source?: ShadowBatchResult['source']
+  gapAnalysisSource: ShadowGapAnalysisSource
+  runConfig: ShadowBatchRunConfig
   legacy: ShadowLegacySnapshot
   assessment: ShadowAssessmentSnapshot
   validation?: ShadowBatchResult['validation']
@@ -57,6 +61,8 @@ export function buildShadowBatchResult(params: {
     caseId: params.caseId,
     ...(params.domain === undefined ? {} : { domain: params.domain }),
     ...(params.source === undefined ? {} : { source: params.source }),
+    gapAnalysisSource: params.gapAnalysisSource,
+    runConfig: params.runConfig,
     legacy: params.legacy,
     assessment: params.assessment,
     comparison: compareShadowSnapshots({
