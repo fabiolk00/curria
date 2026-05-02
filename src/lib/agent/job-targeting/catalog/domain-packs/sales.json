@@ -1,0 +1,240 @@
+{
+  "id": "sales",
+  "version": "2026-05-02",
+  "domain": "sales",
+  "goldenCaseIds": [
+    "marketing-ads-good-fit-with-missing-crm",
+    "software-engineering-low-fit-from-data-profile"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "sales.salesforce",
+      "label": "Salesforce",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Salesforce CRM",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.crm-platform"
+      ]
+    },
+    {
+      "id": "sales.hubspot",
+      "label": "HubSpot",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "HubSpot Sales Hub",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.crm-platform"
+      ]
+    },
+    {
+      "id": "sales.crm",
+      "label": "CRM",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "customer relationship management",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.crm-platform"
+      ]
+    },
+    {
+      "id": "sales.enterprise-sales",
+      "label": "Enterprise sales",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "vendas enterprise",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.account-strategy"
+      ]
+    },
+    {
+      "id": "sales.pipeline-management",
+      "label": "Pipeline management",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "gestao de funil",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.sales-process"
+      ]
+    },
+    {
+      "id": "sales.account-management",
+      "label": "Account management",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "gestao de contas",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "sales.account-strategy"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "sales.crm-platform",
+      "label": "Sales CRM platform",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "sales.sales-process",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "CRM use can directly support pipeline process evidence."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "sales.account-strategy",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "CRM work can be adjacent to account strategy."
+        }
+      ]
+    },
+    {
+      "id": "sales.sales-process",
+      "label": "Sales process",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "sales.crm-platform",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Pipeline management can directly support CRM workflow evidence."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "sales.account-strategy",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Sales process is adjacent to account strategy."
+        }
+      ]
+    },
+    {
+      "id": "sales.account-strategy",
+      "label": "Account strategy",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "sales.sales-process",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Account strategy can be adjacent to sales process."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "sales.crm",
+      "rightTermId": "sales.salesforce",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "rationale": "Generic CRM evidence must not imply Salesforce."
+    },
+    {
+      "leftTermId": "sales.hubspot",
+      "rightTermId": "sales.salesforce",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "rationale": "One CRM platform must not imply another named platform."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

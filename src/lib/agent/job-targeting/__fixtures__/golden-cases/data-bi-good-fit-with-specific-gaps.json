@@ -1,0 +1,138 @@
+{
+  "id": "data-bi-good-fit-with-specific-gaps",
+  "title": "Data BI good fit with one specific visualization gap",
+  "domain": "data-bi",
+  "objective": "A data analyst profile should be treated as a strong BI match while keeping a missing Tableau requirement explicit.",
+  "input": {
+    "cv": {
+      "headline": "Data Analyst focused on BI dashboards and operational KPIs",
+      "summary": "Built Power BI dashboards, SQL reports, and Power Query transformations for sales and operations teams.",
+      "skills": [
+        "Power BI",
+        "SQL",
+        "Power Query",
+        "DAX",
+        "Excel",
+        "Data modeling",
+        "KPI reporting"
+      ],
+      "experience": [
+        {
+          "title": "Data Analyst",
+          "company": "RetailCo",
+          "bullets": [
+            "Created Power BI dashboards for sales, margin, and stock KPIs.",
+            "Modeled data from SQL Server and automated Power Query refresh routines.",
+            "Presented weekly reporting packs to commercial stakeholders."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Business Administration",
+          "institution": "Universidade Central"
+        }
+      ]
+    },
+    "job": {
+      "title": "BI Analyst",
+      "description": "Own executive BI dashboards, SQL analysis, data modeling, and stakeholder reporting. Tableau experience is desirable.",
+      "requirements": [
+        {
+          "id": "req-power-bi",
+          "kind": "skill",
+          "text": "Advanced Power BI dashboard development",
+          "priority": "required"
+        },
+        {
+          "id": "req-sql",
+          "kind": "skill",
+          "text": "SQL querying for business analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-data-modeling",
+          "kind": "skill",
+          "text": "Data modeling for BI datasets",
+          "priority": "required"
+        },
+        {
+          "id": "req-power-query",
+          "kind": "skill",
+          "text": "Power Query transformations",
+          "priority": "preferred"
+        },
+        {
+          "id": "req-stakeholder-reporting",
+          "kind": "experience",
+          "text": "Present KPI reports to business stakeholders",
+          "priority": "required"
+        },
+        {
+          "id": "req-tableau",
+          "kind": "skill",
+          "text": "Tableau dashboard maintenance",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-tableau",
+          "text": "No resume evidence for Tableau dashboard maintenance."
+        }
+      ],
+      "reviewNeededGaps": []
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-power-bi",
+      "req-sql",
+      "req-data-modeling",
+      "req-power-query",
+      "req-stakeholder-reporting"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-tableau"
+    ],
+    "criticalGapIds": [
+      "gap-tableau"
+    ],
+    "reviewNeededGapIds": [],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-power-bi",
+        "req-sql",
+        "req-data-modeling",
+        "req-power-query",
+        "req-stakeholder-reporting"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-tableau"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "Tableau"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 86,
+      "minimumPercent": 82,
+      "maximumPercent": 90,
+      "sectionScores": {
+        "skills": 0.8,
+        "experience": 1,
+        "education": 0.5
+      }
+    }
+  }
+}

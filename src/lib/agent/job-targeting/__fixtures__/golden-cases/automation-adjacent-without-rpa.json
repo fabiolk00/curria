@@ -1,0 +1,145 @@
+{
+  "id": "automation-adjacent-without-rpa",
+  "title": "Process automation is adjacent to RPA but not direct RPA",
+  "domain": "operations",
+  "objective": "Spreadsheet and workflow automation should be cautious evidence for RPA roles, not direct UiPath or RPA ownership.",
+  "input": {
+    "cv": {
+      "headline": "Operations Analyst with process automation experience",
+      "summary": "Automated spreadsheets, approval trackers, and reporting routines with VBA, Power Automate, and process mapping.",
+      "skills": [
+        "Excel VBA",
+        "Power Automate",
+        "Process mapping",
+        "Workflow automation",
+        "KPI reporting"
+      ],
+      "experience": [
+        {
+          "title": "Process Analyst",
+          "company": "Shared Services Group",
+          "bullets": [
+            "Automated Excel approval trackers with VBA macros.",
+            "Created Power Automate flows for notification and document routing.",
+            "Mapped manual back-office steps and reduced rework in invoice checks."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Production Engineering",
+          "institution": "Universidade Oeste"
+        }
+      ]
+    },
+    "job": {
+      "title": "RPA Analyst",
+      "description": "Map processes and build RPA automations with UiPath, including bot monitoring and business documentation.",
+      "requirements": [
+        {
+          "id": "req-process-mapping",
+          "kind": "experience",
+          "text": "Process mapping for automation opportunities",
+          "priority": "required"
+        },
+        {
+          "id": "req-workflow-automation",
+          "kind": "experience",
+          "text": "Workflow automation for business routines",
+          "priority": "required"
+        },
+        {
+          "id": "req-rpa",
+          "kind": "skill",
+          "text": "RPA automation concepts",
+          "priority": "required"
+        },
+        {
+          "id": "req-uipath",
+          "kind": "skill",
+          "text": "UiPath bot development",
+          "priority": "required"
+        },
+        {
+          "id": "req-bot-monitoring",
+          "kind": "experience",
+          "text": "RPA bot monitoring and support",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-uipath",
+          "text": "No evidence of UiPath bot development."
+        }
+      ],
+      "reviewNeededGaps": [
+        {
+          "id": "gap-rpa-direct",
+          "text": "Automation work is adjacent, but direct RPA ownership is not evidenced."
+        },
+        {
+          "id": "gap-bot-monitoring",
+          "text": "No evidence of RPA bot monitoring."
+        }
+      ]
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-process-mapping",
+      "req-workflow-automation"
+    ],
+    "adjacentRequirementIds": [
+      "req-rpa"
+    ],
+    "unsupportedRequirementIds": [
+      "req-uipath",
+      "req-bot-monitoring"
+    ],
+    "criticalGapIds": [
+      "gap-uipath"
+    ],
+    "reviewNeededGapIds": [
+      "gap-rpa-direct",
+      "gap-bot-monitoring"
+    ],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-process-mapping",
+        "req-workflow-automation"
+      ],
+      "cautiousRequirementIds": [
+        "req-rpa"
+      ],
+      "forbiddenRequirementIds": [
+        "req-uipath",
+        "req-bot-monitoring"
+      ],
+      "requiredCautiousVerbalizations": [
+        "Process and workflow automation experience is adjacent to RPA, but direct RPA delivery is not evidenced."
+      ],
+      "prohibitedClaimTerms": [
+        "UiPath",
+        "bot monitoring"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 68,
+      "minimumPercent": 64,
+      "maximumPercent": 72,
+      "sectionScores": {
+        "skills": 0.25,
+        "experience": 0.83,
+        "education": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,286 @@
+{
+  "id": "hr",
+  "version": "2026-05-02",
+  "domain": "hr",
+  "goldenCaseIds": [
+    "correlated-education-good-fit",
+    "data-bi-good-fit-with-specific-gaps",
+    "automation-adjacent-without-rpa"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "hr.recruiting",
+      "label": "Recrutamento e selecao",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "talent acquisition",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.talent-acquisition"
+      ]
+    },
+    {
+      "id": "hr.ats",
+      "label": "ATS",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "applicant tracking system",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.hr-systems"
+      ]
+    },
+    {
+      "id": "hr.payroll",
+      "label": "Folha de pagamento",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "payroll",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.hr-systems"
+      ]
+    },
+    {
+      "id": "hr.people-analytics",
+      "label": "People analytics",
+      "goldenCaseIds": [
+        "data-bi-good-fit-with-specific-gaps"
+      ],
+      "aliases": [
+        {
+          "value": "HR analytics",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ]
+        },
+        {
+          "value": "RH analytics",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.people-analytics"
+      ]
+    },
+    {
+      "id": "hr.training",
+      "label": "Treinamento e desenvolvimento",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "learning and development",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.learning-development"
+      ]
+    },
+    {
+      "id": "hr.compensation",
+      "label": "Cargos e salarios",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "compensation and benefits",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.compensation"
+      ]
+    },
+    {
+      "id": "hr.hris",
+      "label": "HRIS",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "aliases": [
+        {
+          "value": "human resources information system",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "hr.hr-systems"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "hr.talent-acquisition",
+      "label": "Talent acquisition",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "hr.hr-systems",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ],
+          "rationale": "Recruiting process evidence can be adjacent to applicant tracking system use."
+        }
+      ]
+    },
+    {
+      "id": "hr.hr-systems",
+      "label": "HR systems",
+      "goldenCaseIds": [
+        "correlated-education-good-fit",
+        "automation-adjacent-without-rpa"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "hr.people-analytics",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ],
+          "rationale": "HR systems can be adjacent to reporting and analytics."
+        }
+      ]
+    },
+    {
+      "id": "hr.people-analytics",
+      "label": "People analytics",
+      "goldenCaseIds": [
+        "data-bi-good-fit-with-specific-gaps"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "hr.hr-systems",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ],
+          "rationale": "Analytics can be adjacent to HR system operation."
+        }
+      ]
+    },
+    {
+      "id": "hr.learning-development",
+      "label": "Learning and development",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "hr.talent-acquisition",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ],
+          "rationale": "Learning work can be adjacent to broader people operations."
+        }
+      ]
+    },
+    {
+      "id": "hr.compensation",
+      "label": "Compensation",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "hr.hr-systems",
+          "goldenCaseIds": [
+            "correlated-education-good-fit"
+          ],
+          "rationale": "Compensation work can be adjacent to HR system use."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "hr.ats",
+      "rightTermId": "hr.payroll",
+      "goldenCaseIds": [
+        "correlated-education-good-fit"
+      ],
+      "rationale": "Recruiting system evidence must not imply payroll system experience."
+    },
+    {
+      "leftTermId": "hr.people-analytics",
+      "rightTermId": "hr.payroll",
+      "goldenCaseIds": [
+        "data-bi-good-fit-with-specific-gaps"
+      ],
+      "rationale": "People analytics evidence must not imply payroll operation."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "id": "operations",
+  "version": "2026-05-02",
+  "domain": "operations",
+  "goldenCaseIds": [
+    "erp-specific-tool-missing",
+    "automation-adjacent-without-rpa",
+    "data-bi-tool-without-related-transform-tool"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "operations.sap",
+      "label": "SAP",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "SAP ERP",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.erp-systems"
+      ]
+    },
+    {
+      "id": "operations.totvs",
+      "label": "Totvs",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "TOTVS Protheus",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.erp-systems"
+      ]
+    },
+    {
+      "id": "operations.erp",
+      "label": "ERP",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "enterprise resource planning",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.erp-systems"
+      ]
+    },
+    {
+      "id": "operations.autocad",
+      "label": "AutoCAD",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "CAD drawings",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.engineering-tools"
+      ]
+    },
+    {
+      "id": "operations.rpa",
+      "label": "RPA",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "aliases": [
+        {
+          "value": "robotic process automation",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.process-automation"
+      ]
+    },
+    {
+      "id": "operations.power-automate",
+      "label": "Power Automate",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "aliases": [
+        {
+          "value": "Microsoft Power Automate",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.workflow-automation"
+      ]
+    },
+    {
+      "id": "operations.process-mapping",
+      "label": "Mapeamento de processos",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "aliases": [
+        {
+          "value": "process mapping",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.operations-management"
+      ]
+    },
+    {
+      "id": "operations.supply-chain",
+      "label": "Supply chain",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "logistics operations",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "operations.operations-management"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "operations.erp-systems",
+      "label": "ERP systems",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "operations.operations-management",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ],
+          "rationale": "Operations management is adjacent to ERP usage."
+        }
+      ]
+    },
+    {
+      "id": "operations.engineering-tools",
+      "label": "Engineering tools",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "operations.operations-management",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ],
+          "rationale": "Engineering tool evidence can be adjacent to operational process work."
+        }
+      ]
+    },
+    {
+      "id": "operations.process-automation",
+      "label": "Robotic process automation",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "operations.workflow-automation",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ],
+          "rationale": "Workflow automation can be adjacent to RPA but does not prove robotic automation."
+        }
+      ]
+    },
+    {
+      "id": "operations.workflow-automation",
+      "label": "Workflow automation",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "operations.process-automation",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ],
+          "rationale": "Workflow automation is adjacent evidence for RPA requirements."
+        }
+      ]
+    },
+    {
+      "id": "operations.operations-management",
+      "label": "Operations management",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing",
+        "automation-adjacent-without-rpa"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "operations.erp-systems",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ],
+          "rationale": "Managing operations can be adjacent to ERP use but not a named system match."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "operations.erp",
+      "rightTermId": "operations.sap",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "rationale": "Generic ERP evidence must not imply SAP."
+    },
+    {
+      "leftTermId": "operations.erp",
+      "rightTermId": "operations.totvs",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "rationale": "Generic ERP evidence must not imply Totvs."
+    },
+    {
+      "leftTermId": "operations.power-automate",
+      "rightTermId": "operations.rpa",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa"
+      ],
+      "rationale": "Power Automate evidence is adjacent to automation but must not become a direct RPA claim."
+    },
+    {
+      "leftTermId": "operations.autocad",
+      "rightTermId": "operations.erp",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "rationale": "Engineering design tooling must not imply ERP operation."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

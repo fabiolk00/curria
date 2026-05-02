@@ -1,0 +1,163 @@
+{
+  "id": "software-engineering-low-fit-from-data-profile",
+  "title": "Data profile is low fit for software engineering",
+  "domain": "software-engineering",
+  "objective": "A data analyst resume should not be inflated into a backend software engineering match.",
+  "input": {
+    "cv": {
+      "headline": "Data Analyst with reporting automation experience",
+      "summary": "Created SQL analyses, Power BI dashboards, and small Python scripts for data cleanup and reporting workflows.",
+      "skills": [
+        "SQL",
+        "Power BI",
+        "Excel",
+        "Python scripting",
+        "Dashboard automation"
+      ],
+      "experience": [
+        {
+          "title": "Data Analyst",
+          "company": "Logistics Lab",
+          "bullets": [
+            "Automated monthly reporting files with Python scripts and Excel templates.",
+            "Created SQL queries for operational dashboards and exception reports.",
+            "Partnered with operations managers to explain KPI movements."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Data Analytics",
+          "institution": "Faculdade Metropolitana"
+        }
+      ]
+    },
+    "job": {
+      "title": "Backend Software Engineer",
+      "description": "Develop Java services with Spring Boot, REST APIs, microservices, automated tests, and CI/CD deployment pipelines.",
+      "requirements": [
+        {
+          "id": "req-java",
+          "kind": "skill",
+          "text": "Java development",
+          "priority": "required"
+        },
+        {
+          "id": "req-spring-boot",
+          "kind": "skill",
+          "text": "Spring Boot services",
+          "priority": "required"
+        },
+        {
+          "id": "req-rest-api",
+          "kind": "experience",
+          "text": "Production REST API development",
+          "priority": "required"
+        },
+        {
+          "id": "req-ci-cd",
+          "kind": "skill",
+          "text": "CI/CD pipelines",
+          "priority": "preferred"
+        },
+        {
+          "id": "req-python-scripting",
+          "kind": "skill",
+          "text": "Python scripting for automation",
+          "priority": "preferred"
+        },
+        {
+          "id": "req-computing-education",
+          "kind": "education",
+          "text": "Computer science, software engineering, data analytics, or related computing degree",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-java",
+          "text": "No evidence of Java development."
+        },
+        {
+          "id": "gap-spring-boot",
+          "text": "No evidence of Spring Boot service work."
+        },
+        {
+          "id": "gap-rest-api",
+          "text": "No evidence of production REST API delivery."
+        }
+      ],
+      "reviewNeededGaps": [
+        {
+          "id": "gap-ci-cd",
+          "text": "CI/CD is preferred but not evidenced."
+        }
+      ]
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-python-scripting"
+    ],
+    "adjacentRequirementIds": [
+      "req-computing-education"
+    ],
+    "unsupportedRequirementIds": [
+      "req-java",
+      "req-spring-boot",
+      "req-rest-api",
+      "req-ci-cd"
+    ],
+    "criticalGapIds": [
+      "gap-java",
+      "gap-spring-boot",
+      "gap-rest-api"
+    ],
+    "reviewNeededGapIds": [
+      "gap-ci-cd"
+    ],
+    "lowFit": {
+      "expected": true,
+      "reasons": [
+        "Most required backend engineering requirements are unsupported.",
+        "Existing Python scripting evidence is automation support, not production software engineering."
+      ]
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-python-scripting"
+      ],
+      "cautiousRequirementIds": [
+        "req-computing-education"
+      ],
+      "forbiddenRequirementIds": [
+        "req-java",
+        "req-spring-boot",
+        "req-rest-api",
+        "req-ci-cd"
+      ],
+      "requiredCautiousVerbalizations": [
+        "Related data analytics education may support technical ramp-up, but it is not direct software engineering delivery."
+      ],
+      "prohibitedClaimTerms": [
+        "Java",
+        "Spring Boot",
+        "REST API",
+        "CI/CD"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 21,
+      "minimumPercent": 17,
+      "maximumPercent": 25,
+      "sectionScores": {
+        "skills": 0.2,
+        "experience": 0,
+        "education": 0.5
+      }
+    }
+  }
+}

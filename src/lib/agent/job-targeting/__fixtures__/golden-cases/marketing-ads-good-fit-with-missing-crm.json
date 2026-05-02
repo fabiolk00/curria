@@ -1,0 +1,138 @@
+{
+  "id": "marketing-ads-good-fit-with-missing-crm",
+  "title": "Marketing ads fit with missing CRM platform",
+  "domain": "marketing",
+  "objective": "Paid media and analytics evidence should produce a good marketing fit while keeping HubSpot CRM unsupported.",
+  "input": {
+    "cv": {
+      "headline": "Performance Marketing Analyst",
+      "summary": "Managed Google Ads, Meta Ads, GA4 reporting, and campaign budget optimization for ecommerce acquisition.",
+      "skills": [
+        "Google Ads",
+        "Meta Ads",
+        "GA4",
+        "Campaign optimization",
+        "A/B testing",
+        "Looker Studio"
+      ],
+      "experience": [
+        {
+          "title": "Performance Marketing Analyst",
+          "company": "Ecommerce Plus",
+          "bullets": [
+            "Managed Google Ads and Meta Ads campaigns with monthly budget controls.",
+            "Built GA4 and Looker Studio reports for CAC, ROAS, and conversion funnels.",
+            "Ran landing page A/B tests with creative and product teams."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Advertising",
+          "institution": "Escola de Comunicacao Sul"
+        }
+      ]
+    },
+    "job": {
+      "title": "Digital Marketing Analyst",
+      "description": "Manage Google Ads and Meta Ads, analyze GA4 results, optimize campaigns, run tests, and update HubSpot CRM lead data.",
+      "requirements": [
+        {
+          "id": "req-google-ads",
+          "kind": "skill",
+          "text": "Google Ads campaign management",
+          "priority": "required"
+        },
+        {
+          "id": "req-meta-ads",
+          "kind": "skill",
+          "text": "Meta Ads campaign management",
+          "priority": "required"
+        },
+        {
+          "id": "req-ga4",
+          "kind": "skill",
+          "text": "GA4 campaign analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-campaign-optimization",
+          "kind": "experience",
+          "text": "Campaign budget optimization",
+          "priority": "required"
+        },
+        {
+          "id": "req-ab-testing",
+          "kind": "experience",
+          "text": "A/B testing for landing pages or campaigns",
+          "priority": "preferred"
+        },
+        {
+          "id": "req-hubspot-crm",
+          "kind": "skill",
+          "text": "HubSpot CRM lead updates",
+          "priority": "required"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-hubspot-crm",
+          "text": "HubSpot CRM is required but no CRM platform evidence appears in the resume."
+        }
+      ],
+      "reviewNeededGaps": []
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-google-ads",
+      "req-meta-ads",
+      "req-ga4",
+      "req-campaign-optimization",
+      "req-ab-testing"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-hubspot-crm"
+    ],
+    "criticalGapIds": [
+      "gap-hubspot-crm"
+    ],
+    "reviewNeededGapIds": [],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-google-ads",
+        "req-meta-ads",
+        "req-ga4",
+        "req-campaign-optimization",
+        "req-ab-testing"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-hubspot-crm"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "HubSpot",
+        "CRM"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 82,
+      "minimumPercent": 78,
+      "maximumPercent": 86,
+      "sectionScores": {
+        "skills": 0.75,
+        "experience": 1,
+        "education": 1
+      }
+    }
+  }
+}

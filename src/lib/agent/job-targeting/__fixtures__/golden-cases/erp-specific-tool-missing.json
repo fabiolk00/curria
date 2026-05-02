@@ -1,0 +1,129 @@
+{
+  "id": "erp-specific-tool-missing",
+  "title": "Generic ERP experience does not satisfy a specific ERP tool",
+  "domain": "operations",
+  "objective": "Operations ERP evidence should support process requirements while preserving a missing Totvs Protheus requirement.",
+  "input": {
+    "cv": {
+      "headline": "Operations Analyst with ERP and inventory control experience",
+      "summary": "Used SAP MM, Excel, and inventory reports to support purchasing, stock reconciliation, and process controls.",
+      "skills": [
+        "SAP MM",
+        "ERP reporting",
+        "Excel",
+        "Inventory control",
+        "Purchasing routines"
+      ],
+      "experience": [
+        {
+          "title": "Operations Analyst",
+          "company": "Industrial Parts SA",
+          "bullets": [
+            "Tracked purchase orders and inventory movements in SAP MM.",
+            "Reconciled stock differences using ERP reports and Excel controls.",
+            "Documented purchasing routines for warehouse and finance teams."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Technologist in Logistics",
+          "institution": "Centro Universitario Sul"
+        }
+      ]
+    },
+    "job": {
+      "title": "ERP Operations Analyst",
+      "description": "Operate purchasing and stock routines in Totvs Protheus, maintain ERP reports, and support inventory controls.",
+      "requirements": [
+        {
+          "id": "req-erp-reporting",
+          "kind": "experience",
+          "text": "ERP reporting for operations routines",
+          "priority": "required"
+        },
+        {
+          "id": "req-inventory-control",
+          "kind": "experience",
+          "text": "Inventory control and stock reconciliation",
+          "priority": "required"
+        },
+        {
+          "id": "req-excel",
+          "kind": "skill",
+          "text": "Excel controls",
+          "priority": "required"
+        },
+        {
+          "id": "req-totvs-protheus",
+          "kind": "skill",
+          "text": "Totvs Protheus purchasing and stock modules",
+          "priority": "required"
+        },
+        {
+          "id": "req-logistics-education",
+          "kind": "education",
+          "text": "Logistics, operations, or related education",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-totvs-protheus",
+          "text": "Totvs Protheus is required but the resume only shows SAP MM and generic ERP reporting."
+        }
+      ],
+      "reviewNeededGaps": []
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-erp-reporting",
+      "req-inventory-control",
+      "req-excel",
+      "req-logistics-education"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-totvs-protheus"
+    ],
+    "criticalGapIds": [
+      "gap-totvs-protheus"
+    ],
+    "reviewNeededGapIds": [],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-erp-reporting",
+        "req-inventory-control",
+        "req-excel",
+        "req-logistics-education"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-totvs-protheus"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "Totvs",
+        "Protheus"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 76,
+      "minimumPercent": 72,
+      "maximumPercent": 80,
+      "sectionScores": {
+        "skills": 0.67,
+        "experience": 1,
+        "education": 1
+      }
+    }
+  }
+}

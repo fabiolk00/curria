@@ -1,0 +1,42 @@
+{
+  "id": "generic-taxonomy",
+  "version": "2026-05-02",
+  "domain": "generic",
+  "goldenCaseIds": [
+    "catalog-contract-generic-taxonomy"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [],
+  "categories": [],
+  "antiEquivalences": [],
+  "audit": {
+    "source": "quick-260502-g04-plan-01",
+    "updatedAt": "2026-05-02"
+  }
+}

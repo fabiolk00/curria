@@ -1,0 +1,282 @@
+{
+  "id": "marketing",
+  "version": "2026-05-02",
+  "domain": "marketing",
+  "goldenCaseIds": [
+    "marketing-ads-good-fit-with-missing-crm",
+    "correlated-education-good-fit"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "marketing.google-ads",
+      "label": "Google Ads",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Google Adwords",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        },
+        {
+          "value": "paid search",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.paid-media"
+      ]
+    },
+    {
+      "id": "marketing.meta-ads",
+      "label": "Meta Ads",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Facebook Ads",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.paid-media"
+      ]
+    },
+    {
+      "id": "marketing.crm",
+      "label": "CRM",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "customer relationship management",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.crm-platform"
+      ]
+    },
+    {
+      "id": "marketing.hubspot",
+      "label": "HubSpot",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "HubSpot CRM",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.crm-platform"
+      ]
+    },
+    {
+      "id": "marketing.salesforce-marketing-cloud",
+      "label": "Salesforce Marketing Cloud",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Salesforce",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.crm-platform"
+      ]
+    },
+    {
+      "id": "marketing.lifecycle-marketing",
+      "label": "Lifecycle marketing",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "retention marketing",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.retention-marketing"
+      ]
+    },
+    {
+      "id": "marketing.seo",
+      "label": "SEO",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "organic search",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "marketing.content-marketing"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "marketing.paid-media",
+      "label": "Paid media",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "marketing.content-marketing",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Paid and organic acquisition are adjacent acquisition channels."
+        }
+      ]
+    },
+    {
+      "id": "marketing.crm-platform",
+      "label": "CRM and marketing automation platform",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "marketing.retention-marketing",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "CRM platform evidence can directly support retention marketing work."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "marketing.paid-media",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "CRM and paid media can support the same funnel but do not prove each other."
+        }
+      ]
+    },
+    {
+      "id": "marketing.retention-marketing",
+      "label": "Retention marketing",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "marketing.crm-platform",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Retention marketing can directly support CRM campaign evidence."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "marketing.content-marketing",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Content can support lifecycle campaigns but is not the same skill."
+        }
+      ]
+    },
+    {
+      "id": "marketing.content-marketing",
+      "label": "Content marketing",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "marketing.paid-media",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "rationale": "Content and paid media are adjacent acquisition workstreams."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "marketing.google-ads",
+      "rightTermId": "marketing.crm",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "rationale": "Paid acquisition evidence must not imply CRM operation."
+    },
+    {
+      "leftTermId": "marketing.hubspot",
+      "rightTermId": "marketing.salesforce-marketing-cloud",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "rationale": "One CRM tool must not imply another named CRM tool."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

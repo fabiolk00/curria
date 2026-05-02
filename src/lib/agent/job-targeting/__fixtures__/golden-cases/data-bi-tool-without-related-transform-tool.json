@@ -1,0 +1,128 @@
+{
+  "id": "data-bi-tool-without-related-transform-tool",
+  "title": "Power BI does not imply Power Query",
+  "domain": "data-bi",
+  "objective": "A BI profile with Power BI evidence must not be treated as having a related transformation tool when the resume does not mention it.",
+  "input": {
+    "cv": {
+      "headline": "BI Analyst focused on dashboards and DAX metrics",
+      "summary": "Maintained Power BI reports, DAX measures, SQL extracts, and Excel analyses for finance leadership.",
+      "skills": [
+        "Power BI",
+        "DAX",
+        "SQL",
+        "Excel",
+        "Dashboard design"
+      ],
+      "experience": [
+        {
+          "title": "BI Analyst",
+          "company": "FinOps Brasil",
+          "bullets": [
+            "Maintained Power BI dashboards for expense, revenue, and forecast tracking.",
+            "Built SQL extracts and DAX measures for recurring finance reports.",
+            "Reviewed monthly indicators with controllers and FP&A managers."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Economics",
+          "institution": "Instituto Paulista"
+        }
+      ]
+    },
+    "job": {
+      "title": "BI Developer",
+      "description": "Develop Power BI dashboards, maintain SQL datasets, create DAX measures, and build Power Query transformations.",
+      "requirements": [
+        {
+          "id": "req-power-bi",
+          "kind": "skill",
+          "text": "Power BI report development",
+          "priority": "required"
+        },
+        {
+          "id": "req-dax",
+          "kind": "skill",
+          "text": "DAX measures",
+          "priority": "required"
+        },
+        {
+          "id": "req-sql",
+          "kind": "skill",
+          "text": "SQL dataset preparation",
+          "priority": "required"
+        },
+        {
+          "id": "req-power-query",
+          "kind": "skill",
+          "text": "Power Query data transformations",
+          "priority": "required"
+        },
+        {
+          "id": "req-finance-stakeholders",
+          "kind": "experience",
+          "text": "Reporting support for finance stakeholders",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-power-query",
+          "text": "Power Query is required but not evidenced in the resume."
+        }
+      ],
+      "reviewNeededGaps": []
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-power-bi",
+      "req-dax",
+      "req-sql",
+      "req-finance-stakeholders"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-power-query"
+    ],
+    "criticalGapIds": [
+      "gap-power-query"
+    ],
+    "reviewNeededGapIds": [],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-power-bi",
+        "req-dax",
+        "req-sql",
+        "req-finance-stakeholders"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-power-query"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "Power Query"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 73,
+      "minimumPercent": 69,
+      "maximumPercent": 77,
+      "sectionScores": {
+        "skills": 0.75,
+        "experience": 1,
+        "education": 0.5
+      }
+    }
+  }
+}

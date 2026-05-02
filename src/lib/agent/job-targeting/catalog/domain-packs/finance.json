@@ -1,0 +1,321 @@
+{
+  "id": "finance",
+  "version": "2026-05-02",
+  "domain": "finance",
+  "goldenCaseIds": [
+    "finance-analyst-missing-accounting-system",
+    "correlated-education-good-fit",
+    "erp-specific-tool-missing"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "finance.sap-fi",
+      "label": "SAP FI",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system",
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "SAP financeiro",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.accounting-system"
+      ]
+    },
+    {
+      "id": "finance.totvs-financeiro",
+      "label": "Totvs financeiro",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system",
+        "erp-specific-tool-missing"
+      ],
+      "aliases": [
+        {
+          "value": "Totvs RM financeiro",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.accounting-system"
+      ]
+    },
+    {
+      "id": "finance.excel",
+      "label": "Excel",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "aliases": [
+        {
+          "value": "planilhas financeiras",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.spreadsheet-analysis"
+      ]
+    },
+    {
+      "id": "finance.financial-statements",
+      "label": "Demonstracoes financeiras",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "aliases": [
+        {
+          "value": "demonstracoes financeiras",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        },
+        {
+          "value": "financial statements",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.financial-reporting"
+      ]
+    },
+    {
+      "id": "finance.fpa",
+      "label": "FP&A",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "aliases": [
+        {
+          "value": "financial planning and analysis",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        },
+        {
+          "value": "orcamento e forecast",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.planning-analysis"
+      ]
+    },
+    {
+      "id": "finance.accounting",
+      "label": "Contabilidade",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system",
+        "correlated-education-good-fit"
+      ],
+      "aliases": [
+        {
+          "value": "accounting",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.accounting-practice"
+      ]
+    },
+    {
+      "id": "finance.erp-finance",
+      "label": "ERP financeiro",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing",
+        "finance-analyst-missing-accounting-system"
+      ],
+      "aliases": [
+        {
+          "value": "financial ERP",
+          "goldenCaseIds": [
+            "erp-specific-tool-missing"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "finance.accounting-system"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "finance.accounting-system",
+      "label": "Accounting and ERP systems",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system",
+        "erp-specific-tool-missing"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "finance.accounting-practice",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Accounting practice is adjacent to system use but does not prove a specific system."
+        }
+      ]
+    },
+    {
+      "id": "finance.spreadsheet-analysis",
+      "label": "Spreadsheet analysis",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "finance.planning-analysis",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Spreadsheet analysis can support planning but does not prove FP&A ownership."
+        }
+      ]
+    },
+    {
+      "id": "finance.financial-reporting",
+      "label": "Financial reporting",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "finance.accounting-practice",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Reporting and accounting practice can be direct evidence for financial analyst duties."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "finance.planning-analysis",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Reporting can support planning analysis but does not prove forecasting."
+        }
+      ]
+    },
+    {
+      "id": "finance.planning-analysis",
+      "label": "Planning and analysis",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "finance.financial-reporting",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Planning analysis is adjacent to reporting."
+        }
+      ]
+    },
+    {
+      "id": "finance.accounting-practice",
+      "label": "Accounting practice",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system",
+        "correlated-education-good-fit"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [
+        {
+          "categoryId": "finance.financial-reporting",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Accounting practice can directly support financial reporting evidence."
+        }
+      ],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "finance.accounting-system",
+          "goldenCaseIds": [
+            "finance-analyst-missing-accounting-system"
+          ],
+          "rationale": "Accounting practice does not prove a named accounting system."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "finance.excel",
+      "rightTermId": "finance.sap-fi",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "rationale": "Excel analysis must not imply SAP FI experience."
+    },
+    {
+      "leftTermId": "finance.excel",
+      "rightTermId": "finance.totvs-financeiro",
+      "goldenCaseIds": [
+        "finance-analyst-missing-accounting-system"
+      ],
+      "rationale": "Spreadsheet work must not imply a specific accounting system."
+    },
+    {
+      "leftTermId": "finance.erp-finance",
+      "rightTermId": "finance.sap-fi",
+      "goldenCaseIds": [
+        "erp-specific-tool-missing"
+      ],
+      "rationale": "Generic ERP finance evidence must not imply SAP FI."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

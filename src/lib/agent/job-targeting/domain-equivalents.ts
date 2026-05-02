@@ -1,6 +1,15 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { isAbsolute, join } from 'node:path'
+
+import type {
+  CatalogCategory,
+  CatalogTerm,
+  JobTargetingCatalogPack,
+} from '@/lib/agent/job-targeting/catalog/catalog-types'
+import { loadJobTargetingCatalog } from '@/lib/agent/job-targeting/catalog/catalog-loader'
+import { validateJobTargetingCatalogPack } from '@/lib/agent/job-targeting/catalog/catalog-validator'
 import {
   buildCanonicalSignal,
-  hasLexicalAliasMatch,
   includesNormalizedPhrase,
   normalizeSemanticText,
 } from '@/lib/agent/job-targeting/semantic-normalization'
@@ -35,183 +44,195 @@ export type DomainEquivalentMatch = {
   rationale: string
 }
 
-export const DOMAIN_EQUIVALENT_RULES: DomainEquivalentRule[] = [
-  {
-    jobSignals: [
-      'ferramentas de bi',
-      'business intelligence',
-      'power bi',
-      'tableau ou similares',
-      'ferramentas de visualizacao',
-      'ferramentas de visualização',
-      'dashboards gerenciais',
-      'construcao de dashboards',
-      'construção de dashboards',
-    ],
-    resumeSignals: [
-      'power bi',
-      'microsoft power bi',
-      'qlik sense',
-      'qlikview',
-      'qlik view',
-      'dashboards',
-      'data visualization',
-      'visualizacao de dados',
-      'visualização de dados',
-      'business intelligence',
-      'bi',
-    ],
-    evidenceLevel: 'technical_equivalent',
-    rewritePermission: 'can_claim_normalized',
-  },
-  {
-    jobSignals: [
-      'bases de dados',
-      'base de dados',
-      'banco de dados',
-      'bancos de dados',
-      'sql intermediario',
-      'sql intermediário',
-      'sql avancado',
-      'sql avançado',
-      'manipulacao de dados',
-      'manipulação de dados',
-      'modelagem de dados',
-    ],
-    resumeSignals: [
-      'sql',
-      'postgresql',
-      'sql server',
-      'bigquery',
-      'databricks',
-      'azure databricks',
-      'data modeling',
-      'modelagem de dados',
-      'etl',
-      'pipelines etl',
-    ],
-    evidenceLevel: 'technical_equivalent',
-    rewritePermission: 'can_claim_normalized',
-  },
-  {
-    jobSignals: [
-      'coleta limpeza estruturacao e modelagem de dados',
-      'coleta limpeza estruturação e modelagem de dados',
-      'limpeza de dados',
-      'estruturacao de dados',
-      'estruturação de dados',
-      'tratamento de dados',
-      'preparacao de dados',
-      'preparação de dados',
-    ],
-    resumeSignals: [
-      'etl',
-      'pipelines etl',
-      'data modeling',
-      'modelagem de dados',
-      'databricks',
-      'azure databricks',
-      'pyspark',
-    ],
-    evidenceLevel: 'technical_equivalent',
-    rewritePermission: 'can_claim_normalized',
-  },
-  {
-    jobSignals: [
-      'governanca de dados',
-      'governança de dados',
-      'qualidade dos dados',
-      'qualidade de dados',
-      'integridade e qualidade dos dados',
-      'dados nos sistemas corporativos',
-    ],
-    resumeSignals: [
-      'data governance',
-      'governanca de dados',
-      'governança de dados',
-      'governanca e qualidade de dados',
-      'governança e qualidade de dados',
-      'qualidade de dados',
-      'bases confiaveis',
-      'bases confiáveis',
-    ],
-    evidenceLevel: 'technical_equivalent',
-    rewritePermission: 'can_claim_normalized',
-  },
-  {
-    jobSignals: [
-      'sistemas de informacao',
-      'sistemas de informação',
-      'ciencia de dados',
-      'ciência de dados',
-      'areas correlatas',
-      'áreas correlatas',
-      'area correlata',
-      'área correlata',
-      'formacao correlata',
-      'formação correlata',
-      'formacao em area correlata',
-      'formação em área correlata',
-    ],
-    resumeSignals: [
-      'analise e desenvolvimento de sistemas',
-      'análise e desenvolvimento de sistemas',
-      'sistemas',
-      'tecnologia da informacao',
-      'tecnologia da informação',
-      'data engineering',
-      'engenharia de dados',
-    ],
-    evidenceLevel: 'technical_equivalent',
-    rewritePermission: 'can_claim_normalized',
-  },
-  {
-    jobSignals: [
-      'automacao de processos',
-      'automação de processos',
-      'robos',
-      'robôs',
-      'automatizar rotinas',
-      'processos administrativos',
-      'automacoes',
-      'automações',
-    ],
-    resumeSignals: [
-      'power automate',
-      'automacao',
-      'automação',
-      'apis',
-      'api',
-      'rest',
-      'integrei apis',
-      'eliminar processos manuais',
-    ],
-    evidenceLevel: 'strong_contextual_inference',
-    rewritePermission: 'can_bridge_carefully',
-  },
-]
+type CatalogTermRef = {
+  packId: string
+  term: CatalogTerm
+  values: string[]
+}
 
-const STRICT_LITERAL_SIGNALS = [
-  'power query',
-  'totvs protheus',
-  'protheus',
-  'excel avancado',
-  'excel avançado',
-  'procv',
-  'xlookup',
-  'demonstrações financeiras',
-  'demonstracoes financeiras',
-  'indicadores financeiros',
-  'tableau',
-]
+type CatalogCategoryRef = {
+  packId: string
+  category: CatalogCategory
+  values: string[]
+}
+
+type CatalogIndex = {
+  terms: CatalogTermRef[]
+  categories: CatalogCategoryRef[]
+  categoriesById: Map<string, CatalogCategoryRef>
+  antiEquivalentPairs: Set<string>
+}
+
+type CatalogSignalMatch = {
+  terms: CatalogTermRef[]
+  categories: CatalogCategoryRef[]
+}
+
+const GENERIC_TAXONOMY_PATH = 'src/lib/agent/job-targeting/catalog/generic-taxonomy.json'
+const DOMAIN_PACKS_DIR = 'src/lib/agent/job-targeting/catalog/domain-packs'
+
+let cachedCatalogIndex: CatalogIndex | null = null
+
+function resolveProjectPath(filePath: string): string {
+  return isAbsolute(filePath) ? filePath : join(process.cwd(), filePath)
+}
+
+function readCatalogPack(filePath: string): JobTargetingCatalogPack {
+  const raw = readFileSync(resolveProjectPath(filePath), 'utf8')
+  return validateJobTargetingCatalogPack(JSON.parse(raw), filePath)
+}
+
+function listDomainPackPaths(): string[] {
+  const resolvedDir = resolveProjectPath(DOMAIN_PACKS_DIR)
+
+  return readdirSync(resolvedDir)
+    .filter((fileName) => fileName.endsWith('.json'))
+    .sort()
+    .map((fileName) => join(DOMAIN_PACKS_DIR, fileName))
+}
+
+function loadCatalogPacksSync(): JobTargetingCatalogPack[] {
+  return [
+    readCatalogPack(GENERIC_TAXONOMY_PATH),
+    ...listDomainPackPaths().map(readCatalogPack),
+  ]
+}
+
+export function loadDomainEquivalentCatalog() {
+  return loadJobTargetingCatalog({
+    genericTaxonomyPath: GENERIC_TAXONOMY_PATH,
+    domainPackPaths: listDomainPackPaths(),
+  })
+}
+
+function buildValues(term: CatalogTerm): string[] {
+  return Array.from(new Set([
+    term.label,
+    ...term.aliases.map((alias) => alias.value),
+  ].map((value) => value.trim()).filter(Boolean)))
+}
+
+function buildCategoryValues(category: CatalogCategory): string[] {
+  return Array.from(new Set([
+    category.label,
+  ].map((value) => value.trim()).filter(Boolean)))
+}
+
+function buildPairKey(leftTermId: string, rightTermId: string): string {
+  return [leftTermId, rightTermId].sort().join('::')
+}
+
+function buildCatalogIndex(): CatalogIndex {
+  const packs = loadCatalogPacksSync()
+  const terms = packs.flatMap((pack) => pack.terms.map((term) => {
+    const values = buildValues(term)
+
+    return {
+      packId: pack.id,
+      term,
+      values,
+    }
+  }))
+  const categories = packs.flatMap((pack) => pack.categories.map((category) => {
+    const values = buildCategoryValues(category)
+
+    return {
+      packId: pack.id,
+      category,
+      values,
+    }
+  }))
+  const categoriesById = new Map(categories.map((categoryRef) => [categoryRef.category.id, categoryRef]))
+  const antiEquivalentPairs = new Set(
+    packs.flatMap((pack) => pack.antiEquivalences.map((antiEquivalence) => (
+      buildPairKey(antiEquivalence.leftTermId, antiEquivalence.rightTermId)
+    ))),
+  )
+
+  return {
+    terms,
+    categories,
+    categoriesById,
+    antiEquivalentPairs,
+  }
+}
+
+function getCatalogIndex(): CatalogIndex {
+  cachedCatalogIndex ??= buildCatalogIndex()
+  return cachedCatalogIndex
+}
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
+}
+
+function signalMatchesCatalogValues(signal: string, values: string[]): boolean {
+  const normalizedSignal = normalizeSemanticText(signal)
+  const canonicalSignal = buildCanonicalSignal(signal)
+
+  return values.some((value) => {
+    const normalizedValue = normalizeSemanticText(value)
+    const canonicalValue = buildCanonicalSignal(value)
+
+    return Boolean(
+      normalizedSignal
+      && normalizedValue
+      && canonicalSignal
+      && canonicalValue
+      && (
+        canonicalSignal === canonicalValue
+        || includesNormalizedPhrase(normalizedSignal, normalizedValue)
+      ),
+    )
+  })
+}
+
+function findCatalogSignalMatches(signal: string, index: CatalogIndex): CatalogSignalMatch {
+  const terms = index.terms.filter((termRef) => signalMatchesCatalogValues(signal, termRef.values))
+  const categories = index.categories.filter((categoryRef) => signalMatchesCatalogValues(signal, categoryRef.values))
+
+  return {
+    terms,
+    categories,
+  }
+}
+
+function findResumeCatalogEvidence(
+  resumeEvidence: DomainResumeEvidenceEntry[],
+  index: CatalogIndex,
+): Array<{
+  evidence: DomainResumeEvidenceEntry
+  terms: CatalogTermRef[]
+  categories: CatalogCategoryRef[]
+}> {
+  return resumeEvidence
+    .map((evidence) => {
+      const termMatches = index.terms.filter((termRef) => (
+        signalMatchesCatalogValues(evidence.term, termRef.values)
+        || signalMatchesCatalogValues(evidence.span, termRef.values)
+      ))
+      const categoryMatches = index.categories.filter((categoryRef) => (
+        signalMatchesCatalogValues(evidence.term, categoryRef.values)
+        || signalMatchesCatalogValues(evidence.span, categoryRef.values)
+      ))
+
+      return {
+        evidence,
+        terms: termMatches,
+        categories: categoryMatches,
+      }
+    })
+    .filter((entry) => entry.terms.length > 0 || entry.categories.length > 0)
+}
 
 function requirednessForRequirement(requirement: string): RequirementSubSignal['requiredness'] {
   const normalized = normalizeSemanticText(requirement)
+
   if (/\b(?:desejavel|desejaveis|diferencial|nice to have|preferred)\b/u.test(normalized)) {
     return 'preferred'
   }
 
-  if (/\b(?:requisito|obrigatorio|required|dominio|experiencia|vivencia|conhecimento)\b/u.test(normalized)) {
+  if (/\b(?:requisito|obrigatorio|required|mandatory|dominio|experiencia|vivencia|conhecimento)\b/u.test(normalized)) {
     return 'required'
   }
 
@@ -221,24 +242,26 @@ function requirednessForRequirement(requirement: string): RequirementSubSignal['
 function kindForSignal(signal: string): RequirementSubSignal['kind'] {
   const normalized = normalizeSemanticText(signal)
 
-  if (/\b(?:power bi|tableau|power query|totvs|protheus|excel|sql|python|qlik|databricks|bigquery|postgresql)\b/u.test(normalized)) {
-    return 'tool'
-  }
-
-  if (/\b(?:formacao|formação|graduacao|graduação|bacharelado|sistemas de informacao|ciencia de dados|areas correlatas|area correlata)\b/u.test(normalized)) {
+  if (/\b(?:formacao|graduacao|bacharelado|licenciatura|degree|education|academic|curso)\b/u.test(normalized)) {
     return 'education'
   }
 
-  if (/\b(?:ferramentas de bi|business intelligence|bases de dados|modelagem de dados|dashboards|governanca|qualidade de dados)\b/u.test(normalized)) {
-    return 'domain'
-  }
-
-  if (/\b(?:experiencia|vivencia|atuacao)\b/u.test(normalized)) {
+  if (/\b(?:experiencia|vivencia|atuacao|background|track record)\b/u.test(normalized)) {
     return 'experience'
   }
 
-  if (/\b(?:marketing|financeiro|administrativos|negocio|areas de negocio)\b/u.test(normalized)) {
+  if (/\b(?:negocio|business|cliente|stakeholder|mercado|operacao|processo|area)\b/u.test(normalized)) {
     return 'business_context'
+  }
+
+  const index = getCatalogIndex()
+  const catalogMatch = findCatalogSignalMatches(signal, index)
+  if (catalogMatch.terms.length > 0) {
+    return 'tool'
+  }
+
+  if (catalogMatch.categories.length > 0) {
+    return 'domain'
   }
 
   return 'unknown'
@@ -246,12 +269,11 @@ function kindForSignal(signal: string): RequirementSubSignal['kind'] {
 
 function cleanSubSignal(value: string): string {
   return value
-    .replace(/^[\-*•]\s*/u, '')
+    .replace(/^[\-*\u2022]\s*/u, '')
     .replace(/^experi[eê]ncia\s+(?:com|em)\s+/iu, '')
     .replace(/^viv[eê]ncia\s+(?:com|em)\s+/iu, '')
     .replace(/^conhecimento\s+(?:em|com)\s+/iu, '')
     .replace(/^dom[ií]nio\s+(?:de|em)\s+/iu, '')
-    .replace(/^ferramentas?\s+de\s+manipula[cç][aã]o\s+de\s+dados:\s*/iu, '')
     .replace(/^como\s+/iu, '')
     .replace(/\s+/gu, ' ')
     .replace(/[.;:]+$/u, '')
@@ -285,126 +307,187 @@ function pushSubSignal(
 export function decomposeRequirementSignal(requirement: string): RequirementSubSignal[] {
   const requiredness = requirednessForRequirement(requirement)
   const result: RequirementSubSignal[] = []
-  const normalizedRequirement = normalizeSemanticText(requirement)
+  const index = getCatalogIndex()
 
   pushSubSignal(result, requirement, requirement, requiredness)
 
-  if (/\bferramentas? de bi\b/u.test(normalizedRequirement) || /\bbusiness intelligence\b/u.test(normalizedRequirement)) {
-    pushSubSignal(result, requirement, 'ferramentas de BI', requiredness)
-  }
+  index.terms.forEach((termRef) => {
+    if (signalMatchesCatalogValues(requirement, termRef.values)) {
+      termRef.values
+        .filter((value) => signalMatchesCatalogValues(requirement, [value]))
+        .forEach((value) => pushSubSignal(result, requirement, value, requiredness))
+    }
+  })
 
-  if (/\b(?:formacao|graduacao|bacharelado|superior)\b/u.test(normalizedRequirement) && /\b(?:areas correlatas|area correlata|correlatas)\b/u.test(normalizedRequirement)) {
-    pushSubSignal(result, requirement, 'formação em área correlata', requiredness)
-  }
-
-  const explicitTechnologyMatches = requirement.match(/\b(?:Power BI|Microsoft Power BI|Tableau|Power Query|Totvs Protheus|Protheus|SQL|Python|Excel|Qlik Sense|QlikView|Databricks|BigQuery|PostgreSQL)\b/giu) ?? []
-  explicitTechnologyMatches.forEach((signal) => pushSubSignal(result, requirement, signal, requiredness))
-
-  const explicitEducationMatches = requirement.match(/\b(?:Sistemas de Informa[cç][aã]o|Ci[eê]ncia de Dados|Administra[cç][aã]o|Engenharia|Estat[ií]stica|Economia|[aá]reas correlatas)\b/giu) ?? []
-  explicitEducationMatches.forEach((signal) => pushSubSignal(result, requirement, signal, requiredness))
+  index.categories.forEach((categoryRef) => {
+    if (signalMatchesCatalogValues(requirement, categoryRef.values)) {
+      categoryRef.values
+        .filter((value) => signalMatchesCatalogValues(requirement, [value]))
+        .forEach((value) => pushSubSignal(result, requirement, value, requiredness))
+    }
+  })
 
   requirement
     .split(/[,;]|\s+\bou\b\s+|\s+\bor\b\s+/iu)
     .map((part) => cleanSubSignal(part))
-    .filter((part) => part.split(/\s+/u).filter(Boolean).length <= 5)
+    .filter((part) => part.split(/\s+/u).filter(Boolean).length <= 6)
     .forEach((signal) => pushSubSignal(result, requirement, signal, requiredness))
-
-  if (/\b(?:banco|bancos|base|bases)\s+de\s+dados\b/u.test(normalizedRequirement)) {
-    pushSubSignal(result, requirement, 'bases de dados', requiredness)
-  }
-
-  if (/\b(?:automatizar|automacao|automacoes|robos|robôs)\b/u.test(normalizedRequirement)) {
-    pushSubSignal(result, requirement, 'automação de processos', requiredness)
-  }
 
   return result
 }
 
-function textMatchesSignal(text: string, signal: string): boolean {
-  const normalizedText = normalizeSemanticText(text)
-  const normalizedSignal = normalizeSemanticText(signal)
-  const canonicalText = buildCanonicalSignal(text)
-  const canonicalSignal = buildCanonicalSignal(signal)
+function categoryHasRelationship(
+  category: CatalogCategory,
+  targetCategoryId: string,
+  relationship: 'equivalent' | 'adjacent',
+): boolean {
+  const relationships = relationship === 'equivalent'
+    ? category.equivalentCategoryIds
+    : category.adjacentCategoryIds
 
-  return Boolean(
-    normalizedText
-    && normalizedSignal
-    && canonicalText
-    && canonicalSignal
-    && (
-      canonicalText === canonicalSignal
-      || includesNormalizedPhrase(normalizedText, normalizedSignal)
-      || includesNormalizedPhrase(normalizedSignal, normalizedText)
-      || hasLexicalAliasMatch(text, signal)
-    ),
-  )
+  return relationships.some((item) => item.categoryId === targetCategoryId)
 }
 
-function hasResumeSignal(resumeEvidence: DomainResumeEvidenceEntry[], signal: string): boolean {
-  return resumeEvidence.some((entry) => (
-    textMatchesSignal(entry.term, signal)
-    || textMatchesSignal(entry.span, signal)
-  ))
+function categoriesAreRelated(
+  leftCategory: CatalogCategoryRef,
+  rightCategory: CatalogCategoryRef,
+  relationship: 'equivalent' | 'adjacent',
+): boolean {
+  if (leftCategory.category.id === rightCategory.category.id) {
+    return relationship === 'equivalent'
+  }
+
+  return categoryHasRelationship(leftCategory.category, rightCategory.category.id, relationship)
+    || categoryHasRelationship(rightCategory.category, leftCategory.category.id, relationship)
 }
 
-function isStrictLiteralSignal(signal: string): boolean {
-  const normalized = normalizeSemanticText(signal)
-  return STRICT_LITERAL_SIGNALS.some((strictSignal) => normalizeSemanticText(strictSignal) === normalized)
+function termPairIsBlocked(leftTerm: CatalogTermRef, rightTerm: CatalogTermRef, index: CatalogIndex): boolean {
+  return index.antiEquivalentPairs.has(buildPairKey(leftTerm.term.id, rightTerm.term.id))
 }
 
-function candidateMatchesRuleSignal(candidate: string, ruleSignal: string): boolean {
-  return textMatchesSignal(candidate, ruleSignal)
+function termPairHasRelationship(
+  leftTerm: CatalogTermRef,
+  rightTerm: CatalogTermRef,
+  index: CatalogIndex,
+  relationship: 'equivalent' | 'adjacent',
+): boolean {
+  if (termPairIsBlocked(leftTerm, rightTerm, index)) {
+    return false
+  }
+
+  return leftTerm.term.id === rightTerm.term.id && relationship === 'equivalent'
+}
+
+function categoryAndTermHaveRelationship(
+  categoryRef: CatalogCategoryRef,
+  termRef: CatalogTermRef,
+  index: CatalogIndex,
+  relationship: 'equivalent' | 'adjacent',
+): boolean {
+  return termRef.term.categoryIds.some((termCategoryId) => {
+    const termCategory = index.categoriesById.get(termCategoryId)
+
+    return Boolean(termCategory && categoriesAreRelated(categoryRef, termCategory, relationship))
+  })
 }
 
 function collectRuleResumeMatches(
-  resumeEvidence: DomainResumeEvidenceEntry[],
-  resumeSignals: string[],
+  resumeCatalogEvidence: ReturnType<typeof findResumeCatalogEvidence>,
+  matchingJobSignals: CatalogSignalMatch[],
+  relationship: 'equivalent' | 'adjacent',
+  index: CatalogIndex,
 ): DomainResumeEvidenceEntry[] {
-  const matches = resumeEvidence.filter((entry) => resumeSignals.some((resumeSignal) => (
-    textMatchesSignal(entry.term, resumeSignal)
-    || textMatchesSignal(entry.span, resumeSignal)
+  const matches = resumeCatalogEvidence.filter((resumeEntry) => matchingJobSignals.some((jobMatch) => (
+    jobMatch.terms.some((jobTerm) => resumeEntry.terms.some((resumeTerm) => (
+      termPairHasRelationship(jobTerm, resumeTerm, index, relationship)
+    )))
+    || jobMatch.categories.some((jobCategory) => resumeEntry.terms.some((resumeTerm) => (
+      categoryAndTermHaveRelationship(jobCategory, resumeTerm, index, relationship)
+    )))
+    || jobMatch.categories.some((jobCategory) => resumeEntry.categories.some((resumeCategory) => (
+      categoriesAreRelated(jobCategory, resumeCategory, relationship)
+    )))
   )))
 
-  return Array.from(new Map(matches.map((entry) => [`${entry.term}|${entry.span}`, entry])).values())
+  return Array.from(new Map(matches.map((entry) => [`${entry.evidence.term}|${entry.evidence.span}`, entry.evidence])).values())
 }
+
+function buildDomainEquivalentRules(): DomainEquivalentRule[] {
+  const index = getCatalogIndex()
+  const equivalentRules = index.categories
+    .filter((categoryRef) => categoryRef.category.equivalentCategoryIds.length > 0)
+    .map((categoryRef) => {
+      const equivalentCategories = categoryRef.category.equivalentCategoryIds
+        .map((relationship) => index.categoriesById.get(relationship.categoryId))
+        .filter((category): category is CatalogCategoryRef => Boolean(category))
+
+      return {
+        jobSignals: uniqueValues(categoryRef.values),
+        resumeSignals: uniqueValues(equivalentCategories.flatMap((category) => category.values)),
+        evidenceLevel: 'technical_equivalent',
+        rewritePermission: 'can_claim_normalized',
+      } satisfies DomainEquivalentRule
+    })
+
+  const adjacentRules = index.categories
+    .filter((categoryRef) => categoryRef.category.adjacentCategoryIds.length > 0)
+    .map((categoryRef) => {
+      const adjacentCategories = categoryRef.category.adjacentCategoryIds
+        .map((relationship) => index.categoriesById.get(relationship.categoryId))
+        .filter((category): category is CatalogCategoryRef => Boolean(category))
+
+      return {
+        jobSignals: uniqueValues(categoryRef.values),
+        resumeSignals: uniqueValues(adjacentCategories.flatMap((category) => category.values)),
+        evidenceLevel: 'strong_contextual_inference',
+        rewritePermission: 'can_bridge_carefully',
+      } satisfies DomainEquivalentRule
+    })
+
+  return [...equivalentRules, ...adjacentRules]
+}
+
+export const DOMAIN_EQUIVALENT_RULES: DomainEquivalentRule[] = buildDomainEquivalentRules()
 
 export function findDomainEquivalentMatch(
   jobSignal: string,
   resumeEvidence: DomainResumeEvidenceEntry[],
 ): DomainEquivalentMatch | null {
+  const index = getCatalogIndex()
   const subSignals = decomposeRequirementSignal(jobSignal)
   const candidates = subSignals.length > 0 ? subSignals.map((entry) => entry.signal) : [jobSignal]
-  const resumeHasExactStrictSignals = new Set(
-    STRICT_LITERAL_SIGNALS
-      .filter((signal) => hasResumeSignal(resumeEvidence, signal))
-      .map((signal) => buildCanonicalSignal(signal)),
-  )
+  const jobMatches = candidates
+    .map((candidate) => findCatalogSignalMatches(candidate, index))
+    .filter((match) => match.terms.length > 0 || match.categories.length > 0)
 
-  for (const rule of DOMAIN_EQUIVALENT_RULES) {
-    const matchingJobSignals = candidates.filter((candidate) => {
-      const canonicalCandidate = buildCanonicalSignal(candidate)
-      if (isStrictLiteralSignal(candidate) && !resumeHasExactStrictSignals.has(canonicalCandidate)) {
-        return false
-      }
+  if (jobMatches.length === 0) {
+    return null
+  }
 
-      return rule.jobSignals.some((ruleSignal) => candidateMatchesRuleSignal(candidate, ruleSignal))
-    })
+  const resumeCatalogEvidence = findResumeCatalogEvidence(resumeEvidence, index)
+  if (resumeCatalogEvidence.length === 0) {
+    return null
+  }
 
-    if (matchingJobSignals.length === 0) {
-      continue
-    }
-
-    const resumeMatches = collectRuleResumeMatches(resumeEvidence, rule.resumeSignals)
-    if (resumeMatches.length === 0) {
-      continue
-    }
-
+  const equivalentMatches = collectRuleResumeMatches(resumeCatalogEvidence, jobMatches, 'equivalent', index)
+  if (equivalentMatches.length > 0) {
     return {
-      evidenceLevel: rule.evidenceLevel,
-      confidence: rule.evidenceLevel === 'technical_equivalent' ? 0.88 : 0.78,
-      matchedResumeTerms: resumeMatches.map((entry) => entry.term),
-      supportingResumeSpans: resumeMatches.map((entry) => entry.span),
-      rationale: `The compound job signal is supported by safe domain-equivalent resume evidence for: ${matchingJobSignals.join(', ')}.`,
+      evidenceLevel: 'technical_equivalent',
+      confidence: 0.88,
+      matchedResumeTerms: equivalentMatches.map((entry) => entry.term),
+      supportingResumeSpans: equivalentMatches.map((entry) => entry.span),
+      rationale: 'The job signal is supported by catalog-equivalent resume evidence.',
+    }
+  }
+
+  const adjacentMatches = collectRuleResumeMatches(resumeCatalogEvidence, jobMatches, 'adjacent', index)
+  if (adjacentMatches.length > 0) {
+    return {
+      evidenceLevel: 'strong_contextual_inference',
+      confidence: 0.78,
+      matchedResumeTerms: adjacentMatches.map((entry) => entry.term),
+      supportingResumeSpans: adjacentMatches.map((entry) => entry.span),
+      rationale: 'The job signal is supported by adjacent catalog evidence and must remain cautious.',
     }
   }
 

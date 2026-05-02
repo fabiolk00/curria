@@ -1,0 +1,361 @@
+{
+  "id": "software-engineering",
+  "version": "2026-05-02",
+  "domain": "software-engineering",
+  "goldenCaseIds": [
+    "software-engineering-low-fit-from-data-profile",
+    "automation-adjacent-without-rpa",
+    "data-bi-good-fit-with-specific-gaps"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "software-engineering.java",
+      "label": "Java",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "Java backend",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        },
+        {
+          "value": "Java development",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.backend-language"
+      ]
+    },
+    {
+      "id": "software-engineering.javascript",
+      "label": "JavaScript",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "JS",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.frontend-language"
+      ]
+    },
+    {
+      "id": "software-engineering.typescript",
+      "label": "TypeScript",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "TS",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.frontend-language"
+      ]
+    },
+    {
+      "id": "software-engineering.nodejs",
+      "label": "Node.js",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "Node",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.backend-runtime"
+      ]
+    },
+    {
+      "id": "software-engineering.rest-apis",
+      "label": "REST APIs",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa",
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "APIs REST",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ]
+        },
+        {
+          "value": "API integrations",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.api-integration"
+      ]
+    },
+    {
+      "id": "software-engineering.spring-boot",
+      "label": "Spring Boot",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "Spring",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.backend-framework"
+      ]
+    },
+    {
+      "id": "software-engineering.git",
+      "label": "Git",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "version control",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.delivery-practice"
+      ]
+    },
+    {
+      "id": "software-engineering.cloud",
+      "label": "Cloud platforms",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "aliases": [
+        {
+          "value": "AWS",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        },
+        {
+          "value": "Azure",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ]
+        }
+      ],
+      "categoryIds": [
+        "software-engineering.cloud-platform"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "software-engineering.backend-language",
+      "label": "Backend programming language",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.backend-runtime",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Runtime experience is adjacent to backend language evidence."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.frontend-language",
+      "label": "Frontend programming language",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.api-integration",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ],
+          "rationale": "Frontend delivery can be adjacent to API integration."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.backend-runtime",
+      "label": "Backend runtime",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.backend-framework",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Runtime and framework evidence are adjacent but not interchangeable."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.backend-framework",
+      "label": "Backend framework",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.backend-language",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Framework use can support backend experience without proving a different language."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.api-integration",
+      "label": "API integration",
+      "goldenCaseIds": [
+        "automation-adjacent-without-rpa",
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.delivery-practice",
+          "goldenCaseIds": [
+            "automation-adjacent-without-rpa"
+          ],
+          "rationale": "Integration work is adjacent to delivery practice."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.delivery-practice",
+      "label": "Software delivery practice",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.cloud-platform",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Cloud delivery can be adjacent to engineering practice."
+        }
+      ]
+    },
+    {
+      "id": "software-engineering.cloud-platform",
+      "label": "Cloud platform",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "parentCategoryIds": [],
+      "equivalentCategoryIds": [],
+      "adjacentCategoryIds": [
+        {
+          "categoryId": "software-engineering.api-integration",
+          "goldenCaseIds": [
+            "software-engineering-low-fit-from-data-profile"
+          ],
+          "rationale": "Cloud platform exposure can be adjacent to API delivery."
+        }
+      ]
+    }
+  ],
+  "antiEquivalences": [
+    {
+      "leftTermId": "software-engineering.java",
+      "rightTermId": "software-engineering.javascript",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "rationale": "Java evidence must not be treated as JavaScript evidence."
+    },
+    {
+      "leftTermId": "software-engineering.java",
+      "rightTermId": "software-engineering.typescript",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "rationale": "Java evidence must not be treated as TypeScript evidence."
+    },
+    {
+      "leftTermId": "software-engineering.spring-boot",
+      "rightTermId": "software-engineering.nodejs",
+      "goldenCaseIds": [
+        "software-engineering-low-fit-from-data-profile"
+      ],
+      "rationale": "A specific backend framework does not prove a different runtime."
+    }
+  ],
+  "audit": {
+    "source": "quick-260502-g04-plan-02",
+    "updatedAt": "2026-05-02"
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "id": "correlated-education-good-fit",
+  "title": "Correlated education supports analytics fit",
+  "domain": "data-bi",
+  "objective": "A statistics education plus analytics work should support a data role even when the degree title is not identical to the job wording.",
+  "input": {
+    "cv": {
+      "headline": "Analytics Specialist with statistics background",
+      "summary": "Applied Python, SQL, experiment analysis, and statistics coursework to product and operations analytics.",
+      "skills": [
+        "Python",
+        "SQL",
+        "Statistics",
+        "A/B testing",
+        "Regression analysis",
+        "Power BI"
+      ],
+      "experience": [
+        {
+          "title": "Analytics Specialist",
+          "company": "Digital Market",
+          "bullets": [
+            "Analyzed product experiments using Python notebooks and SQL cohorts.",
+            "Built Power BI views for retention, conversion, and campaign funnels.",
+            "Translated statistical results into recommendations for product managers."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Statistics",
+          "institution": "Universidade Federal do Parana"
+        }
+      ]
+    },
+    "job": {
+      "title": "Product Data Analyst",
+      "description": "Analyze experiments, build SQL datasets, use Python, and apply quantitative education in statistics, data science, engineering, or a related field.",
+      "requirements": [
+        {
+          "id": "req-python",
+          "kind": "skill",
+          "text": "Python analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-sql",
+          "kind": "skill",
+          "text": "SQL cohort analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-experiment-analysis",
+          "kind": "experience",
+          "text": "Product experiment or A/B test analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-quantitative-education",
+          "kind": "education",
+          "text": "Degree in statistics, data science, engineering, or a related quantitative field",
+          "priority": "required"
+        },
+        {
+          "id": "req-spark",
+          "kind": "skill",
+          "text": "Spark pipelines",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [],
+      "reviewNeededGaps": [
+        {
+          "id": "gap-spark",
+          "text": "Spark is listed as preferred and has no direct resume evidence."
+        }
+      ]
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-python",
+      "req-sql",
+      "req-experiment-analysis",
+      "req-quantitative-education"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-spark"
+    ],
+    "criticalGapIds": [],
+    "reviewNeededGapIds": [
+      "gap-spark"
+    ],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-python",
+        "req-sql",
+        "req-experiment-analysis",
+        "req-quantitative-education"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-spark"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "Spark"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 88,
+      "minimumPercent": 84,
+      "maximumPercent": 92,
+      "sectionScores": {
+        "skills": 0.75,
+        "experience": 1,
+        "education": 1
+      }
+    }
+  }
+}

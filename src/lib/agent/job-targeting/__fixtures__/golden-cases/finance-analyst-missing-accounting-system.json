@@ -1,0 +1,139 @@
+{
+  "id": "finance-analyst-missing-accounting-system",
+  "title": "Finance analyst missing accounting system",
+  "domain": "finance",
+  "objective": "Finance analysis evidence should support the role while keeping a required accounting system explicit when absent.",
+  "input": {
+    "cv": {
+      "headline": "Financial Analyst with FP&A reporting experience",
+      "summary": "Built budget analyses, Excel models, Power BI dashboards, and monthly forecast packs for managers.",
+      "skills": [
+        "Excel",
+        "Power BI",
+        "Budgeting",
+        "Forecasting",
+        "Variance analysis",
+        "SQL"
+      ],
+      "experience": [
+        {
+          "title": "Financial Analyst",
+          "company": "Consumer Goods BR",
+          "bullets": [
+            "Prepared monthly budget versus actual variance analysis for business units.",
+            "Built Excel models and Power BI dashboards for forecast reviews.",
+            "Partnered with controllers to explain revenue and expense movements."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "degree": "Bachelor in Business Administration",
+          "institution": "Universidade Nove"
+        }
+      ]
+    },
+    "job": {
+      "title": "Finance Analyst",
+      "description": "Prepare budget forecasts, analyze variances, build Excel reports, and use SAP FI or Oracle NetSuite accounting system data.",
+      "requirements": [
+        {
+          "id": "req-budgeting",
+          "kind": "experience",
+          "text": "Budgeting and forecast routines",
+          "priority": "required"
+        },
+        {
+          "id": "req-variance-analysis",
+          "kind": "experience",
+          "text": "Budget versus actual variance analysis",
+          "priority": "required"
+        },
+        {
+          "id": "req-excel-modeling",
+          "kind": "skill",
+          "text": "Advanced Excel financial modeling",
+          "priority": "required"
+        },
+        {
+          "id": "req-bi-reporting",
+          "kind": "skill",
+          "text": "BI dashboards for finance reporting",
+          "priority": "preferred"
+        },
+        {
+          "id": "req-accounting-system",
+          "kind": "skill",
+          "text": "SAP FI or Oracle NetSuite accounting system data",
+          "priority": "required"
+        },
+        {
+          "id": "req-business-education",
+          "kind": "education",
+          "text": "Business, accounting, economics, or related education",
+          "priority": "preferred"
+        }
+      ]
+    },
+    "gapAnalysis": {
+      "criticalGaps": [
+        {
+          "id": "gap-accounting-system",
+          "text": "No SAP FI, Oracle NetSuite, or accounting system evidence appears in the resume."
+        }
+      ],
+      "reviewNeededGaps": []
+    }
+  },
+  "expected": {
+    "supportedRequirementIds": [
+      "req-budgeting",
+      "req-variance-analysis",
+      "req-excel-modeling",
+      "req-bi-reporting",
+      "req-business-education"
+    ],
+    "adjacentRequirementIds": [],
+    "unsupportedRequirementIds": [
+      "req-accounting-system"
+    ],
+    "criticalGapIds": [
+      "gap-accounting-system"
+    ],
+    "reviewNeededGapIds": [],
+    "lowFit": {
+      "expected": false,
+      "reasons": []
+    },
+    "claimPolicy": {
+      "allowedRequirementIds": [
+        "req-budgeting",
+        "req-variance-analysis",
+        "req-excel-modeling",
+        "req-bi-reporting",
+        "req-business-education"
+      ],
+      "cautiousRequirementIds": [],
+      "forbiddenRequirementIds": [
+        "req-accounting-system"
+      ],
+      "requiredCautiousVerbalizations": [],
+      "prohibitedClaimTerms": [
+        "SAP FI",
+        "Oracle NetSuite",
+        "accounting system"
+      ]
+    },
+    "score": {
+      "algorithm": "job-compat-score-v1",
+      "expectedPercent": 83,
+      "minimumPercent": 79,
+      "maximumPercent": 87,
+      "sectionScores": {
+        "skills": 0.67,
+        "experience": 1,
+        "education": 1
+      }
+    }
+  }
+}

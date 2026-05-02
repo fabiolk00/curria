@@ -125,22 +125,24 @@ No new dependency is required for the planned refactor. [VERIFIED: package.json;
 ```text
 src/lib/agent/job-targeting/
   catalog/
-    types.ts
-    validator.ts
-    loader.ts
+    catalog-types.ts
+    catalog-validator.ts
+    catalog-loader.ts
     generic-taxonomy.json
-    packs/*.json
+    domain-packs/*.json
   compatibility/
-    types.ts
     assessment.ts
-    requirement-extraction.ts
+    requirement-decomposition.ts
     evidence-extraction.ts
     matcher.ts
-    scoring.ts
+    score.ts
     claim-policy.ts
     structured-validation.ts
     legacy-adapters.ts
+  __fixtures__/
     golden-cases/*.json
+  __tests__/
+    *.test.ts
 ```
 
 This structure matches the locked path decisions and keeps catalog data outside core logic. [VERIFIED: CONTEXT.md]
@@ -190,7 +192,7 @@ This structure matches the locked path decisions and keeps catalog data outside 
 
 | Problem | Don't build | Use instead | Why |
 |---|---|---|---|
-| Catalog validation | Ad hoc JSON checks | Zod schemas in `catalog/validator.ts` | Project convention already uses zod for structured validation. [CITED: AGENTS.md; VERIFIED: npm ls zod] |
+| Catalog validation | Ad hoc JSON checks | Zod schemas in `catalog/catalog-validator.ts` | Project convention already uses zod for structured validation. [CITED: AGENTS.md; VERIFIED: npm ls zod] |
 | Public score math | Parallel calculators in route/UI/pipeline | `job-compat-score-v1` from assessment | Current comparison route can backfill score from `targetingPlan`, which would become a second calculator if left in place. [VERIFIED: src/lib/routes/session-comparison/decision.ts:28-37] |
 | Claim safety | String lists as source of truth | Structured claim policy adapted to legacy lists | Current `TargetedRewritePermissions` is list-based and should become an adapter output. [VERIFIED: src/types/agent.ts:323-330; VERIFIED: CONTEXT.md] |
 | Domain equivalence | `if Power BI then...` runtime branches | Catalog alias/category/anti-equivalence records | Current `domain-equivalents.ts` and `skill-adjacency.ts` contain runtime technology/domain examples that conflict with the new locked core rule. [VERIFIED: src/lib/agent/job-targeting/domain-equivalents.ts:38-400; VERIFIED: src/lib/agent/job-targeting/skill-adjacency.ts:12-51; VERIFIED: CONTEXT.md] |
@@ -280,11 +282,11 @@ return {
 
 | Behavior | Test Type | Existing Coverage | Wave 0 Gap |
 |---|---|---|---|
-| Catalog validator rejects terms/anti-equivalences without `goldenCaseIds` | unit | none found. [VERIFIED: rg --files src/lib/agent/job-targeting] | Add `catalog/validator.test.ts`. |
+| Catalog validator rejects terms/anti-equivalences without `goldenCaseIds` | unit | none found. [VERIFIED: rg --files src/lib/agent/job-targeting] | Add `src/lib/agent/job-targeting/__tests__/catalog-validator.test.ts`. |
 | Requirement extraction/decomposition remains generic | unit/golden | Partial current coverage in `core-requirement-coverage.test.ts`. [VERIFIED: src/lib/agent/job-targeting/core-requirement-coverage.test.ts:53-180] | Add golden runner for locked cases. |
-| Matcher precedence exact > alias > anti-equivalence > category > adjacent > LLM > unsupported | unit | none found for this exact order. [VERIFIED: CONTEXT.md; VERIFIED: rg --files src/lib/agent/job-targeting] | Add `compatibility/matcher.test.ts`. |
+| Matcher precedence exact > alias > anti-equivalence > category > adjacent > LLM > unsupported | unit | none found for this exact order. [VERIFIED: CONTEXT.md; VERIFIED: rg --files src/lib/agent/job-targeting] | Add `src/lib/agent/job-targeting/__tests__/matcher.test.ts`. |
 | Claim policy allowed/cautious/forbidden maps to validation and rewrite | unit/integration | Current list-based tests exist. [VERIFIED: src/lib/agent/job-targeting/validation-policy.test.ts; VERIFIED: src/lib/agent/job-targeting/safe-targeting-emphasis.test.ts] | Add `claim-policy.test.ts` and adapter tests. |
-| Score `job-compat-score-v1` uses locked weights and adjacent discount | unit | Current score tests cover old display shape only. [VERIFIED: src/lib/agent/job-targeting/score-breakdown.test.ts:56-99] | Add `compatibility/scoring.test.ts`. |
+| Score `job-compat-score-v1` uses locked weights and adjacent discount | unit | Current score tests cover old display shape only. [VERIFIED: src/lib/agent/job-targeting/score-breakdown.test.ts:56-99] | Add `src/lib/agent/job-targeting/compatibility/score.ts` and `src/lib/agent/job-targeting/__tests__/score.test.ts`. |
 | Pipeline persists assessment and derives legacy fields | integration | Pipeline tests cover current legacy fields. [VERIFIED: src/lib/agent/tools/pipeline.test.ts:1749-1865] | Extend pipeline tests for `jobCompatibilityAssessment`. |
 | Hardcode guard blocks tool/vendor/segment terms in core | unit/architecture | Current guard covers only `core-requirement-coverage.ts`. [VERIFIED: src/lib/agent/job-targeting/core-requirement-coverage.test.ts:53-70] | Add guard over `compatibility/**` excluding `catalog/**`, fixtures, tests. |
 
@@ -322,15 +324,15 @@ return {
 | Logging resume/job content | Information Disclosure | New logs must include counts, IDs, versions, and no full resume/job text. [VERIFIED: CONTEXT.md; VERIFIED: src/lib/agent/job-targeting-pipeline.ts:704-763] |
 | Catalog drift making unsafe equivalences valid | Tampering | Require pack validation and `goldenCaseIds` on terms/anti-equivalences. [VERIFIED: CONTEXT.md] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `jobCompatibilityAssessment` be returned to clients?**  
    What we know: current session and comparison routes expose legacy targeting fields, and UI only needs score/recommendations/review cards today. [VERIFIED: src/app/api/session/[id]/route.ts:100-131; VERIFIED: src/components/resume/resume-comparison-view.tsx:635-773]  
-   Recommendation: keep full assessment server/internal initially and expose only adapted public fields unless UI diagnostics require it.
+   Resolution: keep full assessment server/internal initially. Persist it in `agentState.jobCompatibilityAssessment`, but expose only the existing adapted public fields unless a later UI task explicitly adds an assessment diagnostic surface.
 
 2. **How much of target-role extraction is in scope for generic core?**  
    What we know: current role extraction has role-name regexes in `build-targeting-plan.ts`. [VERIFIED: src/lib/agent/tools/build-targeting-plan.ts:60-281]  
-   Recommendation: do not solve role taxonomy in the first assessment slice; keep target role as metadata and focus the engine on requirement/evidence compatibility.
+   Resolution: target-role extraction is metadata for this refactor, not part of the generic compatibility core. The assessment may report `targetRole`, `targetRoleConfidence`, and `targetRoleSource`, but tool/role taxonomy cleanup outside the compatibility engine is deferred.
 
 ## Sources
 
