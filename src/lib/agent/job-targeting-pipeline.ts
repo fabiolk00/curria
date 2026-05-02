@@ -1,6 +1,7 @@
 import { analyzeGap } from '@/lib/agent/tools/gap-analysis'
 import { buildOverrideReviewHighlightState } from '@/lib/agent/highlight/override-review-highlights'
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
+import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
 import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
 import { evaluateCareerFitRisk } from '@/lib/agent/profile-review'
 import {
@@ -36,6 +37,10 @@ import { createJobTargetingLogContext } from '@/lib/agent/job-targeting-observab
 import { recordMetricCounter } from '@/lib/observability/metric-events'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import type { CoreRequirement, JobTargetingExplanation, Session, TargetEvidence } from '@/types/agent'
+import type {
+  JobCompatibilityAssessment,
+  RequirementEvidenceSource,
+} from '@/lib/agent/job-targeting/compatibility/types'
 import type { JobTargetingTrace } from '@/types/trace'
 
 type JobTargetingTraceDraft = Pick<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt'>
@@ -328,6 +333,87 @@ function countInferredEvidence(targetEvidence: TargetEvidence[] = []): number {
   )).length
 }
 
+function countAssessmentRequirementSources(
+  assessment: JobCompatibilityAssessment,
+): {
+  deterministicCount: number
+  catalogCount: number
+  llmCount: number
+  fallbackCount: number
+} {
+  const deterministicSources = new Set<RequirementEvidenceSource>(['exact', 'composite_decomposition'])
+  const catalogSources = new Set<RequirementEvidenceSource>([
+    'catalog_alias',
+    'catalog_category',
+    'catalog_anti_equivalence',
+  ])
+
+  return assessment.requirements.reduce((counts, requirement) => {
+    if (deterministicSources.has(requirement.source)) {
+      counts.deterministicCount += 1
+    } else if (catalogSources.has(requirement.source)) {
+      counts.catalogCount += 1
+    } else if (requirement.source === 'llm_ambiguous') {
+      counts.llmCount += 1
+    } else {
+      counts.fallbackCount += 1
+    }
+
+    return counts
+  }, {
+    deterministicCount: 0,
+    catalogCount: 0,
+    llmCount: 0,
+    fallbackCount: 0,
+  })
+}
+
+function buildCompatibilityLogPayload(
+  session: Session,
+  assessment: JobCompatibilityAssessment,
+) {
+  const sourceCounts = countAssessmentRequirementSources(assessment)
+
+  return {
+    workflowMode: 'job_targeting',
+    sessionId: session.id,
+    userId: session.userId,
+    assessmentVersion: assessment.audit.assessmentVersion,
+    requirementExtractionVersion: assessment.audit.requirementExtractionVersion,
+    evidenceExtractionVersion: assessment.audit.evidenceExtractionVersion,
+    matcherVersion: assessment.audit.matcherVersion,
+    claimPolicyVersion: assessment.audit.claimPolicyVersion,
+    scoreVersion: assessment.audit.scoreVersion,
+    catalogIds: assessment.catalog.catalogIds,
+    catalogVersions: assessment.catalog.catalogVersions,
+    totalRequirements: assessment.requirements.length,
+    supportedCount: assessment.supportedRequirements.length,
+    adjacentCount: assessment.adjacentRequirements.length,
+    unsupportedCount: assessment.unsupportedRequirements.length,
+    criticalGapCount: assessment.criticalGaps.length,
+    allowedClaimCount: assessment.claimPolicy.allowedClaims.length,
+    cautiousClaimCount: assessment.claimPolicy.cautiousClaims.length,
+    forbiddenClaimCount: assessment.claimPolicy.forbiddenClaims.length,
+    lowFitTriggered: assessment.lowFit.triggered,
+    lowFitBlocking: assessment.lowFit.blocking,
+    ...sourceCounts,
+  }
+}
+
+function logCompatibilityAssessmentLifecycle(
+  session: Session,
+  assessment: JobCompatibilityAssessment,
+): void {
+  const payload = buildCompatibilityLogPayload(session, assessment)
+
+  logInfo('job_targeting.compatibility.catalog_loaded', payload)
+  logInfo('job_targeting.compatibility.requirements_extracted', payload)
+  logInfo('job_targeting.compatibility.evidence_classified', payload)
+  logInfo('job_targeting.compatibility.claim_policy_built', payload)
+  logInfo('job_targeting.compatibility.score_calculated', payload)
+  logInfo('job_targeting.compatibility.completed', payload)
+}
+
 function buildJobTargetingExplanation(params: {
   session: Session
   optimizedCvState: Session['cvState']
@@ -602,6 +688,23 @@ export async function runJobTargetingPipeline(
       targetFitAssessment,
     },
   })
+  logInfo('job_targeting.compatibility.started', {
+    workflowMode: 'job_targeting',
+    sessionId: session.id,
+    userId: session.userId,
+    cvStatePresent: true,
+    targetJobDescriptionPresent: true,
+    gapAnalysisPresent: true,
+    careerFitEvaluationPresent: Boolean(careerFitEvaluation),
+  })
+  const jobCompatibilityAssessment = await evaluateJobCompatibility({
+    cvState: session.cvState,
+    targetJobDescription,
+    gapAnalysis: gapAnalysisResult,
+    userId: session.userId,
+    sessionId: session.id,
+  })
+  logCompatibilityAssessmentLifecycle(session, jobCompatibilityAssessment)
 
   await persistPipelineAgentState({
     ...session.agentState,
@@ -609,6 +712,7 @@ export async function runJobTargetingPipeline(
     gapAnalysis,
     targetFitAssessment,
     careerFitEvaluation: careerFitEvaluation ?? undefined,
+    jobCompatibilityAssessment,
     atsWorkflowRun: buildWorkflowRun(session, {
       currentStage: 'targeting_plan',
     }),
@@ -638,6 +742,7 @@ export async function runJobTargetingPipeline(
     mode: 'job_targeting',
     rewriteIntent: 'targeted_rewrite',
     careerFitEvaluation: careerFitEvaluation ?? undefined,
+    jobCompatibilityAssessment,
   })
   const jobKeywords = extractJobKeywords({
     gapAnalysis,
@@ -689,6 +794,7 @@ export async function runJobTargetingPipeline(
     gapAnalysis,
     targetFitAssessment,
     careerFitEvaluation: careerFitEvaluation ?? undefined,
+    jobCompatibilityAssessment,
     targetingPlan,
     atsWorkflowRun: buildWorkflowRun(session, {
       currentStage: 'rewrite_plan',
@@ -710,6 +816,7 @@ export async function runJobTargetingPipeline(
       gapAnalysis,
       targetFitAssessment,
       careerFitEvaluation: careerFitEvaluation ?? undefined,
+      jobCompatibilityAssessment,
       targetingPlan,
       extractionWarning: 'low_confidence_role',
       atsWorkflowRun: buildWorkflowRun(session, {
@@ -853,6 +960,7 @@ export async function runJobTargetingPipeline(
       gapAnalysis,
       targetFitAssessment,
       careerFitEvaluation: careerFitEvaluation ?? undefined,
+      jobCompatibilityAssessment,
       targetingPlan,
       extractionWarning: targetingPlan.targetRoleConfidence === 'low' ? 'low_confidence_role' : undefined,
       rewriteStatus: 'failed',
@@ -976,6 +1084,8 @@ export async function runJobTargetingPipeline(
       workflowMode: 'job_targeting',
       gapAnalysis,
       targetFitAssessment,
+      careerFitEvaluation: careerFitEvaluation ?? undefined,
+      jobCompatibilityAssessment,
       targetingPlan,
       rewriteStatus: 'failed',
       atsWorkflowRun: buildWorkflowRun(session, {
@@ -1021,6 +1131,7 @@ export async function runJobTargetingPipeline(
     targetJobDescription,
     gapAnalysis: gapAnalysisResult,
     targetingPlan,
+    jobCompatibilityAssessment,
   })
   let summaryRetryAttempted = false
   let summaryRetrySucceeded = false
@@ -1065,6 +1176,7 @@ export async function runJobTargetingPipeline(
         targetJobDescription,
         gapAnalysis: gapAnalysisResult,
         targetingPlan,
+        jobCompatibilityAssessment,
       })
       summaryRetrySucceeded = !validation.blocked
 
@@ -1126,6 +1238,7 @@ export async function runJobTargetingPipeline(
       targetJobDescription,
       gapAnalysis: gapAnalysisResult,
       targetingPlan,
+      jobCompatibilityAssessment,
     })
     acceptedLowFitFallbackUsed = true
   }
@@ -1412,6 +1525,7 @@ export async function runJobTargetingPipeline(
     gapAnalysis,
     targetFitAssessment,
     careerFitEvaluation: careerFitEvaluation ?? undefined,
+    jobCompatibilityAssessment,
     targetingPlan,
     extractionWarning: targetingPlan.targetRoleConfidence === 'low' ? 'low_confidence_role' : undefined,
     rewriteStatus: validation.blocked ? 'failed' : 'completed',

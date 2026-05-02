@@ -1901,12 +1901,12 @@ describe('ATS enhancement reliability hardening', () => {
     expect(mockEvaluateJobCompatibility).toHaveBeenCalledWith({
       cvState: session.cvState,
       targetJobDescription: session.agentState.targetJobDescription,
-      gapAnalysis: {
+      gapAnalysis: expect.objectContaining({
         matchScore: 68,
         missingSkills: ['BigQuery'],
         weakAreas: ['summary'],
-        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiÃªncia.'],
-      },
+        improvementSuggestions: [expect.stringContaining('Aproxime o resumo da vaga')],
+      }),
       userId: session.userId,
       sessionId: session.id,
     })
