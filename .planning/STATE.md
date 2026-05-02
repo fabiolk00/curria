@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
 Last activity: 2026-05-02
-Last Activity Description: Completed quick task 260502-dm0: Alterar CTA Ver meu score ATS gratis para criar-conta e persistir metodo de signup.
+Last Activity Description: Completed quick task 260502-fiy: Ajustar fallback signup gratuito para profile-setup e copy CTA landing mantendo redirect_to pago.
 
 Progress: [##########] 100%
 
@@ -180,6 +180,7 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260502-fiy | Ajustar fallback signup gratuito para profile-setup e copy CTA landing mantendo redirect_to pago | 2026-05-02 | 0947f58 | Validated | [260502-fiy-ajustar-fallback-signup-gratuito-para-pr](./quick/260502-fiy-ajustar-fallback-signup-gratuito-para-pr/) |
 | 260502-dm0 | Alterar CTA Ver meu score ATS gratis para criar-conta e persistir metodo de signup google ou email | 2026-05-02 | 67409c5 | Validated | [260502-dm0-alterar-cta-ver-meu-score-ats-gratis-par](./quick/260502-dm0-alterar-cta-ver-meu-score-ats-gratis-par/) |
 | 260502-df8 | Mostrar CTA melhorar curriculo no profile-setup redirecionando para generate-resume | 2026-05-02 | working-tree | Validated | [260502-df8-mostrar-cta-melhorar-curriculo-no-profil](./quick/260502-df8-mostrar-cta-melhorar-curriculo-no-profil/) |
 | 260501-w6t | Criar rota generate-resume separar geracao do profile-setup atualizar sidebar e validar welcome guide | 2026-05-02 | working-tree | Validated | [260501-w6t-criar-rota-generate-resume-separar-gerac](./quick/260501-w6t-criar-rota-generate-resume-separar-gerac/) |
