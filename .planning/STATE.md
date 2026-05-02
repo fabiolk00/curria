@@ -6,8 +6,8 @@ current_phase: 108
 current_phase_name: adicionar camada dinamica de evidencia semantica para targeted rewrite de job_targeting
 current_plan: 01 completed
 status: verifying
-stopped_at: Completed 260502-g04-07-PLAN.md
-last_updated: "2026-05-02T16:51:29.882Z"
+stopped_at: Completed 260502-g04-08-PLAN.md
+last_updated: "2026-05-02T17:11:04.767Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 73
@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: Phase complete — ready for verification
 Last activity: 2026-05-02
-Last Activity Description: Completed quick task 260502-g04-07: Legacy Job Targeting adapters now derive product-facing targeting contracts from JobCompatibilityAssessment.
+Last Activity Description: Completed quick task 260502-g04-08: Assessment-derived wrappers and structured claim validation now enforce canonical JobCompatibilityAssessment boundaries.
 
 Progress: [##########] 100%
 
@@ -47,6 +47,7 @@ Baseline carried forward from earlier shipped milestones:
 - Total plans completed: 87
 - Milestones archived: 5
 - Quick 260502-g04-07: 13min, 2 tasks, 10 files.
+- Quick 260502-g04-08: 16min, 2 tasks, 19 files.
 
 ## Accumulated Context
 
@@ -175,6 +176,8 @@ Baseline carried forward from earlier shipped milestones:
 - [Phase Quick 260502-g04-06]: Empty compatibility score dimensions are treated as neutral at 0.5 so absent dimensions do not become implicit hard failures.
 - [Phase Quick 260502-g04-07]: Assessment-aware Job Targeting legacy adapters now derive targeting evidence, coverage, low-fit, positioning, and display score from JobCompatibilityAssessment.
 - [Phase Quick 260502-g04-07]: buildTargetedRewritePlan preserves legacy behavior without an assessment and bypasses legacy compatibility classifiers when an assessment is supplied.
+- [Phase Quick 260502-g04-08]: Assessment-backed Job Targeting sessions now use adapter-derived score, low-fit, recommendations, permissions, emphasis, and structured claim validation instead of legacy recalculation.
+- [Phase Quick 260502-g04-08]: Generated CV claim safety is now section-traced through GeneratedClaimTrace and maps structured assessment policy violations back into the brownfield ValidationIssue contract.
 
 ### Pending Todos
 
@@ -274,9 +277,10 @@ Baseline carried forward from earlier shipped milestones:
 | 260502-g04-05 | Generic catalog-driven matcher for Job Targeting compatibility refactor | 2026-05-02 | abefb4b | Validated | [260502-g04-refatorar-job-targeting-para-motor-gener](./quick/260502-g04-refatorar-job-targeting-para-motor-gener/) |
 | 260502-g04-06 | Canonical Job Targeting compatibility assessment with score, claim policy, and validation | 2026-05-02 | 53924b6 | Validated | [260502-g04-refatorar-job-targeting-para-motor-gener](./quick/260502-g04-refatorar-job-targeting-para-motor-gener/) |
 | 260502-g04-07 | Legacy adapter/build-targeting-plan integration after the canonical assessment core | 2026-05-02 | 93d83ad | Validated | [260502-g04-refatorar-job-targeting-para-motor-gener](./quick/260502-g04-refatorar-job-targeting-para-motor-gener/) |
+| 260502-g04-08 | Remaining legacy wrapper delegation and assessment claim-policy validation | 2026-05-02 | d1aa242 | Validated | [260502-g04-refatorar-job-targeting-para-motor-gener](./quick/260502-g04-refatorar-job-targeting-para-motor-gener/) |
 
 ## Session Continuity
 
-Last session: 2026-05-02T16:51:03.781Z
-Stopped at: Completed 260502-g04-07-PLAN.md
+Last session: 2026-05-02T17:11:04.767Z
+Stopped at: Completed 260502-g04-08-PLAN.md
 Resume file: None
