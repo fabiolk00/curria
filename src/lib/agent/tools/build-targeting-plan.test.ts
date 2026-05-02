@@ -6,6 +6,7 @@ import * as lowFitWarningGateModule from '@/lib/agent/job-targeting/low-fit-warn
 import * as safeTargetingEmphasisModule from '@/lib/agent/job-targeting/safe-targeting-emphasis'
 import * as rewritePermissionsModule from '@/lib/agent/job-targeting/rewrite-permissions'
 import { buildTargetedRewritePlan, buildTargetingPlan } from '@/lib/agent/tools/build-targeting-plan'
+import type { JobCompatibilityAssessment, RequirementEvidence } from '@/lib/agent/job-targeting/compatibility/types'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 
 const { mockOpenAICompletionCreate, mockCallOpenAIWithRetry, mockTrackApiUsage } = vi.hoisted(() => ({
@@ -64,6 +65,201 @@ const gapAnalysis: GapAnalysisResult = {
   missingSkills: ['Airflow'],
   weakAreas: ['summary'],
   improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
+}
+
+function assessmentRequirement(
+  overrides: Partial<RequirementEvidence> & Pick<RequirementEvidence, 'id' | 'productGroup' | 'rewritePermission'>,
+): RequirementEvidence {
+  const signal = overrides.extractedSignals?.[0] ?? overrides.id
+
+  return {
+    id: overrides.id,
+    originalRequirement: signal,
+    normalizedRequirement: signal.toLowerCase(),
+    extractedSignals: [signal],
+    kind: 'skill',
+    importance: 'core',
+    evidenceLevel: overrides.productGroup === 'supported' ? 'explicit' : 'unsupported_gap',
+    matchedResumeTerms: overrides.productGroup === 'supported' ? [signal] : [],
+    supportingResumeSpans: overrides.productGroup === 'supported'
+      ? [{ id: `span-${overrides.id}`, text: signal }]
+      : [],
+    confidence: overrides.productGroup === 'supported' ? 1 : 0.7,
+    rationale: 'assessment fixture',
+    source: 'exact',
+    catalogTermIds: [],
+    catalogCategoryIds: [],
+    prohibitedTerms: overrides.productGroup === 'unsupported' ? [signal] : [],
+    audit: {
+      matcherVersion: 'test',
+      precedence: ['exact'],
+      catalogIds: [],
+      catalogVersions: {},
+      catalogTermIds: [],
+      catalogCategoryIds: [],
+    },
+    ...overrides,
+  }
+}
+
+function buildCompatibilityAssessment(): JobCompatibilityAssessment {
+  const supported = assessmentRequirement({
+    id: 'assessment-supported',
+    productGroup: 'supported',
+    rewritePermission: 'can_claim_directly',
+    extractedSignals: ['Assessment supported signal'],
+  })
+  const unsupported = assessmentRequirement({
+    id: 'assessment-unsupported',
+    productGroup: 'unsupported',
+    rewritePermission: 'must_not_claim',
+    extractedSignals: ['Assessment unsupported signal'],
+  })
+
+  return {
+    version: 'job-compat-assessment-v1',
+    targetRole: 'Assessment Role',
+    targetRoleConfidence: 'high',
+    targetRoleSource: 'heuristic',
+    requirements: [supported, unsupported],
+    supportedRequirements: [supported],
+    adjacentRequirements: [],
+    unsupportedRequirements: [unsupported],
+    claimPolicy: {
+      allowedClaims: [{
+        id: 'claim-supported',
+        signal: 'Assessment supported signal',
+        permission: 'allowed',
+        evidenceBasis: [{ id: 'span-supported', text: 'Assessment supported signal' }],
+        allowedTerms: ['Assessment supported signal'],
+        prohibitedTerms: [],
+        rationale: 'supported',
+        requirementIds: ['assessment-supported'],
+      }],
+      cautiousClaims: [],
+      forbiddenClaims: [{
+        id: 'claim-unsupported',
+        signal: 'Assessment unsupported signal',
+        permission: 'forbidden',
+        evidenceBasis: [],
+        allowedTerms: [],
+        prohibitedTerms: ['Assessment unsupported signal'],
+        rationale: 'unsupported',
+        requirementIds: ['assessment-unsupported'],
+      }],
+    },
+    scoreBreakdown: {
+      version: 'job-compat-score-v1',
+      total: 84,
+      maxTotal: 100,
+      adjacentDiscount: 0.5,
+      dimensions: {
+        skills: 90,
+        experience: 80,
+        education: 75,
+      },
+      counts: {
+        total: 2,
+        supported: 1,
+        adjacent: 0,
+        unsupported: 1,
+      },
+      weights: {
+        skills: 0.34,
+        experience: 0.46,
+        education: 0.2,
+      },
+      formula: {
+        supportedValue: 1,
+        adjacentValue: 0.5,
+        unsupportedValue: 0,
+      },
+      audit: {
+        dimensionDetails: {
+          skills: {
+            id: 'skills',
+            weight: 0.34,
+            requirementCount: 1,
+            supportedCount: 1,
+            adjacentCount: 0,
+            unsupportedCount: 0,
+            rawScore: 0.9,
+            weightedScore: 0.31,
+          },
+          experience: {
+            id: 'experience',
+            weight: 0.46,
+            requirementCount: 1,
+            supportedCount: 1,
+            adjacentCount: 0,
+            unsupportedCount: 0,
+            rawScore: 0.8,
+            weightedScore: 0.37,
+          },
+          education: {
+            id: 'education',
+            weight: 0.2,
+            requirementCount: 0,
+            supportedCount: 0,
+            adjacentCount: 0,
+            unsupportedCount: 0,
+            rawScore: 0.75,
+            weightedScore: 0.15,
+          },
+        },
+      },
+    },
+    criticalGaps: [{
+      id: 'critical-assessment-unsupported',
+      signal: 'Assessment unsupported signal',
+      kind: 'skill',
+      importance: 'core',
+      severity: 'critical',
+      rationale: 'unsupported_core_requirement',
+      requirementIds: ['assessment-unsupported'],
+      prohibitedTerms: ['Assessment unsupported signal'],
+    }],
+    reviewNeededGaps: [],
+    lowFit: {
+      triggered: false,
+      blocking: false,
+      riskLevel: 'low',
+      reasons: [],
+      thresholdAudit: {
+        score: 84,
+        minimumScore: 25,
+        unsupportedCoreCount: 1,
+        totalCoreCount: 2,
+        unsupportedCoreRatio: 0.5,
+        supportedOrAdjacentCount: 1,
+      },
+    },
+    catalog: {
+      catalogIds: [],
+      catalogVersions: {},
+    },
+    audit: {
+      generatedAt: '2026-05-02T12:00:00.000Z',
+      assessmentVersion: 'job-compat-assessment-v1',
+      requirementExtractionVersion: 'test',
+      evidenceExtractionVersion: 'test',
+      matcherVersion: 'test',
+      claimPolicyVersion: 'job-compat-claim-policy-v1',
+      scoreVersion: 'job-compat-score-v1',
+      counters: {
+        requirements: 2,
+        resumeEvidence: 1,
+        supported: 1,
+        adjacent: 0,
+        unsupported: 1,
+        allowedClaims: 1,
+        cautiousClaims: 0,
+        forbiddenClaims: 1,
+        criticalGaps: 1,
+        reviewNeededGaps: 0,
+      },
+    },
+  }
 }
 
 describe('buildTargetingPlan', () => {
@@ -243,6 +439,61 @@ describe('buildTargetingPlan', () => {
     })
 
     expect(plan.missingButCannotInvent).toEqual(['Airflow'])
+  })
+
+  it('delegates compatibility-sensitive fields to the canonical assessment when provided', async () => {
+    const classifySpy = vi.spyOn(evidenceClassifierModule, 'classifyTargetEvidence')
+    const coreCoverageSpy = vi.spyOn(coreRequirementCoverageModule, 'buildCoreRequirementCoverage')
+    const lowFitSpy = vi.spyOn(lowFitWarningGateModule, 'buildLowFitWarningGate')
+
+    const plan = await buildTargetedRewritePlan({
+      cvState: buildCvState(),
+      targetJobDescription: [
+        'About The Job',
+        'Work on roadmap, discovery, and stakeholder alignment.',
+      ].join('\n'),
+      gapAnalysis: {
+        ...gapAnalysis,
+        matchScore: 12,
+        missingSkills: ['Legacy missing signal'],
+      },
+      jobCompatibilityAssessment: buildCompatibilityAssessment(),
+      mode: 'job_targeting',
+      rewriteIntent: 'targeted_rewrite',
+    })
+
+    expect(mockOpenAICompletionCreate).not.toHaveBeenCalled()
+    expect(classifySpy).not.toHaveBeenCalled()
+    expect(coreCoverageSpy).not.toHaveBeenCalled()
+    expect(lowFitSpy).not.toHaveBeenCalled()
+    expect(plan.targetRole).toBe('Assessment Role')
+    expect(plan.targetRoleConfidence).toBe('high')
+    expect(plan.targetRoleSource).toBe('heuristic')
+    expect(plan.targetEvidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        jobSignal: 'Assessment supported signal',
+        evidenceLevel: 'explicit',
+      }),
+      expect.objectContaining({
+        jobSignal: 'Assessment unsupported signal',
+        evidenceLevel: 'unsupported_gap',
+      }),
+    ]))
+    expect(plan.rewritePermissions).toEqual(expect.objectContaining({
+      directClaimsAllowed: ['Assessment supported signal'],
+      forbiddenClaims: ['Assessment unsupported signal'],
+    }))
+    expect(plan.coreRequirementCoverage).toEqual(expect.objectContaining({
+      total: 2,
+      supported: 1,
+      unsupported: 1,
+      topUnsupportedSignalsForDisplay: ['Assessment unsupported signal'],
+    }))
+    expect(plan.lowFitWarningGate).toEqual(expect.objectContaining({
+      triggered: false,
+      matchScore: 84,
+      riskLevel: 'low',
+    }))
   })
 
   it('adds a safe target role positioning when the target role is distant and gap-heavy', async () => {

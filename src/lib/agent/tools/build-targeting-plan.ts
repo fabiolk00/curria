@@ -8,10 +8,12 @@ import { buildLowFitWarningGate } from '@/lib/agent/job-targeting/low-fit-warnin
 import { buildTargetRolePositioning } from '@/lib/agent/job-targeting/recoverable-validation'
 import { buildTargetedRewritePermissions } from '@/lib/agent/job-targeting/rewrite-permissions'
 import { buildSafeTargetingEmphasis } from '@/lib/agent/job-targeting/safe-targeting-emphasis'
+import { buildTargetingPlanFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
 import { MAX_TARGETING_PLAN_ITEMS, shapeTargetJobDescription } from '@/lib/agent/job-targeting-retry'
 import { trackApiUsage } from '@/lib/agent/usage-tracker'
 import { openai } from '@/lib/openai/client'
 import { callOpenAIWithRetry, getChatCompletionText, getChatCompletionUsage } from '@/lib/openai/chat'
+import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import type { TargetingPlan } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 
@@ -161,6 +163,12 @@ export async function buildTargetedRewritePlan(params: BuildTargetedRewritePlanI
   }
 
   const basePlan = await buildBaseTargetingPlan(params)
+  if (params.jobCompatibilityAssessment) {
+    return buildTargetingPlanFromAssessment(params.jobCompatibilityAssessment, {
+      basePlan,
+    })
+  }
+
   const coreRequirementSignals = extractCoreRequirementSignalsFromDescription(params.targetJobDescription)
 
   const targetEvidence = await classifyTargetEvidence({
@@ -440,6 +448,7 @@ type BuildTargetingPlanParams = {
   cvState: CVState
   targetJobDescription: string
   gapAnalysis: GapAnalysisResult
+  jobCompatibilityAssessment?: JobCompatibilityAssessment
   userId?: string
   sessionId?: string
 }
@@ -457,7 +466,13 @@ async function buildBaseTargetingPlan(params: BuildTargetingPlanParams): Promise
   let extractedRole: { targetRole: string; confidence: 'high' | 'medium' | 'low' }
   let targetRoleSource: TargetingPlan['targetRoleSource']
 
-  if (heuristic.confidence === 'high') {
+  if (params.jobCompatibilityAssessment) {
+    extractedRole = {
+      targetRole: params.jobCompatibilityAssessment.targetRole,
+      confidence: params.jobCompatibilityAssessment.targetRoleConfidence,
+    }
+    targetRoleSource = params.jobCompatibilityAssessment.targetRoleSource
+  } else if (heuristic.confidence === 'high') {
     extractedRole = heuristic
     targetRoleSource = 'heuristic'
   } else {
