@@ -52,13 +52,13 @@ export function JobTargetingScoreCard({
     <section
       data-testid="job-targeting-score-card"
       className={cn(
-        "rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-5",
+        "rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-5",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 sm:text-base">
+          <h2 className="text-xl font-bold leading-tight text-zinc-950 dark:text-zinc-50">
             Compatibilidade com a vaga
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">

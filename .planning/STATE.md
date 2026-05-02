@@ -8,7 +8,7 @@ current_plan: 01 completed
 status: in_progress
 stopped_at: Completed Phase 108 semantic evidence classification for targeted rewrite
 last_updated: "2026-04-27T09:31:30.0000000-03:00"
-last_activity: 2026-04-29
+last_activity: 2026-05-02
 progress:
   total_phases: 57
   completed_phases: 11
@@ -35,8 +35,8 @@ Current Phase Name: adicionar camada dinamica de evidencia semantica para target
 Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: In progress
-Last activity: 2026-04-29
-Last Activity Description: Completed quick plan 260428-upq-01: Smart Generation canonical guided route and workflow-aware start locks.
+Last activity: 2026-05-02
+Last Activity Description: Completed quick task 260501-vsc: Aplicar fundacao tipografica espacamento radius cores e elevation no projeto inteiro via tokens globais e componentes base.
 
 Progress: [##########] 100%
 
@@ -180,6 +180,9 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260501-vsc | Aplicar fundacao tipografica espacamento radius cores e elevation no projeto inteiro via tokens globais e componentes base | 2026-05-02 | working-tree | Validated | [260501-vsc-aplicar-fundacao-tipografica-espacamento](./quick/260501-vsc-aplicar-fundacao-tipografica-espacamento/) |
+| 260501-vid | Adaptar pricing cards e tabela de comparacao aos tokens e regras de layout preservando planos e precos atuais | 2026-05-02 | working-tree | Validated | [260501-vid-adaptar-pricing-cards-e-tabela-de-compar](./quick/260501-vid-adaptar-pricing-cards-e-tabela-de-compar/) |
+| 260501-val | Corrigir buraco no layout do curriculo job-target aberto e alinhar tipografia de Pontos para revisar | 2026-05-02 | working-tree | Validated | [260501-val-corrigir-buraco-no-layout-do-curr-culo-j](./quick/260501-val-corrigir-buraco-no-layout-do-curr-culo-j/) |
 | 260429-w1m | Ajustar peso visual do título Pontos para revisar | 2026-04-29 | working-tree | Validated | [260429-w1m-ajustar-peso-visual-do-titulo-pontos-par](./quick/260429-w1m-ajustar-peso-visual-do-titulo-pontos-par/) |
 | 260429-vy9 | Padronizar títulos e corrigir layout responsivo da comparação | 2026-04-29 | working-tree | Validated | [260429-vy9-padronizar-t-tulos-e-corrigir-layout-res](./quick/260429-vy9-padronizar-t-tulos-e-corrigir-layout-res/) |
 | 260429-vgk | Replicar fielmente layout do zip para seção de pontos a revisar | 2026-04-29 | working-tree | Validated | [260429-vgk-replicar-fielmente-layout-do-zip-para-se](./quick/260429-vgk-replicar-fielmente-layout-do-zip-para-se/) |

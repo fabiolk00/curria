@@ -299,7 +299,7 @@ export function ResumeEditorModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!isSaving} className="flex max-h-[85vh] max-w-[92vw] flex-col gap-0 overflow-hidden border-[#e8e5dc] bg-white p-0 text-[#2c2a25] sm:max-w-4xl">
         <DialogHeader className="border-b border-[#e8e5dc] px-5 py-4">
-          <DialogTitle className="text-base font-bold tracking-[-0.02em] text-[#2c2a25]">Editar currículo</DialogTitle>
+          <DialogTitle className="text-base font-bold tracking-normal text-[#2c2a25]">Editar currículo</DialogTitle>
           <DialogDescription className="text-xs text-[#9c9789]">Altere as seções e atualize o PDF com a versão salva.</DialogDescription>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="flex min-h-0 flex-1 flex-col overflow-hidden">

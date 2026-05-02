@@ -20,7 +20,7 @@ export default function FinalCta({ theme, role }: { theme: SEOPageProps['theme']
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000004_1px,transparent_1px),linear-gradient(to_bottom,#00000004_1px,transparent_1px)] bg-[size:16px_16px]" />
           
           <div className="relative z-10">
-            <h2 className="text-3xl md:text-[56px] font-bold text-[#0a0a0a] tracking-[-0.03em] leading-tight mb-6">
+            <h2 className="text-3xl md:text-[56px] font-bold text-[#0a0a0a] tracking-normal leading-tight mb-6">
               Pronto para sua próxima vaga de {role}?
             </h2>
             <p className="text-lg md:text-xl text-zinc-600 mb-10 max-w-2xl mx-auto font-medium">

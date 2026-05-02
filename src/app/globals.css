@@ -2,29 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CurrIA - Figma-aligned OKLCH token system adapted to Tailwind 3 */
+/* CurrIA - global product foundation tokens adapted to Tailwind 3 */
 
 :root {
+  --color-bg-default: #ffffff;
+  --color-bg-subtle: #fafafa;
+  --color-surface-default: #ffffff;
+  --color-surface-muted: #f7f7f7;
+  --color-border-subtle: #e6e6e6;
+  --color-border-default: #d6d6d6;
+  --color-text-primary: #1b1b1d;
+  --color-text-secondary: #5e5e66;
+  --color-text-muted: #8a8a93;
+  --color-action-primary: #232327;
+  --color-action-primary-text: #ffffff;
+  --color-link-default: #2563eb;
+  --color-state-success: #16a34a;
+  --color-state-warning: #d97706;
+  --color-state-error: #dc2626;
+  --color-state-info: #3b82f6;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-pill: 9999px;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 1px rgb(0 0 0 / 0.04);
+  --shadow-2: 0 8px 22px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.05);
+  --shadow-3: 0 18px 48px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.08);
+
+  --font-size-hero: clamp(4rem, 8vw, 5rem);
+  --font-size-section: clamp(2.5rem, 5vw, 3.5rem);
+  --font-size-page-title: clamp(1.75rem, 3vw, 2.25rem);
+  --font-size-card-title: 1.25rem;
+  --font-size-body-lg: 1.125rem;
+  --font-size-body: 1rem;
+  --font-size-body-sm: 0.875rem;
+  --font-size-meta: 0.75rem;
+
   --background: 1 0 0;
-  --foreground: 0.145 0 0;
+  --foreground: 0.223 0.004 286.08;
   --card: 1 0 0;
-  --card-foreground: 0.145 0 0;
+  --card-foreground: 0.223 0.004 286.08;
   --popover: 1 0 0;
-  --popover-foreground: 0.145 0 0;
-  --primary: 0.145 0 0;
+  --popover-foreground: 0.223 0.004 286.08;
+  --primary: 0.258 0.007 285.87;
   --primary-foreground: 1 0 0;
-  --secondary: 0.95 0.0058 264.53;
-  --secondary-foreground: 0.205 0 0;
-  --muted: 0.965 0.004 264.53;
-  --muted-foreground: 0.554 0.023 285.94;
-  --accent: 0.93 0.006 264.53;
-  --accent-foreground: 0.145 0 0;
-  --destructive: 0.577 0.245 27.325;
+  --secondary: 0.985 0 89.88;
+  --secondary-foreground: 0.223 0.004 286.08;
+  --muted: 0.976 0 89.88;
+  --muted-foreground: 0.485 0.013 285.92;
+  --accent: 0.976 0 89.88;
+  --accent-foreground: 0.223 0.004 286.08;
+  --destructive: 0.577 0.215 27.33;
   --destructive-foreground: 1 0 0;
-  --border: 0.922 0 0;
-  --input: 0.922 0 0;
-  --ring: 0.708 0 0;
-  --radius: 0.875rem;
+  --border: 0.925 0 89.88;
+  --input: 0.876 0 89.88;
+  --ring: 0.623 0.188 259.81;
+  --radius: var(--radius-lg);
 
   --chart-1: 0.646 0.222 41.116;
   --chart-2: 0.6 0.118 184.704;
@@ -41,13 +90,25 @@
   --sidebar-border: 0.922 0 0;
   --sidebar-ring: 0.708 0 0;
 
-  --success: 0.723 0.192 149.58;
+  --success: 0.627 0.170 149.21;
   --success-foreground: 0.99 0 0;
-  --warning: 0.839 0.173 84.54;
-  --warning-foreground: 0.28 0.02 84.54;
+  --warning: 0.666 0.157 58.32;
+  --warning-foreground: 1 0 0;
 }
 
 .dark {
+  --color-bg-default: #111113;
+  --color-bg-subtle: #18181b;
+  --color-surface-default: #18181b;
+  --color-surface-muted: #232327;
+  --color-border-subtle: #2f2f36;
+  --color-border-default: #3f3f46;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #d4d4d8;
+  --color-text-muted: #a1a1aa;
+  --color-action-primary: #fafafa;
+  --color-action-primary-text: #1b1b1d;
+
   --background: 0.145 0 0;
   --foreground: 0.985 0 0;
   --card: 0.18 0 0;
@@ -92,10 +153,12 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-size: 16px;
   }
 
   * {
     @apply border-border outline-ring/50;
+    letter-spacing: 0;
   }
 
   a[href],
@@ -113,13 +176,57 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top left, oklch(var(--primary) / 0.035), transparent 32%),
-      radial-gradient(circle at top right, oklch(var(--chart-2) / 0.04), transparent 28%);
+    background-color: var(--color-bg-default);
     color-scheme: light;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    line-height: 1.55;
   }
 
   .dark body {
     color-scheme: dark;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-text-primary);
+    font-weight: 750;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--font-size-hero);
+    line-height: 1;
+  }
+
+  h2 {
+    font-size: var(--font-size-section);
+    line-height: 1.05;
+  }
+
+  h3 {
+    font-size: var(--font-size-page-title);
+    line-height: 1.15;
+  }
+
+  h4 {
+    font-size: var(--font-size-card-title);
+    line-height: 1.2;
+  }
+
+  p,
+  li {
+    line-height: 1.55;
+  }
+
+  small {
+    font-size: var(--font-size-meta);
+    line-height: 1.35;
+  }
+
+  a {
+    text-underline-offset: 0.18em;
   }
 }

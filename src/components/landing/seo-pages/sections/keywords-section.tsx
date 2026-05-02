@@ -16,7 +16,7 @@ export default function KeywordsSection({ theme, keywords }: { theme: SEOPagePro
             <div className={`absolute inset-0 ${theme.bgAccent.replace('bg-', 'bg-')} opacity-20 group-hover:opacity-30 transition-opacity rounded-2xl`} />
             <Network className="w-8 h-8 relative z-10" />
           </div>
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             Palavras-Chave
           </h2>
           <p className="text-xl text-zinc-600 font-medium leading-relaxed">
@@ -59,4 +59,3 @@ export default function KeywordsSection({ theme, keywords }: { theme: SEOPagePro
     </section>
   );
 }
-

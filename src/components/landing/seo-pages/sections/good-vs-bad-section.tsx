@@ -9,7 +9,7 @@ export default function GoodVsBadSection({ theme, bad, good }: { theme: SEOPageP
       
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-20">
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             O que o ATS vê vs. O que você enviou
           </h2>
           <p className="text-xl text-zinc-600 font-medium leading-relaxed">
@@ -175,5 +175,4 @@ export default function GoodVsBadSection({ theme, bad, good }: { theme: SEOPageP
     </section>
   );
 }
-
 

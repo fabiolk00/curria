@@ -181,7 +181,7 @@ export function ReviewWarningPanel(props: ReviewWarningPanelProps) {
     <section
       data-testid="override-review-panel"
       className={cn(
-        "bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden",
+        "bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden",
         className,
       )}
     >
@@ -198,7 +198,7 @@ export function ReviewWarningPanel(props: ReviewWarningPanelProps) {
       </div>
 
       <div className="px-6 pt-8 pb-2 flex items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0">Pontos para revisar</h1>
+        <h2 className="shrink-0 whitespace-nowrap text-xl font-bold leading-tight text-zinc-950 dark:text-zinc-50">Pontos para revisar</h2>
         <div className="flex-1 h-px bg-gray-200" />
       </div>
 

@@ -9,10 +9,64 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+      },
+      fontSize: {
+        hero: ['var(--font-size-hero)', { lineHeight: '1', fontWeight: '800' }],
+        section: ['var(--font-size-section)', { lineHeight: '1.05', fontWeight: '800' }],
+        'page-title': ['var(--font-size-page-title)', { lineHeight: '1.15', fontWeight: '700' }],
+        'card-title': ['var(--font-size-card-title)', { lineHeight: '1.2', fontWeight: '700' }],
+        'body-lg': ['var(--font-size-body-lg)', { lineHeight: '1.55' }],
+        body: ['var(--font-size-body)', { lineHeight: '1.55' }],
+        'body-sm': ['var(--font-size-body-sm)', { lineHeight: '1.45' }],
+        meta: ['var(--font-size-meta)', { lineHeight: '1.35' }],
+      },
+      spacing: {
+        1: 'var(--space-1)',
+        2: 'var(--space-2)',
+        3: 'var(--space-3)',
+        4: 'var(--space-4)',
+        5: 'var(--space-5)',
+        6: 'var(--space-6)',
+        8: 'var(--space-8)',
+        10: 'var(--space-10)',
+        12: 'var(--space-12)',
+        16: 'var(--space-16)',
+        20: 'var(--space-20)',
+        24: 'var(--space-24)',
       },
       colors: {
-        border: 'oklch(var(--border) / <alpha-value>)',
+        bg: {
+          default: 'var(--color-bg-default)',
+          subtle: 'var(--color-bg-subtle)',
+        },
+        surface: {
+          DEFAULT: 'var(--color-surface-default)',
+          muted: 'var(--color-surface-muted)',
+        },
+        border: {
+          DEFAULT: 'oklch(var(--border) / <alpha-value>)',
+          subtle: 'var(--color-border-subtle)',
+          default: 'var(--color-border-default)',
+        },
+        text: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
+        },
+        action: {
+          primary: 'var(--color-action-primary)',
+          'primary-text': 'var(--color-action-primary-text)',
+        },
+        link: {
+          DEFAULT: 'var(--color-link-default)',
+        },
+        state: {
+          success: 'var(--color-state-success)',
+          warning: 'var(--color-state-warning)',
+          error: 'var(--color-state-error)',
+          info: 'var(--color-state-info)',
+        },
         input: 'oklch(var(--input) / <alpha-value>)',
         ring: 'oklch(var(--ring) / <alpha-value>)',
         background: 'oklch(var(--background) / <alpha-value>)',
@@ -72,9 +126,25 @@ module.exports = {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        pill: 'var(--radius-pill)',
+      },
+      boxShadow: {
+        xs: 'var(--shadow-1)',
+        sm: 'var(--shadow-1)',
+        md: 'var(--shadow-2)',
+        lg: 'var(--shadow-3)',
+        1: 'var(--shadow-1)',
+        2: 'var(--shadow-2)',
+        3: 'var(--shadow-3)',
+      },
+      letterSpacing: {
+        tighter: '0',
+        tight: '0',
+        normal: '0',
       },
       keyframes: {
         wave: {

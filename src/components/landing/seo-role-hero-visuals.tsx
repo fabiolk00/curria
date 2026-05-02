@@ -377,7 +377,7 @@ function DataAnalystHero({ theme }: HeroVisualProps) {
             {[["Conversão", "24%"], ["Retenção", "87%"], ["Receita", "132"]].map(([label, value]) => (
               <div key={label} className="rounded-[20px] border border-violet-100 bg-violet-50/80 px-4 py-4 shadow-[0_8px_18px_rgba(139,92,246,0.08)]">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600">{label}</p>
-                <p className="mt-2 text-[1.9rem] font-semibold leading-none tracking-[-0.03em] text-slate-950">{value}</p>
+                <p className="mt-2 text-[1.9rem] font-semibold leading-none tracking-normal text-slate-950">{value}</p>
               </div>
             ))}
           </div>
@@ -478,7 +478,7 @@ function MarketingHero({ theme }: HeroVisualProps) {
             {[["CTR", "3.4%"], ["ROAS", "4.8x"], ["CAC", "-22%"]].map(([label, value]) => (
               <div key={label} className="min-w-0 rounded-[20px] bg-white/6 px-3 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{label}</p>
-                <p className="mt-2 text-[1.8rem] font-semibold leading-none tracking-[-0.03em]">{value}</p>
+                <p className="mt-2 text-[1.8rem] font-semibold leading-none tracking-normal">{value}</p>
               </div>
             ))}
           </div>

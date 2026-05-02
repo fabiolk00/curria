@@ -14,28 +14,32 @@ vi.mock("@/components/landing/pricing-comparison-table", () => ({
 }))
 
 describe("PricingSection", () => {
-  it("uses the same included and excluded resource signaling as the comparison table, hides it on mobile, and sends CTAs to signup", () => {
+  it("renders canonical plan cards, recommendation state, and plan-specific CTAs", () => {
     render(<PricingSection />)
 
-    expect(screen.getByTestId("landing-pricing-comparison")).toHaveClass("hidden")
-    expect(screen.getByTestId("landing-pricing-comparison")).toHaveClass("md:block")
     expect(screen.getByTestId("pricing-comparison-table-component")).toBeInTheDocument()
-    expect(screen.getAllByText("Currículos")).toHaveLength(4)
-    expect(screen.getAllByText("ATS Expert")).toHaveLength(4)
-    expect(screen.getAllByLabelText("PDF: incluído")).toHaveLength(3)
-    expect(screen.getAllByLabelText("PDF: não incluído")).toHaveLength(1)
-    expect(screen.getAllByLabelText("Histórico: incluído")).toHaveLength(3)
-    expect(screen.getAllByLabelText("Histórico: não incluído")).toHaveLength(1)
+    expect(screen.getByTestId("landing-pricing-comparison")).not.toHaveClass("hidden")
+    expect(screen.getByTestId("pricing-card-free")).toHaveAttribute("data-featured", "false")
+    expect(screen.getByTestId("pricing-card-unit")).toHaveAttribute("data-featured", "false")
+    expect(screen.getByTestId("pricing-card-monthly")).toHaveAttribute("data-featured", "true")
+    expect(screen.getByTestId("pricing-card-pro")).toHaveAttribute("data-featured", "false")
+    expect(screen.getByText("Recomendado")).toBeInTheDocument()
+    expect(screen.getByText("R$ 0")).toBeInTheDocument()
+    expect(screen.getByText("R$ 19,90")).toBeInTheDocument()
+    expect(screen.getByText("R$ 39,90")).toBeInTheDocument()
+    expect(screen.getByText("R$ 59,90")).toBeInTheDocument()
+
     const chatLabelPattern = new RegExp(["Chat", "com IA"].join(" "), "i")
     const retiredFormatPattern = new RegExp(["DO", "CX"].join(""), "i")
 
     expect(screen.queryByText(chatLabelPattern)).not.toBeInTheDocument()
     expect(screen.queryByText(retiredFormatPattern)).not.toBeInTheDocument()
-    expect(screen.queryByText("Incluído")).not.toBeInTheDocument()
-    expect(screen.queryByText("Não")).not.toBeInTheDocument()
+    expect(screen.queryByText("Enterprise")).not.toBeInTheDocument()
+    expect(screen.queryByText("Plus")).not.toBeInTheDocument()
 
-    const ctas = screen.getAllByRole("link", { name: /começar agora/i })
-    expect(ctas).toHaveLength(4)
-    expect(ctas.every((link) => link.getAttribute("href") === "/criar-conta")).toBe(true)
+    expect(screen.getByRole("link", { name: "Começar grátis" })).toHaveAttribute("href", "/criar-conta")
+    expect(screen.getByRole("link", { name: "Continuar com Unitário" })).toHaveAttribute("href", "/finalizar-compra?plan=unit")
+    expect(screen.getByRole("link", { name: "Continuar com Mensal" })).toHaveAttribute("href", "/finalizar-compra?plan=monthly")
+    expect(screen.getByRole("link", { name: "Continuar com Pro" })).toHaveAttribute("href", "/finalizar-compra?plan=pro")
   })
 })

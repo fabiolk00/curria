@@ -20,7 +20,7 @@ export default function FaqSection() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="mb-6 text-[40px] font-bold leading-[1.1] tracking-[-0.02em] text-zinc-900">
+          <h2 className="mb-6 text-[40px] font-bold leading-[1.1] tracking-normal text-zinc-900">
             Perguntas frequentes
           </h2>
           <p className="text-xl font-medium leading-relaxed text-zinc-500">

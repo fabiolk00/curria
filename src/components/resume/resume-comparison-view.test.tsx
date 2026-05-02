@@ -467,11 +467,15 @@ describe('ResumeComparisonView', () => {
     expect(screen.getByTestId('override-review-panel-scroll')).toHaveClass('lg:overflow-y-auto')
     expect(screen.getByRole('button', { name: /ocultar currículo/i }).parentElement).toHaveClass('hidden', 'lg:flex')
 
+    const diagnosticColumn = screen.getByTestId('job-targeting-diagnostic-column')
     const scoreCard = screen.getByTestId('job-targeting-score-card')
     const resumeFrame = screen.getByTestId('job-target-resume-frame')
     const reviewPanel = screen.getByTestId('override-review-panel')
-    expect(scoreCard.compareDocumentPosition(resumeFrame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(resumeFrame.compareDocumentPosition(reviewPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(diagnosticColumn).toContainElement(scoreCard)
+    expect(diagnosticColumn).toContainElement(reviewPanel)
+    expect(diagnosticColumn).toHaveClass('space-y-4', 'lg:col-start-2', 'lg:row-start-1')
+    expect(resumeFrame.parentElement).toHaveClass('lg:col-start-1', 'lg:row-start-1')
+    expect(resumeFrame.parentElement).not.toHaveClass('lg:row-span-2')
 
     await user.click(screen.getByRole('button', { name: /ocultar currículo/i }))
 

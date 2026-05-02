@@ -21,7 +21,8 @@ describe("JobTargetingScoreCard", () => {
       />,
     )
 
-    expect(screen.getByText("Compatibilidade com a vaga")).toBeInTheDocument()
+    expect(screen.getByTestId("job-targeting-score-card")).toHaveClass("rounded-xl", "shadow-sm")
+    expect(screen.getByText("Compatibilidade com a vaga")).toHaveClass("text-xl", "font-bold", "leading-tight")
     expect(screen.getByText("Composição da nota")).toBeInTheDocument()
     expect(screen.getByText("72")).toBeInTheDocument()
     expect(screen.getByLabelText("Nota de Habilidades")).toHaveAttribute("aria-valuenow", "82")

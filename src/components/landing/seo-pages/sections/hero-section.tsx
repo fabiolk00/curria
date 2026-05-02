@@ -20,7 +20,7 @@ export default function HeroSection({ theme, content }: { theme: SEOPageProps['t
             {theme.badgeLabel}
           </div>
           
-          <h1 className="text-5xl md:text-[64px] font-bold tracking-[-0.02em] text-zinc-900 leading-[1.05] mb-6">
+          <h1 className="text-5xl md:text-[64px] font-bold tracking-normal text-zinc-900 leading-[1.05] mb-6">
             {content.heroTitle}
           </h1>
           

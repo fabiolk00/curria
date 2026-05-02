@@ -11,7 +11,7 @@ export default function FaqSection({ faq }: { faq: readonly SeoFaqItem[] }) {
     <section className="py-32 bg-[#FAFAFA] border-b border-zinc-200/50">
       <div className="max-w-3xl mx-auto px-6">
         <div className="text-center mb-20">
-          <h2 className="text-[40px] leading-[1.1] font-bold text-zinc-900 tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-zinc-900 tracking-normal mb-6">
             Perguntas Frequentes
           </h2>
           <p className="text-xl text-zinc-500 font-medium leading-relaxed">

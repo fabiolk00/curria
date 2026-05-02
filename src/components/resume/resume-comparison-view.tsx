@@ -751,7 +751,24 @@ export function ResumeComparisonView({
               isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
             )}
           >
-          {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
+          {hasOverrideReviewBoard ? (
+            <section
+              data-testid="job-targeting-diagnostic-column"
+              className="order-1 space-y-4 lg:col-start-2 lg:row-start-1"
+            >
+              {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
+                <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
+              ) : null}
+              <ReviewWarningPanel
+                items={visibleReviewItems}
+                hasInlineHighlights={hasInlineHighlights}
+                reviewCardCount={reviewCardCount}
+                highlightRangeCount={highlightRangeCount}
+                compatibilityStatus={compatibilityStatus}
+                scrollClassName={reviewPanelScrollClassName}
+              />
+            </section>
+          ) : hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
             <div className="order-1 lg:col-start-2 lg:row-start-1">
               <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
             </div>
@@ -774,7 +791,7 @@ export function ResumeComparisonView({
           <div
             className={cn(
               isJobTargeting
-                ? "order-2 lg:col-start-1 lg:row-span-2 lg:row-start-1"
+                ? "order-2 lg:col-start-1 lg:row-start-1"
                 : undefined,
             )}
           >
@@ -859,26 +876,6 @@ export function ResumeComparisonView({
               </div>
             ) : null}
           </div>
-          {hasOverrideReviewBoard ? (
-            <section
-              data-testid="job-targeting-diagnostic-column"
-              className={cn(
-                "order-3 space-y-4 lg:col-start-2",
-                hasJobTargetingScore ? "lg:row-start-2" : "lg:row-start-1",
-              )}
-            >
-              {hasOverrideReviewBoard ? (
-                <ReviewWarningPanel
-                  items={visibleReviewItems}
-                  hasInlineHighlights={hasInlineHighlights}
-                  reviewCardCount={reviewCardCount}
-                  highlightRangeCount={highlightRangeCount}
-                  compatibilityStatus={compatibilityStatus}
-                  scrollClassName={reviewPanelScrollClassName}
-                />
-              ) : null}
-            </section>
-          ) : null}
           </div>
         </div>
       </div>

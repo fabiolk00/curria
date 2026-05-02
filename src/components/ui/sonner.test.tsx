@@ -41,14 +41,14 @@ vi.mock("sonner", () => ({
 import { Toaster } from "./sonner"
 
 describe("Toaster", () => {
-  it("uses a black info surface and enables manual close", () => {
+  it("uses the action surface tokens and enables manual close", () => {
     render(<Toaster />)
 
     const toaster = screen.getByTestId("mock-sonner")
     expect(toaster).toHaveAttribute("data-close-button", "true")
-    expect(toaster).toHaveAttribute("data-bg", "#050505")
-    expect(toaster).toHaveAttribute("data-text", "#ffffff")
-    expect(toaster).toHaveAttribute("data-border", "#1f1f1f")
+    expect(toaster).toHaveAttribute("data-bg", "var(--color-action-primary)")
+    expect(toaster).toHaveAttribute("data-text", "var(--color-action-primary-text)")
+    expect(toaster).toHaveAttribute("data-border", "#3f3f46")
     expect(toaster).toHaveAttribute("data-has-success-icon", "true")
     expect(toaster).toHaveAttribute("data-has-error-icon", "true")
     expect(toaster).toHaveAttribute("data-has-close-icon", "true")

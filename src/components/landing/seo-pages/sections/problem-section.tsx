@@ -11,7 +11,7 @@ export default function ProblemSection({ theme, cards }: { theme: SEOPageProps['
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-20">
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             Por que ótimos candidatos são rejeitados pelo ATS?
           </h2>
           <p className="text-xl text-zinc-600 font-medium leading-relaxed">

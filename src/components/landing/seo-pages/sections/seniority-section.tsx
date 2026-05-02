@@ -23,7 +23,7 @@ export default function SenioritySection({ theme, levels }: { theme: SEOPageProp
             <div className={`absolute inset-0 ${theme.bgAccent} opacity-20 blur-xl`} />
             <TrendingUp className="w-8 h-8 text-[#0a0a0a] relative z-10" />
           </div>
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             Ajustando para nível de experiência
           </h2>
           <p className="text-xl text-zinc-600 mb-10 leading-relaxed font-medium">
@@ -94,4 +94,3 @@ export default function SenioritySection({ theme, levels }: { theme: SEOPageProp
     </section>
   );
 }
-

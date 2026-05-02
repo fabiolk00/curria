@@ -9,7 +9,7 @@ export default function SpecializationsSection({ theme, specializations }: { the
       
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="max-w-3xl mb-20">
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             Adapte por especialização
           </h2>
           <p className="text-xl text-zinc-600 font-medium leading-relaxed">
@@ -60,4 +60,3 @@ export default function SpecializationsSection({ theme, specializations }: { the
     </section>
   );
 }
-

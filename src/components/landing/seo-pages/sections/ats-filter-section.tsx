@@ -20,7 +20,7 @@ export default function AtsFilterSection({ theme, checklist }: { theme: SEOPageP
             <div className={`absolute inset-0 ${theme.bgAccent} opacity-20 blur-xl`} />
             <FileSearch className="w-8 h-8 text-[#0a0a0a] relative z-10" />
           </div>
-          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-[-0.02em] mb-6">
+          <h2 className="text-[40px] leading-[1.1] font-bold text-[#0a0a0a] tracking-normal mb-6">
             Como os sistemas ATS leem o seu currículo
           </h2>
           <p className="text-lg text-zinc-600 mb-6 leading-relaxed font-medium">
