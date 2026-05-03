@@ -89,5 +89,22 @@ describe('job compatibility claim policy', () => {
         requirementIds: ['req-unsupported'],
       }),
     ])
+    expect(policy.warnings).toBeUndefined()
+    expect(policy.allowedClaims).toHaveLength(1)
+    expect(policy.cautiousClaims).toHaveLength(1)
+  })
+
+  it('deduplicates claim terms by the same canonical signal used by validation', () => {
+    const policy = buildJobCompatibilityClaimPolicy([
+      requirement({
+        id: 'req-supported',
+        productGroup: 'supported',
+        extractedSignals: ['Supported signal', 'supported   signal'],
+        matchedResumeTerms: ['Supported Signal'],
+        supportingResumeSpans: [{ id: 'span-supported', text: 'Supported signal' }],
+      }),
+    ])
+
+    expect(policy.allowedClaims[0]?.allowedTerms).toEqual(['Supported signal'])
   })
 })

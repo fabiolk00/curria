@@ -11,6 +11,12 @@ type CliOptions = {
   disableLlm?: boolean
   useRealGapAnalysis?: boolean
   includeRewriteValidation?: boolean
+  confirmLlmCost?: boolean
+  maxLlmCases?: number
+  maxEstimatedCostUsd?: number
+  dryRunRewriteValidation?: boolean
+  reuseCachedLlmResults?: boolean
+  llmCacheDir?: string
   report?: boolean
 }
 
@@ -75,6 +81,42 @@ function parseArgs(args: string[]): CliOptions {
       continue
     }
 
+    if (arg === '--confirm-llm-cost') {
+      options.confirmLlmCost = true
+      continue
+    }
+
+    if (arg === '--max-llm-cases') {
+      options.maxLlmCases = readNumber(args[index + 1], 0)
+      index += 1
+      continue
+    }
+
+    if (arg === '--max-estimated-cost-usd') {
+      const parsed = Number(args[index + 1])
+      options.maxEstimatedCostUsd = Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+      index += 1
+      continue
+    }
+
+    if (arg === '--dry-run-rewrite-validation') {
+      options.dryRunRewriteValidation = true
+      options.includeRewriteValidation = false
+      options.disableLlm = true
+      continue
+    }
+
+    if (arg === '--reuse-cached-llm-results') {
+      options.reuseCachedLlmResults = true
+      continue
+    }
+
+    if (arg === '--llm-cache-dir') {
+      options.llmCacheDir = args[index + 1]
+      index += 1
+      continue
+    }
+
     if (arg === '--no-report') {
       options.report = false
     }
@@ -108,7 +150,17 @@ function installServerOnlyShimForCli(): void {
   moduleWithLoad.__curriaServerOnlyShimInstalled = true
 }
 
+function loadNextEnvironmentForCli(): void {
+  const requireFromProject = Module.createRequire(path.join(process.cwd(), 'package.json'))
+  const nextEnv = requireFromProject('@next/env') as {
+    loadEnvConfig(projectDir: string): void
+  }
+
+  nextEnv.loadEnvConfig(process.cwd())
+}
+
 async function main() {
+  loadNextEnvironmentForCli()
   installServerOnlyShimForCli()
   const options = parseArgs(process.argv.slice(2))
   if (!options.input || !options.output) {
@@ -138,9 +190,17 @@ async function main() {
       event: 'job_targeting.shadow_batch.llm_mode_enabled',
       useRealGapAnalysis: options.useRealGapAnalysis ?? false,
       includeRewriteValidation: options.includeRewriteValidation ?? false,
-      allowLlm: !(options.disableLlm ?? true),
+      allowLlm: Boolean(options.useRealGapAnalysis || options.includeRewriteValidation),
       concurrency,
       message: 'This run may incur OpenAI latency/cost. It does not generate artifacts or consume user credits.',
+    }))
+  } else if (options.dryRunRewriteValidation) {
+    console.warn(JSON.stringify({
+      event: 'job_targeting.shadow_batch.rewrite_validation_dry_run',
+      dryRunRewriteValidation: true,
+      allowLlm: false,
+      concurrency,
+      message: 'Dry-run rewrite validation does not call OpenAI, generate artifacts, or consume user credits.',
     }))
   }
 
@@ -154,6 +214,13 @@ async function main() {
     disableLlm: options.disableLlm ?? true,
     useRealGapAnalysis: options.useRealGapAnalysis ?? false,
     includeRewriteValidation: options.includeRewriteValidation ?? false,
+    confirmLlmCost: options.confirmLlmCost ?? false,
+    maxLlmCases: options.maxLlmCases,
+    maxEstimatedCostUsd: options.maxEstimatedCostUsd,
+    dryRunRewriteValidation: options.dryRunRewriteValidation ?? false,
+    reuseCachedLlmResults: options.reuseCachedLlmResults ?? false,
+    llmCacheDir: options.llmCacheDir,
+    enforceCostGuards: true,
   })
 
   let cutoverReady: boolean | undefined

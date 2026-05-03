@@ -237,4 +237,128 @@ describe('structured compatibility validation', () => {
       }),
     ])
   })
+
+  it('blocks unclassified generated text without treating the whole text as an expressed signal', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'experience',
+        itemPath: 'experience.0.bullets.0',
+        generatedText: 'Introduced a new unclassified operating rhythm.',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'warning',
+        rationale: 'new_text_without_claim_policy',
+        unclassifiedText: 'Introduced a new unclassified operating rhythm.',
+        classificationStatus: 'unclassified_new_text',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.blocked).toBe(true)
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        type: 'unclassified_generated_text',
+        term: 'Introduced a new unclassified operating rhythm.',
+      }),
+    ])
+  })
+
+  it('allows formatting-only trace items without claim policy ids', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'experience',
+        itemPath: 'experience.0.bullets.0',
+        generatedText: 'Maintained and organized existing reports.',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'formatting_only_without_new_claim',
+        source: 'formatting_only',
+        classificationStatus: 'formatting_only',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.blocked).toBe(false)
+    expect(result.issues).toEqual([])
+  })
+
+  it('keeps forbidden terms blocked even when a trace claims formatting-only', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'skills',
+        itemPath: 'skills.1',
+        generatedText: 'Unsupported signal',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: ['Unsupported signal'],
+        validationStatus: 'invalid',
+        rationale: 'formatting_only_without_new_claim',
+        source: 'formatting_only',
+        classificationStatus: 'formatting_only',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.blocked).toBe(true)
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        type: 'unsupported_skill_added',
+        term: 'Unsupported signal',
+      }),
+    ])
+  })
+
+  it('does not treat a preserved original title as a new target-role assertion', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'experience',
+        itemPath: 'experience.0.title',
+        generatedText: 'Target Role Acme',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'original_preserved_without_new_claim',
+        source: 'preserved_original',
+        classificationStatus: 'original_preserved',
+      }],
+      claimPolicy: policy,
+      targetRole: {
+        value: 'Target Role',
+        permission: 'must_not_claim_target_role',
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.issues).toEqual([])
+  })
+
+  it('matches allowed expressed signals with shared canonicalization', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'experience',
+        itemPath: 'experience.0.bullets.0',
+        generatedText: 'Delivered reports with supported signal.',
+        expressedSignals: ['supported   signal'],
+        usedClaimPolicyIds: ['claim-allowed-supported'],
+        evidenceBasis: ['supported signal'],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'claim_policy_matched',
+        classificationStatus: 'claim_policy_matched',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.issues).toEqual([])
+    expect(result.blocked).toBe(false)
+  })
 })

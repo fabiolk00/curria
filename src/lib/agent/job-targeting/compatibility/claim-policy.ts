@@ -4,22 +4,33 @@ import type {
   RequirementEvidence,
   RequirementEvidenceSpan,
 } from '@/lib/agent/job-targeting/compatibility/types'
+import { uniqueByCanonicalClaimSignal } from '@/lib/agent/job-targeting/compatibility/claim-signal'
 
 export const JOB_COMPATIBILITY_CLAIM_POLICY_VERSION = 'job-compat-claim-policy-v1'
 
 export function buildJobCompatibilityClaimPolicy(
   requirements: RequirementEvidence[],
 ): JobCompatibilityClaimPolicy {
+  const supportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'supported')
+  const adjacentRequirements = requirements.filter((requirement) => requirement.productGroup === 'adjacent')
+  const unsupportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'unsupported')
+  const allowedClaims = supportedRequirements.map((requirement) => toAllowedClaim(requirement))
+  const cautiousClaims = adjacentRequirements.map((requirement) => toCautiousClaim(requirement))
+  const forbiddenClaims = unsupportedRequirements.map((requirement) => toForbiddenClaim(requirement))
+  const warnings = [
+    ...(supportedRequirements.length > 0 && allowedClaims.length === 0
+      ? ['claim_policy_missing_supported_claim']
+      : []),
+    ...(adjacentRequirements.length > 0 && cautiousClaims.length === 0
+      ? ['claim_policy_missing_cautious_claim']
+      : []),
+  ]
+
   return {
-    allowedClaims: requirements
-      .filter((requirement) => requirement.productGroup === 'supported')
-      .map((requirement) => toAllowedClaim(requirement)),
-    cautiousClaims: requirements
-      .filter((requirement) => requirement.productGroup === 'adjacent')
-      .map((requirement) => toCautiousClaim(requirement)),
-    forbiddenClaims: requirements
-      .filter((requirement) => requirement.productGroup === 'unsupported')
-      .map((requirement) => toForbiddenClaim(requirement)),
+    allowedClaims,
+    cautiousClaims,
+    forbiddenClaims,
+    ...(warnings.length === 0 ? {} : { warnings }),
   }
 }
 
@@ -86,5 +97,5 @@ function spanTexts(spans: RequirementEvidenceSpan[]): string[] {
 }
 
 function unique(items: string[]): string[] {
-  return [...new Set(items.map((item) => item.trim()).filter(Boolean))]
+  return uniqueByCanonicalClaimSignal(items)
 }

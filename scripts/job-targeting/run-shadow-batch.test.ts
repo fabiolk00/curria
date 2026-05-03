@@ -156,9 +156,11 @@ function buildAssessment() {
 
 describe('runShadowBatch', () => {
   let tempDir: string
+  let cacheDir: string | undefined
 
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'curria-shadow-batch-'))
+    cacheDir = undefined
     vi.clearAllMocks()
     mockBuildTargetedRewritePlan.mockResolvedValue(buildPlan())
     mockEvaluateJobCompatibility.mockResolvedValue(buildAssessment())
@@ -197,6 +199,9 @@ describe('runShadowBatch', () => {
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true })
+    if (cacheDir) {
+      await rm(cacheDir, { recursive: true, force: true })
+    }
   })
 
   async function writeCases(cases: JobTargetingShadowCase[]): Promise<{ input: string; output: string }> {
@@ -226,6 +231,82 @@ describe('runShadowBatch', () => {
       }),
       runtime: expect.objectContaining({ success: true }),
     }))
+    expect(mockAnalyzeGap).not.toHaveBeenCalled()
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+  })
+
+  it('aborts real rewrite validation without explicit LLM cost confirmation', async () => {
+    const { input, output } = await writeCases([buildCase('case-rewrite-cost')])
+
+    await expect(runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      enforceCostGuards: true,
+    })).rejects.toThrow('LLM cost confirmation required')
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+    expect(mockAnalyzeGap).not.toHaveBeenCalled()
+  })
+
+  it('aborts real gap analysis without explicit LLM cost confirmation', async () => {
+    const { input, output } = await writeCases([buildCase('case-gap-cost')])
+
+    await expect(runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      useRealGapAnalysis: true,
+      enforceCostGuards: true,
+    })).rejects.toThrow('LLM cost confirmation required')
+
+    expect(mockAnalyzeGap).not.toHaveBeenCalled()
+  })
+
+  it('aborts LLM runs when maxLlmCases is below the selected case count', async () => {
+    const { input, output } = await writeCases([buildCase('case-1'), buildCase('case-2')])
+
+    await expect(runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      confirmLlmCost: true,
+      maxLlmCases: 1,
+      maxEstimatedCostUsd: 1,
+      enforceCostGuards: true,
+    })).rejects.toThrow('Refusing to run 2 LLM cases with maxLlmCases=1')
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+  })
+
+  it('aborts LLM runs without an explicit estimated cost budget', async () => {
+    const { input, output } = await writeCases([buildCase('case-budget-required')])
+
+    await expect(runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      confirmLlmCost: true,
+      maxLlmCases: 1,
+      enforceCostGuards: true,
+    })).rejects.toThrow('LLM max estimated cost budget required')
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+  })
+
+  it('aborts LLM runs when estimated cost exceeds the configured budget', async () => {
+    const { input, output } = await writeCases([buildCase('case-1'), buildCase('case-2')])
+
+    await expect(runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      confirmLlmCost: true,
+      maxLlmCases: 2,
+      maxEstimatedCostUsd: 0.05,
+      enforceCostGuards: true,
+    })).rejects.toThrow('Estimated cost $0.10 exceeds max budget $0.05')
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
   })
 
   it('respects limit', async () => {
@@ -326,6 +407,78 @@ describe('runShadowBatch', () => {
     }))
   })
 
+  it('runs dry-run rewrite validation without calling OpenAI rewrite', async () => {
+    const { input, output } = await writeCases([buildCase('case-dry-run')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      dryRunRewriteValidation: true,
+      concurrency: 1,
+      enforceCostGuards: true,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+    expect(result.runConfig).toEqual(expect.objectContaining({
+      includeRewriteValidation: true,
+      dryRunRewriteValidation: true,
+      allowLlm: false,
+    }))
+    expect(result.validation).toEqual(expect.objectContaining({
+      executed: true,
+      mode: 'dry_run',
+    }))
+    expect(result.llmUsage).toEqual(expect.objectContaining({
+      gapAnalysisCalled: false,
+      rewriteCalled: false,
+      estimatedCostUsd: 0,
+    }))
+  })
+
+  it('reuses cached rewrite validation results without a second OpenAI rewrite call', async () => {
+    cacheDir = path.join('.local', `test-shadow-cache-${process.pid}-${Date.now()}`)
+    const { input, output } = await writeCases([buildCase('case-cache')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      confirmLlmCost: true,
+      maxLlmCases: 1,
+      maxEstimatedCostUsd: 1,
+      reuseCachedLlmResults: true,
+      llmCacheDir: cacheDir,
+      concurrency: 1,
+      enforceCostGuards: true,
+    })
+    expect(mockRewriteResumeFull).toHaveBeenCalledTimes(1)
+
+    mockRewriteResumeFull.mockClear()
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      confirmLlmCost: true,
+      maxLlmCases: 1,
+      maxEstimatedCostUsd: 1,
+      reuseCachedLlmResults: true,
+      llmCacheDir: cacheDir,
+      concurrency: 1,
+      enforceCostGuards: true,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(mockRewriteResumeFull).not.toHaveBeenCalled()
+    expect(result.validation).toEqual(expect.objectContaining({
+      cacheHit: true,
+    }))
+    expect(result.llmUsage).toEqual(expect.objectContaining({
+      rewriteCalled: false,
+      cacheHit: true,
+    }))
+  })
+
   it('classifies model rewrite failures specifically and uses a transparent synthetic trace fallback', async () => {
     mockRewriteResumeFull.mockResolvedValueOnce({
       success: false,
@@ -348,7 +501,12 @@ describe('runShadowBatch', () => {
       blocked: false,
       factualViolation: false,
       rewriteSucceeded: false,
+      errorCode: 'UNAUTHORIZED',
+      safeErrorCode: 'UNAUTHORIZED',
       rewriteErrorCode: 'UNAUTHORIZED',
+      failedSection: 'summary',
+      retryAttempted: false,
+      fallbackUsed: true,
       traceFallbackUsed: true,
     }))
     expect(result.validation.issueTypes).toEqual(expect.arrayContaining([

@@ -729,6 +729,37 @@ export type RewriteSectionInput = {
   current_content: string
   instructions: string
   target_keywords?: string[]
+  claim_policy_trace_contract?: {
+    required: boolean
+    allowedClaims: Array<{
+      id: string
+      signal: string
+      allowedTerms: string[]
+      evidenceBasis: string[]
+    }>
+    cautiousClaims: Array<{
+      id: string
+      signal: string
+      allowedTerms: string[]
+      evidenceBasis: string[]
+      verbalizationTemplate?: string
+    }>
+    forbiddenClaims: Array<{
+      id: string
+      signal: string
+      prohibitedTerms: string[]
+    }>
+  }
+}
+
+export type RewriteClaimTraceItem = {
+  targetPath: string
+  source: 'preserved_original' | 'formatting_only' | 'new_generated_text'
+  usedClaimPolicyIds: string[]
+  expressedSignals: string[]
+  evidenceBasis: string[]
+  permissionLevel: 'allowed' | 'cautious' | 'preserved_original' | 'formatting_only'
+  rationale?: string
 }
 
 export type RewriteSectionData =
@@ -745,6 +776,7 @@ export type RewriteSectionOutput =
       section_data: RewriteSectionData
       keywords_added: string[]
       changes_made: string[]
+      claim_trace_items?: RewriteClaimTraceItem[]
     }
   | ToolFailure
 

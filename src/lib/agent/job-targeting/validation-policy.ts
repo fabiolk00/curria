@@ -76,6 +76,8 @@ function mapStructuredIssueType(issue: StructuredValidationIssue): NonNullable<V
       return 'unsupported_claim'
     case 'missing_claim_trace':
       return 'unsupported_claim'
+    case 'unclassified_generated_text':
+      return 'unsupported_claim'
     case 'unsupported_expressed_signal':
       return 'unsupported_claim'
     case 'forbidden_term':
@@ -99,6 +101,8 @@ function messageForStructuredIssue(issue: StructuredValidationIssue): string {
       return 'A versÃ£o targetizada declarou um requisito proibido pela avaliaÃ§Ã£o de compatibilidade.'
     case 'missing_claim_trace':
       return 'A versao targetizada incluiu texto novo sem trace estruturado de claim.'
+    case 'unclassified_generated_text':
+      return 'A versao targetizada incluiu texto novo que nao foi ligado a uma claim permitida ou cautelosa.'
     case 'unsupported_expressed_signal':
       return 'A versao targetizada expressou um sinal que nao esta permitido pela policy estruturada.'
     default:

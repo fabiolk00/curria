@@ -8,11 +8,17 @@ export type ShadowBatchRunConfig = {
   allowLlm: boolean
   useRealGapAnalysis: boolean
   includeRewriteValidation: boolean
+  dryRunRewriteValidation?: boolean
   persist: boolean
   concurrency: number
   limit?: number
   inputPathHash?: string
   totalInputCases?: number
+  confirmLlmCost?: boolean
+  maxLlmCases?: number
+  maxEstimatedCostUsd?: number
+  reuseCachedLlmResults?: boolean
+  llmCacheDir?: string
 }
 
 export type JobTargetingShadowCase = {
@@ -65,17 +71,36 @@ export type ShadowComparisonSnapshot = {
 
 export type ShadowValidationSnapshot = {
   executed: boolean
+  mode?: 'real_llm' | 'dry_run'
   blocked: boolean
   issueTypes: string[]
   factualViolation: boolean
   generatedClaimTraceCount?: number
   missingTraceCount?: number
   rewriteSucceeded?: boolean
+  errorCode?: string
+  safeErrorCode?: string
   rewriteErrorCode?: string
   rewriteErrorMessage?: string
+  failedSection?: string
+  retryAttempted?: boolean
+  fallbackUsed?: boolean
+  cacheHit?: boolean
   hasOptimizedCvState?: boolean
   hasSectionRewritePlans?: boolean
   traceFallbackUsed?: boolean
+}
+
+export type ShadowLlmUsageSnapshot = {
+  gapAnalysisCalled: boolean
+  rewriteCalled: boolean
+  cacheHit: boolean
+  cacheHits?: number
+  cacheMisses?: number
+  estimatedCostUsd: number
+  actualInputTokens?: number
+  actualOutputTokens?: number
+  actualCostUsd?: number
 }
 
 export type ShadowBatchResult = {
@@ -88,6 +113,7 @@ export type ShadowBatchResult = {
   assessment: ShadowAssessmentSnapshot
   comparison: ShadowComparisonSnapshot
   validation?: ShadowValidationSnapshot
+  llmUsage?: ShadowLlmUsageSnapshot
   runtime: {
     startedAt: string
     completedAt: string

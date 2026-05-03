@@ -9,11 +9,17 @@ type ShadowRunConfigRecord = {
   allowLlm?: boolean
   useRealGapAnalysis?: boolean
   includeRewriteValidation?: boolean
+  dryRunRewriteValidation?: boolean
   persist?: boolean
   concurrency?: number
   limit?: number
   inputPathHash?: string
   totalInputCases?: number
+  confirmLlmCost?: boolean
+  maxLlmCases?: number
+  maxEstimatedCostUsd?: number
+  reuseCachedLlmResults?: boolean
+  llmCacheDir?: string
 }
 
 export type ShadowComparisonRecord = {
@@ -66,11 +72,23 @@ export type ShadowComparisonRecord = {
   }
   validation?: {
     executed?: boolean
+    mode?: 'real_llm' | 'dry_run'
     blocked?: boolean
     issueTypes?: string[]
     factualViolation?: boolean
     generatedClaimTraceCount?: number
     missingTraceCount?: number
+  }
+  llmUsage?: {
+    gapAnalysisCalled?: boolean
+    rewriteCalled?: boolean
+    cacheHit?: boolean
+    cacheHits?: number
+    cacheMisses?: number
+    estimatedCostUsd?: number
+    actualInputTokens?: number
+    actualOutputTokens?: number
+    actualCostUsd?: number
   }
 }
 
@@ -81,11 +99,17 @@ export type ShadowDivergenceReport = {
     allowLlm: boolean
     useRealGapAnalysis: boolean
     includeRewriteValidation: boolean
+    dryRunRewriteValidation: boolean
     persist: boolean
     limit?: number
     concurrency: number
     totalInputCases: number
     processedCases: number
+    confirmLlmCost: boolean
+    maxLlmCases?: number
+    maxEstimatedCostUsd?: number
+    reuseCachedLlmResults: boolean
+    llmCacheDir?: string
     gapAnalysisSources: {
       provided: number
       synthetic: number
@@ -93,6 +117,15 @@ export type ShadowDivergenceReport = {
     }
     pipelineRepresentativeness: PipelineRepresentativeness
     rewriteValidationCoverage: RewriteValidationCoverage
+  }
+  cost: {
+    estimatedCostUsd: number
+    actualCostUsd?: number
+    llmCases: number
+    gapAnalysisCalls: number
+    rewriteCalls: number
+    cacheHits: number
+    cacheMisses: number
   }
   totalCases: number
   successfulCases: number
@@ -155,6 +188,10 @@ function average(values: number[]): number {
   }
 
   return values.reduce((total, value) => total + value, 0) / values.length
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0)
 }
 
 function readRecordScoreDelta(record: ShadowComparisonRecord): number {
@@ -249,7 +286,10 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
   const realLlm = records.filter((record) => record.gapAnalysisSource === 'real_llm').length
   const useRealGapAnalysis = everyRecord(records, (record) => record.runConfig?.useRealGapAnalysis === true)
   const includeRewriteValidation = everyRecord(records, (record) => record.runConfig?.includeRewriteValidation === true)
+  const dryRunRewriteValidation = everyRecord(records, (record) => record.runConfig?.dryRunRewriteValidation === true)
   const persist = everyRecord(records, (record) => record.runConfig?.persist === true)
+  const confirmLlmCost = everyRecord(records, (record) => record.runConfig?.confirmLlmCost === true)
+  const reuseCachedLlmResults = everyRecord(records, (record) => record.runConfig?.reuseCachedLlmResults === true)
   const validationExecutedCount = successfulRecords.filter((record) => record.validation?.executed === true).length
   const rewriteValidationCoverage: RewriteValidationCoverage = validationExecutedCount === 0
     ? 'none'
@@ -261,6 +301,9 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
     ? 'full'
     : 'partial'
   const limits = new Set(records.map((record) => record.runConfig?.limit).filter((value): value is number => typeof value === 'number'))
+  const maxLlmCases = new Set(records.map((record) => record.runConfig?.maxLlmCases).filter((value): value is number => typeof value === 'number'))
+  const maxEstimatedCostUsd = new Set(records.map((record) => record.runConfig?.maxEstimatedCostUsd).filter((value): value is number => typeof value === 'number'))
+  const llmCacheDirs = new Set(records.map((record) => record.runConfig?.llmCacheDir).filter((value): value is string => typeof value === 'string' && value.length > 0))
   const totalInputCases = Math.max(
     processedCases,
     ...records.map((record) => record.runConfig?.totalInputCases ?? 0),
@@ -270,11 +313,17 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
     allowLlm: everyRecord(records, (record) => record.runConfig?.allowLlm === true),
     useRealGapAnalysis,
     includeRewriteValidation,
+    dryRunRewriteValidation,
     persist,
     ...(limits.size === 1 ? { limit: [...limits][0] } : {}),
     concurrency: Math.max(0, ...records.map((record) => record.runConfig?.concurrency ?? 0)),
     totalInputCases,
     processedCases,
+    confirmLlmCost,
+    ...(maxLlmCases.size === 1 ? { maxLlmCases: [...maxLlmCases][0] } : {}),
+    ...(maxEstimatedCostUsd.size === 1 ? { maxEstimatedCostUsd: [...maxEstimatedCostUsd][0] } : {}),
+    reuseCachedLlmResults,
+    ...(llmCacheDirs.size === 1 ? { llmCacheDir: [...llmCacheDirs][0] } : {}),
     gapAnalysisSources: {
       provided,
       synthetic,
@@ -285,11 +334,41 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
   }
 }
 
+function buildCostSummary(records: ShadowComparisonRecord[]): ShadowDivergenceReport['cost'] {
+  const estimatedCostUsd = round(sum(records.map((record) => record.llmUsage?.estimatedCostUsd ?? 0)))
+  const actualCosts = records
+    .map((record) => record.llmUsage?.actualCostUsd)
+    .filter((value): value is number => typeof value === 'number')
+  const gapAnalysisCalls = records.filter((record) => record.llmUsage?.gapAnalysisCalled === true).length
+  const rewriteCalls = records.filter((record) => record.llmUsage?.rewriteCalled === true).length
+  const cacheHits = sum(records.map((record) => (
+    typeof record.llmUsage?.cacheHits === 'number'
+      ? record.llmUsage.cacheHits
+      : record.llmUsage?.cacheHit
+        ? 1
+        : 0
+  )))
+  const cacheMisses = sum(records.map((record) => record.llmUsage?.cacheMisses ?? 0))
+
+  return {
+    estimatedCostUsd,
+    ...(actualCosts.length > 0 ? { actualCostUsd: round(sum(actualCosts)) } : {}),
+    llmCases: records.filter((record) => (
+      record.llmUsage?.gapAnalysisCalled === true || record.llmUsage?.rewriteCalled === true
+    )).length,
+    gapAnalysisCalls,
+    rewriteCalls,
+    cacheHits,
+    cacheMisses,
+  }
+}
+
 export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): ShadowDivergenceReport {
   const successfulRecords = records.filter(isSuccessful)
   const failedCases = records.length - successfulRecords.length
   const deltas = successfulRecords.map((record) => Math.abs(readRecordScoreDelta(record)))
   const runConfig = buildRunConfig(records)
+  const cost = buildCostSummary(records)
   const factualValidationViolations = successfulRecords.filter((record) => record.validation?.factualViolation).length
   const rewriteValidationBlockedCases = successfulRecords.filter((record) => record.validation?.blocked).length
   const rewriteValidationOperationalIssueCases = successfulRecords.filter(hasRewriteOperationalIssue).length
@@ -318,6 +397,12 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
   if (runConfig.rewriteValidationCoverage !== 'full') {
     cutoverReasons.push('rewrite_validation_not_executed')
   }
+  if (
+    runConfig.rewriteValidationCoverage !== 'none'
+    && successfulRecords.every((record) => record.validation?.mode === 'dry_run')
+  ) {
+    cutoverReasons.push('rewrite_validation_dry_run_only')
+  }
   if (!runConfig.persist) {
     cutoverReasons.push('shadow_results_not_persisted')
   }
@@ -344,6 +429,7 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
     CUTOVER_READY: cutoverReasons.length === 0,
     cutoverReasons,
     runConfig,
+    cost,
     totalCases: records.length,
     successfulCases: successfulRecords.length,
     failedCases,
@@ -404,11 +490,27 @@ export function renderShadowDivergenceMarkdown(report: ShadowDivergenceReport): 
     `- allowLlm: ${report.runConfig.allowLlm}`,
     `- useRealGapAnalysis: ${report.runConfig.useRealGapAnalysis}`,
     `- includeRewriteValidation: ${report.runConfig.includeRewriteValidation}`,
+    `- dryRunRewriteValidation: ${report.runConfig.dryRunRewriteValidation}`,
+    `- confirmLlmCost: ${report.runConfig.confirmLlmCost}`,
+    `- maxLlmCases: ${report.runConfig.maxLlmCases ?? 'none'}`,
+    `- maxEstimatedCostUsd: ${report.runConfig.maxEstimatedCostUsd ?? 'none'}`,
+    `- reuseCachedLlmResults: ${report.runConfig.reuseCachedLlmResults}`,
+    `- llmCacheDir: ${report.runConfig.llmCacheDir ?? 'none'}`,
     `- concurrency: ${report.runConfig.concurrency}`,
     `- limit: ${report.runConfig.limit ?? 'none'}`,
     `- totalInputCases: ${report.runConfig.totalInputCases}`,
     `- processedCases: ${report.runConfig.processedCases}`,
     `- gapAnalysisSources: provided=${report.runConfig.gapAnalysisSources.provided}, synthetic=${report.runConfig.gapAnalysisSources.synthetic}, realLlm=${report.runConfig.gapAnalysisSources.realLlm}`,
+    '',
+    '## Cost / LLM Usage',
+    '',
+    `- Estimated cost: $${report.cost.estimatedCostUsd.toFixed(2)}`,
+    `- Actual cost: ${typeof report.cost.actualCostUsd === 'number' ? `$${report.cost.actualCostUsd.toFixed(2)}` : 'unknown'}`,
+    `- LLM cases: ${report.cost.llmCases}`,
+    `- Gap analysis calls: ${report.cost.gapAnalysisCalls}`,
+    `- Rewrite calls: ${report.cost.rewriteCalls}`,
+    `- Cache hits: ${report.cost.cacheHits}`,
+    `- Cache misses: ${report.cost.cacheMisses}`,
     '',
     '## Cutover Reasons',
     '',

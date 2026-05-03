@@ -214,8 +214,9 @@ function buildTargetedPermissionInstructions(targetingPlan: TargetingPlan): stri
   } else if (targetRolePositioning?.permission === 'can_bridge_to_target_role') {
     lines.push(
       'Target role positioning:',
-      `- You may bridge toward "${targetRolePositioning.targetRole}" carefully, but avoid presenting it as fully established professional identity unless the wording stays grounded.`,
+      `- You may bridge toward "${targetRolePositioning.targetRole}" carefully, but must not open with or state "${targetRolePositioning.targetRole}" as the candidate's established professional identity.`,
       `- Prefer safer positioning such as: "${targetRolePositioning.safeRolePositioning}".`,
+      `- Safe summary template: "Profissional com experiência em [evidências reais], com atuação próxima ao contexto de ${targetRolePositioning.targetRole}."`,
     )
   }
 
@@ -269,7 +270,13 @@ function buildClaimPolicyInstructions(assessment?: JobCompatibilityAssessment): 
 
   return [
     'Structured claim policy is binding for this rewrite.',
+    'Claim-policy-first generation is mandatory: choose claimPolicyIds before writing any new factual text.',
     'For each rewritten bullet, summary line, skill, education item, or certification item, use only allowed or cautious claim policy ids.',
+    'For source=new_generated_text, usedClaimPolicyIds, expressedSignals, and evidenceBasis must be non-empty and copied from the selected allowed/cautious policy items.',
+    'For source=formatting_only, keep the same facts as the original text and do not add tools, target roles, certifications, seniority, education, domains, platforms, or ownership.',
+    'For source=preserved_original, keep the original facts without adding targeting claims.',
+    'Expressed signals must come only from allowed or cautious claim signals. Do not invent new expressedSignals outside this policy.',
+    'If no allowed or cautious claim applies, preserve original wording or treat the change as formatting only; do not add a new claim.',
     'Never express a forbidden claim. Cautious claims must use cautious bridge wording and real evidence basis.',
     'Allowed claim policy ids:',
     ...(allowed.length > 0 ? allowed : ['- none']),
@@ -278,6 +285,36 @@ function buildClaimPolicyInstructions(assessment?: JobCompatibilityAssessment): 
     'Forbidden claim policy ids:',
     ...(forbidden.length > 0 ? forbidden : ['- none']),
   ]
+}
+
+function buildClaimPolicyTraceContract(
+  assessment?: JobCompatibilityAssessment,
+): RewriteSectionInput['claim_policy_trace_contract'] | undefined {
+  if (!assessment) {
+    return undefined
+  }
+
+  return {
+    required: true,
+    allowedClaims: assessment.claimPolicy.allowedClaims.map((claim) => ({
+      id: claim.id,
+      signal: claim.signal,
+      allowedTerms: claim.allowedTerms,
+      evidenceBasis: claim.evidenceBasis.map((basis) => basis.text),
+    })),
+    cautiousClaims: assessment.claimPolicy.cautiousClaims.map((claim) => ({
+      id: claim.id,
+      signal: claim.signal,
+      allowedTerms: claim.allowedTerms,
+      evidenceBasis: claim.evidenceBasis.map((basis) => basis.text),
+      ...(claim.verbalizationTemplate === undefined ? {} : { verbalizationTemplate: claim.verbalizationTemplate }),
+    })),
+    forbiddenClaims: assessment.claimPolicy.forbiddenClaims.map((claim) => ({
+      id: claim.id,
+      signal: claim.signal,
+      prohibitedTerms: claim.prohibitedTerms,
+    })),
+  }
 }
 
 function splitTargetRequirements(targetingPlan: TargetingPlan): {
@@ -486,6 +523,8 @@ function buildTargetJobSectionInstructions(
         'Rewrite only the professional summary.',
         targetingPlan.targetRolePositioning?.permission === 'must_not_claim_target_role'
           ? 'Use 4 to 6 concise lines aligned to the vacancy context without presenting the candidate as the literal target role.'
+          : targetingPlan.targetRolePositioning?.permission === 'can_bridge_to_target_role'
+          ? 'Use 4 to 6 concise lines with bridge wording toward the target role context; do not present the candidate as the literal target role title.'
           : targetingPlan.targetRoleConfidence !== 'low'
           ? 'Use 4 to 6 concise lines aligned to the target role without claiming skills or experiences the candidate does not have.'
           : 'Use 4 to 6 concise lines aligned to the vacancy context without claiming a literal role identity, skills, or experiences the candidate does not have.',
@@ -886,6 +925,9 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
               current_content: currentContent,
               instructions: baseInstructions,
               target_keywords: targetKeywords,
+              ...(params.mode === 'job_targeting'
+                ? { claim_policy_trace_contract: buildClaimPolicyTraceContract(params.jobCompatibilityAssessment) }
+                : {}),
             }, params.userId, params.sessionId)
 
             if (!rewriteResult.output.success) {
@@ -960,6 +1002,9 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
                 current_content: currentContent,
                 instructions: `${baseInstructions}\n\n${buildAssertiveRewriteInstructions(section)}`,
                 target_keywords: targetKeywords,
+                ...(params.mode === 'job_targeting'
+                  ? { claim_policy_trace_contract: buildClaimPolicyTraceContract(params.jobCompatibilityAssessment) }
+                  : {}),
               }, params.userId, params.sessionId)
 
               if (!rewriteResult.output.success) {
@@ -1004,11 +1049,13 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
         sectionData,
       )
       if (params.mode === 'job_targeting' && params.jobCompatibilityAssessment) {
+        const modelClaimTraceItems = result.output.success ? result.output.claim_trace_items : undefined
         sectionRewritePlans.push(buildSectionRewritePlan({
           section,
           originalCvState: params.cvState,
           generatedCvState: optimizedCvState,
           claimPolicy: params.jobCompatibilityAssessment.claimPolicy,
+          modelClaimTraceItems,
         }))
       }
       changedSections.push(section)

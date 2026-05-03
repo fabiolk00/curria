@@ -87,16 +87,35 @@ export type GeneratedClaimTraceSection =
 
 export type GeneratedClaimTraceValidationStatus = 'valid' | 'warning' | 'invalid'
 
+export type GeneratedClaimTraceClassificationStatus =
+  | 'claim_policy_matched'
+  | 'original_preserved'
+  | 'formatting_only'
+  | 'unclassified_new_text'
+
+export type SectionRewriteItemSource =
+  | 'preserved_original'
+  | 'formatting_only'
+  | 'new_generated_text'
+
+export type SectionRewriteItemPermissionLevel =
+  | Extract<ClaimPolicyPermission, 'allowed' | 'cautious'>
+  | 'preserved_original'
+  | 'formatting_only'
+
 export interface SectionRewritePlan {
   section: GeneratedClaimTraceSection
   items: Array<{
     targetPath: string
     intendedText: string
+    source: SectionRewriteItemSource
     claimPolicyIds: string[]
     expressedSignals: string[]
     evidenceBasis: string[]
-    permissionLevel: Extract<ClaimPolicyPermission, 'allowed' | 'cautious'>
+    permissionLevel: SectionRewriteItemPermissionLevel
     prohibitedTermsAcknowledged: string[]
+    unclassifiedText?: string
+    classificationStatus?: GeneratedClaimTraceClassificationStatus
   }>
 }
 
@@ -110,6 +129,9 @@ export interface GeneratedClaimTrace {
   prohibitedTermsFound: string[]
   validationStatus: GeneratedClaimTraceValidationStatus
   rationale: string
+  source?: SectionRewriteItemSource
+  unclassifiedText?: string
+  classificationStatus?: GeneratedClaimTraceClassificationStatus
 }
 
 export type JobCompatibilityRequirementKind = RequirementKind
@@ -206,6 +228,7 @@ export interface JobCompatibilityClaimPolicy {
   allowedClaims: ClaimPolicyItem[]
   cautiousClaims: ClaimPolicyItem[]
   forbiddenClaims: ClaimPolicyItem[]
+  warnings?: string[]
 }
 
 export interface JobCompatibilityScoreDimensionBreakdown {

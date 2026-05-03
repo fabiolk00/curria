@@ -53,6 +53,7 @@ function readyResult(index: number, overrides: Partial<ShadowComparisonRecord> =
     },
     validation: {
       executed: true,
+      mode: 'real_llm',
       blocked: false,
       factualViolation: false,
       issueTypes: [],
@@ -123,6 +124,7 @@ describe('analyze-shadow-divergence', () => {
       allowLlm: true,
       useRealGapAnalysis: false,
       includeRewriteValidation: true,
+      dryRunRewriteValidation: false,
       persist: true,
       limit: 500,
       concurrency: 3,
@@ -135,6 +137,14 @@ describe('analyze-shadow-divergence', () => {
         synthetic: 0,
         realLlm: 0,
       },
+    }))
+    expect(report.cost).toEqual(expect.objectContaining({
+      estimatedCostUsd: 0,
+      llmCases: 0,
+      gapAnalysisCalls: 0,
+      rewriteCalls: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
     }))
   })
 
@@ -210,6 +220,72 @@ describe('analyze-shadow-divergence', () => {
     expect(report.CUTOVER_READY).toBe(false)
     expect(report.runConfig.rewriteValidationCoverage).toBe('none')
     expect(report.cutoverReasons).toContain('rewrite_validation_not_executed')
+  })
+
+  it('marks CUTOVER_READY=false when rewrite validation is dry-run only', () => {
+    const records = Array.from({ length: 500 }, (_, index) => readyResult(index, {
+      runConfig: {
+        allowLlm: false,
+        useRealGapAnalysis: false,
+        includeRewriteValidation: true,
+        dryRunRewriteValidation: true,
+        persist: true,
+        concurrency: 3,
+        limit: 500,
+        totalInputCases: 500,
+      },
+      validation: {
+        executed: true,
+        mode: 'dry_run',
+        blocked: false,
+        factualViolation: false,
+        issueTypes: [],
+      },
+    }))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.runConfig.dryRunRewriteValidation).toBe(true)
+    expect(report.cutoverReasons).toContain('rewrite_validation_dry_run_only')
+  })
+
+  it('aggregates LLM cost and cache usage', () => {
+    const records = [
+      readyResult(1, {
+        llmUsage: {
+          gapAnalysisCalled: true,
+          rewriteCalled: false,
+          cacheHit: false,
+          cacheHits: 0,
+          cacheMisses: 1,
+          estimatedCostUsd: 0.01,
+        },
+      }),
+      readyResult(2, {
+        llmUsage: {
+          gapAnalysisCalled: false,
+          rewriteCalled: true,
+          cacheHit: true,
+          cacheHits: 1,
+          cacheMisses: 0,
+          estimatedCostUsd: 0.05,
+          actualCostUsd: 0.03,
+        },
+      }),
+    ]
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.cost).toEqual(expect.objectContaining({
+      estimatedCostUsd: 0.06,
+      actualCostUsd: 0.03,
+      llmCases: 2,
+      gapAnalysisCalls: 1,
+      rewriteCalls: 1,
+      cacheHits: 1,
+      cacheMisses: 1,
+    }))
   })
 
   it('marks CUTOVER_READY=false when failed cases exist', () => {

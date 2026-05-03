@@ -5,6 +5,10 @@ import type {
   JobCompatibilityClaimPolicy,
   StructuredValidationVersion,
 } from '@/lib/agent/job-targeting/compatibility/types'
+import {
+  canonicalizeClaimSignal,
+  containsCanonicalClaimSignal,
+} from '@/lib/agent/job-targeting/compatibility/claim-signal'
 import type { TargetRoleClaimPermission } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 
@@ -18,6 +22,7 @@ export type StructuredValidationIssueType =
   | 'target_role_asserted_without_permission'
   | 'unsafe_direct_claim'
   | 'missing_claim_trace'
+  | 'unclassified_generated_text'
   | 'unsupported_expressed_signal'
 
 export interface StructuredValidationIssue {
@@ -74,6 +79,7 @@ export function validateGeneratedClaims({
       traces,
       claimPolicy,
     }),
+    ...validateUnclassifiedGeneratedText({ traces }),
     ...claimPolicy.forbiddenClaims.flatMap((item) => validateForbiddenTerms({ traces, item })),
     ...claimPolicy.cautiousClaims.flatMap((item) => validateCautiousTerms({ traces, item })),
     ...validateTargetRole({
@@ -234,6 +240,30 @@ function validateTraceExpressedSignals({
   })
 }
 
+function validateUnclassifiedGeneratedText({
+  traces,
+}: {
+  traces: GeneratedClaimTrace[]
+}): StructuredValidationIssue[] {
+  return traces
+    .filter((item) => (
+      item.classificationStatus === 'unclassified_new_text'
+      || item.rationale === 'new_text_without_claim_policy'
+    ))
+    .filter((item) => item.usedClaimPolicyIds.length === 0)
+    .filter((item) => item.expressedSignals.length === 0)
+    .map((item, index) => ({
+      id: `unclassified_generated_text-${item.itemPath}-${index + 1}`,
+      type: 'unclassified_generated_text' as const,
+      severity: 'error' as const,
+      term: item.unclassifiedText ?? item.generatedText,
+      requirementIds: [],
+      section: item.section,
+      traceId: item.itemPath,
+      generatedText: item.generatedText,
+    }))
+}
+
 function validateForbiddenTerms({
   traces,
   item,
@@ -310,6 +340,10 @@ function validateTargetRole({
       candidateTrace.section === 'summary'
       || candidateTrace.section === 'experience'
     ))
+    .filter((candidateTrace) => (
+      candidateTrace.source !== 'preserved_original'
+      && candidateTrace.classificationStatus !== 'original_preserved'
+    ))
     .filter((candidateTrace) => containsTerm(candidateTrace.generatedText, role))
     .filter((candidateTrace) => (
       targetRole?.permission !== 'can_bridge_to_target_role'
@@ -384,18 +418,9 @@ function hasCautiousLanguage(value: string): boolean {
 }
 
 function containsTerm(source: string, term: string): boolean {
-  const normalizedSource = normalizeForTermMatch(source)
-  const normalizedTerm = normalizeForTermMatch(term)
-
-  return normalizedTerm.length > 0 && normalizedSource.includes(normalizedTerm)
+  return containsCanonicalClaimSignal(source, term)
 }
 
 function normalizeForTermMatch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return canonicalizeClaimSignal(value)
 }

@@ -11,6 +11,20 @@ The JobCompatibilityAssessment must run in shadow mode before it becomes the pro
 
 ## Shadow Batch Validation
 
+The batch runner is cost-safe by default. A plain shadow batch does not call OpenAI; it uses provided gap analysis from cases or the deterministic synthetic fallback.
+
+Smoke and volume validation with no OpenAI cost:
+
+```bash
+tsx scripts/job-targeting/run-shadow-batch.ts \
+  --input .local/job-targeting-shadow-cases/synthetic-500-shadow-cases.jsonl \
+  --output .local/job-targeting-shadow-results/synthetic-500-results.jsonl \
+  --limit 500 \
+  --concurrency 3
+```
+
+Any run that enables real LLM calls must opt in with `--confirm-llm-cost`, cap the number of LLM cases with `--max-llm-cases`, and provide a budget using `--max-estimated-cost-usd`.
+
 Run volume validation through the batch runner, not through 500 browser sessions:
 
 ```bash
@@ -27,11 +41,14 @@ For the most representative compatibility cutover run, use real gap analysis ins
 ```bash
 tsx scripts/job-targeting/run-shadow-batch.ts \
   --input .local/job-targeting-shadow-cases/cases.jsonl \
-  --output .local/job-targeting-shadow-results/results-real-gap.jsonl \
-  --limit 500 \
-  --concurrency 2 \
+  --output .local/job-targeting-shadow-results/results-real-gap-25.jsonl \
+  --limit 25 \
+  --concurrency 1 \
   --persist \
-  --use-real-gap-analysis
+  --use-real-gap-analysis \
+  --confirm-llm-cost \
+  --max-llm-cases 25 \
+  --max-estimated-cost-usd 1.00
 ```
 
 Generate or regenerate the cutover report from an existing result file:
@@ -48,11 +65,24 @@ Run rewrite/trace validation on a smaller controlled sample:
 tsx scripts/job-targeting/run-shadow-batch.ts \
   --input .local/job-targeting-shadow-cases/cases.jsonl \
   --output .local/job-targeting-shadow-results/results-rewrite-validation.jsonl \
-  --limit 100 \
+  --limit 10 \
   --concurrency 1 \
   --persist \
-  --use-real-gap-analysis \
-  --include-rewrite-validation
+  --include-rewrite-validation \
+  --confirm-llm-cost \
+  --max-llm-cases 10 \
+  --max-estimated-cost-usd 1.00
+```
+
+For rewrite/trace debugging without OpenAI calls, use dry-run validation:
+
+```bash
+tsx scripts/job-targeting/run-shadow-batch.ts \
+  --input .local/job-targeting-shadow-cases/synthetic-500-shadow-cases.jsonl \
+  --output .local/job-targeting-shadow-results/synthetic-100-rewrite-dry-run.jsonl \
+  --limit 100 \
+  --concurrency 3 \
+  --dry-run-rewrite-validation
 ```
 
 The runner writes one JSONL result per case, persists shadow comparisons when `--persist` is used, and generates:
@@ -60,7 +90,9 @@ The runner writes one JSONL result per case, persists shadow comparisons when `-
 - `.local/job-targeting-shadow-results/report.json`
 - `.local/job-targeting-shadow-results/report.md`
 
-The report must contain `CUTOVER_READY=true` before `JOB_COMPATIBILITY_ASSESSMENT_CUTOVER_APPROVED=true` can be set. The analyzer is conservative: it returns `CUTOVER_READY=false` when the batch used synthetic gap analysis, did not persist shadow comparisons, or did not execute rewrite validation for the final cutover report.
+The report must contain `CUTOVER_READY=true` before `JOB_COMPATIBILITY_ASSESSMENT_CUTOVER_APPROVED=true` can be set. The analyzer is conservative: it returns `CUTOVER_READY=false` when the batch used synthetic gap analysis, did not persist shadow comparisons, did not execute rewrite validation for the final cutover report, or only executed dry-run rewrite validation.
+
+The report also includes a `Cost / LLM Usage` section with estimated cost, real cost when available, LLM case counts, gap analysis calls, rewrite calls, cache hits, and cache misses.
 
 ## Promotion Criteria
 

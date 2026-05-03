@@ -15,6 +15,7 @@ import type {
 import type {
   RewriteSectionInput,
   RewriteSectionOutput,
+  RewriteClaimTraceItem,
   ToolPatch,
 } from '@/types/agent'
 
@@ -27,6 +28,7 @@ type RewritePayloadBase = {
   rewritten_content: string
   keywords_added: string[]
   changes_made: string[]
+  claim_trace_items?: RewriteClaimTraceItem[]
 }
 
 type ValidatedRewritePayload =
@@ -40,6 +42,15 @@ const RewritePayloadBaseSchema = z.object({
   rewritten_content: z.string(),
   keywords_added: z.array(z.string()),
   changes_made: z.array(z.string()),
+  claim_trace_items: z.array(z.object({
+    targetPath: z.string(),
+    source: z.enum(['preserved_original', 'formatting_only', 'new_generated_text']),
+    usedClaimPolicyIds: z.array(z.string()),
+    expressedSignals: z.array(z.string()),
+    evidenceBasis: z.array(z.string()),
+    permissionLevel: z.enum(['allowed', 'cautious', 'preserved_original', 'formatting_only']),
+    rationale: z.string().optional(),
+  })).optional(),
 })
 
 const ExperienceEntrySchema = z.object({
@@ -404,6 +415,12 @@ ${buildSectionPromptInstructions(section).map((item) => `- ${item}`).join('\n')}
 Contrato compartilhado de reescrita a aplicar rigorosamente:
 ${formatResumeRewriteGuardrails()}
 
+Claim-policy trace contract when requested:
+- Include "claim_trace_items" only when input.claim_policy_trace_contract.required=true.
+- For new factual text, choose usedClaimPolicyIds before writing the line.
+- expressedSignals must be copied from selected claimPolicy.signal values.
+- If no claimPolicyId applies, preserve the original text or mark the item as formatting_only without adding any new tool, role, certification, seniority, education, or domain claim.
+
 Idioma:
 - Use português brasileiro (pt-BR) profissional, objetivo e confiante.
 - Mantenha nomes próprios de ferramentas e termos técnicos em inglês quando esse for o uso correto (Azure Databricks, PySpark, Qlik Sense, Medallion, etc.).
@@ -448,6 +465,36 @@ function normalizeRewritePayload(
 
   record.keywords_added = normalizeStringList(record.keywords_added)
   record.changes_made = normalizeStringList(record.changes_made, 7)
+  if (Array.isArray(record.claim_trace_items)) {
+    const validTraceSources = new Set(['preserved_original', 'formatting_only', 'new_generated_text'])
+    const validPermissionLevels = new Set(['allowed', 'cautious', 'preserved_original', 'formatting_only'])
+    record.claim_trace_items = record.claim_trace_items
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => {
+        const traceItem = item as Record<string, unknown>
+        const source = normalizeStringValue(traceItem.source)
+        const permissionLevel = normalizeStringValue(traceItem.permissionLevel)
+
+        return {
+          targetPath: normalizeStringValue(traceItem.targetPath),
+          source,
+          usedClaimPolicyIds: normalizeStringList(traceItem.usedClaimPolicyIds),
+          expressedSignals: normalizeStringList(traceItem.expressedSignals),
+          evidenceBasis: normalizeStringList(traceItem.evidenceBasis),
+          permissionLevel,
+          rationale: normalizeStringValue(traceItem.rationale) || undefined,
+        }
+      })
+      .filter((item) => (
+        item.targetPath
+        && validTraceSources.has(item.source)
+        && validPermissionLevels.has(item.permissionLevel)
+      ))
+
+    if ((record.claim_trace_items as unknown[]).length === 0) {
+      delete record.claim_trace_items
+    }
+  }
 
   if (section === 'summary') {
     if (typeof record.section_data !== 'string') {
@@ -669,6 +716,9 @@ export async function rewriteSection(
         section_data: validatedPayload.section_data,
         keywords_added: validatedPayload.keywords_added,
         changes_made: validatedPayload.changes_made,
+        ...(validatedPayload.claim_trace_items === undefined
+          ? {}
+          : { claim_trace_items: validatedPayload.claim_trace_items }),
       },
       patch: buildRewritePatch(validatedPayload),
     }

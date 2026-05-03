@@ -53,6 +53,7 @@ export function buildShadowBatchResult(params: {
   legacy: ShadowLegacySnapshot
   assessment: ShadowAssessmentSnapshot
   validation?: ShadowBatchResult['validation']
+  llmUsage?: ShadowBatchResult['llmUsage']
   startedAt: string
   completedAt: string
   error?: string
@@ -70,6 +71,7 @@ export function buildShadowBatchResult(params: {
       assessment: params.assessment,
     }),
     ...(params.validation === undefined ? {} : { validation: params.validation }),
+    ...(params.llmUsage === undefined ? {} : { llmUsage: params.llmUsage }),
     runtime: {
       startedAt: params.startedAt,
       completedAt: params.completedAt,
