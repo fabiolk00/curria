@@ -6,8 +6,8 @@ current_phase: 108
 current_phase_name: adicionar camada dinamica de evidencia semantica para targeted rewrite de job_targeting
 current_plan: 01 completed
 status: verifying
-stopped_at: Completed quick task 260503-m0c
-last_updated: "2026-05-03T19:01:32.857Z"
+stopped_at: Completed quick task 260503-qzm
+last_updated: "2026-05-03T22:43:12.803Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 73
@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: Phase complete — ready for verification
 Last activity: 2026-05-03
-Last Activity Description: Completed quick task 260503-m0c: fixed auth and resume navigation polish, tablet layout scroll behavior, welcome guide order/spotlight sizing, and route loading feedback.
+Last Activity Description: Completed quick task 260503-qzm: redesigned authenticated settings into a compact account control center with plan, credits, resume actions, recent activity, billing, support identifiers, and safe sensitive actions.
 
 Progress: [##########] 100%
 
@@ -54,6 +54,7 @@ Baseline carried forward from earlier shipped milestones:
 - Quick 260502-op1: shadow batch CLI smoke runner server-only import fix.
 - Quick 260502-p91: rewrite validation diagnostics and synthetic trace fallback for shadow batch.
 - Quick 260503-m0c: auth/resume navigation polish, tablet layout scroll fixes, welcome guide order, and loading feedback.
+- Quick 260503-qzm: settings-first account surface for identity, plan/credits, resume actions, billing, activity, support, and safe sensitive actions.
 
 ## Accumulated Context
 
@@ -201,6 +202,7 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260503-qzm | Redesign authenticated settings page for CurrIA account, credits, profile and safety | 2026-05-03 | 8beb8d2 | Validated | [260503-qzm-redesign-authenticated-settings-page-int](./quick/260503-qzm-redesign-authenticated-settings-page-int/) |
 | 260503-m0c | Corrigir bugs de UI e redirecionamento: botao voltar ao perfil preto, overflow tablet generate/auth, welcome guide, Google redirect, historico gerar, loading em cliques | 2026-05-03 | 468e44a | Validated | [260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b](./quick/260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b/) |
 | 260502-p91 | Investigate and fix rewrite validation rewrite_failed in shadow batch | 2026-05-02 | working-tree | Validated | [260502-p91-investigate-and-fix-rewrite-validation-r](./quick/260502-p91-investigate-and-fix-rewrite-validation-r/) |
 | 260502-op1 | Fix shadow batch smoke runner server-only CLI imports | 2026-05-02 | 2740387 | Validated | [260502-op1-fix-shadow-batch-smoke-runner-server-onl](./quick/260502-op1-fix-shadow-batch-smoke-runner-server-onl/) |
