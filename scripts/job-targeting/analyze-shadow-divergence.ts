@@ -20,6 +20,11 @@ type ShadowRunConfigRecord = {
   maxEstimatedCostUsd?: number
   reuseCachedLlmResults?: boolean
   llmCacheDir?: string
+  providerCooldownMs?: number
+  maxProviderRetries?: number
+  stopOnProviderCircuitOpen?: boolean
+  resumeFailedFrom?: string
+  skipSuccessfulFrom?: string
 }
 
 export type ShadowComparisonRecord = {
@@ -76,6 +81,8 @@ export type ShadowComparisonRecord = {
     blocked?: boolean
     issueTypes?: string[]
     factualViolation?: boolean
+    operationalFailure?: boolean
+    providerIssueType?: string
     generatedClaimTraceCount?: number
     missingTraceCount?: number
   }
@@ -85,6 +92,8 @@ export type ShadowComparisonRecord = {
     cacheHit?: boolean
     cacheHits?: number
     cacheMisses?: number
+    providerRetryCount?: number
+    providerCooldownMs?: number
     estimatedCostUsd?: number
     actualInputTokens?: number
     actualOutputTokens?: number
@@ -110,6 +119,11 @@ export type ShadowDivergenceReport = {
     maxEstimatedCostUsd?: number
     reuseCachedLlmResults: boolean
     llmCacheDir?: string
+    providerCooldownMs?: number
+    maxProviderRetries?: number
+    stopOnProviderCircuitOpen: boolean
+    resumeFailedFrom?: string
+    skipSuccessfulFrom?: string
     gapAnalysisSources: {
       provided: number
       synthetic: number
@@ -126,6 +140,8 @@ export type ShadowDivergenceReport = {
     rewriteCalls: number
     cacheHits: number
     cacheMisses: number
+    providerRetryCount: number
+    providerCooldownMs?: number
   }
   totalCases: number
   successfulCases: number
@@ -143,6 +159,10 @@ export type ShadowDivergenceReport = {
   factualValidationViolations: number
   rewriteValidationBlockedCases: number
   rewriteValidationOperationalIssueCases: number
+  providerOperationalFailures: number
+  providerRateLimitedCases: number
+  providerCircuitOpenCases: number
+  providerShortCircuitedCases: number
   confirmedFalsePositiveForbiddenClaims: number
   confirmedFalseNegativeCoreExplicit: number
   top30LargestScoreDivergences: Array<{
@@ -165,7 +185,20 @@ function hasRewriteOperationalIssue(record: ShadowComparisonRecord): boolean {
   return Boolean(record.validation?.issueTypes?.some((issueType: string) => (
     /^rewrite_/u.test(issueType)
     || issueType === 'shadow_trace_fallback_used'
+    || isProviderIssueType(issueType)
   )))
+}
+
+function isProviderIssueType(issueType: string): boolean {
+  return issueType === 'provider_rate_limited'
+    || issueType === 'provider_circuit_open'
+    || issueType === 'provider_short_circuited'
+    || issueType === 'provider_temporary_failure'
+}
+
+function hasProviderOperationalFailure(record: ShadowComparisonRecord): boolean {
+  return record.validation?.operationalFailure === true
+    || Boolean(record.validation?.issueTypes?.some(isProviderIssueType))
 }
 
 export function percentile(values: number[], percentileValue: number): number {
@@ -303,7 +336,11 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
   const limits = new Set(records.map((record) => record.runConfig?.limit).filter((value): value is number => typeof value === 'number'))
   const maxLlmCases = new Set(records.map((record) => record.runConfig?.maxLlmCases).filter((value): value is number => typeof value === 'number'))
   const maxEstimatedCostUsd = new Set(records.map((record) => record.runConfig?.maxEstimatedCostUsd).filter((value): value is number => typeof value === 'number'))
+  const providerCooldownMs = new Set(records.map((record) => record.runConfig?.providerCooldownMs).filter((value): value is number => typeof value === 'number'))
+  const maxProviderRetries = new Set(records.map((record) => record.runConfig?.maxProviderRetries).filter((value): value is number => typeof value === 'number'))
   const llmCacheDirs = new Set(records.map((record) => record.runConfig?.llmCacheDir).filter((value): value is string => typeof value === 'string' && value.length > 0))
+  const resumeFailedFrom = new Set(records.map((record) => record.runConfig?.resumeFailedFrom).filter((value): value is string => typeof value === 'string' && value.length > 0))
+  const skipSuccessfulFrom = new Set(records.map((record) => record.runConfig?.skipSuccessfulFrom).filter((value): value is string => typeof value === 'string' && value.length > 0))
   const totalInputCases = Math.max(
     processedCases,
     ...records.map((record) => record.runConfig?.totalInputCases ?? 0),
@@ -324,6 +361,11 @@ function buildRunConfig(records: ShadowComparisonRecord[]): ShadowDivergenceRepo
     ...(maxEstimatedCostUsd.size === 1 ? { maxEstimatedCostUsd: [...maxEstimatedCostUsd][0] } : {}),
     reuseCachedLlmResults,
     ...(llmCacheDirs.size === 1 ? { llmCacheDir: [...llmCacheDirs][0] } : {}),
+    ...(providerCooldownMs.size === 1 ? { providerCooldownMs: [...providerCooldownMs][0] } : {}),
+    ...(maxProviderRetries.size === 1 ? { maxProviderRetries: [...maxProviderRetries][0] } : {}),
+    stopOnProviderCircuitOpen: everyRecord(records, (record) => record.runConfig?.stopOnProviderCircuitOpen !== false),
+    ...(resumeFailedFrom.size === 1 ? { resumeFailedFrom: [...resumeFailedFrom][0] } : {}),
+    ...(skipSuccessfulFrom.size === 1 ? { skipSuccessfulFrom: [...skipSuccessfulFrom][0] } : {}),
     gapAnalysisSources: {
       provided,
       synthetic,
@@ -349,6 +391,10 @@ function buildCostSummary(records: ShadowComparisonRecord[]): ShadowDivergenceRe
         : 0
   )))
   const cacheMisses = sum(records.map((record) => record.llmUsage?.cacheMisses ?? 0))
+  const providerRetryCount = sum(records.map((record) => record.llmUsage?.providerRetryCount ?? 0))
+  const providerCooldownValues = records
+    .map((record) => record.llmUsage?.providerCooldownMs)
+    .filter((value): value is number => typeof value === 'number')
 
   return {
     estimatedCostUsd,
@@ -360,6 +406,10 @@ function buildCostSummary(records: ShadowComparisonRecord[]): ShadowDivergenceRe
     rewriteCalls,
     cacheHits,
     cacheMisses,
+    providerRetryCount,
+    ...(providerCooldownValues.length > 0
+      ? { providerCooldownMs: Math.max(...providerCooldownValues) }
+      : {}),
   }
 }
 
@@ -372,6 +422,10 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
   const factualValidationViolations = successfulRecords.filter((record) => record.validation?.factualViolation).length
   const rewriteValidationBlockedCases = successfulRecords.filter((record) => record.validation?.blocked).length
   const rewriteValidationOperationalIssueCases = successfulRecords.filter(hasRewriteOperationalIssue).length
+  const providerOperationalFailures = successfulRecords.filter(hasProviderOperationalFailure).length
+  const providerRateLimitedCases = successfulRecords.filter((record) => record.validation?.issueTypes?.includes('provider_rate_limited')).length
+  const providerCircuitOpenCases = successfulRecords.filter((record) => record.validation?.issueTypes?.includes('provider_circuit_open')).length
+  const providerShortCircuitedCases = successfulRecords.filter((record) => record.validation?.issueTypes?.includes('provider_short_circuited')).length
   const confirmedFalsePositiveForbiddenClaims = successfulRecords.filter((record) => (
     record.validation?.issueTypes?.some((issueType) => /forbidden|unsupported|unsafe_direct_claim/u.test(issueType))
   )).length
@@ -415,6 +469,9 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
   if (rewriteValidationOperationalIssueCases > 0) {
     cutoverReasons.push('rewrite_validation_operational_issues_present')
   }
+  if (providerOperationalFailures > 0) {
+    cutoverReasons.push('provider_operational_failures_present')
+  }
   if (confirmedFalsePositiveForbiddenClaims > 0) {
     cutoverReasons.push('confirmed_false_positive_forbidden_claims_present')
   }
@@ -450,6 +507,10 @@ export function buildShadowDivergenceReport(records: ShadowComparisonRecord[]): 
     factualValidationViolations,
     rewriteValidationBlockedCases,
     rewriteValidationOperationalIssueCases,
+    providerOperationalFailures,
+    providerRateLimitedCases,
+    providerCircuitOpenCases,
+    providerShortCircuitedCases,
     confirmedFalsePositiveForbiddenClaims,
     confirmedFalseNegativeCoreExplicit,
     top30LargestScoreDivergences: successfulRecords
@@ -481,6 +542,10 @@ export function renderShadowDivergenceMarkdown(report: ShadowDivergenceReport): 
     `- Critical gap divergent count: ${report.criticalGapDivergentCount}`,
     `- Factual validation violations: ${report.factualValidationViolations}`,
     `- Rewrite validation operational issue cases: ${report.rewriteValidationOperationalIssueCases}`,
+    `- Provider operational failures: ${report.providerOperationalFailures}`,
+    `- Provider rate-limited cases: ${report.providerRateLimitedCases}`,
+    `- Provider circuit-open cases: ${report.providerCircuitOpenCases}`,
+    `- Provider short-circuited cases: ${report.providerShortCircuitedCases}`,
     `- Pipeline representativeness: ${report.runConfig.pipelineRepresentativeness}`,
     `- Rewrite validation coverage: ${report.runConfig.rewriteValidationCoverage}`,
     `- Persisted shadow results: ${report.runConfig.persist}`,
@@ -496,6 +561,11 @@ export function renderShadowDivergenceMarkdown(report: ShadowDivergenceReport): 
     `- maxEstimatedCostUsd: ${report.runConfig.maxEstimatedCostUsd ?? 'none'}`,
     `- reuseCachedLlmResults: ${report.runConfig.reuseCachedLlmResults}`,
     `- llmCacheDir: ${report.runConfig.llmCacheDir ?? 'none'}`,
+    `- providerCooldownMs: ${report.runConfig.providerCooldownMs ?? 'none'}`,
+    `- maxProviderRetries: ${report.runConfig.maxProviderRetries ?? 'none'}`,
+    `- stopOnProviderCircuitOpen: ${report.runConfig.stopOnProviderCircuitOpen}`,
+    `- resumeFailedFrom: ${report.runConfig.resumeFailedFrom ?? 'none'}`,
+    `- skipSuccessfulFrom: ${report.runConfig.skipSuccessfulFrom ?? 'none'}`,
     `- concurrency: ${report.runConfig.concurrency}`,
     `- limit: ${report.runConfig.limit ?? 'none'}`,
     `- totalInputCases: ${report.runConfig.totalInputCases}`,
@@ -511,6 +581,8 @@ export function renderShadowDivergenceMarkdown(report: ShadowDivergenceReport): 
     `- Rewrite calls: ${report.cost.rewriteCalls}`,
     `- Cache hits: ${report.cost.cacheHits}`,
     `- Cache misses: ${report.cost.cacheMisses}`,
+    `- Provider retry count: ${report.cost.providerRetryCount}`,
+    `- Provider cooldown ms: ${report.cost.providerCooldownMs ?? 'none'}`,
     '',
     '## Cutover Reasons',
     '',

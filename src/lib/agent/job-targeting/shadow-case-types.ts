@@ -19,6 +19,11 @@ export type ShadowBatchRunConfig = {
   maxEstimatedCostUsd?: number
   reuseCachedLlmResults?: boolean
   llmCacheDir?: string
+  providerCooldownMs?: number
+  maxProviderRetries?: number
+  stopOnProviderCircuitOpen?: boolean
+  resumeFailedFrom?: string
+  skipSuccessfulFrom?: string
 }
 
 export type JobTargetingShadowCase = {
@@ -89,6 +94,10 @@ export type ShadowValidationSnapshot = {
   hasOptimizedCvState?: boolean
   hasSectionRewritePlans?: boolean
   traceFallbackUsed?: boolean
+  operationalFailure?: boolean
+  providerIssueType?: 'provider_rate_limited' | 'provider_circuit_open' | 'provider_short_circuited' | 'provider_temporary_failure'
+  providerRetryCount?: number
+  providerCooldownMs?: number
 }
 
 export type ShadowLlmUsageSnapshot = {
@@ -97,6 +106,8 @@ export type ShadowLlmUsageSnapshot = {
   cacheHit: boolean
   cacheHits?: number
   cacheMisses?: number
+  providerRetryCount?: number
+  providerCooldownMs?: number
   estimatedCostUsd: number
   actualInputTokens?: number
   actualOutputTokens?: number

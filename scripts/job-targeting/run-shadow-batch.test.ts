@@ -516,6 +516,183 @@ describe('runShadowBatch', () => {
     expect(result.validation.generatedClaimTraceCount).toBeGreaterThan(0)
   })
 
+  it('classifies 429 rewrite failures as provider operational failures', async () => {
+    mockRewriteResumeFull.mockResolvedValueOnce({
+      success: false,
+      error: 'Rate limit reached for requests.',
+      errorCode: 'RATE_LIMITED',
+      failedSection: 'summary',
+    })
+    const { input, output } = await writeCases([buildCase('case-provider-rate')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      concurrency: 1,
+      maxProviderRetries: 0,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(result.validation).toEqual(expect.objectContaining({
+      executed: true,
+      mode: 'real_llm',
+      blocked: true,
+      factualViolation: false,
+      operationalFailure: true,
+      providerIssueType: 'provider_rate_limited',
+    }))
+    expect(result.validation.issueTypes).toContain('provider_rate_limited')
+    expect(result.validation.issueTypes).not.toContain('rewrite_failed')
+  })
+
+  it('classifies circuit breaker short-circuits as provider operational failures', async () => {
+    mockRewriteResumeFull.mockResolvedValueOnce({
+      success: false,
+      error: 'OpenAI circuit breaker is open.',
+      errorCode: 'INTERNAL_ERROR',
+      failedSection: 'summary',
+    })
+    const { input, output } = await writeCases([buildCase('case-provider-circuit')])
+
+    await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      concurrency: 1,
+      maxProviderRetries: 0,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(result.validation).toEqual(expect.objectContaining({
+      operationalFailure: true,
+      providerIssueType: 'provider_short_circuited',
+      factualViolation: false,
+    }))
+    expect(result.validation.issueTypes).toContain('provider_short_circuited')
+  })
+
+  it('retries provider failures after cooldown and respects maxProviderRetries', async () => {
+    mockRewriteResumeFull
+      .mockResolvedValueOnce({
+        success: false,
+        error: 'Rate limit reached for requests.',
+        errorCode: 'RATE_LIMITED',
+        failedSection: 'summary',
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        optimizedCvState: cvState,
+        generatedClaimTrace: [{
+          section: 'summary',
+          itemPath: 'summary',
+          generatedText: cvState.summary,
+          expressedSignals: [],
+          usedClaimPolicyIds: [],
+          evidenceBasis: [],
+          prohibitedTermsFound: [],
+          validationStatus: 'valid',
+          rationale: 'test',
+        }],
+      })
+    const { input, output } = await writeCases([buildCase('case-provider-retry')])
+
+    const summary = await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      concurrency: 1,
+      providerCooldownMs: 1,
+      maxProviderRetries: 1,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(summary.stoppedEarly).toBeUndefined()
+    expect(mockRewriteResumeFull).toHaveBeenCalledTimes(2)
+    expect(result.validation).toEqual(expect.objectContaining({
+      rewriteSucceeded: true,
+      providerRetryCount: 1,
+    }))
+    expect(result.llmUsage).toEqual(expect.objectContaining({
+      providerRetryCount: 1,
+      providerCooldownMs: 1,
+    }))
+  })
+
+  it('stops starting new cases when provider failure remains after retries', async () => {
+    mockRewriteResumeFull.mockResolvedValue({
+      success: false,
+      error: 'OpenAI circuit breaker is open.',
+      errorCode: 'INTERNAL_ERROR',
+      failedSection: 'summary',
+    })
+    const { input, output } = await writeCases([buildCase('case-1'), buildCase('case-2')])
+
+    const summary = await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      concurrency: 1,
+      providerCooldownMs: 1,
+      maxProviderRetries: 0,
+      stopOnProviderCircuitOpen: true,
+    })
+    const results = (await readFile(output, 'utf8')).trim().split(/\r?\n/u).map((line) => JSON.parse(line))
+
+    expect(summary).toEqual(expect.objectContaining({
+      total: 1,
+      stoppedEarly: true,
+      stopReason: 'provider_short_circuited',
+    }))
+    expect(results).toHaveLength(1)
+    expect(results[0].caseId).toBe('case-1')
+    expect(mockRewriteResumeFull).toHaveBeenCalledTimes(1)
+  })
+
+  it('resume-failed-from reruns only provider operational failures', async () => {
+    const previous = path.join(tempDir, 'previous.jsonl')
+    await writeFile(previous, [
+      JSON.stringify({
+        caseId: 'case-1',
+        validation: {
+          executed: true,
+          blocked: false,
+          factualViolation: false,
+          issueTypes: [],
+        },
+        runtime: { success: true },
+      }),
+      JSON.stringify({
+        caseId: 'case-2',
+        validation: {
+          executed: true,
+          blocked: true,
+          factualViolation: false,
+          operationalFailure: true,
+          issueTypes: ['provider_rate_limited'],
+        },
+        runtime: { success: true },
+      }),
+    ].join('\n'), 'utf8')
+    const { input, output } = await writeCases([buildCase('case-1'), buildCase('case-2')])
+
+    const summary = await runShadowBatch({
+      inputPath: input,
+      outputPath: output,
+      includeRewriteValidation: true,
+      concurrency: 1,
+      resumeFailedFrom: previous,
+    })
+    const result = JSON.parse((await readFile(output, 'utf8')).trim())
+
+    expect(summary).toEqual(expect.objectContaining({
+      total: 1,
+      rerunProviderFailures: 1,
+    }))
+    expect(result.caseId).toBe('case-2')
+    expect(mockRewriteResumeFull).toHaveBeenCalledTimes(1)
+  })
+
   it('reports missing generated traces as missing_claim_trace instead of generic rewrite_failed', async () => {
     mockRewriteResumeFull.mockResolvedValueOnce({
       success: true,

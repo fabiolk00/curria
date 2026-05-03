@@ -17,12 +17,22 @@ type CliOptions = {
   dryRunRewriteValidation?: boolean
   reuseCachedLlmResults?: boolean
   llmCacheDir?: string
+  providerCooldownMs?: number
+  maxProviderRetries?: number
+  stopOnProviderCircuitOpen?: boolean
+  resumeFailedFrom?: string
+  skipSuccessfulFrom?: string
   report?: boolean
 }
 
 function readNumber(value: string | undefined, fallback: number): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function readNonNegativeNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
 }
 
 function parseArgs(args: string[]): CliOptions {
@@ -113,6 +123,40 @@ function parseArgs(args: string[]): CliOptions {
 
     if (arg === '--llm-cache-dir') {
       options.llmCacheDir = args[index + 1]
+      index += 1
+      continue
+    }
+
+    if (arg === '--provider-cooldown-ms') {
+      options.providerCooldownMs = readNumber(args[index + 1], 60_000)
+      index += 1
+      continue
+    }
+
+    if (arg === '--max-provider-retries') {
+      options.maxProviderRetries = readNonNegativeNumber(args[index + 1], 2)
+      index += 1
+      continue
+    }
+
+    if (arg === '--stop-on-provider-circuit-open') {
+      options.stopOnProviderCircuitOpen = true
+      continue
+    }
+
+    if (arg === '--no-stop-on-provider-circuit-open') {
+      options.stopOnProviderCircuitOpen = false
+      continue
+    }
+
+    if (arg === '--resume-failed-from') {
+      options.resumeFailedFrom = args[index + 1]
+      index += 1
+      continue
+    }
+
+    if (arg === '--skip-successful-from') {
+      options.skipSuccessfulFrom = args[index + 1]
       index += 1
       continue
     }
@@ -220,6 +264,11 @@ async function main() {
     dryRunRewriteValidation: options.dryRunRewriteValidation ?? false,
     reuseCachedLlmResults: options.reuseCachedLlmResults ?? false,
     llmCacheDir: options.llmCacheDir,
+    providerCooldownMs: options.providerCooldownMs,
+    maxProviderRetries: options.maxProviderRetries,
+    stopOnProviderCircuitOpen: options.stopOnProviderCircuitOpen,
+    resumeFailedFrom: options.resumeFailedFrom,
+    skipSuccessfulFrom: options.skipSuccessfulFrom,
     enforceCostGuards: true,
   })
 

@@ -78,7 +78,7 @@ function getDeltaLabel(entry: BillingActivityRow): string {
   return `+${entry.creditsDelta} crédito`
 }
 
-export function BillingActivityCard() {
+export function BillingActivityCard({ className }: { className?: string }) {
   const [entries, setEntries] = useState<BillingHistoryResponse['entries']>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -119,12 +119,15 @@ export function BillingActivityCard() {
   return (
     <Card
       data-testid="billing-activity-card"
-      className="rounded-[2rem] border-border/60 bg-card/90 py-0 shadow-[0_28px_90px_-70px_oklch(var(--foreground)/0.9)]"
+      className={cn(
+        'rounded-[8px] border-border/70 bg-white py-0 shadow-xs',
+        className,
+      )}
     >
       <CardHeader className="pt-8">
         <CardTitle className="flex items-center gap-2">
           <History className="h-5 w-5 text-primary" />
-          Billing activity
+          Atividade de cobrança e créditos
         </CardTitle>
         <CardDescription>
           Atividade recente de exportação baseada nas reservas e lançamentos de crédito mais recentes.

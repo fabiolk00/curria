@@ -49,6 +49,11 @@ export type RunShadowBatchOptions = {
   reuseCachedLlmResults?: boolean
   llmCacheDir?: string
   enforceCostGuards?: boolean
+  providerCooldownMs?: number
+  maxProviderRetries?: number
+  stopOnProviderCircuitOpen?: boolean
+  resumeFailedFrom?: string
+  skipSuccessfulFrom?: string
 }
 
 export type RunShadowBatchSummary = {
@@ -56,6 +61,10 @@ export type RunShadowBatchSummary = {
   successful: number
   failed: number
   outputPath: string
+  stoppedEarly?: boolean
+  stopReason?: string
+  skippedSuccessful?: number
+  rerunProviderFailures?: number
 }
 
 export const SHADOW_BATCH_ESTIMATED_COST_USD = {
@@ -64,6 +73,8 @@ export const SHADOW_BATCH_ESTIMATED_COST_USD = {
 } as const
 
 const SHADOW_BATCH_PROMPT_VERSION = 'shadow-batch-rewrite-validation-v1'
+const DEFAULT_PROVIDER_COOLDOWN_MS = 60_000
+const DEFAULT_MAX_PROVIDER_RETRIES = 2
 
 function hashInputPath(inputPath: string): string {
   return createHash('sha256')
@@ -181,6 +192,50 @@ function parseJsonLines(source: string): unknown[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => JSON.parse(line) as unknown)
+}
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) {
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+function parseShadowBatchResults(source: string): ShadowBatchResult[] {
+  return parseJsonLines(source).filter((value): value is ShadowBatchResult => (
+    Boolean(value)
+    && typeof value === 'object'
+    && typeof (value as Partial<ShadowBatchResult>).caseId === 'string'
+  ))
+}
+
+async function readShadowBatchResults(inputPath: string | undefined): Promise<ShadowBatchResult[]> {
+  if (!inputPath) {
+    return []
+  }
+
+  return parseShadowBatchResults(await readFile(inputPath, 'utf8'))
+}
+
+function isProviderIssueType(issueType: string): boolean {
+  return issueType === 'provider_rate_limited'
+    || issueType === 'provider_circuit_open'
+    || issueType === 'provider_short_circuited'
+    || issueType === 'provider_temporary_failure'
+}
+
+function hasProviderOperationalFailure(result: ShadowBatchResult): boolean {
+  return result.validation?.operationalFailure === true
+    || Boolean(result.validation?.issueTypes?.some(isProviderIssueType))
+}
+
+function isReusableSuccessfulResult(result: ShadowBatchResult): boolean {
+  return result.runtime.success === true
+    && result.validation?.operationalFailure !== true
+    && !hasProviderOperationalFailure(result)
 }
 
 function assertShadowCase(value: unknown): JobTargetingShadowCase {
@@ -426,7 +481,12 @@ async function runRewriteValidation(params: {
       hasAssessment: Boolean(params.assessment),
       hasClaimPolicy: Boolean(params.assessment.claimPolicy),
     })
-    const fallback = shouldUseSyntheticTraceFallback(params.testCase, issueType)
+    const providerIssueType = classifyProviderFailure({
+      errorCode: rewrite.errorCode,
+      errorMessage: rewrite.error,
+    })
+    const providerOperationalFailure = providerIssueType !== undefined
+    const fallback = !providerOperationalFailure && shouldUseSyntheticTraceFallback(params.testCase, issueType)
       ? validatePreservedCvStateTrace({
           testCase: params.testCase,
           targetingPlan: params.targetingPlan,
@@ -434,7 +494,7 @@ async function runRewriteValidation(params: {
         })
       : undefined
     const issueTypes = uniqueStrings([
-      issueType,
+      ...(providerIssueType ? [providerIssueType] : [issueType]),
       ...(fallback?.issueTypes ?? []),
       ...(fallback ? ['shadow_trace_fallback_used'] : []),
     ])
@@ -450,14 +510,16 @@ async function runRewriteValidation(params: {
       hasSectionRewritePlans: Boolean(rewrite.sectionRewritePlans?.length),
       generatedClaimTraceCount: fallback?.generatedClaimTraceCount ?? rewrite.generatedClaimTrace?.length ?? 0,
       validationIssueTypes: issueTypes,
-      validationBlocked: fallback?.blocked ?? true,
+      validationBlocked: providerOperationalFailure ? true : fallback?.blocked ?? true,
       traceFallbackUsed: Boolean(fallback),
+      operationalFailure: providerOperationalFailure,
+      providerIssueType,
     })
 
     const failureSnapshot: ShadowValidationSnapshot = {
       executed: true,
       mode: 'real_llm',
-      blocked: fallback?.blocked ?? true,
+      blocked: providerOperationalFailure ? true : fallback?.blocked ?? true,
       issueTypes,
       factualViolation: fallback?.factualViolation ?? false,
       generatedClaimTraceCount: fallback?.generatedClaimTraceCount ?? rewrite.generatedClaimTrace?.length ?? 0,
@@ -474,8 +536,12 @@ async function runRewriteValidation(params: {
       hasOptimizedCvState: Boolean(rewrite.optimizedCvState),
       hasSectionRewritePlans: Boolean(rewrite.sectionRewritePlans?.length),
       traceFallbackUsed: Boolean(fallback),
+      operationalFailure: providerOperationalFailure,
+      ...(providerIssueType === undefined ? {} : { providerIssueType }),
     }
-    await writeCache(params.llmCacheDir, cacheKey, failureSnapshot)
+    if (!providerOperationalFailure) {
+      await writeCache(params.llmCacheDir, cacheKey, failureSnapshot)
+    }
     return failureSnapshot
   }
 
@@ -556,6 +622,35 @@ function classifyRewriteValidationFailure(params: {
   }
 
   return 'rewrite_failed'
+}
+
+function classifyProviderFailure(params: {
+  errorCode?: string
+  errorMessage?: string
+}): ShadowValidationSnapshot['providerIssueType'] | undefined {
+  const message = params.errorMessage ?? ''
+
+  if (params.errorCode === 'RATE_LIMITED' || /\b429\b|rate limit|rate_limit/iu.test(message)) {
+    return 'provider_rate_limited'
+  }
+
+  if (/circuit breaker is probing recovery|short.?circuit/iu.test(message)) {
+    return 'provider_short_circuited'
+  }
+
+  if (/circuit breaker is open|OPENAI_CIRCUIT_OPEN|circuit open/iu.test(message)) {
+    return 'provider_short_circuited'
+  }
+
+  if (params.errorCode === 'GENERATION_ERROR' || /temporar|timeout|overloaded|503|502|500/iu.test(message)) {
+    return 'provider_temporary_failure'
+  }
+
+  return undefined
+}
+
+function isProviderValidationSnapshot(validation: ShadowValidationSnapshot | undefined): boolean {
+  return Boolean(validation?.operationalFailure || validation?.issueTypes.some(isProviderIssueType))
 }
 
 function shouldUseSyntheticTraceFallback(
@@ -768,6 +863,60 @@ export async function processShadowCase(params: {
   }
 }
 
+function withProviderRetryMetadata(
+  result: ShadowBatchResult,
+  params: {
+    providerRetryCount: number
+    providerCooldownMs: number
+  },
+): ShadowBatchResult {
+  return {
+    ...result,
+    validation: result.validation
+      ? {
+        ...result.validation,
+        providerRetryCount: params.providerRetryCount,
+        providerCooldownMs: params.providerCooldownMs,
+      }
+      : result.validation,
+    llmUsage: result.llmUsage
+      ? {
+        ...result.llmUsage,
+        providerRetryCount: params.providerRetryCount,
+        providerCooldownMs: params.providerCooldownMs,
+      }
+      : result.llmUsage,
+  }
+}
+
+async function processShadowCaseWithProviderRetries(params: Parameters<typeof processShadowCase>[0] & {
+  providerCooldownMs: number
+  maxProviderRetries: number
+}): Promise<ShadowBatchResult> {
+  let providerRetryCount = 0
+
+  for (;;) {
+    const result = await processShadowCase(params)
+    const enriched = withProviderRetryMetadata(result, {
+      providerRetryCount,
+      providerCooldownMs: params.providerCooldownMs,
+    })
+
+    if (!hasProviderOperationalFailure(enriched) || providerRetryCount >= params.maxProviderRetries) {
+      return enriched
+    }
+
+    providerRetryCount += 1
+    logWarn('job_targeting.shadow_batch.provider_cooldown', {
+      caseId: params.testCase.id,
+      providerRetryCount,
+      providerCooldownMs: params.providerCooldownMs,
+      issueTypes: enriched.validation?.issueTypes ?? [],
+    })
+    await sleep(params.providerCooldownMs)
+  }
+}
+
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
@@ -807,10 +956,32 @@ export async function writeShadowBatchResults(
 
 export async function runShadowBatch(options: RunShadowBatchOptions): Promise<RunShadowBatchSummary> {
   const cases = await loadShadowCases(options.inputPath)
-  const selectedCases = cases.slice(0, options.limit ?? cases.length)
+  const resumeResults = await readShadowBatchResults(options.resumeFailedFrom)
+  const skipResults = await readShadowBatchResults(options.skipSuccessfulFrom)
+  const resumeCaseIds = new Set(resumeResults
+    .filter(hasProviderOperationalFailure)
+    .map((result) => result.caseId))
+  const skipSuccessfulCaseIds = new Set(skipResults
+    .filter(isReusableSuccessfulResult)
+    .map((result) => result.caseId))
+  const baseCases = cases.slice(0, options.limit ?? cases.length)
+  const selectedCases = baseCases.filter((testCase) => {
+    if (options.resumeFailedFrom) {
+      return resumeCaseIds.has(testCase.id)
+    }
+
+    if (skipSuccessfulCaseIds.has(testCase.id)) {
+      return false
+    }
+
+    return true
+  })
   const dryRunRewriteValidation = options.dryRunRewriteValidation ?? false
   const includeRewriteValidation = options.includeRewriteValidation ?? false
   const useRealGapAnalysis = options.useRealGapAnalysis ?? false
+  const providerCooldownMs = options.providerCooldownMs ?? DEFAULT_PROVIDER_COOLDOWN_MS
+  const maxProviderRetries = options.maxProviderRetries ?? DEFAULT_MAX_PROVIDER_RETRIES
+  const stopOnProviderCircuitOpen = options.stopOnProviderCircuitOpen ?? true
   validateCostGuards({
     caseCount: selectedCases.length,
     useRealGapAnalysis,
@@ -847,11 +1018,13 @@ export async function runShadowBatch(options: RunShadowBatchOptions): Promise<Ru
     ...(options.maxEstimatedCostUsd === undefined ? {} : { maxEstimatedCostUsd: options.maxEstimatedCostUsd }),
     ...(options.reuseCachedLlmResults === undefined ? {} : { reuseCachedLlmResults: options.reuseCachedLlmResults }),
     ...(options.llmCacheDir === undefined ? {} : { llmCacheDir: options.llmCacheDir }),
+    providerCooldownMs,
+    maxProviderRetries,
+    stopOnProviderCircuitOpen,
+    ...(options.resumeFailedFrom === undefined ? {} : { resumeFailedFrom: options.resumeFailedFrom }),
+    ...(options.skipSuccessfulFrom === undefined ? {} : { skipSuccessfulFrom: options.skipSuccessfulFrom }),
   }
-  const results = await runWithConcurrency(
-    selectedCases,
-    effectiveConcurrency,
-    (testCase) => processShadowCase({
+  const processCase = (testCase: JobTargetingShadowCase) => processShadowCaseWithProviderRetries({
       testCase,
       runConfig,
       persist: options.persist ?? false,
@@ -861,8 +1034,36 @@ export async function runShadowBatch(options: RunShadowBatchOptions): Promise<Ru
       dryRunRewriteValidation,
       reuseCachedLlmResults: options.reuseCachedLlmResults ?? false,
       llmCacheDir: options.llmCacheDir,
-    }),
-  )
+      providerCooldownMs,
+      maxProviderRetries,
+    })
+  const results: ShadowBatchResult[] = []
+  let stoppedEarly = false
+  let stopReason: string | undefined
+
+  if (stopOnProviderCircuitOpen && allowLlm) {
+    for (const testCase of selectedCases) {
+      const result = await processCase(testCase)
+      results.push(result)
+
+      if (hasProviderOperationalFailure(result)) {
+        stoppedEarly = true
+        stopReason = result.validation?.providerIssueType ?? 'provider_temporary_failure'
+        logWarn('job_targeting.shadow_batch.stopped_on_provider_failure', {
+          caseId: result.caseId,
+          stopReason,
+          issueTypes: result.validation?.issueTypes ?? [],
+        })
+        break
+      }
+    }
+  } else {
+    results.push(...await runWithConcurrency(
+      selectedCases,
+      effectiveConcurrency,
+      processCase,
+    ))
+  }
 
   await writeShadowBatchResults(options.outputPath, results)
 
@@ -871,5 +1072,8 @@ export async function runShadowBatch(options: RunShadowBatchOptions): Promise<Ru
     successful: results.filter((result) => result.runtime.success).length,
     failed: results.filter((result) => !result.runtime.success).length,
     outputPath: options.outputPath,
+    ...(stoppedEarly ? { stoppedEarly, stopReason } : {}),
+    ...(skipSuccessfulCaseIds.size === 0 ? {} : { skippedSuccessful: baseCases.filter((testCase) => skipSuccessfulCaseIds.has(testCase.id)).length }),
+    ...(options.resumeFailedFrom === undefined ? {} : { rerunProviderFailures: selectedCases.length }),
   }
 }

@@ -116,6 +116,28 @@ describe('analyze-shadow-divergence', () => {
     expect(report.cutoverReasons).toContain('rewrite_validation_operational_issues_present')
   })
 
+  it('reports provider operational failures separately from factual violations', () => {
+    const records = Array.from({ length: 500 }, (_, index) => (index === 0
+      ? readyResult(index, {
+        validation: {
+          executed: true,
+          blocked: true,
+          factualViolation: false,
+          operationalFailure: true,
+          issueTypes: ['provider_rate_limited'],
+        },
+      })
+      : readyResult(index)))
+
+    const report = buildShadowDivergenceReport(records)
+
+    expect(report.CUTOVER_READY).toBe(false)
+    expect(report.providerOperationalFailures).toBe(1)
+    expect(report.providerRateLimitedCases).toBe(1)
+    expect(report.factualValidationViolations).toBe(0)
+    expect(report.cutoverReasons).toContain('provider_operational_failures_present')
+  })
+
   it('includes aggregated run config and can mark ready when provided gap analysis covers all cases', () => {
     const report = buildShadowDivergenceReport(Array.from({ length: 500 }, (_, index) => readyResult(index)))
 
@@ -145,6 +167,7 @@ describe('analyze-shadow-divergence', () => {
       rewriteCalls: 0,
       cacheHits: 0,
       cacheMisses: 0,
+      providerRetryCount: 0,
     }))
   })
 
@@ -259,6 +282,8 @@ describe('analyze-shadow-divergence', () => {
           cacheHit: false,
           cacheHits: 0,
           cacheMisses: 1,
+          providerRetryCount: 2,
+          providerCooldownMs: 60000,
           estimatedCostUsd: 0.01,
         },
       }),
@@ -285,6 +310,8 @@ describe('analyze-shadow-divergence', () => {
       rewriteCalls: 1,
       cacheHits: 1,
       cacheMisses: 1,
+      providerRetryCount: 2,
+      providerCooldownMs: 60000,
     }))
   })
 

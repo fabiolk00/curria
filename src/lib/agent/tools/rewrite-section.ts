@@ -582,6 +582,23 @@ function normalizeTraceTargetPath(value: string): string {
     .replace(/\s+/gu, '')
 }
 
+function buildRewriteFailureFromUnknown(error: unknown) {
+  const typedError = error as { code?: unknown; status?: unknown; message?: unknown }
+  const message = typeof typedError.message === 'string'
+    ? typedError.message
+    : 'Failed to rewrite resume section.'
+
+  if (typedError.code === 'OPENAI_CIRCUIT_OPEN') {
+    return toolFailure(TOOL_ERROR_CODES.INTERNAL_ERROR, message)
+  }
+
+  if (typedError.status === 429) {
+    return toolFailure(TOOL_ERROR_CODES.RATE_LIMITED, message)
+  }
+
+  return toolFailureFromUnknown(error, 'Failed to rewrite resume section.')
+}
+
 function validateRewritePayload(
   section: RewriteSectionInput['section'],
   rawText: string,
@@ -752,7 +769,7 @@ export async function rewriteSection(
     }
   } catch (error) {
     return {
-      output: toolFailureFromUnknown(error, 'Failed to rewrite resume section.'),
+      output: buildRewriteFailureFromUnknown(error),
     }
   }
 }

@@ -21,9 +21,51 @@ interface Session {
 
 interface SessionListProps {
   sessions: Session[]
+  variant?: "default" | "compact"
 }
 
-export default function SessionList({ sessions }: SessionListProps) {
+function SessionBadges({ session }: { session: Session }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <PhaseBadge phase={session.phase} />
+      {session.atsReadiness?.display ? (
+        <>
+          <ATSScoreBadge
+            score={session.atsReadiness.displayedReadinessScoreCurrent}
+            formattedScore={session.atsReadiness.display.formattedScorePtBr}
+          />
+          <AtsReadinessStatusBadge
+            badgeText={session.atsReadiness.display.badgeTextPtBr}
+          />
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+export default function SessionList({ sessions, variant = "default" }: SessionListProps) {
+  if (variant === "compact") {
+    return (
+      <div className="divide-y divide-border/70">
+        {sessions.map((session) => (
+          <Link
+            key={session.id}
+            href={buildResumeComparisonPath(session.id)}
+            className="flex flex-col gap-3 py-4 transition-colors first:pt-0 last:pb-0 hover:text-primary sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0 space-y-1">
+              <p className="truncate text-sm font-semibold text-foreground">
+                Sessão {session.id.substring(0, 6)}...
+              </p>
+              <p className="text-xs text-muted-foreground">{session.createdAt}</p>
+            </div>
+            <SessionBadges session={session} />
+          </Link>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {sessions.map((session) => (
@@ -34,20 +76,7 @@ export default function SessionList({ sessions }: SessionListProps) {
                 <p className="font-medium">Sessão {session.id.substring(0, 6)}...</p>
                 <p className="text-xs text-muted-foreground">{session.createdAt}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <PhaseBadge phase={session.phase} />
-                {session.atsReadiness?.display ? (
-                  <>
-                    <ATSScoreBadge
-                      score={session.atsReadiness.displayedReadinessScoreCurrent}
-                      formattedScore={session.atsReadiness.display.formattedScorePtBr}
-                    />
-                    <AtsReadinessStatusBadge
-                      badgeText={session.atsReadiness.display.badgeTextPtBr}
-                    />
-                  </>
-                ) : null}
-              </div>
+              <SessionBadges session={session} />
             </CardContent>
           </Card>
         </Link>
