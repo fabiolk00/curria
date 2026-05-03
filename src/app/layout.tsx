@@ -4,9 +4,11 @@ import { Inter } from "next/font/google"
 
 import GoogleAnalytics from "@/components/analytics/google-analytics"
 import { embeddedClerkLocalizationPtBr } from "@/components/auth/clerk-localization"
+import { RouteLoadingIndicator } from "@/components/navigation/route-loading-indicator"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
+import { PROFILE_SETUP_PATH } from "@/lib/routes/app"
 import { getSiteUrl } from "@/lib/seo/site-config"
 import "./globals.css"
 
@@ -66,13 +68,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider localization={embeddedClerkLocalizationPtBr}>
+    <ClerkProvider
+      localization={embeddedClerkLocalizationPtBr}
+      signInFallbackRedirectUrl={PROFILE_SETUP_PATH}
+      signUpFallbackRedirectUrl={PROFILE_SETUP_PATH}
+    >
       <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable}`}>
         <head />
         <body className="font-sans">
           <GoogleAnalytics />
           <ThemeProvider>
             <TooltipProvider delayDuration={300}>
+              <RouteLoadingIndicator />
               {children}
               <Toaster />
             </TooltipProvider>

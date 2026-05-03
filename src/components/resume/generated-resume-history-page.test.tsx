@@ -117,4 +117,28 @@ describe("GeneratedResumeHistoryPage", () => {
       expect(mockGetResumeGenerationHistory).toHaveBeenNthCalledWith(2, 1, 4)
     })
   })
+
+  it("routes the empty history CTA to the dedicated generate resume page", async () => {
+    const user = userEvent.setup()
+
+    mockGetResumeGenerationHistory.mockResolvedValue({
+      items: [],
+      pagination: {
+        page: 1,
+        limit: 4,
+        totalItems: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    })
+
+    render(<GeneratedResumeHistoryPage />)
+
+    await user.click(await screen.findByRole("button", {
+      name: "Melhorar currículo com IA",
+    }))
+
+    expect(mockPush).toHaveBeenCalledWith("/generate-resume")
+  })
 })

@@ -39,6 +39,7 @@ import {
   isInsufficientCreditsError,
   overrideJobTargetingValidation,
 } from "@/lib/dashboard/workspace-client"
+import { startNavigationFeedback } from "@/lib/navigation/feedback"
 import { resolveValidationOverrideCta } from "@/lib/dashboard/validation-override-cta"
 import { assessAtsEnhancementReadiness, getAtsEnhancementBlockingItems } from "@/lib/profile/ats-enhancement"
 import type { PlanSlug } from "@/lib/plans"
@@ -615,6 +616,10 @@ export default function UserDataPage({
 }: UserDataPageProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const pushWithFeedback = useCallback((href: string): void => {
+    startNavigationFeedback()
+    router.push(href)
+  }, [router])
   const editorContainerRef = useRef<HTMLDivElement | null>(null)
   const targetJobDescriptionRef = useRef<HTMLTextAreaElement | null>(null)
   const [activeView, setActiveView] = useState<ProfileView>(initialView)
@@ -846,7 +851,7 @@ export default function UserDataPage({
       toast.success("Perfil salvo com sucesso.")
 
       if (pathname !== PROFILE_SETUP_PATH) {
-        router.push(PROFILE_SETUP_PATH)
+        pushWithFeedback(PROFILE_SETUP_PATH)
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar o perfil.")
@@ -857,7 +862,7 @@ export default function UserDataPage({
 
   const handleReturnToProfile = (): void => {
     if (pathname !== PROFILE_SETUP_PATH) {
-      router.push(PROFILE_SETUP_PATH)
+      pushWithFeedback(PROFILE_SETUP_PATH)
       return
     }
 
@@ -866,7 +871,7 @@ export default function UserDataPage({
 
   const handleProfileGenerationCta = (): void => {
     if (profileGenerationCtaAction === "redirect") {
-      router.push(GENERATE_RESUME_PATH)
+      pushWithFeedback(GENERATE_RESUME_PATH)
       return
     }
 
@@ -1201,7 +1206,7 @@ export default function UserDataPage({
     })
 
     toast.success(buildGenerationSuccessMessage(successMessage, data.warnings))
-    router.push(buildResumeComparisonPath(data.sessionId))
+    pushWithFeedback(buildResumeComparisonPath(data.sessionId))
   }
 
   const closeRewriteValidationFailure = (): void => {
@@ -1691,7 +1696,7 @@ export default function UserDataPage({
                   type="button"
                   variant="outline"
                   disabled={isSaving || isRunningAtsEnhancement}
-                  onClick={() => router.push(PROFILE_SETUP_PATH)}
+                  onClick={() => pushWithFeedback(PROFILE_SETUP_PATH)}
                 >
                   Cancelar
                 </Button>
@@ -1919,7 +1924,7 @@ export default function UserDataPage({
               variant="ghost"
               data-testid="enhancement-back-button"
               aria-label="Voltar ao perfil"
-              className="-ml-3 h-8 px-3 text-slate-500 hover:bg-transparent hover:text-slate-900"
+              className="-ml-1 h-9 rounded-full bg-black px-4 text-white hover:bg-black/90 hover:text-white"
               onClick={handleReturnToProfile}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />

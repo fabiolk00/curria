@@ -113,7 +113,7 @@ describe("DashboardWelcomeGuide", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("opens on Perfil and advances through generate resume and resume history in the expected order", async () => {
+  it("opens on Perfil and advances through resume history and generate resume in the expected order", async () => {
     const user = userEvent.setup()
     const { rerender } = render(<TestTargets />)
 
@@ -126,30 +126,30 @@ describe("DashboardWelcomeGuide", () => {
 
     await user.click(within(initialDialog).getByRole("button", { name: /Pr/ }))
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH)
-    })
-    mockPathname = DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH
-    rerender(<TestTargets />)
-
-    const secondDialog = await screen.findByRole("dialog")
-    expect(within(secondDialog).getByRole("heading", { name: "Gerar currículo" })).toBeInTheDocument()
-    expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
-      "data-target-id",
-      dashboardWelcomeGuideTargets.generateResumeNav,
-    )
-
-    await user.click(within(secondDialog).getByRole("button", { name: /Pr/ }))
-    await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_RESUMES_PATH)
     })
     mockPathname = DASHBOARD_WELCOME_GUIDE_RESUMES_PATH
     rerender(<TestTargets />)
 
-    const thirdDialog = await screen.findByRole("dialog")
-    expect(within(thirdDialog).getByRole("heading", { name: "Histórico de currículos" })).toBeInTheDocument()
+    const secondDialog = await screen.findByRole("dialog")
+    expect(within(secondDialog).getByRole("heading", { name: "Histórico de currículos" })).toBeInTheDocument()
     expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
       "data-target-id",
       dashboardWelcomeGuideTargets.resumesNav,
+    )
+
+    await user.click(within(secondDialog).getByRole("button", { name: /Pr/ }))
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH)
+    })
+    mockPathname = DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH
+    rerender(<TestTargets />)
+
+    const thirdDialog = await screen.findByRole("dialog")
+    expect(within(thirdDialog).getByRole("heading", { name: "Gerar currículo" })).toBeInTheDocument()
+    expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
+      "data-target-id",
+      dashboardWelcomeGuideTargets.generateResumeNav,
     )
   })
 

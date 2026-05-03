@@ -50,6 +50,7 @@ import {
   GENERATE_RESUME_PATH,
   PROFILE_SETUP_PATH,
 } from "@/lib/routes/app"
+import { startNavigationFeedback } from "@/lib/navigation/feedback"
 import { cn } from "@/lib/utils"
 
 const COLLAPSED_WIDTH = 56
@@ -257,6 +258,7 @@ function SidebarContent({
   }
 
   const handleNewResume = () => {
+    startNavigationFeedback()
     router.push(GENERATE_RESUME_PATH)
     onCloseMobile?.()
   }

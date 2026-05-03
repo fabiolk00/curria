@@ -32,11 +32,11 @@ export default function AuthShell({
   redirectTo?: string | null
 }) {
   return (
-    <div className="min-h-screen flex">
-      <section className="relative hidden overflow-hidden bg-gradient-to-br from-foreground via-foreground to-foreground/90 lg:flex lg:w-1/2">
+    <div className="flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+      <section className="relative hidden overflow-hidden bg-gradient-to-br from-foreground via-foreground to-foreground/90 lg:flex lg:h-full lg:w-1/2">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-violet-900/20" />
 
-        <div className="relative z-10 flex w-full flex-col justify-between p-12">
+        <div className="relative z-10 flex w-full flex-col justify-between p-8 xl:p-12">
           <div className="flex items-center">
             <Logo
               linkTo="/"
@@ -46,23 +46,23 @@ export default function AuthShell({
             />
           </div>
 
-          <div className="flex max-w-lg flex-1 flex-col justify-center">
-            <h1 className="mb-6 text-4xl font-bold leading-tight text-white md:text-5xl">
+          <div className="flex max-w-lg flex-1 flex-col justify-center py-6 xl:py-0">
+            <h1 className="mb-5 text-3xl font-bold leading-tight text-white xl:mb-6 xl:text-5xl">
               {"Pare de enviar currículos genéricos."}
             </h1>
-            <p className="mb-4 text-lg leading-relaxed text-white/70">
+            <p className="mb-3 text-base leading-relaxed text-white/70 xl:mb-4 xl:text-lg">
               {"Deixe seu currículo mais claro para o ATS e aumente suas chances de entrevista."}
             </p>
-            <p className="text-base text-white">
+            <p className="text-sm text-white xl:text-base">
               {"Seu currículo precisa mostrar rápido por que você merece avançar."}
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 xl:space-y-4">
             {features.map((feature) => (
               <div
                 key={feature}
-                className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm xl:gap-4 xl:p-4"
               >
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-violet-400" />
                 <span className="text-sm text-white/90">{feature}</span>
@@ -72,7 +72,7 @@ export default function AuthShell({
         </div>
       </section>
 
-      <section className="flex flex-1 items-center justify-center bg-muted/30 px-6 py-8 lg:w-1/2 lg:px-12 lg:py-14">
+      <section className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-muted/30 px-6 py-6 lg:h-full lg:w-1/2 lg:px-10 lg:py-8 xl:px-12 xl:py-10">
         <div className="w-full max-w-lg rounded-xl border border-border/50 bg-card shadow-xl">
           <div className="p-8">
             <div className="mb-8 flex items-center justify-center">

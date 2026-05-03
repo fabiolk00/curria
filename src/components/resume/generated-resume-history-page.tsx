@@ -8,8 +8,9 @@ import type {
   GeneratedResumeHistoryResponse,
 } from "@/lib/generated-resume-types"
 import { getResumeGenerationHistory } from "@/lib/dashboard/workspace-client"
+import { startNavigationFeedback } from "@/lib/navigation/feedback"
 import {
-  LEGACY_PROFILE_SETUP_ALIAS_PATH,
+  GENERATE_RESUME_PATH,
   PROFILE_SETUP_PATH,
   buildResumeComparisonPath,
 } from "@/lib/routes/app"
@@ -103,6 +104,7 @@ export function GeneratedResumeHistoryPage() {
       return
     }
 
+    startNavigationFeedback()
     router.push(destination)
   }
 
@@ -120,10 +122,16 @@ export function GeneratedResumeHistoryPage() {
       pagination={history.pagination}
       isLoading={isLoading}
       error={error}
-      onBack={() => router.push(PROFILE_SETUP_PATH)}
+      onBack={() => {
+        startNavigationFeedback()
+        router.push(PROFILE_SETUP_PATH)
+      }}
       onRetry={handleRetry}
       onPageChange={handlePageChange}
-      onStartResume={() => router.push(LEGACY_PROFILE_SETUP_ALIAS_PATH)}
+      onStartResume={() => {
+        startNavigationFeedback()
+        router.push(GENERATE_RESUME_PATH)
+      }}
       onDownloadPdf={handleDownloadPdf}
       onOpen={handleOpen}
     />

@@ -40,15 +40,6 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
     requiresSidebar: true,
   },
   {
-    id: "generate-resume",
-    title: "Gerar currículo",
-    description:
-      "Este item abre a página dedicada para melhorar seu currículo para ATS ou adaptar uma versão para uma vaga específica.",
-    targetId: dashboardWelcomeGuideTargets.generateResumeNav,
-    path: DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH,
-    preferredSide: "left",
-  },
-  {
     id: "resumes",
     title: "Histórico de currículos",
     description:
@@ -57,6 +48,15 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
     path: DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
     preferredSide: "right",
     requiresSidebar: true,
+  },
+  {
+    id: "generate-resume",
+    title: "Gerar currículo",
+    description:
+      "Este item abre a página dedicada para melhorar seu currículo para ATS ou adaptar uma versão para uma vaga específica.",
+    targetId: dashboardWelcomeGuideTargets.generateResumeNav,
+    path: DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH,
+    preferredSide: "left",
   },
 ]
 

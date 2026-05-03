@@ -41,11 +41,11 @@ function measureTarget(element: HTMLElement): SpotlightRect {
   const computedRadius = Number.parseFloat(window.getComputedStyle(element).borderRadius)
 
   return {
-    top: Math.max(rect.top - 6, 8),
-    left: Math.max(rect.left - 6, 8),
-    width: rect.width + 12,
-    height: rect.height + 12,
-    radius: Number.isFinite(computedRadius) ? Math.max(computedRadius + 6, 16) : 16,
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    radius: Number.isFinite(computedRadius) ? computedRadius : 12,
   }
 }
 

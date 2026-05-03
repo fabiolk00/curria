@@ -46,7 +46,7 @@ export default function DashboardShell({
 
   return (
     <DashboardWelcomeGuide>
-      <div className="flex min-h-screen bg-background md:h-screen md:overflow-hidden">
+      <div className="flex h-[100dvh] min-h-0 overflow-hidden bg-background">
         {isMobile && showDashboardNavigation ? (
           <Button
             variant="outline"
@@ -72,7 +72,7 @@ export default function DashboardShell({
           />
         ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {billingNotice ? (
             <div
               data-testid="billing-notice"
@@ -84,10 +84,10 @@ export default function DashboardShell({
 
           <main
             className={cn(
-              "min-w-0 flex-1",
+              "min-h-0 min-w-0 flex-1",
               showDashboardNavigation
-                ? "h-[calc(107.5svh-4rem)] md:overflow-auto"
-                : "min-h-screen w-full overflow-auto",
+                ? "overflow-auto"
+                : "w-full overflow-auto",
             )}
           >
             {children}

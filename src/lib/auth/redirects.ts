@@ -1,5 +1,7 @@
 import { PROFILE_SETUP_PATH, canonicalizeAppPath } from "@/lib/routes/app"
 
+export const SSO_CALLBACK_PATH = "/sso-callback"
+
 export function getSafeRedirectPath(
   candidate: string | null | undefined,
   fallback = PROFILE_SETUP_PATH,
@@ -13,4 +15,8 @@ export function getSafeRedirectPath(
   }
 
   return canonicalizeAppPath(candidate)
+}
+
+export function buildSsoCallbackPath(redirectTo: string): string {
+  return `${SSO_CALLBACK_PATH}?redirect_to=${encodeURIComponent(redirectTo)}`
 }

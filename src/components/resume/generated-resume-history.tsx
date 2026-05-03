@@ -28,7 +28,7 @@ function BackButton({ onBack }: { onBack?: () => void }) {
     <button
       type="button"
       onClick={onBack}
-      className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-950"
+      className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
     >
       <ArrowLeft className="h-4 w-4" />
       Voltar ao perfil

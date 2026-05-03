@@ -14,7 +14,7 @@ import {
 } from "@/components/auth/auth-form-ui"
 import { getClerkErrorMessage } from "@/components/auth/clerk-error"
 import { Button } from "@/components/ui/button"
-import { getSafeRedirectPath } from "@/lib/auth/redirects"
+import { buildSsoCallbackPath, getSafeRedirectPath } from "@/lib/auth/redirects"
 import { navigateToUrl } from "@/lib/navigation/external"
 import { PROFILE_SETUP_PATH } from "@/lib/routes/app"
 
@@ -195,7 +195,7 @@ export default function SignupForm() {
     try {
       await signUp.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
+        redirectUrl: buildSsoCallbackPath(redirectTo),
         redirectUrlComplete: redirectTo,
       })
     } catch (error) {

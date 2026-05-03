@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getSafeRedirectPath } from "@/lib/auth/redirects"
+import { buildSsoCallbackPath, getSafeRedirectPath } from "@/lib/auth/redirects"
 import { GENERATE_RESUME_PATH } from "@/lib/routes/app"
 
 describe("getSafeRedirectPath", () => {
@@ -12,6 +12,15 @@ describe("getSafeRedirectPath", () => {
   it("keeps internal non-legacy routes untouched", () => {
     expect(getSafeRedirectPath("/finalizar-compra?plan=pro", "/profile-setup")).toBe(
       "/finalizar-compra?plan=pro",
+    )
+  })
+
+  it("builds SSO callback URLs with the safe destination carried through", () => {
+    expect(buildSsoCallbackPath("/profile-setup")).toBe(
+      "/sso-callback?redirect_to=%2Fprofile-setup",
+    )
+    expect(buildSsoCallbackPath("/finalizar-compra?plan=pro")).toBe(
+      "/sso-callback?redirect_to=%2Ffinalizar-compra%3Fplan%3Dpro",
     )
   })
 

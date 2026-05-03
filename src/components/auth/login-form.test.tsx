@@ -112,7 +112,7 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(mockAuthenticateWithRedirect).toHaveBeenCalledWith({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
+        redirectUrl: "/sso-callback?redirect_to=%2Fprofile-setup",
         redirectUrlComplete: "/profile-setup",
       })
     })
@@ -131,7 +131,7 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(mockAuthenticateWithRedirect).toHaveBeenCalledWith({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
+        redirectUrl: "/sso-callback?redirect_to=%2Ffinalizar-compra%3Fplan%3Dpro",
         redirectUrlComplete: "/finalizar-compra?plan=pro",
       })
     })
