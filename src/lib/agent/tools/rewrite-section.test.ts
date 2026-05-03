@@ -454,4 +454,89 @@ describe('rewriteSection', () => {
     expect(systemPrompt).toContain('Experiência: preserve percentuais, reduções de tempo, economia, throughput, SLA, volumes e impacto regional/global sempre que forem reais.')
     expect(systemPrompt).toContain('Mantenha nomes próprios de ferramentas e termos técnicos em inglês')
   })
+  it('keeps and normalizes claim trace items for job targeting rewrites', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      rewritten_content: 'Entreguei dashboards com Power BI.',
+      section_data: [{
+        title: 'Engineer',
+        company: 'Acme',
+        startDate: '2022',
+        endDate: 'present',
+        bullets: ['Entreguei dashboards com Power BI.'],
+      }],
+      claim_trace_items: [{
+        targetPath: 'experience[0].bullet[0]',
+        source: 'new_generated_text',
+        usedClaimPolicyIds: ['claim-power-bi'],
+        expressedSignals: ['Power BI'],
+        evidenceBasis: ['Power BI'],
+        permissionLevel: 'allowed',
+      }],
+      keywords_added: ['Power BI'],
+      changes_made: ['Reescreveu bullet com claim rastreada'],
+    })))
+
+    const result = await rewriteSection({
+      section: 'experience',
+      current_content: JSON.stringify([{
+        title: 'Engineer',
+        company: 'Acme',
+        startDate: '2022',
+        endDate: 'present',
+        bullets: ['Built reports'],
+      }]),
+      instructions: 'Rewrite experience',
+      claim_policy_trace_contract: {
+        required: true,
+        allowedClaims: [{
+          id: 'claim-power-bi',
+          signal: 'Power BI',
+          allowedTerms: ['Power BI'],
+          evidenceBasis: ['Power BI'],
+        }],
+        cautiousClaims: [],
+        forbiddenClaims: [],
+      },
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output.success).toBe(true)
+    if (!result.output.success) {
+      throw new Error('Expected rewrite to succeed')
+    }
+
+    expect(result.output.claim_trace_items).toEqual([expect.objectContaining({
+      targetPath: 'experience.0.bullets.0',
+      usedClaimPolicyIds: ['claim-power-bi'],
+      expressedSignals: ['Power BI'],
+      evidenceBasis: ['Power BI'],
+    })])
+  })
+
+  it('prompts the model to emit claim trace items with exact paths and copied policy data', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      rewritten_content: 'Backend engineer',
+      section_data: 'Backend engineer',
+      keywords_added: [],
+      changes_made: [],
+    })))
+
+    await rewriteSection({
+      section: 'summary',
+      current_content: 'Backend engineer',
+      instructions: 'Rewrite summary',
+      claim_policy_trace_contract: {
+        required: true,
+        allowedClaims: [],
+        cautiousClaims: [],
+        forbiddenClaims: [],
+      },
+    }, 'usr_123', 'sess_123')
+
+    const systemPrompt = createCompletion.mock.calls[0]?.[0]?.messages?.[0]?.content
+
+    expect(systemPrompt).toContain('"claim_trace_items"')
+    expect(systemPrompt).toContain('Exact targetPath formats: summary; skills.N; experience.N.title; experience.N.bullets.M; education.N; certifications.N.')
+    expect(systemPrompt).toContain('If source=new_generated_text, usedClaimPolicyIds, expressedSignals, and evidenceBasis must be non-empty.')
+    expect(systemPrompt).toContain('Never create new claim ids, new expressedSignals, or new evidenceBasis outside claim_policy_trace_contract.')
+  })
 })

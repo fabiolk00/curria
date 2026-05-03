@@ -317,6 +317,187 @@ function buildClaimPolicyTraceContract(
   }
 }
 
+function repairUnclassifiedGeneratedText(params: {
+  section: RewriteSectionName
+  originalCvState: CVState
+  generatedCvState: CVState
+  sectionPlan: SectionRewritePlan
+  targetRole?: {
+    value?: string
+    permission?: string
+  }
+}): CVState {
+  const unclassifiedItems = params.sectionPlan.items.filter((item) => shouldRepairGeneratedItem({
+    item,
+    targetRole: params.targetRole,
+  }))
+
+  if (unclassifiedItems.length === 0) {
+    return params.generatedCvState
+  }
+
+  switch (params.section) {
+    case 'summary':
+      return {
+        ...params.generatedCvState,
+        summary: params.originalCvState.summary,
+      }
+
+    case 'skills': {
+      const blockedSkillIndexes = new Set(unclassifiedItems
+        .map((item) => /^skills\.(\d+)$/u.exec(item.targetPath)?.[1])
+        .filter((value): value is string => value !== undefined)
+        .map(Number))
+
+      return {
+        ...params.generatedCvState,
+        skills: params.generatedCvState.skills.filter((_, index) => !blockedSkillIndexes.has(index)),
+      }
+    }
+
+    case 'experience': {
+      const experience = params.generatedCvState.experience.map((entry) => ({
+        ...entry,
+        bullets: [...entry.bullets],
+      }))
+      const bulletIndexesToRemove = new Map<number, number[]>()
+
+      unclassifiedItems.forEach((item) => {
+        const titleMatch = /^experience\.(\d+)\.title$/u.exec(item.targetPath)
+        if (titleMatch?.[1] !== undefined) {
+          const entryIndex = Number(titleMatch[1])
+          const originalEntry = params.originalCvState.experience[entryIndex]
+          if (experience[entryIndex] && originalEntry) {
+            experience[entryIndex] = {
+              ...experience[entryIndex],
+              title: originalEntry.title,
+              company: originalEntry.company,
+              location: originalEntry.location,
+            }
+          }
+          return
+        }
+
+        const bulletMatch = /^experience\.(\d+)\.bullets\.(\d+)$/u.exec(item.targetPath)
+        if (bulletMatch?.[1] === undefined || bulletMatch[2] === undefined) {
+          return
+        }
+
+        const entryIndex = Number(bulletMatch[1])
+        const bulletIndex = Number(bulletMatch[2])
+        const originalBullet = params.originalCvState.experience[entryIndex]?.bullets[bulletIndex]
+        if (experience[entryIndex] === undefined) {
+          return
+        }
+
+        if (originalBullet !== undefined) {
+          experience[entryIndex].bullets[bulletIndex] = originalBullet
+          return
+        }
+
+        bulletIndexesToRemove.set(entryIndex, [
+          ...(bulletIndexesToRemove.get(entryIndex) ?? []),
+          bulletIndex,
+        ])
+      })
+
+      bulletIndexesToRemove.forEach((indexes, entryIndex) => {
+        const blocked = new Set(indexes)
+        const entry = experience[entryIndex]
+        if (entry) {
+          entry.bullets = entry.bullets.filter((_, index) => !blocked.has(index))
+        }
+      })
+
+      return {
+        ...params.generatedCvState,
+        experience,
+      }
+    }
+
+    case 'education': {
+      const blockedIndexes = new Set(unclassifiedItems
+        .map((item) => /^education\.(\d+)$/u.exec(item.targetPath)?.[1])
+        .filter((value): value is string => value !== undefined)
+        .map(Number))
+
+      return {
+        ...params.generatedCvState,
+        education: params.generatedCvState.education
+          .map((entry, index) => params.originalCvState.education[index] ?? entry)
+          .filter((_, index) => !blockedIndexes.has(index) || params.originalCvState.education[index] !== undefined),
+      }
+    }
+
+    case 'certifications': {
+      const blockedIndexes = new Set(unclassifiedItems
+        .map((item) => /^certifications\.(\d+)$/u.exec(item.targetPath)?.[1])
+        .filter((value): value is string => value !== undefined)
+        .map(Number))
+      const originalCertifications = params.originalCvState.certifications ?? []
+
+      return {
+        ...params.generatedCvState,
+        certifications: (params.generatedCvState.certifications ?? [])
+          .map((entry, index) => originalCertifications[index] ?? entry)
+          .filter((_, index) => !blockedIndexes.has(index) || originalCertifications[index] !== undefined),
+      }
+    }
+  }
+}
+
+function shouldRepairGeneratedItem(params: {
+  item: SectionRewritePlan['items'][number]
+  targetRole?: {
+    value?: string
+    permission?: string
+  }
+}): boolean {
+  if (
+    params.item.classificationStatus === 'unclassified_new_text'
+    && params.item.claimPolicyIds.length === 0
+  ) {
+    return true
+  }
+
+  if (
+    params.item.classificationStatus !== 'original_preserved'
+    && params.item.source !== 'preserved_original'
+    && params.item.prohibitedTermsAcknowledged.length > 0
+  ) {
+    return true
+  }
+
+  const targetRole = params.targetRole?.value?.trim()
+  if (
+    !targetRole
+    || params.targetRole?.permission === 'can_claim_target_role'
+    || params.item.classificationStatus === 'original_preserved'
+    || params.item.source === 'preserved_original'
+    || !normalizeForKeywordVisibility(params.item.intendedText).includes(normalizeForKeywordVisibility(targetRole))
+  ) {
+    return false
+  }
+
+  return params.targetRole?.permission !== 'can_bridge_to_target_role'
+    || !hasCautiousTargetRoleLanguage(params.item.intendedText)
+}
+
+function hasCautiousTargetRoleLanguage(value: string): boolean {
+  const normalized = normalizeForKeywordVisibility(value)
+
+  return [
+    'aplicavel',
+    'contexto',
+    'relacionad',
+    'proximo',
+    'proxima',
+    'demandas',
+    'perfil',
+    'experiencia aplicavel',
+  ].some((cue) => normalized.includes(cue))
+}
+
 function splitTargetRequirements(targetingPlan: TargetingPlan): {
   coreRequirements: CoreRequirement[]
   preferredRequirements: CoreRequirement[]
@@ -1050,13 +1231,38 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
       )
       if (params.mode === 'job_targeting' && params.jobCompatibilityAssessment) {
         const modelClaimTraceItems = result.output.success ? result.output.claim_trace_items : undefined
-        sectionRewritePlans.push(buildSectionRewritePlan({
+        let sectionRewritePlan = buildSectionRewritePlan({
           section,
           originalCvState: params.cvState,
           generatedCvState: optimizedCvState,
           claimPolicy: params.jobCompatibilityAssessment.claimPolicy,
           modelClaimTraceItems,
-        }))
+        })
+        const repairedCvState = (modelClaimTraceItems?.length ?? 0) === 0
+          ? optimizedCvState
+          : repairUnclassifiedGeneratedText({
+              section,
+              originalCvState: params.cvState,
+              generatedCvState: optimizedCvState,
+              sectionPlan: sectionRewritePlan,
+              targetRole: {
+                value: params.jobCompatibilityAssessment.targetRole,
+                permission: targetingPlan?.targetRolePositioning?.permission,
+              },
+            })
+
+        if (repairedCvState !== optimizedCvState) {
+          optimizedCvState = repairedCvState
+          sectionRewritePlan = buildSectionRewritePlan({
+            section,
+            originalCvState: params.cvState,
+            generatedCvState: optimizedCvState,
+            claimPolicy: params.jobCompatibilityAssessment.claimPolicy,
+            modelClaimTraceItems,
+          })
+        }
+
+        sectionRewritePlans.push(sectionRewritePlan)
       }
       changedSections.push(section)
       if (result.output.success) {

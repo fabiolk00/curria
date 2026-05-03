@@ -399,6 +399,17 @@ Estrutura de saída (JSON exato):
 {
   "rewritten_content": "texto legível para exibição humana",
   ${getSectionDataDescription(section)},
+  "claim_trace_items": [
+    {
+      "targetPath": "summary | skills.0 | experience.0.title | experience.0.bullets.0 | education.0 | certifications.0",
+      "source": "preserved_original | formatting_only | new_generated_text",
+      "usedClaimPolicyIds": ["ids copiados exatamente de allowedClaims/cautiousClaims"],
+      "expressedSignals": ["signals copiados exatamente das claims selecionadas"],
+      "evidenceBasis": ["evidenceBasis copiado exatamente das claims selecionadas"],
+      "permissionLevel": "allowed | cautious | preserved_original | formatting_only",
+      "rationale": "curto e factual"
+    }
+  ],
   "keywords_added": ["lista", "de", "keywords", "adicionadas"],
   "changes_made": ["lista curta e factual de melhorias reais"]
 }
@@ -418,8 +429,13 @@ ${formatResumeRewriteGuardrails()}
 Claim-policy trace contract when requested:
 - Include "claim_trace_items" only when input.claim_policy_trace_contract.required=true.
 - For new factual text, choose usedClaimPolicyIds before writing the line.
+- For each output item, emit one claim_trace_items entry with the exact targetPath used by section_data.
+- Exact targetPath formats: summary; skills.N; experience.N.title; experience.N.bullets.M; education.N; certifications.N.
 - expressedSignals must be copied from selected claimPolicy.signal values.
+- evidenceBasis must be copied from selected claimPolicy.evidenceBasis values and should appear in the generated sentence when possible.
+- If source=new_generated_text, usedClaimPolicyIds, expressedSignals, and evidenceBasis must be non-empty.
 - If no claimPolicyId applies, preserve the original text or mark the item as formatting_only without adding any new tool, role, certification, seniority, education, or domain claim.
+- Never create new claim ids, new expressedSignals, or new evidenceBasis outside claim_policy_trace_contract.
 
 Idioma:
 - Use português brasileiro (pt-BR) profissional, objetivo e confiante.
@@ -476,7 +492,7 @@ function normalizeRewritePayload(
         const permissionLevel = normalizeStringValue(traceItem.permissionLevel)
 
         return {
-          targetPath: normalizeStringValue(traceItem.targetPath),
+          targetPath: normalizeTraceTargetPath(normalizeStringValue(traceItem.targetPath)),
           source,
           usedClaimPolicyIds: normalizeStringList(traceItem.usedClaimPolicyIds),
           expressedSignals: normalizeStringList(traceItem.expressedSignals),
@@ -552,6 +568,18 @@ function normalizeRewritePayload(
   }
 
   return record
+}
+
+function normalizeTraceTargetPath(value: string): string {
+  return value
+    .trim()
+    .replace(/\[(\d+)\]/gu, '.$1')
+    .replace(/\bexperiences\b/giu, 'experience')
+    .replace(/\bexperience\.(\d+)\.bullet\./giu, 'experience.$1.bullets.')
+    .replace(/\bskills?\.(\d+)/iu, 'skills.$1')
+    .replace(/\beducations?\.(\d+)/iu, 'education.$1')
+    .replace(/\bcertifications?\.(\d+)/iu, 'certifications.$1')
+    .replace(/\s+/gu, '')
 }
 
 function validateRewritePayload(
