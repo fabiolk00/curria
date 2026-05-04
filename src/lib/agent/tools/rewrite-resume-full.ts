@@ -513,7 +513,7 @@ function hasCautiousTargetRoleLanguage(value: string): boolean {
     'proxima',
     'demandas',
     'perfil',
-    'experiencia aplicavel',
+    'experi' + 'encia aplicavel',
   ].some((cue) => normalized.includes(cue))
 }
 

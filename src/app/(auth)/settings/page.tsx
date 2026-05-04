@@ -14,8 +14,8 @@ import { getExistingUserProfile } from "@/lib/profile/user-profiles"
 import { getFallbackInitials, splitDisplayName } from "@/lib/user/display-name"
 
 export const metadata = {
-  title: "Configurações - CurrIA",
-  description: "Gerencie seu perfil, plano e créditos no CurrIA",
+  title: "Configura\u00e7\u00f5es - CurrIA",
+  description: "Gerencie seu perfil, plano e cr\u00e9ditos no CurrIA",
 }
 
 type FieldRowProps = {
@@ -26,10 +26,10 @@ type FieldRowProps = {
 
 type FormattedSession = {
   id: string
-  reference: string
-  phase: string
+  title: string
   createdAt: string
   atsReadiness: ReturnType<typeof resolveSessionAtsReadiness> | null
+  workflowLabel: string
 }
 
 function formatSessionDate(value: Date): string {
@@ -41,11 +41,46 @@ function formatSessionDate(value: Date): string {
 }
 
 function formatCreditCount(credits: number): string {
-  return `${credits} crédito${credits === 1 ? "" : "s"}`
+  return `${credits} cr\u00e9dito${credits === 1 ? "" : "s"}`
 }
 
-function formatSessionReference(sessionId: string): string {
-  return sessionId.length > 15 ? `${sessionId.slice(0, 15)}...` : sessionId
+function parseWorkflowMode(mode?: string): "ats_enhancement" | "job_targeting" {
+  return mode === "job_targeting" ? "job_targeting" : "ats_enhancement"
+}
+
+function getTargetRoleHint(targetJobDescription?: string): string | null {
+  if (!targetJobDescription) {
+    return null
+  }
+
+  const firstLine = targetJobDescription.split("\n")[0]?.trim() ?? ""
+  const normalized = firstLine
+    .replace(/^(?:cargo|vaga|position|role|title|funcao|funcao)\s*[:\-]?\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+
+  if (!normalized) {
+    return null
+  }
+
+  return normalized.length > 50 ? `${normalized.slice(0, 47)}...` : normalized
+}
+
+function resolveSessionTitle(input: {
+  workflowMode: "ats_enhancement" | "job_targeting"
+  targetRoleHint: string | null
+}): string {
+  if (input.workflowMode === "job_targeting") {
+    return input.targetRoleHint
+      ? `Curr\u00edculo para ${input.targetRoleHint}`
+      : "Curr\u00edculo para vaga-alvo"
+  }
+
+  return "Curr\u00edculo ATS otimizado"
+}
+
+function resolveWorkflowLabel(mode: "ats_enhancement" | "job_targeting"): string {
+  return mode === "job_targeting" ? "Vaga alvo" : "ATS geral"
 }
 
 function FieldRow({ label, value, helper }: FieldRowProps) {
@@ -76,18 +111,27 @@ export default async function SettingsPage() {
   ])
 
   const displayName = appUser.displayName?.trim()
-  const email = appUser.primaryEmail || appUser.authIdentity.email || "Não informado"
+  const email = appUser.primaryEmail || appUser.authIdentity.email || "N\u00e3o informado"
   const { firstName, lastName } = splitDisplayName(displayName)
   const avatarInitials = getFallbackInitials(displayName, email, "CR")
   const avatarImageUrl = profile?.profile_photo_url ?? null
-  const planName = billingInfo ? PLANS[billingInfo.plan].name : "Não informado"
-  const formattedSessions: FormattedSession[] = sessions.map((session) => ({
-    id: session.id,
-    reference: formatSessionReference(session.id),
-    phase: session.phase,
-    createdAt: formatSessionDate(session.updatedAt),
-    atsReadiness: resolveSessionAtsReadiness({ session }),
-  }))
+  const planName = billingInfo ? PLANS[billingInfo.plan].name : "N\u00e3o informado"
+
+  const formattedSessions: FormattedSession[] = sessions.map((session) => {
+    const workflowMode = parseWorkflowMode(session.agentState.workflowMode)
+    const targetRoleHint = getTargetRoleHint(session.agentState.targetJobDescription)
+
+    return {
+      id: session.id,
+      title: resolveSessionTitle({
+        workflowMode,
+        targetRoleHint,
+      }),
+      createdAt: formatSessionDate(session.updatedAt),
+      atsReadiness: resolveSessionAtsReadiness({ session }),
+      workflowLabel: resolveWorkflowLabel(workflowMode),
+    }
+  })
 
   return (
     <div className="bg-bg-subtle px-4 py-8 sm:px-6 lg:px-8">
@@ -121,15 +165,12 @@ export default async function SettingsPage() {
           <FieldRow label="Sobrenome" value={<span className="break-words">{lastName}</span>} />
           <FieldRow label="Email" value={<span className="break-all">{email}</span>} />
           <FieldRow label="Plano" value={planName} />
-          <FieldRow
-            label="Créditos disponíveis"
-            value={formatCreditCount(appUser.creditAccount.creditsRemaining)}
-          />
+          <FieldRow label="Cr\u00e9ditos dispon\u00edveis" value={formatCreditCount(appUser.creditAccount.creditsRemaining)} />
         </section>
 
         <section className="overflow-hidden rounded-[8px] border border-border/80 bg-white shadow-xs">
           <div className="border-b border-border/70 bg-muted/50 px-4 py-3 sm:px-5">
-            <p className="text-xs font-semibold text-foreground">2 últimos currículos gerados</p>
+            <p className="text-xs font-semibold text-foreground">2 \u00faltimos curr\u00edculos gerados</p>
           </div>
 
           {formattedSessions.length > 0 ? (
@@ -144,9 +185,14 @@ export default async function SettingsPage() {
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      Currículo {session.reference}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {session.title}
+                      </p>
+                      <Badge variant="outline" className="rounded-[6px] text-[11px]">
+                        {session.workflowLabel}
+                      </Badge>
+                    </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <p className="text-xs text-muted-foreground">{session.createdAt}</p>
                       {session.atsReadiness?.display ? (
@@ -165,9 +211,9 @@ export default async function SettingsPage() {
             </div>
           ) : (
             <div className="px-4 py-8 text-center sm:px-5">
-              <p className="text-sm font-medium text-foreground">Nenhum currículo gerado ainda.</p>
+              <p className="text-sm font-medium text-foreground">Nenhum curr\u00edculo gerado ainda.</p>
               <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
-                Quando você gerar um currículo, os acessos mais recentes aparecem aqui.
+                Quando voc\u00ea gerar um curr\u00edculo, os acessos mais recentes aparecem aqui.
               </p>
             </div>
           )}

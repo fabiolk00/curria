@@ -88,25 +88,25 @@ function mapStructuredIssueType(issue: StructuredValidationIssue): NonNullable<V
 function messageForStructuredIssue(issue: StructuredValidationIssue): string {
   switch (issue.type) {
     case 'unsupported_skill_added':
-      return 'A lista de skills targetizada promoveu um requisito sem suporte factual como competÃªncia direta.'
+      return 'A lista de skills targetizada promoveu um requisito sem suporte factual como competência direta.'
     case 'unsupported_certification':
-      return 'A versÃ£o targetizada incluiu certificaÃ§Ã£o nÃ£o comprovada pelo currÃ­culo original.'
+      return 'A versão targetizada incluiu certificação não comprovada pelo currículo original.'
     case 'unsupported_education_claim':
-      return 'A versÃ£o targetizada incluiu formaÃ§Ã£o ou escolaridade nÃ£o comprovada pelo currÃ­culo original.'
+      return 'A versão targetizada incluiu formação ou escolaridade não comprovada pelo currículo original.'
     case 'target_role_asserted_without_permission':
-      return 'O resumo targetizado assumiu o cargo alvo diretamente sem permissÃ£o da avaliaÃ§Ã£o de compatibilidade.'
+      return 'O resumo targetizado assumiu o cargo alvo diretamente sem permissão da avaliação de compatibilidade.'
     case 'unsafe_direct_claim':
-      return 'A versÃ£o targetizada transformou uma evidÃªncia cautelosa em claim direta.'
+      return 'A versão targetizada transformou uma evidência cautelosa em claim direta.'
     case 'forbidden_term':
-      return 'A versÃ£o targetizada declarou um requisito proibido pela avaliaÃ§Ã£o de compatibilidade.'
+      return 'A versão targetizada declarou um requisito proibido pela avaliação de compatibilidade.'
     case 'missing_claim_trace':
-      return 'A versao targetizada incluiu texto novo sem trace estruturado de claim.'
+      return 'A versão targetizada incluiu texto novo sem trace estruturado de claim.'
     case 'unclassified_generated_text':
-      return 'A versao targetizada incluiu texto novo que nao foi ligado a uma claim permitida ou cautelosa.'
+      return 'A versão targetizada incluiu texto novo que não foi ligado a uma claim permitida ou cautelosa.'
     case 'unsupported_expressed_signal':
-      return 'A versao targetizada expressou um sinal que nao esta permitido pela policy estruturada.'
+      return 'A versão targetizada expressou um sinal que não está permitido pela policy estruturada.'
     default:
-      return 'A versao targetizada violou a policy estruturada de compatibilidade.'
+      return 'A versão targetizada violou a policy estruturada de compatibilidade.'
   }
 }
 
@@ -138,8 +138,8 @@ function buildAssessmentClaimPolicyIssues(params: {
     suggestedReplacement: params.targetingPlan?.safeTargetingEmphasis?.safeDirectEmphasis[0],
     userFacingTitle: issue.type === 'target_role_asserted_without_permission'
       ? 'O resumo assumiu o cargo alvo diretamente'
-      : 'A versÃ£o declarou informaÃ§Ã£o sem comprovaÃ§Ã£o suficiente',
-    userFacingExplanation: 'A avaliaÃ§Ã£o de compatibilidade marcou este ponto como cauteloso ou proibido para claim direta.',
+      : 'A versão declarou informação sem comprovação suficiente',
+    userFacingExplanation: 'A avaliação de compatibilidade marcou este ponto como cauteloso ou proibido para claim direta.',
   }))
 }
 

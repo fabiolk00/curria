@@ -9,6 +9,7 @@ import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { formatRenewalCountdown } from '@/lib/asaas/billing-display'
 import { loadOptionalBillingInfo } from '@/lib/asaas/optional-billing-info'
 import { getExistingUserProfile } from '@/lib/profile/user-profiles'
+import { logWarn, serializeError } from '@/lib/observability/structured-log'
 
 export const metadata = {
   title: 'Dashboard - CurrIA',
@@ -18,20 +19,41 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const e2eAuthEnabled = await isE2EAuthEnabled()
   const [appUser, clerkUser] = await Promise.all([
     getCurrentAppUser(),
-    isE2EAuthEnabled() ? Promise.resolve(null) : currentUser(),
+    e2eAuthEnabled ? Promise.resolve(null) : currentUser(),
   ])
   if (!appUser) {
     redirect('/entrar')
   }
 
-  const [{ billingInfo, billingNotice }, userProfile] = await Promise.all([
+  const [billingLookup, profileLookup] = await Promise.allSettled([
     loadOptionalBillingInfo(appUser.id, 'auth_layout'),
-    getExistingUserProfile(appUser.id),
+    e2eAuthEnabled ? Promise.resolve(null) : getExistingUserProfile(appUser.id),
   ])
-  const sidebarUserImageUrl = userProfile?.profile_photo_url ?? clerkUser?.imageUrl ?? null
 
+  const { billingInfo, billingNotice } = billingLookup.status === 'fulfilled'
+    ? billingLookup.value
+    : {
+        billingInfo: null,
+        billingNotice: 'Não foi possível carregar seus dados de cobrança neste momento.',
+      }
+
+  const userProfile = profileLookup.status === 'fulfilled'
+    ? profileLookup.value
+    : null
+
+  if (profileLookup.status === 'rejected') {
+    logWarn('auth.layout.profile_lookup_failed', {
+      appUserId: appUser.id,
+      success: false,
+      surface: 'auth_layout',
+      ...serializeError(profileLookup.reason),
+    })
+  }
+
+  const sidebarUserImageUrl = userProfile?.profile_photo_url ?? clerkUser?.imageUrl ?? null
   const renewsIn = billingInfo?.hasActiveRecurringSubscription
     ? formatRenewalCountdown(billingInfo.renewsAt)
     : null
@@ -40,12 +62,16 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     ? billingInfo.plan
     : null
   const displayName =
-    clerkUser?.fullName?.trim()
+    appUser.displayName?.trim()
+    || userProfile?.cv_state?.fullName?.trim()
+    || clerkUser?.fullName?.trim()
     || clerkUser?.firstName?.trim()
     || clerkUser?.username
     || 'Conta CurrIA'
   const primaryEmail =
-    clerkUser?.primaryEmailAddress?.emailAddress
+    appUser.primaryEmail
+    || userProfile?.cv_state?.email?.trim()
+    || clerkUser?.primaryEmailAddress?.emailAddress
     || clerkUser?.emailAddresses[0]?.emailAddress
     || ''
 

@@ -137,7 +137,7 @@ describe('job targeting feedback route', () => {
       sessionId: 'sess_123',
       feedbackType: 'score_disagreed',
       targetSignal: 'Unsupported signal',
-      userComment: 'Tenho essa experiencia em outro curriculo.',
+      userComment: 'Tenho essa experiência em outro currículo.',
     }))
 
     expect(response.status).toBe(201)

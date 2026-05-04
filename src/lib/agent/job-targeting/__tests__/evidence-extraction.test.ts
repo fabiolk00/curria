@@ -143,8 +143,8 @@ describe('resume evidence extraction', () => {
           startDate: '2021',
           endDate: 'present',
           bullets: [
-            'Sem experiencia com sistemas dedicados de atendimento',
-            'Nao registra experiencia direta com SAP FI',
+            'Sem experiência com sistemas dedicados de atendimento',
+            'Não registra experiência direta com SAP FI',
             'Experiencia avancada em melhoria de processos',
           ],
         },
@@ -167,12 +167,12 @@ describe('resume evidence extraction', () => {
         qualifier: 'learning',
       }),
       expect.objectContaining({
-        text: 'Sem experiencia com sistemas dedicados de atendimento',
+        text: 'Sem experiência com sistemas dedicados de atendimento',
         sourceConfidence: 1,
         qualifier: 'negative',
       }),
       expect.objectContaining({
-        text: 'Nao registra experiencia direta com SAP FI',
+        text: 'Não registra experiência direta com SAP FI',
         sourceConfidence: 1,
         qualifier: 'negative',
       }),

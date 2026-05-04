@@ -179,4 +179,38 @@ describe('AuthLayout', () => {
     expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
     expect(screen.getByText('Child')).toBeInTheDocument()
   })
+
+  it('renders the dashboard shell when profile lookup fails', async () => {
+    mockGetCurrentAppUser.mockResolvedValue({
+      id: 'usr_123',
+      displayName: 'Fallback Profile User',
+      primaryEmail: 'fallback@example.com',
+      creditAccount: {
+        id: 'cred_123',
+        userId: 'usr_123',
+        creditsRemaining: 20,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    mockLoadOptionalBillingInfo.mockResolvedValue({
+      billingNotice: null,
+      billingInfo: {
+        plan: 'monthly',
+        creditsRemaining: 20,
+        maxCredits: 20,
+        renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    })
+    mockGetExistingUserProfile.mockRejectedValueOnce(new Error('fetch failed'))
+
+    const jsx = await AuthLayout({
+      children: <div>Child</div>,
+    })
+
+    render(jsx)
+
+    expect(screen.getByTestId('dashboard-shell')).toBeInTheDocument()
+    expect(screen.getByText('Child')).toBeInTheDocument()
+  })
 })

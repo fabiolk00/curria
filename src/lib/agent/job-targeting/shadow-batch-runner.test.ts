@@ -32,7 +32,7 @@ describe('shadow batch case loading', () => {
         fullName: 'Pessoa Teste',
         email: 'teste@example.com',
         phone: '+55 11 99999-0000',
-        summary: 'Analista com experiencia em dados.',
+        summary: 'Analista com experiência em dados.',
         experience: [],
         skills: ['SQL'],
         education: [],
@@ -64,7 +64,7 @@ describe('shadow batch case loading', () => {
         fullName: 'Pessoa Teste',
         email: 'teste@example.com',
         phone: '+55 11 99999-0000',
-        summary: 'Analista com experiencia em dados.',
+        summary: 'Analista com experiência em dados.',
         experience: [],
         skills: ['SQL'],
         education: [],
@@ -76,4 +76,3 @@ describe('shadow batch case loading', () => {
     await expect(loadShadowCases(input)).rejects.toThrow(/must be anonymized/u)
   })
 })
-

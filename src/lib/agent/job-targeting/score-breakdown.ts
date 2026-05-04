@@ -76,7 +76,7 @@ function classifyRequirement(signal: string): ScoreDimension {
     return 'education'
   }
 
-  if (/\b(?:habilidade|compet[eÃª]ncia|t[eÃ©]cnica|tecnologia|ferramenta|tooling|plataforma|sistema|linguagem|stack|metodologia|processo|automa[cÃ§][aÃ£]o|integra[cÃ§][aÃ£]o|dados|dashboard|relat[oÃ³]rio|indicador|an[aÃ¡]lise|software)\b/iu.test(normalized)) {
+   if (/\b(?:habilidade|compet[eê]ncia|t[eé]cnica|tecnologia|ferramenta|tooling|plataforma|sistema|linguagem|stack|metodologia|processo|automa[cç][aã]o|integra[cç][aã]o|dados|dashboard|relat[oó]rio|indicador|an[aá]lise|software)\b/iu.test(normalized)) {
     return 'skills'
   }
 

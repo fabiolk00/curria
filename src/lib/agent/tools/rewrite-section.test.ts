@@ -394,7 +394,7 @@ describe('rewriteSection', () => {
         permissionLevel: 'formatting_only',
       }],
       keywords_added: [],
-      changes_made: ['Padronizou estrutura de experiencia'],
+      changes_made: ['Padronizou estrutura de experiência'],
     })))
 
     const result = await rewriteSection({
@@ -442,7 +442,7 @@ describe('rewriteSection', () => {
       },
       claim_trace_items: 'invalid',
       keywords_added: ['nova keyword'],
-      changes_made: ['Tentou reescrever experiencia'],
+      changes_made: ['Tentou reescrever experiência'],
     })))
 
     const result = await rewriteSection({

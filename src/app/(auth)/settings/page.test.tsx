@@ -95,6 +95,28 @@ function buildSession(id: string, updatedAt = new Date("2026-04-21T12:00:00.000Z
   }
 }
 
+function buildJobTargetingSession(id: string, targetRole?: string): Session {
+  return {
+    id,
+    userId: "usr_123",
+    stateVersion: 1,
+    phase: "generation",
+    cvState: {} as Session["cvState"],
+    agentState: {
+      parseStatus: "empty",
+      rewriteHistory: {},
+      workflowMode: "job_targeting",
+      targetJobDescription: targetRole,
+    } as Session["agentState"],
+    generatedOutput: {} as Session["generatedOutput"],
+    creditsUsed: 0,
+    messageCount: 0,
+    creditConsumed: false,
+    createdAt: new Date("2026-04-19T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-21T12:00:00.000Z"),
+  }
+}
+
 describe("SettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -146,8 +168,8 @@ describe("SettingsPage", () => {
     expect(screen.getByText("5 créditos")).toBeInTheDocument()
 
     expect(screen.getByText("2 últimos currículos gerados")).toBeInTheDocument()
-    expect(screen.getByText("Currículo sess_recent_123")).toBeInTheDocument()
-    expect(screen.getByText("Currículo sess_recent_456")).toBeInTheDocument()
+    expect(screen.getAllByText("Currículo ATS otimizado")).toHaveLength(2)
+    expect(screen.getAllByText("ATS geral")).toHaveLength(2)
     expect(screen.getAllByText("ATS 91")).toHaveLength(2)
     expect(screen.getAllByRole("link")).toHaveLength(2)
     expect(screen.getAllByRole("link")[0]).toHaveAttribute(
@@ -161,19 +183,52 @@ describe("SettingsPage", () => {
     expect(screen.queryByText("Clerk user")).not.toBeInTheDocument()
     expect(screen.queryByText("App user")).not.toBeInTheDocument()
     expect(screen.queryByText("Conta de créditos")).not.toBeInTheDocument()
-    expect(screen.queryByText("Zona sensível")).not.toBeInTheDocument()
-    expect(screen.queryByText("Atividade de cobrança")).not.toBeInTheDocument()
+    expect(screen.queryByText("Zona sensivel")).not.toBeInTheDocument()
+    expect(screen.queryByText("Atividade de cobranca")).not.toBeInTheDocument()
+
+    expect(screen.queryByText("sess_recent_123")).not.toBeInTheDocument()
+    expect(screen.queryByText("sess_recent_456")).not.toBeInTheDocument()
+  })
+
+  it("shows job target sessions with the job label", async () => {
+    mockGetCurrentAppUser.mockResolvedValue(buildAppUser())
+    mockLoadOptionalBillingInfo.mockResolvedValue({
+      billingNotice: null,
+      billingInfo: {
+        plan: "monthly",
+        status: "active",
+        creditsRemaining: 4,
+        maxCredits: 12,
+        hasActiveRecurringSubscription: true,
+        renewsAt: "2026-05-15T12:00:00.000Z",
+      },
+    })
+    mockGetUserSessions.mockResolvedValue([
+      buildJobTargetingSession("sess_target_123", "Desenvolvedor de Produto"),
+    ])
+    mockGetExistingUserProfile.mockResolvedValue({
+      profile_photo_url: null,
+    })
+
+    const jsx = await SettingsPage()
+    render(jsx)
+
+    expect(screen.getByText("Currículo para Desenvolvedor de Produto")).toBeInTheDocument()
+    expect(screen.getByText("Vaga alvo")).toBeInTheDocument()
+    expect(screen.getByText("ATS 91")).toBeInTheDocument()
   })
 
   it("uses account fallbacks when billing and generated resumes are unavailable", async () => {
-    mockGetCurrentAppUser.mockResolvedValue(buildAppUser({
-      credits: 0,
-      displayName: undefined,
-      primaryEmail: undefined,
-      authEmail: "fallback@curria.test",
-    }))
+    mockGetCurrentAppUser.mockResolvedValue(
+      buildAppUser({
+        credits: 0,
+        displayName: undefined,
+        primaryEmail: undefined,
+        authEmail: "fallback@curria.test",
+      }),
+    )
     mockLoadOptionalBillingInfo.mockResolvedValue({
-      billingNotice: "Billing temporariamente indisponível.",
+      billingNotice: "Billing temporariamente indisponivel.",
       billingInfo: null,
     })
     mockGetUserSessions.mockResolvedValue([])
@@ -185,7 +240,7 @@ describe("SettingsPage", () => {
     render(jsx)
 
     expect(screen.getByLabelText("Avatar do perfil")).toHaveTextContent("FC")
-    expect(screen.getAllByText("Nao informado")).toHaveLength(2)
+    expect(screen.getAllByText("Não informado")).toHaveLength(3)
     expect(screen.getByText("fallback@curria.test")).toBeInTheDocument()
     expect(screen.getByText("0 créditos")).toBeInTheDocument()
     expect(screen.getByText("Nenhum currículo gerado ainda.")).toBeInTheDocument()

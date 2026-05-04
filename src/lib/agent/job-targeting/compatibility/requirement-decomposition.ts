@@ -61,7 +61,7 @@ const kindPatterns: Array<{
   pattern: RegExp
 }> = [
   { kind: 'education', id: 'education', pattern: educationRequirementPattern },
-  { kind: 'responsibility', id: 'experience', pattern: /\b(experience|background|track\s+record|vivencia|experiencia)\b/i },
+  { kind: 'responsibility', id: 'experience', pattern: /\b(experience|background|track\s+record|vivencia|experi(?:e|ê)ncia)\b/i },
   { kind: 'responsibility', id: 'responsibility', pattern: responsibilitySectionPattern },
   { kind: 'responsibility', id: 'action_coordinate', pattern: /\b(coordinate|deliver|maintain|support|prepare|manage|analyze|conduzir|coordenar|entregar)\b/i },
   { kind: 'skill', id: 'skill', pattern: /\b(skill|ability|communication|knowledge|proficiency|competencia|habilidade|conhecimento|comunicacao)\b/i },

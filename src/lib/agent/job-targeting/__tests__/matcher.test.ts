@@ -489,7 +489,7 @@ describe('catalog-driven requirement evidence matcher', () => {
       requirement: requirement({ id: 'negative', text: 'Power BI' }),
       resumeEvidence: evidence([{
         id: 'negative',
-        text: 'Sem experiencia com Power BI',
+        text: 'Sem experiência com Power BI',
         section: 'experience',
         sourceKind: 'experience_bullet',
         sourceConfidence: 1,
@@ -552,15 +552,15 @@ describe('catalog-driven requirement evidence matcher', () => {
     const negativeCases = [
       {
         requirementText: 'SQL',
-        evidenceText: 'Nao possui experiencia registrada com SQL',
+        evidenceText: 'Não possui experiência registrada com SQL',
       },
       {
         requirementText: 'SAP FI',
-        evidenceText: 'Sem experiencia com SAP FI',
+        evidenceText: 'Sem experiência com SAP FI',
       },
       {
         requirementText: 'Node.js',
-        evidenceText: 'Ainda nao registra experiencia direta com Node.js',
+        evidenceText: 'Ainda não registra experiência direta com Node.js',
       },
       {
         requirementText: 'Kubernetes',

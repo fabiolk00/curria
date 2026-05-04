@@ -601,7 +601,12 @@ function ProfileSectionCard({
           <PenLine className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className={cn("min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1.5", contentClassName)}>
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          contentClassName,
+        )}
+      >
         {children}
       </div>
     </Card>
@@ -1355,8 +1360,8 @@ export default function UserDataPage({
   }>
 
   const renderProfileView = () => (
-    <main className="min-h-screen bg-white text-neutral-900 lg:h-screen lg:overflow-hidden">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:px-6 lg:py-5">
+    <main className="flex h-full min-h-0 flex-col bg-white text-neutral-900">
+      <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-4 sm:px-6 lg:min-h-0 lg:px-6 lg:py-5">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
@@ -1563,7 +1568,7 @@ export default function UserDataPage({
               </ProfileSectionCard>
             </section>
 
-            <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto pb-1">
+            <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <ProfileSectionCard
                 title="Skills"
                 editLabel={PROFILE_SECTION_META.skills.label}
@@ -1664,8 +1669,8 @@ export default function UserDataPage({
   )
 
   const renderEditorView = () => (
-    <main className="min-h-screen bg-background text-foreground lg:h-screen lg:overflow-hidden">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:py-5">
+    <main className="flex h-full min-h-0 flex-col bg-background text-foreground">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-6 lg:min-h-0 lg:py-5">
         <header className="shrink-0 rounded-3xl border border-border bg-card px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
@@ -1743,7 +1748,7 @@ export default function UserDataPage({
         ) : (
           <div
             ref={editorContainerRef}
-            className="mt-5 flex-1 overflow-y-auto lg:min-h-0"
+            className="mt-5 flex-1 overflow-y-auto lg:min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <VisualResumeEditor
               value={resumeData}
@@ -1758,8 +1763,8 @@ export default function UserDataPage({
   )
 
   const renderLegacyEnhancementView = () => (
-    <main className="min-h-screen bg-white text-slate-900 lg:h-screen lg:overflow-hidden">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:py-5">
+    <main className="flex h-full min-h-0 flex-col bg-white text-slate-900">
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-4 sm:px-6 lg:min-h-0 lg:py-5">
         <header className="shrink-0 rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
@@ -1795,7 +1800,7 @@ export default function UserDataPage({
           </div>
         </header>
 
-        <div className="mt-5 flex-1 overflow-y-auto lg:min-h-0">
+        <div className="mt-5 flex-1 overflow-y-auto lg:min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.8fr)]">
             <Card className="rounded-3xl border border-slate-200 bg-white p-0 shadow-sm">
               <div className="space-y-6 p-6">
@@ -1812,7 +1817,7 @@ export default function UserDataPage({
                     value={targetJobDescription}
                     onChange={(event) => setTargetJobDescription(event.target.value)}
                     disabled={isBusy}
-                    rows={10}
+                    rows={8}
                     placeholder="Cole aqui a descrição da vaga para adaptar o currículo a um cargo específico."
                     className="min-h-[220px] rounded-2xl border-slate-200 bg-slate-50 text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus-visible:ring-black"
                   />
@@ -1928,8 +1933,8 @@ export default function UserDataPage({
   )
 
   const renderEnhancementView = () => (
-    <main className="min-h-screen bg-white text-slate-900 lg:h-screen lg:overflow-hidden">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4 sm:px-6 lg:h-full lg:min-h-0 lg:py-5">
+    <main className="flex h-full min-h-0 flex-col bg-white text-slate-900">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-6 lg:min-h-0 lg:py-5">
         <header className="shrink-0 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <Button
@@ -1952,7 +1957,7 @@ export default function UserDataPage({
           </div>
         </header>
 
-        <div className="mt-5 flex-1 overflow-y-auto lg:min-h-0">
+        <div className="mt-5 flex-1 overflow-y-auto lg:min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.82fr)]">
             <Card className="rounded-3xl border border-slate-200 bg-white p-0 shadow-sm">
               <div className="space-y-6 p-6">
@@ -2044,13 +2049,6 @@ export default function UserDataPage({
                         bullets e compatibilidade com sistemas ATS.
                       </p>
                     </div>
-
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-sm font-medium text-emerald-900">Seguro para testar</p>
-                      <p className="mt-1 text-xs leading-5 text-emerald-700">
-                        Seu currículo base continua preservado. A IA cria uma nova versão para você comparar antes de exportar.
-                      </p>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -2067,7 +2065,7 @@ export default function UserDataPage({
                       value={targetJobDescription}
                       onChange={(event) => handleTargetJobDescriptionChange(event.target.value)}
                       disabled={isBusy}
-                      rows={10}
+                      rows={8}
                       aria-invalid={targetJobValidationMessage ? "true" : undefined}
                       aria-describedby={targetJobValidationMessage
                         ? "target-job-description-helper target-job-description-error"
@@ -2075,9 +2073,7 @@ export default function UserDataPage({
                       placeholder="Cole aqui responsabilidades, requisitos, qualificações, stack, senioridade e qualquer detalhe importante da vaga..."
                       className="min-h-[260px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus-visible:ring-black"
                     />
-                    <p id="target-job-description-helper" className="text-xs leading-5 text-slate-500">
-                      Cole a descrição completa da vaga para a IA adaptar seu currículo com base nos requisitos reais.
-                    </p>
+                    <p id="target-job-description-helper" className="text-xs leading-5 text-slate-500" />
                     {targetJobValidationMessage ? (
                       <p
                         id="target-job-description-error"
@@ -2151,13 +2147,6 @@ export default function UserDataPage({
                     </li>
                   ))}
                 </ul>
-
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-sm font-medium text-emerald-900">Seguro para testar</p>
-                  <p className="mt-1 text-xs leading-5 text-emerald-700">
-                    A IA cria uma nova versão. Você compara antes de exportar.
-                  </p>
-                </div>
 
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Neste modo</p>
@@ -2257,7 +2246,7 @@ export default function UserDataPage({
 
           <div
             data-testid="rewrite-validation-dialog-scroll"
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 text-sm text-foreground"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 text-sm text-foreground [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {validationUserFriendlyReview ? (
               <JobTargetingReviewPanel
@@ -2382,3 +2371,4 @@ export default function UserDataPage({
     </div>
   )
 }
+

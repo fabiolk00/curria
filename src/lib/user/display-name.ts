@@ -24,8 +24,8 @@ export function splitDisplayName(displayName: string | null | undefined): UserDi
 
   if (parts.length === 0) {
     return {
-      firstName: "Nao informado",
-      lastName: "Nao informado",
+      firstName: "Não informado",
+      lastName: "Não informado",
     }
   }
 
@@ -33,7 +33,6 @@ export function splitDisplayName(displayName: string | null | undefined): UserDi
 
   return {
     firstName,
-    lastName: lastNameParts.join(" ") || "Nao informado",
+    lastName: lastNameParts.join(" ") || "Não informado",
   }
 }
-

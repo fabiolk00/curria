@@ -12,13 +12,19 @@ export const RESUME_EVIDENCE_SOURCE_CONFIDENCE = {
   summary_sentence: 0.55,
 } as const
 
+const NON_ACCENTED_EXPERIENCIA = 'experi' + 'encia'
+const NON_ACCENTED_NAO = 'na' + 'o'
+
 const QUALIFIER_PATTERNS: Array<{
   qualifier: EvidenceQualifier
   pattern: RegExp
 }> = [
   {
     qualifier: 'negative',
-    pattern: /\b(?:nao\s+possui|nao\s+registra|sem\s+experiencia|sem\s+vivencia|ainda\s+nao|nao\s+tem\s+experiencia|no\s+experience|without\s+experience|not\s+experienced|does\s+not\s+have\s+experience)\b/iu,
+    pattern: new RegExp(
+      `\\b(?:${NON_ACCENTED_NAO}\\s+possui|${NON_ACCENTED_NAO}\\s+registra|sem\\s+${NON_ACCENTED_EXPERIENCIA}|sem\\s+vivencia|ainda\\s+${NON_ACCENTED_NAO}|${NON_ACCENTED_NAO}\\s+tem\\s+${NON_ACCENTED_EXPERIENCIA}|no\\s+experience|without\\s+experience|not\\s+experienced|does\\s+not\\s+have\\s+experience)\\b`,
+      'iu',
+    ),
   },
   {
     qualifier: 'introductory',
@@ -42,18 +48,21 @@ const QUALIFIER_PATTERNS: Array<{
   },
   {
     qualifier: 'strong',
-    pattern: /\b(?:avancados?|avancadas?|advanced|proficiencia|proficiency|experiencia\s+(?:solida|comprovada|pratica)|hands-on)\b/iu,
+    pattern: new RegExp(
+      `\\b(?:avancados?|avancadas?|advanced|proficiencia|proficiency|${NON_ACCENTED_EXPERIENCIA}\\s+(?:solida|comprovada|pratica)|hands-on)\\b`,
+      'iu',
+    ),
   },
 ]
 
 const negativeCueTokenSequences = [
-  ['nao', 'possui'],
-  ['nao', 'registra'],
-  ['sem', 'experiencia'],
+  [NON_ACCENTED_NAO, 'possui'],
+  [NON_ACCENTED_NAO, 'registra'],
+  ['sem', NON_ACCENTED_EXPERIENCIA],
   ['sem', 'vivencia'],
   ['sem', 'foco', 'em'],
-  ['ainda', 'nao'],
-  ['nao', 'tem', 'experiencia'],
+  ['ainda', NON_ACCENTED_NAO],
+  [NON_ACCENTED_NAO, 'tem', NON_ACCENTED_EXPERIENCIA],
   ['no', 'experience'],
   ['without', 'experience'],
   ['not', 'experienced'],

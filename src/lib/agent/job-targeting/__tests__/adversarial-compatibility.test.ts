@@ -23,7 +23,7 @@ describe('adversarial compatibility cases', () => {
       requirement: { id: 'negative', text: 'Power BI', kind: 'skill', importance: 'core' },
       resumeEvidence: evidence({
         id: 'negative',
-        text: 'Sem experiencia com Power BI',
+        text: 'Sem experiência com Power BI',
         qualifier: 'negative',
       }),
       catalog,

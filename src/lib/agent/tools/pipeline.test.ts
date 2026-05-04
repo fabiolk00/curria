@@ -646,7 +646,7 @@ describe('ATS enhancement reliability hardening', () => {
         matchScore: 68,
         missingSkills: ['BigQuery'],
         weakAreas: ['summary'],
-        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiencia.'],
+        improvementSuggestions: ['Aproxime o resumo da vaga sem inventar experiência.'],
       },
       targetingPlan: buildDefaultTargetingPlan(),
       jobCompatibilityAssessment: buildPipelineAssessment(),
@@ -3479,13 +3479,13 @@ describe('ATS enhancement reliability hardening', () => {
         code: 'forbidden_term',
         severity: 'high',
         issueType: 'forbidden_claim',
-        message: 'A versÃ£o declarou um requisito proibido.',
+        message: 'A versão declarou um requisito proibido.',
       }],
       issues: [{
         code: 'forbidden_term',
         severity: 'high',
         issueType: 'forbidden_claim',
-        message: 'A versÃ£o declarou um requisito proibido.',
+        message: 'A versão declarou um requisito proibido.',
       }],
     }) as never)).toBe(true)
 
@@ -3495,13 +3495,13 @@ describe('ATS enhancement reliability hardening', () => {
         code: 'unsafe_direct_claim',
         severity: 'high',
         issueType: 'unsupported_claim',
-        message: 'A versÃ£o transformou evidÃªncia cautelosa em claim direta.',
+        message: 'A versão transformou evidência cautelosa em claim direta.',
       }],
       issues: [{
         code: 'unsafe_direct_claim',
         severity: 'high',
         issueType: 'unsupported_claim',
-        message: 'A versÃ£o transformou evidÃªncia cautelosa em claim direta.',
+        message: 'A versão transformou evidência cautelosa em claim direta.',
       }],
     }) as never)).toBe(true)
   })

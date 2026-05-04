@@ -8,7 +8,7 @@ const cvState: CVState = {
   fullName: 'Ana Silva',
   email: 'ana@example.com',
   phone: '555-0100',
-  summary: 'Analista com experiencia em Power BI e SQL.',
+  summary: 'Analista com experiência em Power BI e SQL.',
   experience: [{
     title: 'Analista de BI',
     company: 'Acme',
@@ -23,7 +23,7 @@ const cvState: CVState = {
 
 const jobMutations = [
   'Requisitos:\n- Power BI\n- SQL',
-  'SQL\nPower BI\nO que esperamos: experiencia com indicadores',
+    'SQL\nPower BI\nO que esperamos: experiência com indicadores',
   'Experiencia com Power BI e SQL para acompanhamento de indicadores.',
   'Requisitos: Power BI, SQL, comunicacao com areas de negocio.',
   'Requirements:\n- Power BI\n- SQL',
