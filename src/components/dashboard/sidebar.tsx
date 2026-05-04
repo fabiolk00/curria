@@ -51,6 +51,7 @@ import {
   PROFILE_SETUP_PATH,
 } from "@/lib/routes/app"
 import { startNavigationFeedback } from "@/lib/navigation/feedback"
+import { getFallbackInitials } from "@/lib/user/display-name"
 import { cn } from "@/lib/utils"
 
 const COLLAPSED_WIDTH = 56
@@ -73,12 +74,6 @@ type NavItem = {
   isActive: (pathname: string) => boolean
 }
 
-type ProfileResponse = {
-  profile: {
-    profilePhotoUrl: string | null
-  } | null
-}
-
 const navItems: NavItem[] = [
   {
     label: "Perfil",
@@ -97,18 +92,6 @@ const navItems: NavItem[] = [
     isActive: (pathname) => pathname === DASHBOARD_RESUMES_HISTORY_PATH,
   },
 ]
-
-function getInitials(fullName?: string | null, email?: string | null): string {
-  const source = fullName?.trim() || email?.trim() || "Usuário"
-  const initials = source
-    .split(/[\s@._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((value) => value[0]?.toUpperCase() ?? "")
-    .join("")
-
-  return initials || "U"
-}
 
 function SidebarNavItem({
   item,
@@ -189,7 +172,7 @@ function SidebarContent({
   onCloseMobile?: () => void
 }) {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null)
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(userImageUrl ?? null)
   const router = useRouter()
   const pathname = usePathname()
   const { signOut } = useClerk()
@@ -204,7 +187,7 @@ function SidebarContent({
     || user?.username
     || "Conta CurrIA"
   const email = userEmail || user?.primaryEmailAddress?.emailAddress || ""
-  const initials = getInitials(displayName, email)
+  const initials = getFallbackInitials(displayName, email)
   const currentCredits = creditsRemaining ?? 0
   const planLabel = currentPlan ? `Plano ${PLANS[currentPlan].name}` : "Plano indisponível"
   const avatarSrc = profilePhotoUrl ?? userImageUrl ?? user?.imageUrl ?? undefined
@@ -213,8 +196,7 @@ function SidebarContent({
     pathname === GENERATE_RESUME_PATH || pathname.startsWith(`${GENERATE_RESUME_PATH}/`)
 
   useEffect(() => {
-    let isMounted = true
-
+    let isActive = true
     const loadProfilePhoto = async (): Promise<void> => {
       try {
         const response = await fetch("/api/profile", {
@@ -225,25 +207,37 @@ function SidebarContent({
           return
         }
 
-        const data = (await response.json()) as ProfileResponse
-        if (!isMounted) {
+        const data = (await response.json()) as {
+          profile: {
+            profilePhotoUrl: string | null
+          } | null
+        }
+        const nextProfilePhotoUrl = data.profile?.profilePhotoUrl ?? null
+        if (!isActive || nextProfilePhotoUrl === null) {
+          return
+        }
+        if (nextProfilePhotoUrl === profilePhotoUrl) {
           return
         }
 
-        setProfilePhotoUrl(data.profile?.profilePhotoUrl ?? null)
-      } catch {
-        if (isMounted) {
-          setProfilePhotoUrl(null)
+        const preloadImage = new Image()
+        preloadImage.onload = () => {
+          if (isActive) {
+            setProfilePhotoUrl(nextProfilePhotoUrl)
+          }
         }
+        preloadImage.src = nextProfilePhotoUrl
+      } catch {
+        return
       }
     }
 
     void loadProfilePhoto()
 
     return () => {
-      isMounted = false
+      isActive = false
     }
-  }, [])
+  }, [profilePhotoUrl])
 
   const handleSignOut = async (): Promise<void> => {
     onCloseMobile?.()
@@ -275,7 +269,7 @@ function SidebarContent({
       )}
     >
       <Avatar className="h-9 w-9 border border-border/60">
-        <AvatarImage src={avatarSrc} alt={displayName} />
+        <AvatarImage className="object-cover" src={avatarSrc} alt={displayName} />
         <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
           {initials}
         </AvatarFallback>

@@ -7,6 +7,7 @@ import AuthLayout, { dynamic } from './layout'
 
 const mockGetCurrentAppUser = vi.fn()
 const mockLoadOptionalBillingInfo = vi.fn()
+const mockGetExistingUserProfile = vi.fn()
 const mockCurrentUser = vi.fn()
 const mockIsE2EAuthEnabled = vi.fn()
 const mockRedirect = vi.fn((path: string) => {
@@ -27,6 +28,10 @@ vi.mock('@/lib/auth/e2e-auth', () => ({
 
 vi.mock('@/lib/asaas/optional-billing-info', () => ({
   loadOptionalBillingInfo: () => mockLoadOptionalBillingInfo(),
+}))
+
+vi.mock('@/lib/profile/user-profiles', () => ({
+  getExistingUserProfile: () => mockGetExistingUserProfile(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -57,6 +62,7 @@ describe('AuthLayout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsE2EAuthEnabled.mockReturnValue(false)
+    mockGetExistingUserProfile.mockResolvedValue(null)
     mockCurrentUser.mockResolvedValue({
       fullName: 'Fabio Kroker',
       firstName: 'Fabio',

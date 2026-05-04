@@ -2,6 +2,7 @@ import { ChevronRight, FileText } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
 import { getCurrentAppUser } from "@/lib/auth/app-user"
@@ -9,6 +10,8 @@ import { resolveSessionAtsReadiness } from "@/lib/ats/scoring"
 import { db } from "@/lib/db/sessions"
 import { PLANS } from "@/lib/plans"
 import { buildResumeComparisonPath } from "@/lib/routes/app"
+import { getExistingUserProfile } from "@/lib/profile/user-profiles"
+import { getFallbackInitials, splitDisplayName } from "@/lib/user/display-name"
 
 export const metadata = {
   title: "Configurações - CurrIA",
@@ -19,6 +22,14 @@ type FieldRowProps = {
   label: string
   value: ReactNode
   helper?: string
+}
+
+type FormattedSession = {
+  id: string
+  reference: string
+  phase: string
+  createdAt: string
+  atsReadiness: ReturnType<typeof resolveSessionAtsReadiness> | null
 }
 
 function formatSessionDate(value: Date): string {
@@ -35,40 +46,6 @@ function formatCreditCount(credits: number): string {
 
 function formatSessionReference(sessionId: string): string {
   return sessionId.length > 15 ? `${sessionId.slice(0, 15)}...` : sessionId
-}
-
-function splitDisplayName(displayName: string | undefined): {
-  firstName: string
-  lastName: string
-} {
-  const parts = displayName?.trim().split(/\s+/).filter(Boolean) ?? []
-
-  if (parts.length === 0) {
-    return {
-      firstName: "Não informado",
-      lastName: "Não informado",
-    }
-  }
-
-  const [firstName, ...lastNameParts] = parts
-  return {
-    firstName,
-    lastName: lastNameParts.join(" ") || "Não informado",
-  }
-}
-
-function getAvatarInitials(displayName: string | undefined, email: string): string {
-  const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? []
-  if (nameParts.length >= 2) {
-    return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
-  }
-
-  if (nameParts.length === 1) {
-    return nameParts[0].slice(0, 2).toUpperCase()
-  }
-
-  const emailName = email.split("@")[0]?.replace(/[^a-zA-Z0-9]/g, "") ?? ""
-  return (emailName.slice(0, 2) || "CR").toUpperCase()
 }
 
 function FieldRow({ label, value, helper }: FieldRowProps) {
@@ -92,17 +69,19 @@ export default async function SettingsPage() {
     return null
   }
 
-  const [{ billingInfo }, sessions] = await Promise.all([
+  const [{ billingInfo }, sessions, profile] = await Promise.all([
     loadOptionalBillingInfo(appUser.id, "settings_page"),
     db.getUserSessions(appUser.id, 2),
+    getExistingUserProfile(appUser.id),
   ])
 
   const displayName = appUser.displayName?.trim()
   const email = appUser.primaryEmail || appUser.authIdentity.email || "Não informado"
   const { firstName, lastName } = splitDisplayName(displayName)
-  const avatarInitials = getAvatarInitials(displayName, email)
+  const avatarInitials = getFallbackInitials(displayName, email, "CR")
+  const avatarImageUrl = profile?.profile_photo_url ?? null
   const planName = billingInfo ? PLANS[billingInfo.plan].name : "Não informado"
-  const formattedSessions = sessions.map((session) => ({
+  const formattedSessions: FormattedSession[] = sessions.map((session) => ({
     id: session.id,
     reference: formatSessionReference(session.id),
     phase: session.phase,
@@ -124,11 +103,17 @@ export default async function SettingsPage() {
           </div>
 
           <div className="flex justify-center bg-muted/60 px-4 py-8">
-            <div
-              aria-label="Avatar do perfil"
-              className="flex h-28 w-28 items-center justify-center rounded-full bg-[#3b8eea] text-4xl font-medium text-white"
-            >
-              {avatarInitials}
+            <div aria-label="Avatar do perfil">
+              <Avatar className="h-28 w-28 border border-border/50">
+                <AvatarImage
+                  className="object-cover"
+                  src={avatarImageUrl ?? undefined}
+                  alt={displayName ?? "Avatar do perfil"}
+                />
+                <AvatarFallback className="bg-[#3b8eea] text-4xl font-medium text-white">
+                  {avatarInitials}
+                </AvatarFallback>
+              </Avatar>
             </div>
           </div>
 
@@ -136,7 +121,10 @@ export default async function SettingsPage() {
           <FieldRow label="Sobrenome" value={<span className="break-words">{lastName}</span>} />
           <FieldRow label="Email" value={<span className="break-all">{email}</span>} />
           <FieldRow label="Plano" value={planName} />
-          <FieldRow label="Créditos disponíveis" value={formatCreditCount(appUser.creditAccount.creditsRemaining)} />
+          <FieldRow
+            label="Créditos disponíveis"
+            value={formatCreditCount(appUser.creditAccount.creditsRemaining)}
+          />
         </section>
 
         <section className="overflow-hidden rounded-[8px] border border-border/80 bg-white shadow-xs">

@@ -11,6 +11,7 @@ import SettingsPage from "./page"
 const mockGetCurrentAppUser = vi.fn()
 const mockLoadOptionalBillingInfo = vi.fn()
 const mockGetUserSessions = vi.fn()
+const mockGetExistingUserProfile = vi.fn()
 const mockResolveSessionAtsReadiness = vi.fn()
 
 vi.mock("@/lib/auth/app-user", () => ({
@@ -25,6 +26,10 @@ vi.mock("@/lib/db/sessions", () => ({
   db: {
     getUserSessions: (...args: unknown[]) => mockGetUserSessions(...args),
   },
+}))
+
+vi.mock("@/lib/profile/user-profiles", () => ({
+  getExistingUserProfile: (...args: unknown[]) => mockGetExistingUserProfile(...args),
 }))
 
 vi.mock("@/lib/ats/scoring", () => ({
@@ -119,6 +124,9 @@ describe("SettingsPage", () => {
       buildSession("sess_recent_123"),
       buildSession("sess_recent_456", new Date("2026-04-20T12:00:00.000Z")),
     ])
+    mockGetExistingUserProfile.mockResolvedValue({
+      profile_photo_url: null,
+    })
 
     const jsx = await SettingsPage()
     render(jsx)
@@ -142,8 +150,12 @@ describe("SettingsPage", () => {
     expect(screen.getByText("Currículo sess_recent_456")).toBeInTheDocument()
     expect(screen.getAllByText("ATS 91")).toHaveLength(2)
     expect(screen.getAllByRole("link")).toHaveLength(2)
-    expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "/dashboard/resume/compare/sess_recent_123")
+    expect(screen.getAllByRole("link")[0]).toHaveAttribute(
+      "href",
+      "/dashboard/resume/compare/sess_recent_123",
+    )
     expect(mockGetUserSessions).toHaveBeenCalledWith("usr_123", 2)
+    expect(mockGetExistingUserProfile).toHaveBeenCalledWith("usr_123")
     expect(mockResolveSessionAtsReadiness).toHaveBeenCalledTimes(2)
 
     expect(screen.queryByText("Clerk user")).not.toBeInTheDocument()
@@ -165,12 +177,15 @@ describe("SettingsPage", () => {
       billingInfo: null,
     })
     mockGetUserSessions.mockResolvedValue([])
+    mockGetExistingUserProfile.mockResolvedValue({
+      profile_photo_url: null,
+    })
 
     const jsx = await SettingsPage()
     render(jsx)
 
-    expect(screen.getByLabelText("Avatar do perfil")).toHaveTextContent("FA")
-    expect(screen.getAllByText("Não informado")).toHaveLength(3)
+    expect(screen.getByLabelText("Avatar do perfil")).toHaveTextContent("FC")
+    expect(screen.getAllByText("Nao informado")).toHaveLength(2)
     expect(screen.getByText("fallback@curria.test")).toBeInTheDocument()
     expect(screen.getByText("0 créditos")).toBeInTheDocument()
     expect(screen.getByText("Nenhum currículo gerado ainda.")).toBeInTheDocument()
@@ -186,5 +201,6 @@ describe("SettingsPage", () => {
     expect(jsx).toBeNull()
     expect(mockLoadOptionalBillingInfo).not.toHaveBeenCalled()
     expect(mockGetUserSessions).not.toHaveBeenCalled()
+    expect(mockGetExistingUserProfile).not.toHaveBeenCalled()
   })
 })

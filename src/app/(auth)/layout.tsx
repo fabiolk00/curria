@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/context/sidebar-context'
 import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { formatRenewalCountdown } from '@/lib/asaas/billing-display'
 import { loadOptionalBillingInfo } from '@/lib/asaas/optional-billing-info'
+import { getExistingUserProfile } from '@/lib/profile/user-profiles'
 
 export const metadata = {
   title: 'Dashboard - CurrIA',
@@ -25,7 +26,11 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/entrar')
   }
 
-  const { billingInfo, billingNotice } = await loadOptionalBillingInfo(appUser.id, 'auth_layout')
+  const [{ billingInfo, billingNotice }, userProfile] = await Promise.all([
+    loadOptionalBillingInfo(appUser.id, 'auth_layout'),
+    getExistingUserProfile(appUser.id),
+  ])
+  const sidebarUserImageUrl = userProfile?.profile_photo_url ?? clerkUser?.imageUrl ?? null
 
   const renewsIn = billingInfo?.hasActiveRecurringSubscription
     ? formatRenewalCountdown(billingInfo.renewsAt)
@@ -56,7 +61,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           activeRecurringPlan={activeRecurringPlan}
           userDisplayName={displayName}
           userEmail={primaryEmail}
-          userImageUrl={clerkUser?.imageUrl ?? null}
+          userImageUrl={sidebarUserImageUrl}
         >
           {children}
         </DashboardShell>
