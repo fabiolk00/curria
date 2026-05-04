@@ -58,6 +58,7 @@ describe("LoginForm", () => {
 
     expect(screen.getByLabelText("E-mail")).toBeInTheDocument()
     expect(screen.getByLabelText("Senha")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continuar com LinkedIn" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Continuar com Google" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeInTheDocument()
   })
@@ -112,6 +113,26 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(mockAuthenticateWithRedirect).toHaveBeenCalledWith({
         strategy: "oauth_google",
+        redirectUrl: "/sso-callback?redirect_to=%2Fprofile-setup",
+        redirectUrlComplete: "/profile-setup",
+      })
+    })
+  })
+
+  it("starts the LinkedIn redirect flow above Google with the new resume destination", async () => {
+    const user = userEvent.setup()
+
+    render(<LoginForm />)
+
+    const socialButtons = screen.getAllByRole("button", { name: /Continuar com/i })
+    expect(socialButtons[0]).toHaveTextContent("Continuar com LinkedIn")
+    expect(socialButtons[1]).toHaveTextContent("Continuar com Google")
+
+    await user.click(screen.getByRole("button", { name: "Continuar com LinkedIn" }))
+
+    await waitFor(() => {
+      expect(mockAuthenticateWithRedirect).toHaveBeenCalledWith({
+        strategy: "oauth_linkedin_oidc",
         redirectUrl: "/sso-callback?redirect_to=%2Fprofile-setup",
         redirectUrlComplete: "/profile-setup",
       })

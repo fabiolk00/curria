@@ -10,6 +10,7 @@ import {
   AuthErrorMessage,
   AuthField,
   AuthGoogleButton,
+  AuthLinkedInButton,
   AuthSubmitButton,
 } from "@/components/auth/auth-form-ui"
 import { getClerkErrorMessage } from "@/components/auth/clerk-error"
@@ -30,6 +31,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLinkedInPending, setIsLinkedInPending] = useState(false)
   const [isGooglePending, setIsGooglePending] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -88,8 +90,35 @@ export default function LoginForm() {
     }
   }
 
+  const handleLinkedInLogin = async () => {
+    if (!isLoaded || !signIn) {
+      return
+    }
+
+    setIsLinkedInPending(true)
+    setErrorMessage(null)
+
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: "oauth_linkedin_oidc",
+        redirectUrl: buildSsoCallbackPath(redirectTo),
+        redirectUrlComplete: redirectTo,
+      })
+    } catch (error) {
+      setErrorMessage(
+        getClerkErrorMessage(error, "Não foi possível iniciar o login com LinkedIn."),
+      )
+      setIsLinkedInPending(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <AuthLinkedInButton
+        pending={isLinkedInPending}
+        onClick={handleLinkedInLogin}
+      />
+
       <AuthGoogleButton
         pending={isGooglePending}
         onClick={handleGoogleLogin}

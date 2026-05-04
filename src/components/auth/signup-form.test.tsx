@@ -113,6 +113,8 @@ describe("SignupForm", () => {
     expect(screen.getByLabelText("Sobrenome")).toBeInTheDocument()
     expect(screen.getByLabelText("E-mail")).toBeInTheDocument()
     expect(screen.getByLabelText("Senha")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continuar com LinkedIn" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Continuar com Google" })).toBeInTheDocument()
     expect(screen.getByText("Mínimo de 8 caracteres")).toBeInTheDocument()
     expect(screen.getByText("Pelo menos 1 caractere especial")).toBeInTheDocument()
   })
@@ -173,6 +175,26 @@ describe("SignupForm", () => {
     await waitFor(() => {
       expect(mockSignUpAuthenticateWithRedirect).toHaveBeenCalledWith({
         strategy: "oauth_google",
+        redirectUrl: "/sso-callback?redirect_to=%2Fprofile-setup",
+        redirectUrlComplete: "/profile-setup",
+      })
+    })
+  })
+
+  it("starts the LinkedIn signup flow above Google with profile setup by default", async () => {
+    const user = userEvent.setup()
+
+    render(<SignupForm />)
+
+    const socialButtons = screen.getAllByRole("button", { name: /Continuar com/i })
+    expect(socialButtons[0]).toHaveTextContent("Continuar com LinkedIn")
+    expect(socialButtons[1]).toHaveTextContent("Continuar com Google")
+
+    await user.click(screen.getByRole("button", { name: "Continuar com LinkedIn" }))
+
+    await waitFor(() => {
+      expect(mockSignUpAuthenticateWithRedirect).toHaveBeenCalledWith({
+        strategy: "oauth_linkedin_oidc",
         redirectUrl: "/sso-callback?redirect_to=%2Fprofile-setup",
         redirectUrlComplete: "/profile-setup",
       })

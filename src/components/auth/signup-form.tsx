@@ -10,6 +10,7 @@ import {
   AuthErrorMessage,
   AuthField,
   AuthGoogleButton,
+  AuthLinkedInButton,
   AuthSubmitButton,
 } from "@/components/auth/auth-form-ui"
 import { getClerkErrorMessage } from "@/components/auth/clerk-error"
@@ -52,6 +53,7 @@ export default function SignupForm() {
   const [verificationCode, setVerificationCode] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLinkedInPending, setIsLinkedInPending] = useState(false)
   const [isGooglePending, setIsGooglePending] = useState(false)
   const [needsVerification, setNeedsVerification] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -206,6 +208,28 @@ export default function SignupForm() {
     }
   }
 
+  const handleLinkedInSignup = async () => {
+    if (!isSignUpLoaded || !signUp) {
+      return
+    }
+
+    setIsLinkedInPending(true)
+    setErrorMessage(null)
+
+    try {
+      await signUp.authenticateWithRedirect({
+        strategy: "oauth_linkedin_oidc",
+        redirectUrl: buildSsoCallbackPath(redirectTo),
+        redirectUrlComplete: redirectTo,
+      })
+    } catch (error) {
+      setErrorMessage(
+        getClerkErrorMessage(error, "Não foi possível iniciar o cadastro com LinkedIn."),
+      )
+      setIsLinkedInPending(false)
+    }
+  }
+
   const passwordRequirements = [
     {
       id: "min-length",
@@ -276,6 +300,11 @@ export default function SignupForm() {
 
   return (
     <div className="space-y-6">
+      <AuthLinkedInButton
+        pending={isLinkedInPending}
+        onClick={handleLinkedInSignup}
+      />
+
       <AuthGoogleButton
         pending={isGooglePending}
         onClick={handleGoogleSignup}
