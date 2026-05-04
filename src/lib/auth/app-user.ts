@@ -43,6 +43,40 @@ function normalizeProfileText(value: unknown): string | undefined {
   return normalized.length > 0 ? normalized : undefined
 }
 
+function titleCaseWords(value: string): string {
+  const titled = value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
+    .join(' ')
+
+  return titled
+}
+
+function buildDisplayNameFallbackFromEmail(email: string | undefined): string | undefined {
+  const normalizedEmail = normalizeProfileText(email)
+  if (!normalizedEmail) {
+    return undefined
+  }
+
+  const [localPart] = normalizedEmail.split('@')
+  if (!localPart) {
+    return undefined
+  }
+
+  const sanitizedLocalPart = localPart
+    .replace(/[._\-+]+/g, ' ')
+    .replace(/\d+/g, ' ')
+    .trim()
+
+  const fallback = titleCaseWords(sanitizedLocalPart)
+  if (!fallback) {
+    return undefined
+  }
+
+  return fallback
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -173,12 +207,14 @@ async function enrichAppUserProfile(appUser: AppUser): Promise<AppUser> {
     const userDisplayName = normalizeProfileText(userRow?.display_name)
     const userPrimaryEmail = normalizeProfileText(userRow?.primary_email)
 
-    const resolvedDisplayName = normalizeProfileText(appUser.displayName) ?? userDisplayName
     const resolvedPrimaryEmail =
       normalizeProfileText(appUser.primaryEmail)
       ?? normalizeProfileText(appUser.authIdentity.email)
       ?? userPrimaryEmail
       ?? identityEmail
+    const resolvedDisplayName = normalizeProfileText(appUser.displayName)
+      ?? userDisplayName
+      ?? buildDisplayNameFallbackFromEmail(resolvedPrimaryEmail)
 
     return {
       ...appUser,
