@@ -21,8 +21,26 @@ type BootstrapAppUserRow = {
   credit_account_updated_at: string
 }
 
+type AppUserProfileRow = {
+  display_name: string | null
+  primary_email: string | null
+}
+
+type AppUserIdentityProfileRow = {
+  email: string | null
+}
+
 type UserIdentityLookupRow = {
   user_id: string
+}
+
+function normalizeProfileText(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -132,6 +150,50 @@ function mapBootstrapRowToAppUser(row: BootstrapAppUserRow): AppUser {
   }
 }
 
+async function enrichAppUserProfile(appUser: AppUser): Promise<AppUser> {
+  const supabase = getSupabaseAdminClient()
+
+  try {
+    const [
+      { data: userRow },
+      { data: identityRow },
+    ] = await Promise.all([
+      supabase.from('users')
+        .select('display_name, primary_email')
+        .eq('id', appUser.id)
+        .maybeSingle<AppUserProfileRow>(),
+      supabase.from('user_auth_identities')
+        .select('email')
+        .eq('user_id', appUser.id)
+        .eq('provider', CLERK_PROVIDER)
+        .maybeSingle<AppUserIdentityProfileRow>(),
+    ])
+
+    const identityEmail = normalizeProfileText(identityRow?.email)
+    const userDisplayName = normalizeProfileText(userRow?.display_name)
+    const userPrimaryEmail = normalizeProfileText(userRow?.primary_email)
+
+    const resolvedDisplayName = normalizeProfileText(appUser.displayName) ?? userDisplayName
+    const resolvedPrimaryEmail =
+      normalizeProfileText(appUser.primaryEmail)
+      ?? normalizeProfileText(appUser.authIdentity.email)
+      ?? userPrimaryEmail
+      ?? identityEmail
+
+    return {
+      ...appUser,
+      displayName: resolvedDisplayName,
+      primaryEmail: resolvedPrimaryEmail,
+      authIdentity: {
+        ...appUser.authIdentity,
+        email: identityEmail ?? appUser.authIdentity.email,
+      },
+    }
+  } catch {
+    return appUser
+  }
+}
+
 export async function getOrCreateAppUserByClerkUserId(clerkUserId: string): Promise<AppUser> {
   const supabase = getSupabaseAdminClient()
   const { data, error } = await supabase.rpc('get_or_create_app_user', {
@@ -143,7 +205,8 @@ export async function getOrCreateAppUserByClerkUserId(clerkUserId: string): Prom
     throw new Error(`Failed to resolve app user: ${error.message}`)
   }
 
-  return mapBootstrapRowToAppUser(parseBootstrapAppUser(data))
+  const appUser = mapBootstrapRowToAppUser(parseBootstrapAppUser(data))
+  return enrichAppUserProfile(appUser)
 }
 
 export async function getCurrentAppUser(req?: Parameters<typeof getAuth>[0]): Promise<AppUser | null> {
