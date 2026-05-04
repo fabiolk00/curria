@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -74,11 +74,13 @@ describe("DashboardSidebar", () => {
   it("keeps the desktop sidebar collapsed with guided generation navigation", async () => {
     render(<DashboardSidebar />)
 
+    const settingsLink = screen.getByRole("link", { name: "Configurações" })
     const profileLink = screen.getByRole("link", { name: "Perfil" })
     const resumesLink = screen.getByRole("link", { name: "Currículos" })
     const generateButton = screen.getByRole("button", { name: "Gerar currículo" })
     const accountButton = screen.getByRole("button", { name: "Abrir menu da conta" })
 
+    expect(settingsLink).toHaveAttribute("href", "/settings")
     expect(profileLink).toHaveAttribute("href", "/profile-setup")
     expect(resumesLink).toHaveAttribute("href", "/dashboard/resumes-history")
     expect(generateButton).toHaveClass(
@@ -111,8 +113,11 @@ describe("DashboardSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: "Abrir menu da conta" }))
 
-    expect(await screen.findByText("Sair")).toBeInTheDocument()
-    expect(screen.getByText("Ver planos")).toBeInTheDocument()
+    const dropdown = await screen.findByRole("menu")
+
+    expect(within(dropdown).getByText("Sair")).toBeInTheDocument()
+    expect(within(dropdown).getByText("Ver planos")).toBeInTheDocument()
+    expect(within(dropdown).queryByRole("link", { name: "Configurações" })).not.toBeInTheDocument()
   })
 
   it("routes the primary action to the dedicated generate resume page", async () => {

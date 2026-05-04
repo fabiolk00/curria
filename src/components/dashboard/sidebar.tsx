@@ -46,6 +46,7 @@ import {
 } from "@/lib/dashboard/welcome-guide"
 import { PLANS, PlanSlug } from "@/lib/plans"
 import {
+  SETTINGS_PATH,
   DASHBOARD_RESUMES_HISTORY_PATH,
   GENERATE_RESUME_PATH,
   PROFILE_SETUP_PATH,
@@ -71,14 +72,24 @@ type NavItem = {
   label: string
   href: string
   icon: typeof User
+  guideTargetId?: DashboardWelcomeGuideTargetId
   isActive: (pathname: string) => boolean
 }
 
 const navItems: NavItem[] = [
   {
+    label: "Configurações",
+    href: SETTINGS_PATH,
+    icon: Settings,
+    guideTargetId: dashboardWelcomeGuideTargets.settingsNav,
+    isActive: (pathname) =>
+      pathname === SETTINGS_PATH || pathname.startsWith(`${SETTINGS_PATH}/`),
+  },
+  {
     label: "Perfil",
     href: PROFILE_SETUP_PATH,
     icon: User,
+    guideTargetId: dashboardWelcomeGuideTargets.profileNav,
     isActive: (pathname) =>
       pathname === PROFILE_SETUP_PATH
       || pathname.startsWith(`${PROFILE_SETUP_PATH}/`)
@@ -89,6 +100,7 @@ const navItems: NavItem[] = [
     label: "Currículos",
     href: DASHBOARD_RESUMES_HISTORY_PATH,
     icon: FileText,
+    guideTargetId: dashboardWelcomeGuideTargets.resumesNav,
     isActive: (pathname) => pathname === DASHBOARD_RESUMES_HISTORY_PATH,
   },
 ]
@@ -287,7 +299,6 @@ function SidebarContent({
           </motion.div>
         ) : null}
       </AnimatePresence>
-      {isOpen || isMobile ? <Settings className="h-4 w-4 text-sidebar-foreground/60" /> : null}
     </button>
   )
 
@@ -338,13 +349,7 @@ function SidebarContent({
                 isOpen={isOpen}
                 isMobile={isMobile}
                 onNavigate={onCloseMobile}
-                guideTargetId={
-                  item.label === "Perfil"
-                    ? dashboardWelcomeGuideTargets.profileNav
-                    : item.label === "Currículos"
-                      ? dashboardWelcomeGuideTargets.resumesNav
-                      : undefined
-                }
+                guideTargetId={item.guideTargetId}
               />
             ))}
           </nav>
@@ -428,12 +433,6 @@ function SidebarContent({
               >
                 <Sparkles className="h-4 w-4" />
                 Ver planos
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" onClick={onCloseMobile}>
-                  <Settings className="h-4 w-4" />
-                  Configurações
-                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/o-que-e-ats" onClick={onCloseMobile}>

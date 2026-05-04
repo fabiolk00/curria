@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DashboardWelcomeGuide } from "./welcome-guide"
 import {
   DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH,
+  DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH,
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
   DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
   dashboardWelcomeGuideTargets,
@@ -17,7 +18,7 @@ const mockReplace = vi.fn()
 const mockOpen = vi.fn()
 const mockOpenMobile = vi.fn()
 const mockCloseMobile = vi.fn()
-let mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
+let mockPathname = DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH
 let backendWelcomeGuideSeen = false
 
 vi.mock("next/navigation", () => ({
@@ -40,10 +41,12 @@ vi.mock("@/context/sidebar-context", () => ({
 }))
 
 function TestTargets({
+  showSettings = true,
   showProfile = true,
   showGenerateResume = true,
   showResumes = true,
 }: {
+  showSettings?: boolean
   showProfile?: boolean
   showGenerateResume?: boolean
   showResumes?: boolean
@@ -51,6 +54,11 @@ function TestTargets({
   return (
     <DashboardWelcomeGuide>
       <div>
+        {showSettings ? (
+          <button type="button" {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.settingsNav)}>
+            Configurações
+          </button>
+        ) : null}
         {showProfile ? (
           <button type="button" {...getDashboardGuideTargetProps(dashboardWelcomeGuideTargets.profileNav)}>
             Perfil
@@ -74,7 +82,7 @@ function TestTargets({
 describe("DashboardWelcomeGuide", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
+    mockPathname = DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH
     backendWelcomeGuideSeen = false
     window.HTMLElement.prototype.scrollIntoView = vi.fn()
     window.requestAnimationFrame = ((callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0)) as typeof window.requestAnimationFrame
@@ -113,40 +121,55 @@ describe("DashboardWelcomeGuide", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("opens on Perfil and advances through resume history and generate resume in the expected order", async () => {
+  it("opens on Settings and advances through profile, resumes and resume generation", async () => {
     const user = userEvent.setup()
+    mockPathname = DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH
     const { rerender } = render(<TestTargets />)
 
     const initialDialog = await screen.findByRole("dialog")
-    expect(within(initialDialog).getByRole("heading", { name: "Seu perfil" })).toBeInTheDocument()
+    expect(within(initialDialog).getByRole("heading", { name: "Configurações" })).toBeInTheDocument()
+    expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
+      "data-target-id",
+      dashboardWelcomeGuideTargets.settingsNav,
+    )
+
+    await user.click(within(initialDialog).getByRole("button", { name: /Pr/ }))
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
+    })
+    mockPathname = DASHBOARD_WELCOME_GUIDE_PROFILE_PATH
+    rerender(<TestTargets />)
+
+    const secondDialog = await screen.findByRole("dialog")
+    expect(within(secondDialog).getByRole("heading", { name: "Seu perfil" })).toBeInTheDocument()
     expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
       "data-target-id",
       dashboardWelcomeGuideTargets.profileNav,
     )
 
-    await user.click(within(initialDialog).getByRole("button", { name: /Pr/ }))
+    await user.click(within(secondDialog).getByRole("button", { name: /Pr/ }))
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_RESUMES_PATH)
     })
     mockPathname = DASHBOARD_WELCOME_GUIDE_RESUMES_PATH
     rerender(<TestTargets />)
 
-    const secondDialog = await screen.findByRole("dialog")
-    expect(within(secondDialog).getByRole("heading", { name: "Histórico de currículos" })).toBeInTheDocument()
+    const thirdDialog = await screen.findByRole("dialog")
+    expect(within(thirdDialog).getByRole("heading", { name: "Histórico de currículos" })).toBeInTheDocument()
     expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
       "data-target-id",
       dashboardWelcomeGuideTargets.resumesNav,
     )
 
-    await user.click(within(secondDialog).getByRole("button", { name: /Pr/ }))
+    await user.click(within(thirdDialog).getByRole("button", { name: /Pr/ }))
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH)
     })
     mockPathname = DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH
     rerender(<TestTargets />)
 
-    const thirdDialog = await screen.findByRole("dialog")
-    expect(within(thirdDialog).getByRole("heading", { name: "Gerar currículo" })).toBeInTheDocument()
+    const fourthDialog = await screen.findByRole("dialog")
+    expect(within(fourthDialog).getByRole("heading", { name: "Gerar currículo" })).toBeInTheDocument()
     expect(screen.getByTestId("dashboard-welcome-guide-spotlight")).toHaveAttribute(
       "data-target-id",
       dashboardWelcomeGuideTargets.generateResumeNav,
@@ -197,7 +220,7 @@ describe("DashboardWelcomeGuide", () => {
     rerender(<TestTargets />)
 
     const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getByRole("heading", { name: "Seu perfil" })).toBeInTheDocument()
+    expect(within(dialog).getByRole("heading", { name: "Configurações" })).toBeInTheDocument()
     expect(mockOpen).toHaveBeenCalled()
   })
 })

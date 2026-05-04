@@ -10,6 +10,7 @@ import {
   DASHBOARD_WELCOME_GUIDE_PROFILE_PATH,
   DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH,
   DASHBOARD_WELCOME_GUIDE_RESUMES_PATH,
+  DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH,
   DASHBOARD_WELCOME_GUIDE_TARGET_ATTR,
   dashboardWelcomeGuideSteps,
   type DashboardWelcomeGuideStepDefinition,
@@ -138,6 +139,7 @@ export function DashboardWelcomeGuide({ children }: { children: React.ReactNode 
       pathname.startsWith(DASHBOARD_WELCOME_GUIDE_PROFILE_PATH)
       || pathname.startsWith(DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH)
       || pathname === DASHBOARD_WELCOME_GUIDE_RESUMES_PATH
+      || pathname === DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH
     if (!isGuidePath) {
       return
     }

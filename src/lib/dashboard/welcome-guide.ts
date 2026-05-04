@@ -2,14 +2,17 @@ import {
   DASHBOARD_RESUMES_HISTORY_PATH,
   GENERATE_RESUME_PATH,
   PROFILE_SETUP_PATH,
+  SETTINGS_PATH,
 } from "@/lib/routes/app"
 
 export const DASHBOARD_WELCOME_GUIDE_TARGET_ATTR = "data-dashboard-guide-target"
 export const DASHBOARD_WELCOME_GUIDE_PROFILE_PATH = PROFILE_SETUP_PATH
 export const DASHBOARD_WELCOME_GUIDE_GENERATE_RESUME_PATH = GENERATE_RESUME_PATH
 export const DASHBOARD_WELCOME_GUIDE_RESUMES_PATH = DASHBOARD_RESUMES_HISTORY_PATH
+export const DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH = SETTINGS_PATH
 
 export const dashboardWelcomeGuideTargets = {
+  settingsNav: "settings-nav",
   profileNav: "profile-nav",
   generateResumeNav: "generate-resume-nav",
   resumesNav: "resumes-nav",
@@ -29,6 +32,16 @@ export type DashboardWelcomeGuideStepDefinition = {
 }
 
 export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] = [
+  {
+    id: "settings",
+    title: "Configurações",
+    description:
+      "Ajuste seu plano, crÃ©ditos e preferÃªncias de conta para manter o controle do uso do CurrIA.",
+    targetId: dashboardWelcomeGuideTargets.settingsNav,
+    path: DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH,
+    preferredSide: "right",
+    requiresSidebar: true,
+  },
   {
     id: "profile",
     title: "Seu perfil",

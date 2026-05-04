@@ -1,5 +1,6 @@
 export const PROFILE_SETUP_PATH = "/profile-setup"
 export const GENERATE_RESUME_PATH = "/generate-resume"
+export const SETTINGS_PATH = "/settings"
 export const DASHBOARD_SESSIONS_PATH = "/dashboard/sessions"
 export const DASHBOARD_RESUMES_HISTORY_PATH = "/dashboard/resumes-history"
 
