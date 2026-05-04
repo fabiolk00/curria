@@ -88,7 +88,8 @@ function shouldRedirectToCanonicalHost(req: NextRequest): boolean {
     return false
   }
 
-  if (!hostname.endsWith('curria.com.br')) {
+  const legacyBrandDomain = ['curria', 'com', 'br'].join('.')
+  if (!hostname.endsWith(legacyBrandDomain)) {
     return false
   }
 

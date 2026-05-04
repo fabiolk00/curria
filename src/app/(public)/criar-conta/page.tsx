@@ -5,8 +5,8 @@ import SignupForm from "@/components/auth/signup-form"
 import { buildPublicPageMetadata } from "@/lib/seo/public-metadata"
 
 export const metadata: Metadata = buildPublicPageMetadata({
-  title: "Criar conta - CurrIA",
-  description: "Crie sua conta CurrIA",
+  title: "Criar conta - Trampofy",
+  description: "Crie sua conta Trampofy",
   canonicalPath: "/criar-conta",
 })
 

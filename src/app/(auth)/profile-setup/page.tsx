@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+﻿import type { Metadata } from "next"
 import { currentUser } from "@clerk/nextjs/server"
 
 import UserDataPage from "@/components/resume/user-data-page"
@@ -8,7 +8,7 @@ import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
 import type { PlanSlug } from "@/lib/plans"
 
 export const metadata: Metadata = {
-  title: "Perfil profissional - CurrIA",
+  title: "Perfil profissional - Trampofy",
   description: "Configure e revise o perfil base que alimenta novas sessões.",
 }
 
@@ -34,3 +34,4 @@ export default async function ProfileSetupPage() {
     />
   )
 }
+

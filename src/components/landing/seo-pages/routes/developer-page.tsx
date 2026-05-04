@@ -33,7 +33,7 @@ export default function DeveloperPage() {
                   </div>
                 </div>
                 <div className="text-zinc-500 mb-2">{'/* ATS Readiness optimization */'}</div>
-                <div><span className="text-pink-600">import</span> {'{ '}<span className="text-blue-600">Scanner</span>{' }'} <span className="text-pink-600">from</span> <span className="text-emerald-600">&apos;@curria/ats&apos;</span>;</div>
+                <div><span className="text-pink-600">import</span> {'{ '}<span className="text-blue-600">Scanner</span>{' }'} <span className="text-pink-600">from</span> <span className="text-emerald-600">&apos;@trampofy/ats&apos;</span>;</div>
                 <br/>
                 <div><span className="text-pink-600">const</span> <span className="text-[#0a0a0a]">resume</span> <span className="text-pink-600">=</span> <span className="text-pink-600">await</span> <span className="text-blue-600">Scanner</span>.<span className="text-blue-500">analyze</span>();</div>
                 <br/>

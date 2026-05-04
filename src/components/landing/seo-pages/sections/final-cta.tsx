@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+﻿import { motion } from "motion/react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import type { SEOPageProps } from "../seo-page-template";
 
@@ -56,4 +56,5 @@ export default function FinalCta({ theme, role }: { theme: SEOPageProps['theme']
     </section>
   );
 }
+
 

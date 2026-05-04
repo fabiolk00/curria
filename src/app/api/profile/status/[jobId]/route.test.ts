@@ -49,7 +49,7 @@ function buildJob(overrides: Partial<ImportJobRow> = {}): ImportJobRow {
   }
 }
 
-const appUser = { id: USER_ID, email: 'test@curria.com.br' } as unknown as NonNullable<
+const appUser = { id: USER_ID, email: 'test@trampofy.com.br' } as unknown as NonNullable<
   Awaited<ReturnType<typeof getCurrentAppUser>>
 >
 

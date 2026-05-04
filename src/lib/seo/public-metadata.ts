@@ -28,7 +28,7 @@ export function buildPublicPageMetadata({
       url: canonical,
       title,
       description,
-      siteName: "CurrIA",
+      siteName: "Trampofy",
     },
     twitter: {
       card: "summary_large_image",

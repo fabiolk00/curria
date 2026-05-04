@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
@@ -12,7 +12,7 @@ import { getExistingUserProfile } from '@/lib/profile/user-profiles'
 import { logWarn, serializeError } from '@/lib/observability/structured-log'
 
 export const metadata = {
-  title: 'Dashboard - CurrIA',
+  title: 'Dashboard - Trampofy',
   description: 'Otimize seu currículo com IA',
 }
 
@@ -67,7 +67,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     || clerkUser?.fullName?.trim()
     || clerkUser?.firstName?.trim()
     || clerkUser?.username
-    || 'Conta CurrIA'
+    || 'Conta Trampofy'
   const primaryEmail =
     appUser.primaryEmail
     || userProfile?.cv_state?.email?.trim()
@@ -95,3 +95,4 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     </SidebarProvider>
   )
 }
+

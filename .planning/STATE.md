@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: Phase complete — ready for verification
 Last activity: 2026-05-04
-Last Activity Description: Completed quick task 260504-1tr: added a user-friendly Job Targeting review panel, evidence modal, assessment/targeting-evidence mappers, comparison integration, and pre-generation validation-modal integration for proven, related, and needs-evidence requirements.
+Last Activity Description: Completed quick task 260504-f0h: rebranded user-facing front-end surfaces from CurrIA to Trampofy.
 
 Progress: [##########] 100%
 
@@ -205,6 +205,7 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260504-f0h | Rebrand CurrIA para Trampofy no front-end | 2026-05-04 | working-tree | Validated | [260504-f0h-rebrand-curria-para-trampofy-no-front-en](./quick/260504-f0h-rebrand-curria-para-trampofy-no-front-en/) |
 | 260504-1tr | Criar experiencia user-friendly de Revisao Inteligente da Vaga | 2026-05-04 | working-tree | Completed | [260504-1tr-criar-experiencia-user-friendly-de-revis](./quick/260504-1tr-criar-experiencia-user-friendly-de-revis/) |
 | 260504-1fi | Rodar seeded 10 rewrite validation multidominio com budget LLM | 2026-05-04 | working-tree | Completed | [260504-1fi-rodar-seeded-10-rewrite-validation-multi](./quick/260504-1fi-rodar-seeded-10-rewrite-validation-multi/) |
 | 260504-198 | Investigar missed_clear_evidence e score_too_harsh seeded fixed sem LLM | 2026-05-04 | working-tree | Completed | [260504-198-investigar-missed-clear-evidence-e-score](./quick/260504-198-investigar-missed-clear-evidence-e-score/) |

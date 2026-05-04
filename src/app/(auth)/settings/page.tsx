@@ -1,4 +1,4 @@
-import { ChevronRight, FileText } from "lucide-react"
+﻿import { ChevronRight, FileText } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
@@ -16,8 +16,8 @@ import { getFallbackInitials, splitDisplayName } from "@/lib/user/display-name"
 import type { Session } from "@/types/agent"
 
 export const metadata = {
-  title: "Configurações - CurrIA",
-  description: "Gerencie seu perfil, plano e créditos no CurrIA",
+  title: "Configurações - Trampofy",
+  description: "Gerencie seu perfil, plano e créditos no Trampofy",
 }
 
 type FieldRowProps = {
@@ -245,7 +245,7 @@ export default async function SettingsPage() {
       <div className="mx-auto w-full max-w-[540px] space-y-5">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Perfil</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gerencie seu perfil CurrIA</p>
+          <p className="mt-1 text-sm text-muted-foreground">Gerencie seu perfil Trampofy</p>
         </header>
 
         <section className="overflow-hidden rounded-[8px] border border-border/80 bg-white shadow-xs">
@@ -332,3 +332,4 @@ export default async function SettingsPage() {
     </div>
   )
 }
+

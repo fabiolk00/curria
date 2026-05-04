@@ -11,8 +11,6 @@ import {
 } from "lucide-react"
 import { motion } from "motion/react"
 
-import BrandWordmark from "@/components/brand-wordmark"
-
 const steps = [
   {
     icon: FileUp,

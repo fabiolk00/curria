@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+﻿import type { Metadata } from "next"
 import { currentUser } from "@clerk/nextjs/server"
 
 import UserDataPage from "@/components/resume/user-data-page"
@@ -8,7 +8,7 @@ import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
 import type { PlanSlug } from "@/lib/plans"
 
 export const metadata: Metadata = {
-  title: "Gerar currículo - CurrIA",
+  title: "Gerar currículo - Trampofy",
   description: "Gere uma versão ATS ou adapte seu currículo para uma vaga específica.",
 }
 
@@ -34,3 +34,4 @@ export default async function GenerateResumePage() {
     />
   )
 }
+

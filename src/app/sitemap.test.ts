@@ -7,35 +7,35 @@ import { allRoleLandingConfigs } from "@/lib/seo/role-landing-config"
 
 describe("sitemap", () => {
   it("includes all canonical public SEO routes and role landing pages", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://www.curria.com.br"
+    process.env.NEXT_PUBLIC_SITE_URL = "https://www.trampofy.com.br"
 
     const entries = sitemap()
     const urls = entries.map((entry) => entry.url)
 
     expect(urls).toEqual(
       expect.arrayContaining([
-        "https://www.curria.com.br/",
-        `https://www.curria.com.br${PUBLIC_ROUTES.atsGuide}`,
-        `https://www.curria.com.br${PUBLIC_ROUTES.privacy}`,
-        `https://www.curria.com.br${PUBLIC_ROUTES.terms}`,
-        ...allRoleLandingConfigs.map((config) => `https://www.curria.com.br${config.meta.canonical}`),
+        "https://www.trampofy.com.br/",
+        `https://www.trampofy.com.br${PUBLIC_ROUTES.atsGuide}`,
+        `https://www.trampofy.com.br${PUBLIC_ROUTES.privacy}`,
+        `https://www.trampofy.com.br${PUBLIC_ROUTES.terms}`,
+        ...allRoleLandingConfigs.map((config) => `https://www.trampofy.com.br${config.meta.canonical}`),
       ]),
     )
   })
 
   it("does not include auth or functional-only routes", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://www.curria.com.br"
+    process.env.NEXT_PUBLIC_SITE_URL = "https://www.trampofy.com.br"
 
     const urls = sitemap().map((entry) => entry.url)
 
-    expect(urls).not.toContain(`https://www.curria.com.br${PUBLIC_ROUTES.login}`)
-    expect(urls).not.toContain(`https://www.curria.com.br${PUBLIC_ROUTES.signup}`)
-    expect(urls).not.toContain(`https://www.curria.com.br${PUBLIC_ROUTES.checkout}`)
-    expect(urls).not.toContain("https://www.curria.com.br/sso-callback")
+    expect(urls).not.toContain(`https://www.trampofy.com.br${PUBLIC_ROUTES.login}`)
+    expect(urls).not.toContain(`https://www.trampofy.com.br${PUBLIC_ROUTES.signup}`)
+    expect(urls).not.toContain(`https://www.trampofy.com.br${PUBLIC_ROUTES.checkout}`)
+    expect(urls).not.toContain("https://www.trampofy.com.br/sso-callback")
   })
 
   it("uses a stable lastModified value across calls", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://www.curria.com.br"
+    process.env.NEXT_PUBLIC_SITE_URL = "https://www.trampofy.com.br"
 
     const firstRun = sitemap()
     const secondRun = sitemap()
@@ -51,11 +51,11 @@ describe("sitemap", () => {
   })
 
   it("generates absolute www URLs for every sitemap entry", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://www.curria.com.br/"
+    process.env.NEXT_PUBLIC_SITE_URL = "https://www.trampofy.com.br/"
 
     const urls = sitemap().map((entry) => entry.url)
 
     expect(urls).toHaveLength(sitemapRoutes.length)
-    expect(urls.every((url) => url.startsWith("https://www.curria.com.br"))).toBe(true)
+    expect(urls.every((url) => url.startsWith("https://www.trampofy.com.br"))).toBe(true)
   })
 })

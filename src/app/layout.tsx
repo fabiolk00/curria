@@ -16,14 +16,21 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 const baseUrl = getSiteUrl()
 const imageUrl = `${baseUrl}/og-image.svg`
+const siteTitle = "Trampofy - Currículo guiado por IA para cada vaga"
+const siteDescription =
+  "Analise vagas, ajuste seu currículo para ATS e gere versões mais alinhadas com cada oportunidade usando IA."
 
 export const metadata: Metadata = {
-  title: "CurrIA - Consiga mais entrevistas",
-  description: "Consiga mais entrevistas.",
-  applicationName: "CurrIA",
-  authors: [{ name: "CurrIA", url: baseUrl }],
-  creator: "CurrIA",
-  publisher: "CurrIA",
+  title: siteTitle,
+  description: siteDescription,
+  applicationName: "Trampofy",
+  authors: [{ name: "Trampofy", url: baseUrl }],
+  creator: "Trampofy",
+  publisher: "Trampofy",
+  icons: {
+    icon: [{ url: "/trampofy-icon.png", type: "image/png" }],
+    apple: [{ url: "/trampofy-icon.png", type: "image/png" }],
+  },
   verification: {
     google: "PPOK95ojSMP50nd8OtAHu6nEvLzJFhzNcMU6ApjPII0",
   },
@@ -43,22 +50,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: baseUrl,
-    title: "CurrIA - Consiga mais entrevistas.",
-    description: "Consiga mais entrevistas.",
-    siteName: "CurrIA",
+    title: siteTitle,
+    description: siteDescription,
+    siteName: "Trampofy",
     images: [
       {
         url: imageUrl,
         width: 1200,
         height: 630,
-        alt: "CurrIA - Consiga mais entrevistas.",
+        alt: siteTitle,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CurrIA - Consiga mais entrevistas.",
-    description: "Consiga mais entrevistas.",
+    title: siteTitle,
+    description: siteDescription,
     images: [imageUrl],
   },
   alternates: {

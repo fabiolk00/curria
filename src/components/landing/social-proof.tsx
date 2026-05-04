@@ -1,8 +1,7 @@
-"use client"
+﻿"use client"
 
 import { motion } from "motion/react"
 
-import { BrandText } from "@/components/brand-wordmark"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Star, TrendingUp, Users, Briefcase, Quote } from "lucide-react"
@@ -14,7 +13,7 @@ const testimonials = [
     image: "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHdvbWFufGVufDF8fHx8MTc3NTA2MTYxNnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     result: "Recebi 5 entrevistas em 2 semanas",
     content:
-      "Eu não entendia por que não avançava nas vagas. Depois que o CurrIA ajustou meu currículo para o ATS, comecei a receber retorno muito mais rápido.",
+      "Eu não entendia por que não avançava nas vagas. Depois que o Trampofy ajustou meu currículo para o ATS, comecei a receber retorno muito mais rápido.",
   },
   {
     name: "Carlos Mendes",
@@ -118,7 +117,7 @@ export default function SocialProof() {
                     &ldquo;{testimonial.result}&rdquo;
                   </h4>
                   <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
-                    <BrandText text={testimonial.content} className="font-medium text-foreground" />
+                    <span className="font-medium text-foreground">{testimonial.content}</span>
                   </p>
 
                   <div className="flex items-center gap-4 mt-auto">
@@ -140,3 +139,4 @@ export default function SocialProof() {
     </section>
   )
 }
+

@@ -237,7 +237,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       })
     }
 
-    const userName = user?.fullName ?? user?.firstName ?? 'Usuario CurrIA'
+    const userName = user?.fullName ?? user?.firstName ?? 'Usuario Trampofy'
     const userEmail = user?.emailAddresses[0]?.emailAddress ?? null
     const successUrl = buildAppUrl(PROFILE_SETUP_PATH)
     const pricingUrl = buildAppUrl(PUBLIC_SECTION_ROUTES.pricing)

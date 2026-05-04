@@ -154,7 +154,7 @@ describe("SettingsPage", () => {
     render(jsx)
 
     expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument()
-    expect(screen.getByText("Gerencie seu perfil CurrIA")).toBeInTheDocument()
+    expect(screen.getByText("Gerencie seu perfil Trampofy")).toBeInTheDocument()
     expect(screen.getByLabelText("Avatar do perfil")).toHaveTextContent("MS")
     expect(screen.getByText("Nome")).toBeInTheDocument()
     expect(screen.getByText("Maria")).toBeInTheDocument()

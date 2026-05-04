@@ -36,7 +36,7 @@ export const dashboardWelcomeGuideSteps: DashboardWelcomeGuideStepDefinition[] =
     id: "settings",
     title: "Configurações",
     description:
-      "Ajuste seu plano, créditos e preferências de conta para manter o controle do uso do CurrIA.",
+      "Ajuste seu plano, créditos e preferências de conta para manter o controle do uso do Trampofy.",
     targetId: dashboardWelcomeGuideTargets.settingsNav,
     path: DASHBOARD_WELCOME_GUIDE_SETTINGS_PATH,
     preferredSide: "right",

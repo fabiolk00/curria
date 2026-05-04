@@ -1,21 +1,21 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useState } from "react"
 import { UserButton, useAuth } from "@clerk/nextjs"
 import {
-  Menu,
-  ChevronDown,
-  X,
-  Code2,
   BarChart2,
-  Megaphone,
   Briefcase,
+  ChevronDown,
+  Code2,
+  Database,
+  Megaphone,
+  Menu,
   TrendingUp,
   Users,
   Wallet,
-  Database,
+  X,
 } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
 
 import Logo from "@/components/logo"
 import { Button } from "@/components/ui/button"
@@ -135,11 +135,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
             : "shadow-[0_2px_16px_rgba(0,0,0,0.06)]",
         )}
       >
-        <div className="flex h-14 items-center justify-between px-4 md:px-5">
-          <div className="flex items-center gap-7">
-            <Logo />
+        <div className="flex h-16 items-center justify-between px-4 md:h-[72px] md:px-6">
+          <div className="flex min-w-0 items-center gap-6 lg:gap-8">
+            <Logo
+              className="shrink-0"
+              textClassName="text-[46px] md:text-[54px]"
+              iconClassName="max-h-12 md:max-h-14"
+            />
 
-            <nav className="hidden items-center gap-1 md:flex">
+            <nav className="hidden min-w-0 items-center gap-1 lg:flex">
               <Link
                 href={atsLink.href}
                 className="rounded-lg px-3 py-1.5 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted/60 hover:text-foreground"
@@ -208,46 +212,46 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {showAuthButtons && (
+            {showAuthButtons ? (
               <>
                 <Button
                   asChild
                   variant="ghost"
                   size="sm"
-                  className="hidden rounded-xl text-sm font-medium text-foreground hover:bg-muted/60 hover:text-foreground sm:flex"
+                  className="hidden rounded-xl text-sm font-medium text-foreground hover:bg-muted/60 hover:text-foreground lg:flex"
                 >
                   <Link href="/entrar">Entrar</Link>
                 </Button>
                 <Button
                   asChild
                   size="sm"
-                  className="hidden rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:inline-flex"
+                  className="hidden rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md lg:inline-flex"
                 >
                   <Link href="/criar-conta">Criar conta</Link>
                 </Button>
                 <Button
                   asChild
                   size="sm"
-                  className="rounded-xl px-3 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:hidden"
+                  className="rounded-xl px-3 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md lg:hidden"
                 >
                   <Link href="/criar-conta" data-testid="mobile-signup-link">
                     Criar conta
                   </Link>
                 </Button>
               </>
-            )}
+            ) : null}
 
-            {isLoaded && isSignedIn && (
+            {isLoaded && isSignedIn ? (
               <UserButton
                 afterSignOutUrl="/"
                 appearance={{ elements: { avatarBox: "h-8 w-8" } }}
               />
-            )}
+            ) : null}
 
             <Button
               variant="ghost"
               size="icon"
-              className="ml-1 rounded-xl md:hidden"
+              className="ml-1 rounded-xl lg:hidden"
               onClick={() => {
                 onMenuClick?.()
                 setMobileOpen((value) => {
@@ -265,8 +269,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {mobileOpen && (
-          <div className="border-t border-border/40 px-4 pb-4 pt-3 md:hidden">
+        {mobileOpen ? (
+          <div className="border-t border-border/40 px-4 pb-4 pt-3 lg:hidden">
             <nav className="flex flex-col gap-1">
               <Link
                 href={atsLink.href}
@@ -290,7 +294,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 />
               </button>
 
-              {mobileAreasOpen && (
+              {mobileAreasOpen ? (
                 <div className="mt-1 flex flex-col gap-1">
                   {mobileDropdownItems.map((item) => (
                     <Link
@@ -309,7 +313,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     </Link>
                   ))}
                 </div>
-              )}
+              ) : null}
 
               <Link
                 href={pricingLink.href}
@@ -319,7 +323,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 {pricingLink.label}
               </Link>
 
-              {showAuthButtons && (
+              {showAuthButtons ? (
                 <div className="mt-4 flex flex-col gap-2 border-t border-border/40 pt-4">
                   <Button asChild variant="outline" className="w-full rounded-xl text-foreground">
                     <Link href="/entrar" onClick={closeMobileMenu}>
@@ -332,10 +336,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     </Link>
                   </Button>
                 </div>
-              )}
+              ) : null}
             </nav>
           </div>
-        )}
+        ) : null}
       </header>
     </div>
   )

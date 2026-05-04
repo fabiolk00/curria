@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { CheckCircle2 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import Logo from "@/components/logo"
@@ -11,12 +10,6 @@ function buildAuthModeHref(path: "/entrar" | "/criar-conta", redirectTo?: string
 
   return `${path}?redirect_to=${encodeURIComponent(redirectTo)}`
 }
-
-const features = [
-  "Continue do ponto em que parou.",
-  "Descubra o que melhorar no currículo com ajuda da IA.",
-  "Suas análises ATS e PDFs ficam salvos na conta.",
-]
 
 export default function AuthShell({
   mode,
@@ -32,92 +25,103 @@ export default function AuthShell({
   redirectTo?: string | null
 }) {
   return (
-    <div className="flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
-      <section className="relative hidden overflow-hidden bg-gradient-to-br from-foreground via-foreground to-foreground/90 lg:flex lg:h-full lg:w-1/2">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-violet-900/20" />
+    <main className="flex h-[100dvh] overflow-hidden flex-col items-center bg-gray-50 px-[clamp(0.75rem,2vw,3rem)] py-[clamp(0.5rem,1.6vh,1.5rem)] text-slate-900 selection:bg-gray-200 selection:text-gray-900 md:bg-white">
+      <div className="mb-[clamp(0.25rem,1.4vh,1.25rem)] flex shrink-0 items-center justify-center">
+        <Logo
+          linkTo="/"
+          className="justify-center"
+          textClassName="text-[clamp(42px,8vh,82px)]"
+          iconClassName="max-h-[clamp(2.625rem,8vh,5.125rem)]"
+        />
+      </div>
 
-        <div className="relative z-10 flex w-full flex-col justify-between p-8 xl:p-12">
-          <div className="flex items-center">
-            <Logo
-              linkTo="/"
-              className="items-center gap-2"
-              iconClassName="h-10 w-10"
-              textClassName="text-xl text-white"
-            />
-          </div>
-
-          <div className="flex max-w-lg flex-1 flex-col justify-center py-6 xl:py-0">
-            <h1 className="mb-5 text-3xl font-bold leading-tight text-white xl:mb-6 xl:text-5xl">
-              {"Pare de enviar currículos genéricos."}
-            </h1>
-            <p className="mb-3 text-base leading-relaxed text-white/70 xl:mb-4 xl:text-lg">
-              {"Deixe seu currículo mais claro para o ATS e aumente suas chances de entrevista."}
-            </p>
-            <p className="text-sm text-white xl:text-base">
-              {"Seu currículo precisa mostrar rápido por que você merece avançar."}
-            </p>
-          </div>
-
-          <div className="space-y-3 xl:space-y-4">
-            {features.map((feature) => (
+      <section className="flex min-h-0 w-full max-w-[1120px] flex-1 flex-col overflow-hidden rounded-[clamp(16px,2vw,28px)] border border-gray-200/80 bg-white shadow-sm md:flex-row md:shadow-[0_2px_40px_-12px_rgba(0,0,0,0.04)]">
+        <div className="relative flex min-h-0 flex-1 flex-col border-gray-100/70 p-[clamp(1rem,3vh,3.5rem)] md:border-r">
+          <div className="mb-[clamp(0.75rem,2vh,1.75rem)] flex w-full shrink-0 justify-center">
+            <div className="relative flex w-full max-w-[280px] rounded-xl bg-gray-100/80 p-1">
               <div
-                key={feature}
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm xl:gap-4 xl:p-4"
-              >
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-violet-400" />
-                <span className="text-sm text-white/90">{feature}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-muted/30 px-6 py-6 lg:h-full lg:w-1/2 lg:px-10 lg:py-8 xl:px-12 xl:py-10">
-        <div className="w-full max-w-lg rounded-xl border border-border/50 bg-card shadow-xl">
-          <div className="p-8">
-            <div className="mb-8 flex items-center justify-center">
-              <Logo
-                linkTo="/"
-                className="items-center gap-2"
-                iconClassName="h-10 w-10"
-                textClassName="text-xl"
+                className={`absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-lg bg-[#111] shadow-sm transition-transform duration-300 ease-in-out ${
+                  mode === "login" ? "translate-x-0" : "translate-x-[calc(100%+8px)]"
+                }`}
               />
-            </div>
-
-            <div className="mb-8 flex items-center gap-2 rounded-xl bg-muted p-1.5">
               <Link
                 href={buildAuthModeHref("/entrar", redirectTo)}
-                className={`flex-1 rounded-lg px-4 py-3 text-center text-sm font-medium transition-all ${
-                  mode === "login"
-                    ? "bg-foreground text-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`z-10 flex-1 rounded-lg py-2 text-center text-[14px] font-semibold transition-colors duration-300 ${
+                  mode === "login" ? "text-white" : "text-gray-500 hover:text-gray-900"
                 }`}
               >
                 Entrar
               </Link>
               <Link
                 href={buildAuthModeHref("/criar-conta", redirectTo)}
-                className={`flex-1 rounded-lg px-4 py-3 text-center text-sm font-medium transition-all ${
-                  mode === "signup"
-                    ? "bg-foreground text-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`z-10 flex-1 rounded-lg py-2 text-center text-[14px] font-semibold transition-colors duration-300 ${
+                  mode === "signup" ? "text-white" : "text-gray-500 hover:text-gray-900"
                 }`}
               >
                 Criar conta
               </Link>
             </div>
+          </div>
 
-            <div className="mb-8 text-center">
-              <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          <div className="mx-auto flex min-h-0 w-full max-w-[360px] flex-1 flex-col justify-center [&_.space-y-6]:space-y-3 [&_form.space-y-5]:space-y-3 [&_form_.grid.gap-5]:gap-3">
+            <div className="mb-[clamp(0.75rem,1.8vh,1.5rem)] shrink-0 text-center">
+              <h1 className="text-[clamp(1rem,2.2vh,1.25rem)] font-semibold tracking-tight text-gray-950">
+                {title}
+              </h1>
               {description ? (
-                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                <p className="mt-1 text-[clamp(0.75rem,1.55vh,0.875rem)] leading-5 text-gray-500">
+                  {description}
+                </p>
               ) : null}
             </div>
-
             {children}
+          </div>
+
+          <div className="mt-[clamp(0.5rem,1.4vh,1.25rem)] flex w-full shrink-0 justify-center [@media(max-height:760px)]:hidden">
+            <p className="w-full max-w-[360px] text-center text-[11px] leading-[1.45] text-gray-500 md:text-left">
+              Ao informar seu e-mail, você confirma que aceita receber contatos da Trampofy
+              sobre nossos produtos e serviços. Você pode sair da lista a qualquer momento.
+              Saiba mais em nossa{" "}
+              <Link href="/privacidade" className="underline transition-colors hover:text-gray-800">
+                política de privacidade
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+
+        <div className="hidden flex-1 flex-col justify-center bg-gray-50/50 p-[clamp(2rem,5vw,4.5rem)] md:flex md:bg-transparent [@media(max-height:760px)]:hidden">
+          <div className="mx-auto max-w-[420px] text-left">
+            <h2 className="mb-[clamp(0.75rem,2vh,1.5rem)] text-[clamp(1.25rem,3vh,1.75rem)] font-semibold tracking-[-0.01em] text-gray-900">
+              Bem-vindo ao Trampofy.
+            </h2>
+
+            <div className="space-y-[clamp(0.625rem,1.6vh,1.5rem)] text-[clamp(0.8125rem,1.6vh,0.9375rem)] leading-[1.55] text-gray-600">
+              <p>
+                O Trampofy ajuda você a transformar seu currículo real em versões mais
+                claras, honestas e alinhadas para cada vaga.
+              </p>
+
+              <p>
+                Analise a oportunidade, ajuste palavras-chave importantes para ATS e
+                gere um currículo pronto para baixar sem inventar experiências.
+              </p>
+
+              <p>Vamos começar.</p>
+            </div>
           </div>
         </div>
       </section>
-    </div>
+
+      <footer className="mt-[clamp(0.25rem,1.2vh,1rem)] flex shrink-0 flex-wrap items-center justify-center gap-x-5 gap-y-1 pb-[clamp(0rem,0.8vh,0.5rem)] text-[clamp(0.6875rem,1.4vh,0.8125rem)] font-medium text-gray-500 [@media(max-height:700px)]:hidden">
+        <span>© 2026 Trampofy</span>
+        <Link href="/privacidade" className="transition-colors hover:text-gray-800">
+          Política de privacidade
+        </Link>
+        <Link href="/termos" className="transition-colors hover:text-gray-800">
+          Termos de uso
+        </Link>
+      </footer>
+    </main>
   )
 }

@@ -1,4 +1,4 @@
-import { PLANS } from "@/lib/plans"
+﻿import { PLANS } from "@/lib/plans"
 import {
   buildFaqPageJsonLd,
   type FaqPageJsonLd,
@@ -44,13 +44,13 @@ export function buildOrganizationSchema(baseUrl: string): SchemaOrganization {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "CurrIA",
+    name: "Trampofy",
     url: baseUrl,
     description: "Plataforma de otimização de currículos com IA para profissionais brasileiros.",
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
-      email: "support@curria.com.br",
+      email: "support@trampofy.com.br",
     },
   }
 }
@@ -67,7 +67,7 @@ export function buildSoftwareApplicationSchema(baseUrl: string): SchemaSoftwareA
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "CurrIA",
+    name: "Trampofy",
     description: "Otimizador de currículo com inteligência artificial para sistemas ATS.",
     applicationCategory: "BusinessApplication",
     url: baseUrl,
@@ -80,3 +80,4 @@ export function buildFAQSchema(
 ): FaqPageJsonLd {
   return buildFaqPageJsonLd(faqs)
 }
+

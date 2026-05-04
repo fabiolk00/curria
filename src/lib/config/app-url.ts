@@ -11,7 +11,7 @@ function normalizeUrl(value: string | undefined, fallback: string): URL {
 export function getAppUrl(): URL {
   return normalizeUrl(
     process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_BASE_URL || 'https://www.curria.com.br',
+    process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trampofy.com.br',
   )
 }
 

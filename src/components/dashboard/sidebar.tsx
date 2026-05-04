@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
@@ -197,7 +197,7 @@ function SidebarContent({
     || user?.fullName?.trim()
     || user?.firstName?.trim()
     || user?.username
-    || "Conta CurrIA"
+    || "Conta Trampofy"
   const email = userEmail || user?.primaryEmailAddress?.emailAddress || ""
   const initials = getFallbackInitials(displayName, email)
   const currentCredits = creditsRemaining ?? 0
@@ -533,3 +533,4 @@ export function DashboardSidebar({
     </aside>
   )
 }
+

@@ -5,10 +5,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import HeroSection from "./hero-section"
 
-vi.mock("@/components/brand-wordmark", () => ({
-  BrandText: ({ text }: { text: string }) => <span>{text}</span>,
-}))
-
 vi.mock("@/components/landing/floating-decorations", () => ({
   FloatingDecorations: () => <div data-testid="floating-decorations" />,
 }))

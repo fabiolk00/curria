@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://www.curria.com.br"
+const DEFAULT_SITE_URL = "https://www.trampofy.com.br"
 
 export const SEO_LAST_MODIFIED = new Date("2026-04-26T00:00:00.000Z")
 

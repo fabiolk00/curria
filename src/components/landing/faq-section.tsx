@@ -1,10 +1,9 @@
-"use client"
+﻿"use client"
 
 import { AnimatePresence, motion } from "motion/react"
 import { ChevronDown } from "lucide-react"
 import { useState } from "react"
 
-import { BrandText } from "@/components/brand-wordmark"
 import { landingFaqs } from "@/components/landing/faq-content"
 
 export default function FaqSection() {
@@ -24,10 +23,7 @@ export default function FaqSection() {
             Perguntas frequentes
           </h2>
           <p className="text-xl font-medium leading-relaxed text-zinc-500">
-            <BrandText
-              text="Tire suas dúvidas sobre ATS, currículo e como o CurrIA ajuda você a conseguir mais entrevistas."
-              className="font-medium text-zinc-500"
-            />
+            Tire suas dúvidas sobre ATS, currículo e como o Trampofy ajuda você a conseguir mais entrevistas.
           </p>
         </motion.div>
 
@@ -71,10 +67,9 @@ export default function FaqSection() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="px-8 pb-8 pt-0"
                     >
-                      <BrandText
-                        text={faq.answer}
-                        className="text-[15px] font-medium leading-relaxed text-zinc-500"
-                      />
+                      <p className="text-[15px] font-medium leading-relaxed text-zinc-500">
+                        {faq.answer}
+                      </p>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -86,3 +81,4 @@ export default function FaqSection() {
     </section>
   )
 }
+

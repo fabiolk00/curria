@@ -5,8 +5,8 @@ import LoginForm from "@/components/auth/login-form"
 import { buildPublicPageMetadata } from "@/lib/seo/public-metadata"
 
 export const metadata: Metadata = buildPublicPageMetadata({
-  title: "Entrar - CurrIA",
-  description: "Entre na sua conta CurrIA",
+  title: "Entrar - Trampofy",
+  description: "Entre na sua conta Trampofy",
   canonicalPath: "/entrar",
 })
 

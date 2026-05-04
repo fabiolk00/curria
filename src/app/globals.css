@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CurrIA - global product foundation tokens adapted to Tailwind 3 */
+/* Trampofy - global product foundation tokens adapted to Tailwind 3 */
 
 @keyframes curria-route-progress {
   0% {

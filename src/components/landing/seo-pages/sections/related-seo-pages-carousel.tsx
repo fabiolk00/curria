@@ -140,7 +140,7 @@ export default function RelatedSeoPagesCarousel({ currentSlug }: { currentSlug: 
             Guias específicos para diferentes perfis profissionais
           </h2>
           <p className="mt-3 text-base text-muted-foreground md:text-lg">
-            Descubra outras páginas ATS do CurrIA com foco por função, palavras-chave e narrativa profissional.
+            Descubra outras páginas ATS do Trampofy com foco por função, palavras-chave e narrativa profissional.
           </p>
         </div>
 
@@ -190,10 +190,10 @@ export default function RelatedSeoPagesCarousel({ currentSlug }: { currentSlug: 
                       </div>
 
                       <div>
-                        <h3 className="text-2xl font-semibold">{guide.title}</h3>
+                        <h3 className="text-2xl font-semibold !text-white">{guide.title}</h3>
                         <p className="mt-2 text-sm text-white/80">{guide.subtitle}</p>
 
-                        <div className="mt-4 text-sm font-medium text-white/90">Ver guia →</div>
+                        <div className="mt-4 text-sm font-medium text-white/90">Ver guia</div>
                       </div>
                     </div>
                   </Link>
@@ -206,3 +206,4 @@ export default function RelatedSeoPagesCarousel({ currentSlug }: { currentSlug: 
     </section>
   )
 }
+

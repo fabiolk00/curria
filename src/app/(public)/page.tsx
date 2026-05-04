@@ -7,7 +7,7 @@ import Footer from "@/components/landing/footer"
 import FaqSection from "@/components/landing/faq-section"
 import SocialProof from "@/components/landing/social-proof"
 import ExploreResumesCarousel from "@/components/landing/explore-resumes-carousel"
-import HowCurriaSolves from "@/components/landing/how-curria-solves"
+import HowTrampofySolves from "@/components/landing/how-trampofy-solves"
 import { Schema } from "@/components/schema"
 
 export default function LandingPage() {
@@ -19,7 +19,7 @@ export default function LandingPage() {
         <HeroSection />
         <SocialProof />
         <AtsExplainer />
-        <HowCurriaSolves />
+        <HowTrampofySolves />
         <ExploreResumesCarousel />
         <PricingSection />
         <FaqSection />

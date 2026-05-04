@@ -1,4 +1,4 @@
-﻿import type OpenAI from 'openai'
+import type OpenAI from 'openai'
 import { APIError } from 'openai'
 import { createHash } from 'crypto'
 import {
@@ -69,7 +69,7 @@ const MISSING_PROFILE_TEXT = 'Preciso do seu currículo salvo em "Meu Perfil" pa
 const ASYNC_TARGET_RESUME_TOOL = ['create', 'target', 'resume'].join('_')
 const ASYNC_GENERATE_FILE_TOOL = ['generate', 'file'].join('_')
 const RECOVERY_SYSTEM_PROMPT = [
-  'You are CurrIA, a resume optimization assistant for Brazilian users.',
+  'You are Trampofy, a resume optimization assistant for Brazilian users.',
   'Respond in the same language as the user, in plain text, with a short and useful answer.',
   'If the user writes in Portuguese, answer only in Brazilian Portuguese (pt-BR) and do not mix English sentences into the reply.',
   'Do not call tools.',

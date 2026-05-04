@@ -61,7 +61,7 @@ describe('checkout route billing sequencing', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.NEXT_PUBLIC_APP_URL = 'https://app.curria.com.br'
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.trampofy.com.br'
     vi.mocked(getCurrentAppUser).mockResolvedValue({
       id: 'usr_123',
       status: 'active',
@@ -237,7 +237,7 @@ describe('checkout route billing sequencing', () => {
 
     expect(response.status).toBe(200)
     expect(createCheckoutLink).toHaveBeenCalledWith(expect.objectContaining({
-      userName: 'Usuario CurrIA',
+      userName: 'Usuario Trampofy',
       userEmail: null,
       successUrl: buildAppUrl('/profile-setup'),
       cancelUrl: buildAppUrl('/#pricing'),

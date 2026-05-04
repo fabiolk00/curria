@@ -16,7 +16,7 @@ type CreateCheckoutLinkInput = {
 }
 
 function buildPaymentLinkName(planName: string): string {
-  return `CurrIA - ${planName}`
+  return `Trampofy - ${planName}`
 }
 
 function getAsaasHostedOrigin(): string {

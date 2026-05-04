@@ -113,7 +113,7 @@ export function buildLockedPreviewCvState(
     experience: [
       {
         title: headline,
-        company: 'CurrIA Preview',
+        company: 'Trampofy Preview',
         location: 'Remoto',
         startDate: '2026',
         endDate: 'present',
@@ -127,14 +127,14 @@ export function buildLockedPreviewCvState(
     education: [
       {
         degree: 'Versão de demonstração',
-        institution: 'CurrIA',
+        institution: 'Trampofy',
         year: '2026',
       },
     ],
     certifications: [
       {
         name: 'Acesso ao currículo real disponível apenas após upgrade',
-        issuer: 'CurrIA',
+        issuer: 'Trampofy',
         year: '2026',
       },
     ],

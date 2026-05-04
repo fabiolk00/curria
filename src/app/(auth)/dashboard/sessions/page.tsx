@@ -1,8 +1,8 @@
-import { Metadata } from "next"
+﻿import { Metadata } from "next"
 import { SessionsList } from "@/components/dashboard/sessions-list"
 
 export const metadata: Metadata = {
-  title: "Sessões - CurrIA",
+  title: "Sessões - Trampofy",
   description: "Visualize suas sessões anteriores",
 }
 
@@ -16,3 +16,4 @@ export default async function SessionsPage() {
     </div>
   )
 }
+

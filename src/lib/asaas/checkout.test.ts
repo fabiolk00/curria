@@ -68,7 +68,7 @@ describe('Asaas checkout link creation', () => {
       },
       items: [
         {
-          name: `CurrIA - ${PLANS.unit.name}`,
+          name: `Trampofy - ${PLANS.unit.name}`,
           description: PLANS.unit.description,
           quantity: 1,
           value: 19.90,
@@ -108,7 +108,7 @@ describe('Asaas checkout link creation', () => {
       },
       items: [
         {
-          name: `CurrIA - ${PLANS.unit.name}`,
+          name: `Trampofy - ${PLANS.unit.name}`,
           description: PLANS.unit.description,
           quantity: 1,
           value: 19.90,
@@ -161,7 +161,7 @@ describe('Asaas checkout link creation', () => {
       },
       items: [
         {
-          name: `CurrIA - ${PLANS.monthly.name}`,
+          name: `Trampofy - ${PLANS.monthly.name}`,
           description: PLANS.monthly.description,
           quantity: 1,
           value: 39.90,
@@ -205,7 +205,7 @@ describe('Asaas checkout link creation', () => {
       },
       items: [
         {
-          name: `CurrIA - ${PLANS.pro.name}`,
+          name: `Trampofy - ${PLANS.pro.name}`,
           description: PLANS.pro.description,
           quantity: 1,
           value: 59.90,

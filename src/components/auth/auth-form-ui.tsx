@@ -53,7 +53,7 @@ export function AuthField({
   endAdornment?: ReactNode
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Label
         htmlFor={id}
         className="text-sm font-semibold text-foreground"
@@ -69,7 +69,7 @@ export function AuthField({
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
           className={cn(
-            "h-12 rounded-[10px] border-2 border-[#d0d0d5] bg-white px-4 text-base text-foreground shadow-none transition-colors",
+            "h-11 rounded-[10px] border-2 border-[#d0d0d5] bg-white px-4 text-base text-foreground shadow-none transition-colors",
             "placeholder:text-[#727286] focus-visible:border-foreground focus-visible:ring-0",
             endAdornment ? "pr-12" : "",
           )}
@@ -98,7 +98,7 @@ export function AuthGoogleButton({
       type="button"
       onClick={() => void onClick()}
       disabled={pending}
-      className="h-12 w-full rounded-xl bg-foreground text-background shadow-none hover:bg-foreground/90"
+      className="h-11 w-full rounded-xl bg-foreground text-background shadow-none hover:bg-foreground/90"
     >
       {pending ? (
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -144,7 +144,7 @@ export function AuthSubmitButton({
     <Button
       type="submit"
       disabled={pending || disabled}
-      className="h-12 w-full rounded-xl bg-foreground text-background shadow-none hover:bg-foreground/90"
+      className="h-11 w-full rounded-xl bg-foreground text-background shadow-none hover:bg-foreground/90"
     >
       {pending ? (
         <Loader2 className="h-4 w-4 animate-spin" />

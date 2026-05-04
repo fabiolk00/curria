@@ -149,7 +149,7 @@ export const desenvolvedorConfig: RoleLandingConfig = {
   roleShort: "Desenvolvedor",
   visualVariant: "developer",
   meta: {
-    title: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Desenvolvedor que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Aprenda como criar um currículo de desenvolvedor otimizado para ATS. Exemplos de resumo profissional, skills, experiência e palavras-chave para front-end, back-end e full stack.",
     canonical: "/curriculo-desenvolvedor-ats",
   },
@@ -319,7 +319,7 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       {
         role: "Desenvolvedor Full Stack Pleno",
         company: "TechStartup Ltda",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Desenvolvi 12 features críticas em React e TypeScript, aumentando retenção de usuários em 25%",
           "Implementei microsserviços com Node.js e Docker, reduzindo tempo de resposta da API em 60%",
@@ -330,7 +330,7 @@ export const desenvolvedorConfig: RoleLandingConfig = {
       {
         role: "Desenvolvedor Front-end Júnior",
         company: "AgênciaWeb",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Desenvolvi 20+ landing pages responsivas com React e Tailwind CSS",
           "Implementei testes automatizados com Jest, alcançando 85% de cobertura de código",
@@ -346,8 +346,8 @@ export const desenvolvedorConfig: RoleLandingConfig = {
     },
     certifications: [
       "AWS Certified Cloud Practitioner (2023)",
-      "React – Rocketseat (2022)",
-      "JavaScript Algorithms and Data Structures – freeCodeCamp (2020)",
+      "React - Rocketseat (2022)",
+      "JavaScript Algorithms and Data Structures - freeCodeCamp (2020)",
     ],
   },
   improvementSteps: [
@@ -406,7 +406,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
   roleShort: "Analista de Dados",
   visualVariant: "data_analyst",
   meta: {
-    title: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Analista de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Crie um currículo de analista de dados otimizado para ATS. Exemplos de SQL, Python, Power BI, resumo profissional e palavras-chave para passar nos filtros automáticos.",
     canonical: "/curriculo-analista-dados-ats",
   },
@@ -576,7 +576,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
       {
         role: "Analista de Dados Pleno",
         company: "E-commerce Tech S.A.",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Desenvolvi 30+ dashboards em Power BI para marketing, vendas e operações, reduzindo tempo de reporting em 70%",
           "Automatizei pipeline de ETL com Python e Airflow, processando 5M+ registros diários com 99.9% de uptime",
@@ -587,7 +587,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
       {
         role: "Analista de BI Júnior",
         company: "Consultoria Analytics",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Criei 50+ relatórios em Power BI e Tableau para clientes de varejo e finanças",
           "Desenvolvi queries SQL otimizadas, reduzindo tempo de processamento de 4h para 20min",
@@ -604,7 +604,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
     certifications: [
       "Google Data Analytics Professional Certificate (2023)",
       "Microsoft Certified: Power BI Data Analyst Associate (2022)",
-      "SQL for Data Science – Coursera/UC Davis (2021)",
+      "SQL for Data Science - Coursera/UC Davis (2021)",
     ],
   },
   improvementSteps: [
@@ -624,7 +624,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
   faqs: [
     {
       question: "SQL é realmente obrigatório para analista de dados?",
-      answer: "SQL aparece na grande maioria das vagas de dados e é considerado requisito básico. É a linguagem padrão para consultar bancos de dados relacionais, que são usados em praticamente todas as empresas. Mesmo que você use Python no dia a dia, SQL será necessário para extrair dados. Invista em aprender SQL avançado com CTEs, Window Functions e otimização de queries.",
+      answer: "SQL aparece na grande maioria das vagas de dados e é considerado requisito básico. �? a linguagem padrão para consultar bancos de dados relacionais, que são usados em praticamente todas as empresas. Mesmo que você use Python no dia a dia, SQL será necessário para extrair dados. Invista em aprender SQL avançado com CTEs, Window Functions e otimização de queries.",
     },
     {
       question: "Preciso saber programar para ser analista de dados?",
@@ -663,7 +663,7 @@ export const marketingConfig: RoleLandingConfig = {
   roleShort: "Marketing",
   visualVariant: "marketing",
   meta: {
-    title: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Marketing que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Otimize seu currículo de marketing digital para sistemas ATS. Exemplos de resumo profissional, métricas, palavras-chave de performance, SEO e growth para conquistar mais entrevistas.",
     canonical: "/curriculo-marketing-ats",
   },
@@ -744,7 +744,7 @@ export const marketingConfig: RoleLandingConfig = {
     experience: {
       title: "Experiência Profissional",
       bad: "Criei campanhas de marketing digital. Gerenciei as redes sociais da empresa. Trabalhei com e-mail marketing.",
-      good: "Gerenciei R$500K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 30%. Implementei estratégia de SEO que aumentou tráfego orgânico em 150% (50K → 125K visitas/mês). Estruturei automação no HubSpot com 15 fluxos, aumentando conversão de leads em 40%.",
+      good: "Gerenciei R$500K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 30%. Implementei estratégia de SEO que aumentou tráfego orgânico em 150% (50K �?' 125K visitas/mês). Estruturei automação no HubSpot com 15 fluxos, aumentando conversão de leads em 40%.",
     },
   },
   specializations: [
@@ -833,18 +833,18 @@ export const marketingConfig: RoleLandingConfig = {
       {
         role: "Analista de Marketing Digital Pleno",
         company: "SaaS Tech Ltda",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Gerenciei R$300K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 35%",
-          "Implementei estratégia de SEO que aumentou tráfego orgânico em 180% (30K → 85K visitas/mês)",
-          "Estruturei automação no HubSpot com 20 fluxos de nurturing, aumentando conversão MQL→SQL em 45%",
+          "Implementei estratégia de SEO que aumentou tráfego orgânico em 180% (30K �?' 85K visitas/mês)",
+          "Estruturei automação no HubSpot com 20 fluxos de nurturing, aumentando conversão MQL�?'SQL em 45%",
           "Conduzi 50+ testes A/B em landing pages, aumentando taxa de conversão de 2% para 4.5%",
         ],
       },
       {
         role: "Analista de Marketing Júnior",
         company: "E-commerce Fashion S.A.",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Gerenciei campanhas de Google Shopping e Meta Ads com budget de R$150K/mês",
           "Criei e otimizei 100+ anúncios, melhorando CTR médio de 1.2% para 2.8%",
@@ -933,7 +933,7 @@ export const customerSuccessConfig: RoleLandingConfig = {
   roleShort: "Customer Success",
   visualVariant: "customer_success",
   meta: {
-    title: "Currículo para Customer Success que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Customer Success que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Crie um currículo de Customer Success otimizado para ATS. Veja exemplos com onboarding, retenção, churn, NPS, expansão de receita, CRM e lifecycle para conquistar mais entrevistas.",
     canonical: "/curriculo-customer-success-ats",
   },
@@ -1103,7 +1103,7 @@ export const customerSuccessConfig: RoleLandingConfig = {
       {
         role: "Customer Success Manager Pleno",
         company: "SaaS Growth Tech",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Gerenciei carteira de 95 clientes mid-market e enterprise, reduzindo churn em 24% e elevando retenção anual para 93%",
           "Conduzi onboarding de 50+ contas por trimestre, reduzindo time to value em 35% e aumentando adoção inicial do produto em 40%",
@@ -1114,7 +1114,7 @@ export const customerSuccessConfig: RoleLandingConfig = {
       {
         role: "Analista de Customer Success",
         company: "Hub Solutions Brasil",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Acompanhei carteira de 60 clientes SMB com foco em onboarding, suporte consultivo e retenção",
           "Contribuí para aumento de NPS de 58 para 70 com melhoria de processos e comunicação proativa",
@@ -1129,7 +1129,7 @@ export const customerSuccessConfig: RoleLandingConfig = {
       year: "2019",
     },
     certifications: [
-      "Customer Success Manager Certification – SuccessHACKER (2023)",
+      "Customer Success Manager Certification - SuccessHACKER (2023)",
       "HubSpot Customer Success Certification (2022)",
       "Salesforce Administrator Basics (2021)",
     ],
@@ -1202,7 +1202,7 @@ export const productManagerConfig: RoleLandingConfig = {
   roleShort: "Product Manager",
   visualVariant: "product_manager",
   meta: {
-    title: "Currículo para Product Manager que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Product Manager que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Crie um currículo de Product Manager otimizado para ATS. Veja exemplos com discovery, roadmap, priorização, métricas de produto e impacto em negócio para conquistar mais entrevistas.",
     canonical: "/curriculo-product-manager-ats",
   },
@@ -1372,7 +1372,7 @@ export const productManagerConfig: RoleLandingConfig = {
       {
         role: "Product Manager Pleno",
         company: "SaaS Product Labs",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Liderei roadmap de produto B2B com foco em expansão e retenção, aumentando adoção de feature estratégica em 35%",
           "Conduzi discovery com clientes enterprise e usuários finais, validando oportunidades que resultaram em redução de churn de 16%",
@@ -1383,7 +1383,7 @@ export const productManagerConfig: RoleLandingConfig = {
       {
         role: "Associate Product Manager",
         company: "Growth Tech Brasil",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Apoiei discovery, priorização e acompanhamento de métricas em produto digital voltado para SMBs",
           "Estruturei dashboards de produto e análises em GA4 e Amplitude para monitorar retenção e conversão",
@@ -1398,7 +1398,7 @@ export const productManagerConfig: RoleLandingConfig = {
       year: "2019",
     },
     certifications: [
-      "Product Management Certification – Product School (2023)",
+      "Product Management Certification - Product School (2023)",
       "Amplitude Product Analytics Certification (2022)",
       "Google Analytics 4 Certification (2022)",
     ],
@@ -1471,7 +1471,7 @@ export const vendasConfig: RoleLandingConfig = {
   roleShort: "Vendas",
   visualVariant: "sales",
   meta: {
-    title: "Currículo para Vendas que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Vendas que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Crie um currículo de vendas otimizado para ATS. Veja exemplos com metas batidas, receita gerada, conversão, CRM e pipeline para conquistar mais entrevistas.",
     canonical: "/curriculo-vendas-ats",
   },
@@ -1641,7 +1641,7 @@ export const vendasConfig: RoleLandingConfig = {
       {
         role: "Executivo de Vendas Pleno",
         company: "SaaS Revenue Tech",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Gerei R$2,8M em receita anual e bati 132% da meta em 2023",
           "Aumentei conversão de SQL para fechamento em 21% com melhoria na qualificação e negociação",
@@ -1652,7 +1652,7 @@ export const vendasConfig: RoleLandingConfig = {
       {
         role: "Sales Development / Account Executive",
         company: "Growth Comercial Brasil",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Bati 118% da meta anual e contribui com R$1,6M em receita no período",
           "Estruturei cadências outbound com HubSpot e LinkedIn Sales Navigator, elevando taxa de resposta em 27%",
@@ -1740,7 +1740,7 @@ export const financeiroConfig: RoleLandingConfig = {
   roleShort: "Financeiro",
   visualVariant: "finance",
   meta: {
-    title: "Currículo para Analista Financeiro que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Analista Financeiro que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Crie um currículo de analista financeiro otimizado para ATS. Veja exemplos com DRE, fluxo de caixa, orçamento, KPIs e impacto financeiro para conquistar mais entrevistas.",
     canonical: "/curriculo-financeiro-ats",
   },
@@ -1910,7 +1910,7 @@ export const financeiroConfig: RoleLandingConfig = {
       {
         role: "Analista Financeiro Pleno",
         company: "Grupo Finance Corp",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Reduzi custos operacionais em R$900K/ano com revisão de contratos, centros de custo e análises de eficiência",
           "Melhorei a precisão do forecast em 20% com revisão de premissas financeiras e modelagem em Excel",
@@ -1921,7 +1921,7 @@ export const financeiroConfig: RoleLandingConfig = {
       {
         role: "Analista Financeiro Júnior",
         company: "Empresa Brasil Holding",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Atuei em fechamento financeiro, conciliações e relatórios de fluxo de caixa mensal",
           "Automatizei controles em Excel, reduzindo tempo de preparação de relatórios em 30%",
@@ -2010,7 +2010,7 @@ export const engenheiroDadosConfig: RoleLandingConfig = {
   visualVariant: "data_engineer",
 
   meta: {
-    title: "Currículo para Engenheiro de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | CurrIA",
+    title: "Currículo para Engenheiro de Dados que Passa no ATS (Guia, Exemplo e Palavras-chave) | Trampofy",
     description: "Aprenda como criar um currículo de engenheiro de dados otimizado para ATS. Veja exemplos com Spark, Airflow, Databricks, pipelines, ETL e cloud.",
     canonical: "/curriculo-engenheiro-de-dados-ats",
   },
@@ -2190,7 +2190,7 @@ export const engenheiroDadosConfig: RoleLandingConfig = {
       {
         role: "Engenheiro de Dados Pleno",
         company: "Data Platform Solutions",
-        period: "Jan 2022 – Presente",
+        period: "Jan 2022 - Presente",
         bullets: [
           "Desenhei pipelines distribuídos em Spark e Databricks processando 8TB/dia com SLA de 99,9%",
           "Reduzi tempo médio de processamento em 45% com otimização de jobs PySpark e particionamento inteligente",
@@ -2201,7 +2201,7 @@ export const engenheiroDadosConfig: RoleLandingConfig = {
       {
         role: "Engenheiro de Dados Júnior",
         company: "Analytics Infra Brasil",
-        period: "Mar 2020 – Dez 2021",
+        period: "Mar 2020 - Dez 2021",
         bullets: [
           "Desenvolvi pipelines ETL com Python e SQL para ingestão e transformação de múltiplas fontes de dados",
           "Automatizei rotinas de carga e controle de qualidade com redução de 30% no tempo operacional",
@@ -2227,7 +2227,7 @@ export const engenheiroDadosConfig: RoleLandingConfig = {
     { title: "Inclua escala e contexto", description: "Volume de dados, frequência dos jobs, SLA, throughput ou latência ajudam o ATS a entender a complexidade do seu trabalho." },
     { title: "Explique arquitetura e camadas", description: "Data lake, warehouse, ingestão, transformação, serving e observabilidade fortalecem muito o posicionamento técnico." },
     { title: "Quantifique impacto técnico", description: "Mostre tempo economizado, falhas reduzidas, custo otimizado, performance melhorada ou confiabilidade aumentada." },
-    { title: "Diferencie engenharia de análise", description: "Destaque pipelines, arquitetura, automação, cloud e confiabilidade — não apenas relatórios ou dashboards." },
+    { title: "Diferencie engenharia de análise", description: "Destaque pipelines, arquitetura, automação, cloud e confiabilidade - não apenas relatórios ou dashboards." },
     { title: "Adapte ao contexto da vaga", description: "Se a vaga é batch, streaming, platform ou analytics engineering, ajuste a linguagem e os exemplos do currículo para esse foco." },
   ],
 
@@ -2313,3 +2313,4 @@ export const allRoleLandingConfigs: RoleLandingConfig[] = [
   financeiroConfig,
   engenheiroDadosConfig,
 ]
+

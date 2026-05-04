@@ -24,7 +24,7 @@ export function buildRoleLandingMetadata(slug: string): Metadata {
       url: `${baseUrl}${config.meta.canonical}`,
       title: config.meta.title,
       description: config.meta.description,
-      siteName: "CurrIA",
+      siteName: "Trampofy",
     },
     twitter: {
       card: "summary_large_image",

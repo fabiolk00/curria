@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { DASHBOARD_RESUMES_HISTORY_PATH } from "@/lib/routes/app"
 
 export const metadata: Metadata = {
-  title: "Minhas Vagas - CurrIA",
+  title: "Minhas Vagas - Trampofy",
   description: "Acompanhe manualmente o status das suas candidaturas.",
 }
 

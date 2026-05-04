@@ -9,8 +9,8 @@ import { PUBLIC_ROUTES, PUBLIC_SECTION_ROUTES } from "@/lib/routes/public"
 import { buildPublicPageMetadata } from "@/lib/seo/public-metadata"
 
 export const metadata: Metadata = buildPublicPageMetadata({
-  title: "Finalizar compra - CurrIA",
-  description: "Complete seus dados de faturamento para continuar a assinatura da CurrIA.",
+  title: "Finalizar compra - Trampofy",
+  description: "Complete seus dados de faturamento para continuar a assinatura da Trampofy.",
   canonicalPath: "/finalizar-compra",
 })
 

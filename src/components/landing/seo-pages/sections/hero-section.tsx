@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+﻿import { motion } from "motion/react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import type { SEOPageProps } from "../seo-page-template";
 
@@ -63,7 +63,7 @@ export default function HeroSection({ theme, content }: { theme: SEOPageProps['t
               <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F] border border-[#1AAB29]" />
             </div>
             <div className="mx-auto flex h-6 px-3 rounded-md bg-zinc-100/80 items-center justify-center text-[11px] text-zinc-400 font-mono tracking-tight">
-              curria.com.br/verificador-ats
+              trampofy.com.br/verificador-ats
             </div>
             <div className="w-10" /> {/* Spacer for balance */}
           </div>
@@ -75,4 +75,5 @@ export default function HeroSection({ theme, content }: { theme: SEOPageProps['t
     </section>
   );
 }
+
 

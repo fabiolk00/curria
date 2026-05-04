@@ -3,8 +3,6 @@
 import { motion } from "motion/react"
 import { FileSearch, Sparkles, Target } from "lucide-react"
 
-import BrandWordmark from "@/components/brand-wordmark"
-
 const steps = [
   {
     icon: FileSearch,
@@ -26,7 +24,7 @@ const steps = [
   },
 ]
 
-export default function HowCurriaSolves() {
+export default function HowTrampofySolves() {
   return (
     <section className="bg-muted/20 py-24">
       <div className="container mx-auto px-4">
@@ -73,3 +71,4 @@ export default function HowCurriaSolves() {
     </section>
   )
 }
+

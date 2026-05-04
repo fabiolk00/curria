@@ -17,7 +17,6 @@ import {
   X,
 } from "lucide-react"
 
-import BrandWordmark from "@/components/brand-wordmark"
 import Footer from "@/components/landing/footer"
 import Header from "@/components/landing/header"
 
@@ -265,7 +264,7 @@ export default function OQueEAtsPageClient() {
                       <Sparkles className="h-8 w-8" />
                     </div>
                     <h2 className="mb-6 text-3xl font-bold tracking-tight md:text-5xl">
-                      Como a <BrandWordmark /> te ajuda a vencer
+                      Como a Trampofy te ajuda a vencer
                     </h2>
                     <p className="text-lg text-muted-foreground md:text-xl">
                       Nossa IA faz a engenharia reversa do ATS para otimizar seu currículo especificamente para a vaga que você quer conquistar.

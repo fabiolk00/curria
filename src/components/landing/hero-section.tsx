@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
-import { BrandText } from "@/components/brand-wordmark"
 import { FloatingDecorations } from "@/components/landing/floating-decorations"
 import { BeforeAfterComparison } from "@/components/shared/before-after-comparison"
 import { Button } from "@/components/ui/button"
@@ -28,7 +27,7 @@ export default function HeroSection() {
                 </span>
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg md:text-lg">
-                <BrandText text="Descubra por que seu currículo está sendo ignorado e o que corrigir para passar no ATS." />
+                Descubra por que seu currículo está sendo ignorado e o que corrigir para passar no ATS.
               </p>
             </div>
           </div>
