@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState, type ReactNode } from "react"
 
-import Logo from "@/components/logo"
+import Header from "@/components/landing/header"
 
 type TermsSection = {
   id: string
@@ -232,8 +232,16 @@ const TERMS_SECTIONS: TermsSection[] = [
   },
 ]
 
+function formatCurrentMonthYear() {
+  return new Date().toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  })
+}
+
 export function TermsPage() {
   const [activeId, setActiveId] = useState(TERMS_SECTIONS[0].id)
+  const lastUpdated = formatCurrentMonthYear()
 
   useEffect(() => {
     const visibilityMap = new Map<string, number>()
@@ -274,18 +282,11 @@ export function TermsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-4 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Logo size="sm" />
-          <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-            Voltar ao site
-          </Link>
-        </div>
-      </header>
+      <Header />
 
-      <div className="flex">
+      <div className="flex pt-24 sm:pt-28">
         <aside className="hidden w-56 shrink-0 md:block lg:w-64">
-          <div className="sticky top-[65px] h-[calc(100vh-65px)] overflow-y-auto border-r border-border px-5 py-10">
+          <div className="sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto border-r border-border px-5 py-10">
             <nav aria-label="Seções dos Termos">
               <ul className="space-y-1">
                 {TERMS_SECTIONS.map((section) => (
@@ -316,7 +317,7 @@ export function TermsPage() {
             <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
               Ao criar uma conta na CurrIA você concorda em estar vinculado aos nossos Termos de Uso.
             </p>
-            <p className="mt-3 text-sm text-muted-foreground">Última atualização: maio de 2025</p>
+            <p className="mt-3 text-sm text-muted-foreground">Última atualização: {lastUpdated}</p>
 
             <div className="mt-12 space-y-14">
               {TERMS_SECTIONS.map((section) => (
