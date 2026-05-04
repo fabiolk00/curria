@@ -1,6 +1,6 @@
 export type AuthProvider = 'clerk'
 
-export type SignupMethod = 'email' | 'google' | 'unknown'
+export type SignupMethod = 'email' | 'google' | 'linkedin' | 'unknown'
 
 export type UserStatus = 'active' | 'disabled'
 

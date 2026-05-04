@@ -331,4 +331,37 @@ describe('clerk webhook route', () => {
       signupMethod: 'google',
     })
   })
+
+  it('stores linkedin as the signup method when a user.created event has a LinkedIn external account', async () => {
+    mockWebhookVerify.mockReturnValue({
+      type: 'user.created',
+      data: {
+        id: 'user_linkedin',
+        first_name: 'Bruno',
+        last_name: 'Souza',
+        email_addresses: [{
+          email_address: 'bruno@example.com',
+          verification: { status: 'verified' },
+        }],
+        external_accounts: [{ provider: 'oauth_linkedin_oidc' }],
+      },
+    })
+
+    const { POST } = await loadRoute()
+    const response = await POST(new Request('http://localhost/api/webhook/clerk', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'user.created' }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true })
+    expect(mockGetOrCreateAppUserByClerkUserId).toHaveBeenCalledWith('user_linkedin')
+    expect(mockSyncClerkUserProfile).toHaveBeenCalledWith({
+      clerkUserId: 'user_linkedin',
+      displayName: 'Bruno Souza',
+      email: 'bruno@example.com',
+      emailVerifiedAt: expect.any(String),
+      signupMethod: 'linkedin',
+    })
+  })
 })

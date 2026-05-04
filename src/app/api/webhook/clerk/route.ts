@@ -84,6 +84,10 @@ function resolveSignupMethod(data: unknown): SignupMethod {
     return 'google'
   }
 
+  if (providers.some((provider) => provider.toLowerCase().includes('linkedin'))) {
+    return 'linkedin'
+  }
+
   return providers.length > 0 ? 'unknown' : 'email'
 }
 
