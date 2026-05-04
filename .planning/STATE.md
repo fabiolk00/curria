@@ -6,8 +6,8 @@ current_phase: 108
 current_phase_name: adicionar camada dinamica de evidencia semantica para targeted rewrite de job_targeting
 current_plan: 01 completed
 status: verifying
-stopped_at: Completed quick task 260504-04f
-last_updated: "2026-05-04T03:12:40.4559782Z"
+stopped_at: Completed quick task 260504-0fd
+last_updated: "2026-05-04T03:30:19.2672169Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 73
@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: Phase complete — ready for verification
 Last activity: 2026-05-04
-Last Activity Description: Completed quick task 260504-04f: simplified settings into the provided profile-style layout with avatar, name, surname, email, plan, credits, and two recent generated resumes while removing visible Clerk/debug information.
+Last Activity Description: Completed quick task 260504-0fd: added the provided terms page structure as a public `/termos` route with CurrIA logo/branding, canonical metadata, sticky section navigation, and responsive validation.
 
 Progress: [##########] 100%
 
@@ -56,6 +56,7 @@ Baseline carried forward from earlier shipped milestones:
 - Quick 260503-m0c: auth/resume navigation polish, tablet layout scroll fixes, welcome guide order, and loading feedback.
 - Quick 260503-qzm: settings-first account surface for identity, plan/credits, resume actions, billing, activity, support, and safe sensitive actions.
 - Quick 260504-04f: simplified settings profile surface with avatar, identity fields, plan, credits, and two recent generated resumes.
+- Quick 260504-0fd: public terms route rebuilt from provided ZIP structure with CurrIA branding and responsive smoke validation.
 
 ## Accumulated Context
 
@@ -203,6 +204,7 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260504-0fd | Criar rota publica de termos usando ZIP fornecido e adaptar marca CurrIA | 2026-05-04 | b89bf07 | Validated | [260504-0fd-criar-rota-publica-de-termos-usando-zip-](./quick/260504-0fd-criar-rota-publica-de-termos-usando-zip-/) |
 | 260504-04f | Simplificar layout de configuracoes inspirado na referencia com avatar, nome, sobrenome, email, plano, creditos e 2 curriculos recentes | 2026-05-04 | a864143 | Validated | [260504-04f-simplificar-layout-de-configuracoes-insp](./quick/260504-04f-simplificar-layout-de-configuracoes-insp/) |
 | 260503-qzm | Redesign authenticated settings page for CurrIA account, credits, profile and safety | 2026-05-03 | 8beb8d2 | Validated | [260503-qzm-redesign-authenticated-settings-page-int](./quick/260503-qzm-redesign-authenticated-settings-page-int/) |
 | 260503-m0c | Corrigir bugs de UI e redirecionamento: botao voltar ao perfil preto, overflow tablet generate/auth, welcome guide, Google redirect, historico gerar, loading em cliques | 2026-05-03 | 468e44a | Validated | [260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b](./quick/260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b/) |
