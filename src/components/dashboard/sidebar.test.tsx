@@ -99,11 +99,32 @@ describe("DashboardSidebar", () => {
     expect(
       resumesLink.compareDocumentPosition(generateButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0)
+    expect(
+      settingsLink.compareDocumentPosition(profileLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
+    expect(
+      profileLink.compareDocumentPosition(resumesLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
     expect(screen.queryByRole("link", { name: "Sessões" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Nova conversa" })).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Expandir sidebar")).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Recolher sidebar")).not.toBeInTheDocument()
     expect(screen.getByTestId("session-documents-panel")).toHaveAttribute("data-open", "false")
+  })
+
+  it("follows the same order as welcome-guide targets in desktop sidebar", () => {
+    render(<DashboardSidebar />)
+
+    const sidebarTargets = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-dashboard-guide-target]"),
+    ).map((element) => element.getAttribute("data-dashboard-guide-target"))
+
+    expect(sidebarTargets).toEqual([
+      "settings-nav",
+      "profile-nav",
+      "resumes-nav",
+      "generate-resume-nav",
+    ])
   })
 
   it("opens the existing account dropdown on avatar click in collapsed desktop mode", async () => {
