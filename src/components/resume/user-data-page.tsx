@@ -562,6 +562,34 @@ function LinkedInMark({ className }: { className?: string }) {
   )
 }
 
+function ProfileBackButton({
+  onClick,
+  className,
+  "data-testid": dataTestId,
+  "aria-label": ariaLabel,
+}: {
+  onClick: () => void
+  className?: string
+  "data-testid"?: string
+  "aria-label"?: string
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={dataTestId}
+      aria-label={ariaLabel ?? "Voltar ao perfil"}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30",
+        className,
+      )}
+      onClick={onClick}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      Voltar ao perfil
+    </button>
+  )
+}
+
 function ProfileSectionCard({
   title,
   editLabel,
@@ -1674,15 +1702,7 @@ export default function UserDataPage({
         <header className="shrink-0 rounded-3xl border border-border bg-card px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <Button
-                type="button"
-                variant="ghost"
-                className="-ml-3 mb-2 h-8 px-3 text-muted-foreground hover:bg-transparent hover:text-foreground"
-                onClick={handleReturnToProfile}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar ao perfil
-              </Button>
+              <ProfileBackButton onClick={handleReturnToProfile} className="-ml-3" />
               <h1 className="text-xl font-semibold text-foreground">
                 Edite seu currículo base
               </h1>
@@ -1768,15 +1788,7 @@ export default function UserDataPage({
         <header className="shrink-0 rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <Button
-                type="button"
-                variant="ghost"
-                className="-ml-3 mb-2 h-8 px-3 text-slate-500 hover:bg-transparent hover:text-slate-900"
-                onClick={() => setActiveView("profile")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar ao perfil
-              </Button>
+              <ProfileBackButton onClick={() => setActiveView("profile")} className="-ml-3" />
               <Badge
                 data-testid="ats-panel-badge"
                 className="bg-black px-3 py-1 text-xs font-medium text-white hover:bg-black/90"
@@ -1937,17 +1949,11 @@ export default function UserDataPage({
       <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-6 lg:min-h-0 lg:py-5">
         <header className="shrink-0 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="enhancement-back-button"
-              aria-label="Voltar ao perfil"
-              className="-ml-1 h-9 rounded-full bg-black px-4 text-white hover:bg-black/90 hover:text-white"
+            <ProfileBackButton
               onClick={handleReturnToProfile}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao perfil
-            </Button>
+              className="-ml-1"
+              data-testid="enhancement-back-button"
+            />
 
             <div className="text-sm text-slate-500 lg:text-right">
               <span className="font-medium text-slate-900">Modo: {selectedModeLabel}</span>
