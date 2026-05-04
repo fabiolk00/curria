@@ -54,7 +54,7 @@ const TARGET_ROLE_MAX_LENGTH = 72
 const TARGET_ROLE_MAX_WORDS = 12
 const MAX_SESSION_ROLE_LINES = 6
 const GENERIC_TARGET_ROLE_KEYWORDS = [
-  "descricao",
+  "descri\u0063ao",
   "descripcion",
   "requisitos",
   "requisito",

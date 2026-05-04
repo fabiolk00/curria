@@ -92,7 +92,7 @@ const TERMS_SECTIONS: TermsSection[] = [
     ),
   },
   {
-    id: "creditos",
+    id: "cr\u0065ditos",
     label: "Créditos e Planos",
     content: (
       <>

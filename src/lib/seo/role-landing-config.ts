@@ -624,7 +624,7 @@ export const analistaDadosConfig: RoleLandingConfig = {
   faqs: [
     {
       question: "SQL é realmente obrigatório para analista de dados?",
-      answer: "SQL aparece na grande maioria das vagas de dados e é considerado requisito básico. �? a linguagem padrão para consultar bancos de dados relacionais, que são usados em praticamente todas as empresas. Mesmo que você use Python no dia a dia, SQL será necessário para extrair dados. Invista em aprender SQL avançado com CTEs, Window Functions e otimização de queries.",
+      answer: "SQL aparece na grande maioria das vagas de dados e é considerado requisito básico. É a linguagem padrão para consultar bancos de dados relacionais, que são usados em praticamente todas as empresas. Mesmo que você use Python no dia a dia, SQL será necessário para extrair dados. Invista em aprender SQL avançado com CTEs, Window Functions e otimização de queries.",
     },
     {
       question: "Preciso saber programar para ser analista de dados?",
@@ -744,7 +744,7 @@ export const marketingConfig: RoleLandingConfig = {
     experience: {
       title: "Experiência Profissional",
       bad: "Criei campanhas de marketing digital. Gerenciei as redes sociais da empresa. Trabalhei com e-mail marketing.",
-      good: "Gerenciei R$500K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 30%. Implementei estratégia de SEO que aumentou tráfego orgânico em 150% (50K �?' 125K visitas/mês). Estruturei automação no HubSpot com 15 fluxos, aumentando conversão de leads em 40%.",
+      good: "Gerenciei R$500K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 30%. Implementei estratégia de SEO que aumentou tráfego orgânico em 150% (50K para 125K visitas/mês). Estruturei automação no HubSpot com 15 fluxos, aumentando conversão de leads em 40%.",
     },
   },
   specializations: [
@@ -836,8 +836,8 @@ export const marketingConfig: RoleLandingConfig = {
         period: "Jan 2022 - Presente",
         bullets: [
           "Gerenciei R$300K/mês em Google Ads e Meta Ads, alcançando ROAS de 4.5x e reduzindo CAC em 35%",
-          "Implementei estratégia de SEO que aumentou tráfego orgânico em 180% (30K �?' 85K visitas/mês)",
-          "Estruturei automação no HubSpot com 20 fluxos de nurturing, aumentando conversão MQL�?'SQL em 45%",
+          "Implementei estratégia de SEO que aumentou tráfego orgânico em 180% (30K para 85K visitas/mês)",
+          "Estruturei automação no HubSpot com 20 fluxos de nurturing, aumentando conversão MQL para SQL em 45%",
           "Conduzi 50+ testes A/B em landing pages, aumentando taxa de conversão de 2% para 4.5%",
         ],
       },
