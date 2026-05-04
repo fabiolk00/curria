@@ -4,18 +4,20 @@ import type { ReactNode } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
-import { getCurrentAppUser } from "@/lib/auth/app-user"
 import { resolveSessionAtsReadiness } from "@/lib/ats/scoring"
+import { loadOptionalBillingInfo } from "@/lib/asaas/optional-billing-info"
+import { buildResumeGenerationHistoryMetadata } from "@/lib/resume-history/resume-generation-history"
+import { getCurrentAppUser } from "@/lib/auth/app-user"
 import { db } from "@/lib/db/sessions"
 import { PLANS } from "@/lib/plans"
 import { buildResumeComparisonPath } from "@/lib/routes/app"
 import { getExistingUserProfile } from "@/lib/profile/user-profiles"
 import { getFallbackInitials, splitDisplayName } from "@/lib/user/display-name"
+import type { Session } from "@/types/agent"
 
 export const metadata = {
-  title: "Configura\u00e7\u00f5es - CurrIA",
-  description: "Gerencie seu perfil, plano e cr\u00e9ditos no CurrIA",
+  title: "Configurações - CurrIA",
+  description: "Gerencie seu perfil, plano e créditos no CurrIA",
 }
 
 type FieldRowProps = {
@@ -41,42 +43,147 @@ function formatSessionDate(value: Date): string {
 }
 
 function formatCreditCount(credits: number): string {
-  return `${credits} cr\u00e9dito${credits === 1 ? "" : "s"}`
+  return `${credits} crédito${credits === 1 ? "" : "s"}`
 }
 
 function parseWorkflowMode(mode?: string): "ats_enhancement" | "job_targeting" {
   return mode === "job_targeting" ? "job_targeting" : "ats_enhancement"
 }
 
-function getTargetRoleHint(targetJobDescription?: string): string | null {
-  if (!targetJobDescription) {
-    return null
-  }
+const TARGET_ROLE_MAX_LENGTH = 72
+const TARGET_ROLE_MAX_WORDS = 12
+const MAX_SESSION_ROLE_LINES = 6
+const GENERIC_TARGET_ROLE_KEYWORDS = [
+  "descricao",
+  "descripcion",
+  "requisitos",
+  "requisito",
+  "vaga",
+  "vaga alvo",
+  "requisitos da vaga",
+  "requisitos obrigatorios",
+  "responsabilidades",
+  "responsabilidade",
+  "atividades",
+  "resumo",
+  "sobre a vaga",
+  "sobre nos",
+  "sobre o time",
+  "empresa",
+  "qualificacoes",
+  "beneficios",
+  "requisitos tecnicos",
+  "job description",
+  "about the role",
+  "about the job",
+  "job target",
+]
 
-  const firstLine = targetJobDescription.split("\n")[0]?.trim() ?? ""
-  const normalized = firstLine
-    .replace(/^(?:cargo|vaga|position|role|title|funcao|funcao)\s*[:\-]?\s*/i, "")
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
 
-  if (!normalized) {
+function isGenericSectionLabel(value: string): boolean {
+  const normalizedValue = normalizeText(value)
+
+  return (
+    GENERIC_TARGET_ROLE_KEYWORDS.includes(normalizedValue)
+    || /curr[íi]culo\s+para\s+(?:descricao|descricao\s+da\s+vaga|requisitos|requisito|atividade|atividades|resumo|vaga|cargo|vaga\s+alvo)$/i
+      .test(normalizedValue)
+  )
+}
+
+function cleanTargetRole(value: string): string {
+  return value
+    .replace(/^\s*(?:[*\u2022\-]|\d+[.)]\s*)\s*/u, "")
+    .replace(/^(?:cargo|vaga|position|role|title|funcao|função|nome da vaga|t[ií]tulo|titulo)\s*[:=\-]?\s*/iu, "")
+    .replace(/\s+(?:para atuar|responsavel por|responsável por)\s*$/iu, "")
+    .replace(/[.;:|]+$/u, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function hasRoleWords(value: string): boolean {
+  const normalized = normalizeText(value)
+  return !/^(?:we|we're|we are|looking for|buscamos|procuramos|estamos buscando|procurando)\b/u.test(normalized)
+}
+
+function isLikelyRoleLine(value: string): boolean {
+  const targetRole = cleanTargetRole(value)
+
+  if (!targetRole || isGenericSectionLabel(targetRole) || !hasRoleWords(targetRole)) {
+    return false
+  }
+
+  if (targetRole.length > TARGET_ROLE_MAX_LENGTH || targetRole.length < 3) {
+    return false
+  }
+
+  if (/(?:[.!?]|:)/u.test(targetRole)) {
+    return false
+  }
+
+  const wordCount = targetRole.split(/\s+/u).filter(Boolean).length
+  if (wordCount < 2 || wordCount > TARGET_ROLE_MAX_WORDS) {
+    return false
+  }
+
+  return true
+}
+
+function extractTargetRoleFromAgentState(agentState: Session["agentState"]): string | null {
+  const explicitPlanRole = cleanTargetRole(agentState.targetingPlan?.targetRole ?? "")
+  if (explicitPlanRole && isLikelyRoleLine(explicitPlanRole)) {
+    return explicitPlanRole
+  }
+
+  const compatibilityRole = cleanTargetRole(agentState.jobCompatibilityAssessment?.targetRole ?? "")
+  if (compatibilityRole && isLikelyRoleLine(compatibilityRole)) {
+    return compatibilityRole
+  }
+
+  const lines = (agentState.targetJobDescription ?? "")
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  if (lines.length === 0) {
     return null
   }
 
-  return normalized.length > 50 ? `${normalized.slice(0, 47)}...` : normalized
+  const explicitRolePattern = /^\s*(?:cargo|vaga|title|position|role|job title|target role|nome da vaga|t[ií]tulo)\s*[:=\-]\s*(.+?)\s*$/iu
+  for (let index = 0; index < Math.min(lines.length, MAX_SESSION_ROLE_LINES); index += 1) {
+    const explicitMatch = lines[index].match(explicitRolePattern)
+    const explicitCandidate = cleanTargetRole(explicitMatch?.[1] ?? "")
+    if (explicitCandidate && isLikelyRoleLine(explicitCandidate)) {
+      return explicitCandidate
+    }
+  }
+
+  for (let index = 0; index < Math.min(lines.length, MAX_SESSION_ROLE_LINES); index += 1) {
+    const candidate = cleanTargetRole(lines[index])
+    if (isLikelyRoleLine(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
 }
 
 function resolveSessionTitle(input: {
   workflowMode: "ats_enhancement" | "job_targeting"
   targetRoleHint: string | null
 }): string {
-  if (input.workflowMode === "job_targeting") {
-    return input.targetRoleHint
-      ? `Curr\u00edculo para ${input.targetRoleHint}`
-      : "Curr\u00edculo para vaga-alvo"
-  }
-
-  return "Curr\u00edculo ATS otimizado"
+  return buildResumeGenerationHistoryMetadata({
+    workflowMode: input.workflowMode,
+    targetRole: input.targetRoleHint,
+  }).historyTitle
 }
 
 function resolveWorkflowLabel(mode: "ats_enhancement" | "job_targeting"): string {
@@ -111,15 +218,15 @@ export default async function SettingsPage() {
   ])
 
   const displayName = appUser.displayName?.trim()
-  const email = appUser.primaryEmail || appUser.authIdentity.email || "N\u00e3o informado"
+  const email = appUser.primaryEmail || appUser.authIdentity.email || "Não informado"
   const { firstName, lastName } = splitDisplayName(displayName)
   const avatarInitials = getFallbackInitials(displayName, email, "CR")
   const avatarImageUrl = profile?.profile_photo_url ?? null
-  const planName = billingInfo ? PLANS[billingInfo.plan].name : "N\u00e3o informado"
+  const planName = billingInfo ? PLANS[billingInfo.plan].name : "Não informado"
 
   const formattedSessions: FormattedSession[] = sessions.map((session) => {
     const workflowMode = parseWorkflowMode(session.agentState.workflowMode)
-    const targetRoleHint = getTargetRoleHint(session.agentState.targetJobDescription)
+    const targetRoleHint = extractTargetRoleFromAgentState(session.agentState)
 
     return {
       id: session.id,
@@ -165,12 +272,15 @@ export default async function SettingsPage() {
           <FieldRow label="Sobrenome" value={<span className="break-words">{lastName}</span>} />
           <FieldRow label="Email" value={<span className="break-all">{email}</span>} />
           <FieldRow label="Plano" value={planName} />
-          <FieldRow label="Cr\u00e9ditos dispon\u00edveis" value={formatCreditCount(appUser.creditAccount.creditsRemaining)} />
+          <FieldRow
+            label="Créditos disponíveis"
+            value={formatCreditCount(appUser.creditAccount.creditsRemaining)}
+          />
         </section>
 
         <section className="overflow-hidden rounded-[8px] border border-border/80 bg-white shadow-xs">
           <div className="border-b border-border/70 bg-muted/50 px-4 py-3 sm:px-5">
-            <p className="text-xs font-semibold text-foreground">2 \u00faltimos curr\u00edculos gerados</p>
+            <p className="text-xs font-semibold text-foreground">2 últimos currículos gerados</p>
           </div>
 
           {formattedSessions.length > 0 ? (
@@ -211,9 +321,9 @@ export default async function SettingsPage() {
             </div>
           ) : (
             <div className="px-4 py-8 text-center sm:px-5">
-              <p className="text-sm font-medium text-foreground">Nenhum curr\u00edculo gerado ainda.</p>
+              <p className="text-sm font-medium text-foreground">Nenhum currículo gerado ainda.</p>
               <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
-                Quando voc\u00ea gerar um curr\u00edculo, os acessos mais recentes aparecem aqui.
+                Quando você gerar um currículo, os acessos mais recentes aparecem aqui.
               </p>
             </div>
           )}

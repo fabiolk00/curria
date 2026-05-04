@@ -183,8 +183,8 @@ describe("SettingsPage", () => {
     expect(screen.queryByText("Clerk user")).not.toBeInTheDocument()
     expect(screen.queryByText("App user")).not.toBeInTheDocument()
     expect(screen.queryByText("Conta de créditos")).not.toBeInTheDocument()
-    expect(screen.queryByText("Zona sensivel")).not.toBeInTheDocument()
-    expect(screen.queryByText("Atividade de cobranca")).not.toBeInTheDocument()
+    expect(screen.queryByText("Zona sensível")).not.toBeInTheDocument()
+    expect(screen.queryByText("Atividade de cobrança")).not.toBeInTheDocument()
 
     expect(screen.queryByText("sess_recent_123")).not.toBeInTheDocument()
     expect(screen.queryByText("sess_recent_456")).not.toBeInTheDocument()
@@ -218,6 +218,37 @@ describe("SettingsPage", () => {
     expect(screen.getByText("ATS 91")).toBeInTheDocument()
   })
 
+  it("uses resume-title style role extraction and skips heading-only job description lines", async () => {
+    mockGetCurrentAppUser.mockResolvedValue(buildAppUser())
+    mockLoadOptionalBillingInfo.mockResolvedValue({
+      billingNotice: null,
+      billingInfo: {
+        plan: "monthly",
+        status: "active",
+        creditsRemaining: 4,
+        maxCredits: 12,
+        hasActiveRecurringSubscription: true,
+        renewsAt: "2026-05-15T12:00:00.000Z",
+      },
+    })
+    mockGetUserSessions.mockResolvedValue([
+      buildJobTargetingSession(
+        "sess_target_123",
+        "Descrição\nVaga alvo:\nCurrículo para Vaga alvo\nDesenvolvedor de Produto",
+      ),
+    ])
+    mockGetExistingUserProfile.mockResolvedValue({
+      profile_photo_url: null,
+    })
+
+    const jsx = await SettingsPage()
+    render(jsx)
+
+    expect(screen.getByText("Currículo para Desenvolvedor de Produto")).toBeInTheDocument()
+    expect(screen.queryByText("Currículo para Descrição")).not.toBeInTheDocument()
+    expect(screen.queryByText("Currículo para Requisitos")).not.toBeInTheDocument()
+  })
+
   it("uses account fallbacks when billing and generated resumes are unavailable", async () => {
     mockGetCurrentAppUser.mockResolvedValue(
       buildAppUser({
@@ -228,7 +259,7 @@ describe("SettingsPage", () => {
       }),
     )
     mockLoadOptionalBillingInfo.mockResolvedValue({
-      billingNotice: "Billing temporariamente indisponivel.",
+      billingNotice: "Billing temporariamente indisponível.",
       billingInfo: null,
     })
     mockGetUserSessions.mockResolvedValue([])
