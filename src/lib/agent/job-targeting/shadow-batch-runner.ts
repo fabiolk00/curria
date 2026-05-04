@@ -72,7 +72,7 @@ export const SHADOW_BATCH_ESTIMATED_COST_USD = {
   rewriteValidationPerCase: 0.05,
 } as const
 
-const SHADOW_BATCH_PROMPT_VERSION = 'shadow-batch-rewrite-validation-v1'
+const SHADOW_BATCH_PROMPT_VERSION = 'shadow-batch-rewrite-validation-v6'
 const DEFAULT_PROVIDER_COOLDOWN_MS = 60_000
 const DEFAULT_MAX_PROVIDER_RETRIES = 2
 

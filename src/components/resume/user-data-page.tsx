@@ -49,6 +49,8 @@ import { repairUtf8Mojibake } from "@/lib/text/repair-utf8-mojibake"
 import { cvStateToTemplateData } from "@/lib/templates/cv-state-to-template-data"
 import { cn } from "@/lib/utils"
 import { trackAnalyticsEvent } from "@/components/analytics/track-event"
+import type { UserFriendlyRequirementCard } from "@/lib/agent/job-targeting/user-friendly-review"
+import { JobTargetingReviewPanel } from "@/components/resume/job-targeting-review-panel"
 import type { RecoverableValidationBlock, ValidationIssue } from "@/types/agent"
 import type { CVState } from "@/types/cv"
 
@@ -1103,8 +1105,12 @@ export default function UserDataPage({
     )
   const displayValidationTargetRole = getDisplayableTargetRole(rewriteValidationFailure?.targetRole)
   const validationModalPayload = rewriteValidationFailure?.recoverableValidationBlock?.modal
+  const validationUserFriendlyReview = rewriteValidationFailure?.workflowMode === "job_targeting"
+    ? rewriteValidationFailure.recoverableValidationBlock?.userFriendlyReview
+    : undefined
+  const shouldUseFriendlyJobReview = Boolean(validationUserFriendlyReview)
   const validationOverrideCreditCost = validationModalPayload?.actions.primary?.creditCost ?? 1
-  const validationOverrideCta = validationModalPayload?.actions.primary
+  const validationOverrideCta = validationModalPayload?.actions.primary && !shouldUseFriendlyJobReview
     ? resolveValidationOverrideCta({
         creditCost: validationOverrideCreditCost,
         availableCredits,
@@ -1218,6 +1224,13 @@ export default function UserDataPage({
     }
 
     setRewriteValidationFailure(null)
+  }
+
+  const handleAddEvidenceFromReview = (requirement: UserFriendlyRequirementCard): void => {
+    closeRewriteValidationFailure()
+    setRequestedEditorSection("experience")
+    setActiveView("editor")
+    toast.info(`Adicione uma evidência real de ${requirement.label} na sua experiência antes de gerar novamente.`)
   }
 
   const handleValidationOverride = async (): Promise<void> => {
@@ -2231,12 +2244,12 @@ export default function UserDataPage({
         <DialogContent className="!flex max-h-[85vh] flex-col overflow-hidden sm:max-w-2xl">
           <DialogHeader className="shrink-0">
             <DialogTitle>
-              {validationModalPayload?.title ?? (rewriteValidationFailure?.workflowMode === "job_targeting"
+              {validationUserFriendlyReview?.title ?? validationModalPayload?.title ?? (rewriteValidationFailure?.workflowMode === "job_targeting"
                 ? "Não concluímos essa adaptação automaticamente"
                 : "Não concluímos essa melhoria ATS automaticamente")}
             </DialogTitle>
             <DialogDescription>
-              {validationModalPayload?.description ?? (rewriteValidationFailure?.workflowMode === "job_targeting"
+              {validationUserFriendlyReview?.description ?? validationModalPayload?.description ?? (rewriteValidationFailure?.workflowMode === "job_targeting"
                 ? "A validação final encontrou inconsistências e interrompemos a adaptação para a vaga para não gerar um currículo incoerente."
                 : "A validação final encontrou inconsistências e interrompemos a melhoria ATS para não gerar um currículo incoerente.")}
             </DialogDescription>
@@ -2246,7 +2259,13 @@ export default function UserDataPage({
             data-testid="rewrite-validation-dialog-scroll"
             className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 text-sm text-foreground"
           >
-            {validationModalPayload ? (
+            {validationUserFriendlyReview ? (
+              <JobTargetingReviewPanel
+                review={validationUserFriendlyReview}
+                onAddEvidence={handleAddEvidenceFromReview}
+                onChooseAnotherJob={closeRewriteValidationFailure}
+              />
+            ) : validationModalPayload ? (
               <>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <p className="font-medium text-amber-900">{validationModalPayload.primaryProblem}</p>
@@ -2328,7 +2347,7 @@ export default function UserDataPage({
             ) : null}
           </div>
 
-          {validationOverrideCta?.helperText ? (
+          {validationOverrideCta?.helperText && !shouldUseFriendlyJobReview ? (
             <p className="shrink-0 text-xs text-slate-500">{validationOverrideCta.helperText}</p>
           ) : null}
 
@@ -2336,7 +2355,7 @@ export default function UserDataPage({
             <Button type="button" variant="outline" onClick={closeRewriteValidationFailure}>
               {validationModalPayload?.actions.secondary.label ?? "Entendi"}
             </Button>
-            {validationModalPayload?.actions.primary ? (
+            {validationModalPayload?.actions.primary && !shouldUseFriendlyJobReview ? (
               <Button
                 type="button"
                 onClick={handleValidationOverridePrimaryAction}

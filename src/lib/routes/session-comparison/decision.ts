@@ -1,5 +1,6 @@
 import { buildHighlightStateResponseOutcome } from '@/lib/agent/highlight-observability'
 import { buildJobTargetingScoreBreakdownFromPlan } from '@/lib/agent/job-targeting/score-breakdown'
+import { buildUserFriendlyJobReviewFromAssessment } from '@/lib/agent/job-targeting/user-friendly-review'
 import { logInfo } from '@/lib/observability/structured-log'
 import {
   isLockedPreview,
@@ -38,6 +39,9 @@ function resolveJobTargetingExplanationForClient(
       cvState: context.session.cvState,
       jobCompatibilityAssessment: context.session.agentState.jobCompatibilityAssessment,
     }),
+    userFriendlyReview: context.session.agentState.jobCompatibilityAssessment
+      ? buildUserFriendlyJobReviewFromAssessment(context.session.agentState.jobCompatibilityAssessment)
+      : explanation.userFriendlyReview,
   }
 }
 

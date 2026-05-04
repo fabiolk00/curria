@@ -144,6 +144,7 @@ describe('resume evidence extraction', () => {
           endDate: 'present',
           bullets: [
             'Sem experiencia com sistemas dedicados de atendimento',
+            'Nao registra experiencia direta com SAP FI',
             'Experiencia avancada em melhoria de processos',
           ],
         },
@@ -167,6 +168,11 @@ describe('resume evidence extraction', () => {
       }),
       expect.objectContaining({
         text: 'Sem experiencia com sistemas dedicados de atendimento',
+        sourceConfidence: 1,
+        qualifier: 'negative',
+      }),
+      expect.objectContaining({
+        text: 'Nao registra experiencia direta com SAP FI',
         sourceConfidence: 1,
         qualifier: 'negative',
       }),

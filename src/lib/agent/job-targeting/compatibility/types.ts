@@ -68,6 +68,16 @@ export type JobCompatibilityEvidenceSourceKind =
   | 'education_entry'
   | 'certification_entry'
 
+export interface GapPresentationGroup {
+  title: string
+  items: string[]
+}
+
+export interface GapPresentation {
+  criticalGroups: GapPresentationGroup[]
+  reviewNeededGroups: GapPresentationGroup[]
+}
+
 export type EvidenceQualifier =
   | 'negative'
   | 'basic'
@@ -77,6 +87,8 @@ export type EvidenceQualifier =
   | 'expired'
   | 'strong'
   | 'unknown'
+
+export type EvidencePolarity = 'positive' | 'negative' | 'weak' | 'unknown'
 
 export type GeneratedClaimTraceSection =
   | 'summary'
@@ -306,6 +318,9 @@ export interface JobCompatibilityAssessment {
   unsupportedRequirements: RequirementEvidence[]
   claimPolicy: JobCompatibilityClaimPolicy
   scoreBreakdown: JobCompatibilityScoreBreakdown
+  displayScore?: number
+  scoreLabel?: string
+  gapPresentation?: GapPresentation
   criticalGaps: JobCompatibilityGap[]
   reviewNeededGaps: JobCompatibilityGap[]
   lowFit: JobCompatibilityLowFitState

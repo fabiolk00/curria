@@ -271,28 +271,33 @@ function validateForbiddenTerms({
   traces: GeneratedClaimTrace[]
   item: ClaimPolicyItem
 }): StructuredValidationIssue[] {
-  return traces.flatMap((candidateTrace) => (
-    item.prohibitedTerms
-      .filter((term) => (
-        containsTerm(candidateTrace.generatedText, term)
-        || candidateTrace.prohibitedTermsFound.some((found) => containsTerm(found, term))
-      ))
-      .map((term, index) => {
-        const type = classifyForbiddenIssueType(candidateTrace)
+  return traces
+    .filter((candidateTrace) => (
+      candidateTrace.source !== 'preserved_original'
+      && candidateTrace.classificationStatus !== 'original_preserved'
+    ))
+    .flatMap((candidateTrace) => (
+      item.prohibitedTerms
+        .filter((term) => (
+          containsTerm(candidateTrace.generatedText, term)
+          || candidateTrace.prohibitedTermsFound.some((found) => containsTerm(found, term))
+        ))
+        .map((term, index) => {
+          const type = classifyForbiddenIssueType(candidateTrace)
 
-        return {
-          id: `${type}-${item.id}-${candidateTrace.itemPath}-${index + 1}`,
-          type,
-          severity: 'error' as const,
-          term,
-          claimPolicyItemId: item.id,
-          requirementIds: item.requirementIds,
-          section: candidateTrace.section,
-          traceId: candidateTrace.itemPath,
-          generatedText: candidateTrace.generatedText,
-        }
-      })
-  ))
+          return {
+            id: `${type}-${item.id}-${candidateTrace.itemPath}-${index + 1}`,
+            type,
+            severity: 'error' as const,
+            term,
+            claimPolicyItemId: item.id,
+            requirementIds: item.requirementIds,
+            section: candidateTrace.section,
+            traceId: candidateTrace.itemPath,
+            generatedText: candidateTrace.generatedText,
+          }
+        })
+    ))
 }
 
 function validateCautiousTerms({
@@ -303,6 +308,12 @@ function validateCautiousTerms({
   item: ClaimPolicyItem
 }): StructuredValidationIssue[] {
   return traces
+    .filter((candidateTrace) => (
+      candidateTrace.source !== 'preserved_original'
+      && candidateTrace.classificationStatus !== 'original_preserved'
+      && candidateTrace.source !== 'formatting_only'
+      && candidateTrace.classificationStatus !== 'formatting_only'
+    ))
     .filter((candidateTrace) => (
       candidateTrace.usedClaimPolicyIds.includes(item.id)
       || candidateTrace.expressedSignals.some((signal) => containsTerm(signal, item.signal))

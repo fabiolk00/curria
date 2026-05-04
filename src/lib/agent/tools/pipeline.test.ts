@@ -11,7 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Session } from '@/types/agent'
+import type { RewriteClaimTraceItem, Session } from '@/types/agent'
 import type { TargetingPlan } from '@/types/agent'
 import type { CVState } from '@/types/cv'
 import type {
@@ -234,6 +234,13 @@ function buildDefaultTargetingPlan(overrides: Partial<TargetingPlan> = {}): Targ
       forbiddenClaims: ['BigQuery'],
       skillsSurfaceAllowed: ['SQL'],
     },
+    targetRolePositioning: {
+      targetRole: 'Analytics Engineer',
+      permission: 'can_claim_target_role',
+      reason: 'The mocked pipeline fixture explicitly permits the target-role label.',
+      safeRolePositioning: 'Analytics Engineer',
+      forbiddenRoleClaims: [],
+    },
     coreRequirementCoverage: {
       requirements: [
         {
@@ -322,6 +329,39 @@ function buildPipelineAssessment(): JobCompatibilityAssessment {
     supportedRequirements: [supported],
     adjacentRequirements: [adjacent],
     unsupportedRequirements: [unsupported, fallback],
+    claimPolicy: {
+      allowedClaims: [{
+        id: 'claim-supported-sql',
+        signal: 'SQL',
+        permission: 'allowed',
+        evidenceBasis: [{ id: 'span-sql', text: 'SQL' }],
+        allowedTerms: ['SQL'],
+        prohibitedTerms: [],
+        rationale: 'SQL is explicitly present in the CV fixture.',
+        requirementIds: ['req-supported-exact'],
+      }],
+      cautiousClaims: [{
+        id: 'claim-adjacent-data-storytelling',
+        signal: 'Data storytelling',
+        permission: 'cautious',
+        verbalizationTemplate: 'Use related evidence: {allowedTerms}.',
+        evidenceBasis: [{ id: 'span-data-storytelling', text: 'dashboard storytelling' }],
+        allowedTerms: ['dashboard storytelling'],
+        prohibitedTerms: ['Data storytelling expert'],
+        rationale: 'Data storytelling is adjacent in the fixture assessment.',
+        requirementIds: ['req-adjacent-catalog'],
+      }],
+      forbiddenClaims: [{
+        id: 'claim-unsupported-bigquery',
+        signal: 'BigQuery',
+        permission: 'forbidden',
+        evidenceBasis: [],
+        allowedTerms: [],
+        prohibitedTerms: ['BigQuery'],
+        rationale: 'BigQuery is unsupported in the fixture assessment.',
+        requirementIds: ['req-unsupported-llm'],
+      }],
+    },
     criticalGaps: [{
       id: 'gap-bigquery',
       signal: 'BigQuery',
@@ -376,6 +416,8 @@ function buildRewriteValidationResult(overrides: Record<string, unknown> = {}) {
 }
 
 function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
+  const traceItems = buildRewriteTraceItems(cvState, section)
+
   switch (section) {
     case 'summary':
       return {
@@ -384,6 +426,7 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
         section_data: `${cvState.summary} com foco em impacto.`,
         keywords_added: ['SQL'],
         changes_made: ['Resumo fortalecido'],
+        claim_trace_items: traceItems,
       }
     case 'experience':
       return {
@@ -392,6 +435,7 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
         section_data: cvState.experience,
         keywords_added: ['Power BI'],
         changes_made: ['Bullets consolidados'],
+        claim_trace_items: traceItems,
       }
     case 'skills':
       return {
@@ -400,6 +444,7 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
         section_data: cvState.skills,
         keywords_added: [],
         changes_made: ['Skills agrupadas'],
+        claim_trace_items: traceItems,
       }
     case 'education':
       return {
@@ -408,6 +453,7 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
         section_data: cvState.education,
         keywords_added: [],
         changes_made: ['Educacao padronizada'],
+        claim_trace_items: traceItems,
       }
     default:
       return {
@@ -416,7 +462,62 @@ function buildSuccessfulRewriteOutput(cvState: CVState, section: string) {
         section_data: cvState.certifications ?? [],
         keywords_added: [],
         changes_made: ['Certificacoes padronizadas'],
+        claim_trace_items: traceItems,
       }
+  }
+}
+
+function buildRewriteTraceItems(cvState: CVState, section: string): RewriteClaimTraceItem[] {
+  switch (section) {
+    case 'summary':
+      return [{
+        targetPath: 'summary',
+        source: 'new_generated_text',
+        usedClaimPolicyIds: ['claim-supported-sql'],
+        expressedSignals: ['SQL'],
+        evidenceBasis: ['SQL'],
+        permissionLevel: 'allowed',
+      }]
+    case 'experience':
+      return cvState.experience.flatMap((entry, entryIndex) => (
+        entry.bullets.map((_bullet, bulletIndex) => ({
+          targetPath: `experience.${entryIndex}.bullets.${bulletIndex}`,
+          source: 'preserved_original' as const,
+          usedClaimPolicyIds: [],
+          expressedSignals: [],
+          evidenceBasis: [],
+          permissionLevel: 'preserved_original' as const,
+        }))
+      ))
+    case 'skills':
+      return cvState.skills.map((_skill, index) => ({
+        targetPath: `skills.${index}`,
+        source: 'preserved_original',
+        usedClaimPolicyIds: [],
+        expressedSignals: [],
+        evidenceBasis: [],
+        permissionLevel: 'preserved_original',
+      }))
+    case 'education':
+      return cvState.education.map((_entry, index) => ({
+        targetPath: `education.${index}`,
+        source: 'preserved_original',
+        usedClaimPolicyIds: [],
+        expressedSignals: [],
+        evidenceBasis: [],
+        permissionLevel: 'preserved_original',
+      }))
+    case 'certifications':
+      return (cvState.certifications ?? []).map((_entry, index) => ({
+        targetPath: `certifications.${index}`,
+        source: 'preserved_original',
+        usedClaimPolicyIds: [],
+        expressedSignals: [],
+        evidenceBasis: [],
+        permissionLevel: 'preserved_original',
+      }))
+    default:
+      return []
   }
 }
 
@@ -1941,7 +2042,6 @@ describe('ATS enhancement reliability hardening', () => {
     mockEvaluateJobCompatibility.mockResolvedValue(jobCompatibilityAssessment)
 
     const result = await runJobTargetingPipeline(session)
-
     expect(result.success).toBe(true)
     expect(mockAnalyzeGap.mock.invocationCallOrder[0]).toBeLessThan(
       mockEvaluateJobCompatibility.mock.invocationCallOrder[0]!,
@@ -2553,7 +2653,7 @@ describe('ATS enhancement reliability hardening', () => {
     mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
       output: buildSuccessfulRewriteOutput({
         ...buildCvState(),
-        summary: 'Analytics profile with stakeholder communication and business translation.',
+        summary: 'Analytics profile with SQL, stakeholder communication and business translation.',
       }, section),
     }))
 
@@ -2605,7 +2705,7 @@ describe('ATS enhancement reliability hardening', () => {
     mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
       output: buildSuccessfulRewriteOutput({
         ...buildCvState(),
-        summary: 'Analytics profile with stakeholder communication and business translation.',
+        summary: 'Analytics profile with SQL, stakeholder communication and business translation.',
       }, section),
     }))
 
@@ -2660,6 +2760,34 @@ describe('ATS enhancement reliability hardening', () => {
         createdAt: new Date('2026-04-22T12:00:00.000Z'),
       })
       mockValidateRewrite.mockReturnValue(buildRewriteValidationResult())
+      const editorialAssessment = buildPipelineAssessment()
+      editorialAssessment.claimPolicy = {
+        ...editorialAssessment.claimPolicy,
+        allowedClaims: [
+          ...editorialAssessment.claimPolicy.allowedClaims,
+          {
+            id: 'claim-editorial-title',
+            signal: 'Senior BI Engineer',
+            permission: 'allowed',
+            evidenceBasis: [{ id: 'span-editorial-title', text: 'BI Engineer' }],
+            allowedTerms: ['Senior BI Engineer', 'BI Engineer'],
+            prohibitedTerms: [],
+            rationale: 'Fixture permits the rewritten title for highlight resolver isolation.',
+            requirementIds: ['req-supported-exact'],
+          },
+          {
+            id: 'claim-editorial-impact',
+            signal: 'reduzindo',
+            permission: 'allowed',
+            evidenceBasis: [{ id: 'span-editorial-impact', text: 'reduzindo em 40%' }],
+            allowedTerms: ['reduzindo', '40%'],
+            prohibitedTerms: [],
+            rationale: 'Fixture permits the rewritten impact bullet for highlight resolver isolation.',
+            requirementIds: ['req-supported-exact'],
+          },
+        ],
+      }
+      mockEvaluateJobCompatibility.mockResolvedValue(editorialAssessment)
       mockAnalyzeGap.mockResolvedValue({
         output: {
           success: true,
@@ -2687,6 +2815,14 @@ describe('ATS enhancement reliability hardening', () => {
               section_data: 'Analytics engineer com foco em SQL, Power BI e eficiencia operacional.',
               keywords_added: ['SQL', 'Power BI'],
               changes_made: ['Resumo targetizado'],
+              claim_trace_items: [{
+                targetPath: 'summary',
+                source: 'new_generated_text',
+                usedClaimPolicyIds: ['claim-supported-sql'],
+                expressedSignals: ['SQL'],
+                evidenceBasis: ['SQL'],
+                permissionLevel: 'allowed',
+              }],
             },
           }
         }
@@ -2699,6 +2835,24 @@ describe('ATS enhancement reliability hardening', () => {
               section_data: [rewrittenExperience],
               keywords_added: ['Databricks'],
               changes_made: ['Bullets alinhados a impacto'],
+              claim_trace_items: [
+                {
+                  targetPath: 'experience.0.title',
+                  source: 'new_generated_text',
+                  usedClaimPolicyIds: ['claim-editorial-title'],
+                  expressedSignals: ['Senior BI Engineer'],
+                  evidenceBasis: ['BI Engineer'],
+                  permissionLevel: 'allowed',
+                },
+                {
+                  targetPath: 'experience.0.bullets.0',
+                  source: 'new_generated_text',
+                  usedClaimPolicyIds: ['claim-editorial-impact'],
+                  expressedSignals: ['reduzindo'],
+                  evidenceBasis: ['reduzindo em 40%'],
+                  permissionLevel: 'allowed',
+                },
+              ],
             },
           }
         }

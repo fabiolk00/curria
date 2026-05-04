@@ -11,6 +11,7 @@ import {
 } from '@/lib/agent/job-targeting/catalog/catalog-loader'
 
 const requiredPackIds = [
+  'business-admin',
   'data-bi',
   'finance',
   'hr',

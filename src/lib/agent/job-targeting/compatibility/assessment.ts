@@ -27,6 +27,10 @@ import {
   calculateJobCompatibilityScore,
   JOB_COMPATIBILITY_SCORE_VERSION,
 } from './score'
+import {
+  buildAssessmentDisplayScore,
+  buildGapPresentation,
+} from './presentation'
 
 export const JOB_COMPATIBILITY_ASSESSMENT_VERSION = 'job-compat-assessment-v1'
 const FALLBACK_TARGET_ROLE = 'Vaga Alvo'
@@ -84,6 +88,11 @@ export async function evaluateJobCompatibility({
     gapAnalysis,
     severity: 'review',
   })
+  const displayScore = buildAssessmentDisplayScore(scoreBreakdown.total)
+  const gapPresentation = buildGapPresentation({
+    criticalGaps,
+    reviewNeededGaps,
+  })
 
   return {
     version: JOB_COMPATIBILITY_ASSESSMENT_VERSION,
@@ -94,6 +103,8 @@ export async function evaluateJobCompatibility({
     unsupportedRequirements,
     claimPolicy,
     scoreBreakdown,
+    ...displayScore,
+    gapPresentation,
     criticalGaps,
     reviewNeededGaps,
     lowFit: calculateLowFitState(requirements, scoreBreakdown.total),

@@ -14,7 +14,10 @@ import type {
   RequirementImportance,
   RequirementKind,
 } from '@/lib/agent/job-targeting/compatibility/types'
-import { isWeakEvidenceQualifier } from './evidence-qualifiers'
+import {
+  detectEvidencePolarity,
+  isWeakEvidenceQualifier,
+} from './evidence-qualifiers'
 
 export const JOB_COMPATIBILITY_MATCHER_VERSION = 'job-compat-matcher-v1'
 
@@ -167,8 +170,8 @@ export function classifyRequirementEvidence({
       .map((occurrence) => ({ ...occurrence, evidence: item }))
   ))
 
-  const sameTermMatch = findSameTermMatch(requirementTerms, evidenceTerms, 'exact')
-    ?? findSameTermMatch(requirementTerms, evidenceTerms, 'catalog_alias')
+  const sameTermMatch = findSameTermMatch(requirementTerms, evidenceTerms, 'exact', catalogIndex)
+    ?? findSameTermMatch(requirementTerms, evidenceTerms, 'catalog_alias', catalogIndex)
   const directTextMatch = requirementTerms.length === 0 || requirement.kind === 'education'
     ? findDirectTextMatch(requirement, resumeEvidence)
     : null
@@ -277,8 +280,13 @@ function findSameTermMatch(
   requirementTerms: TermOccurrence[],
   evidenceTerms: TermOccurrence[],
   requestedLevel: 'exact' | 'catalog_alias',
+  catalogIndex: CatalogIndex,
 ): MatchCandidate | null {
   for (const requirementTerm of requirementTerms) {
+    if (hasBlockingSpecificRequirementTerm(requirementTerm, requirementTerms, evidenceTerms, catalogIndex)) {
+      continue
+    }
+
     const matches = evidenceTerms.filter((evidenceTerm) => (
       evidenceTerm.term.term.id === requirementTerm.term.term.id
       && (
@@ -320,6 +328,31 @@ function findSameTermMatch(
   }
 
   return null
+}
+
+function hasBlockingSpecificRequirementTerm(
+  candidateRequirementTerm: TermOccurrence,
+  requirementTerms: TermOccurrence[],
+  evidenceTerms: TermOccurrence[],
+  catalogIndex: CatalogIndex,
+): boolean {
+  const candidateTermId = candidateRequirementTerm.term.term.id
+
+  return catalogIndex.antiEquivalences.some((antiEquivalence) => {
+    if (antiEquivalence.rightTermId !== candidateTermId) {
+      return false
+    }
+
+    const specificTermId = antiEquivalence.leftTermId
+    const requirementNamesSpecificTerm = requirementTerms.some((requirementTerm) => (
+      requirementTerm.term.term.id === specificTermId
+    ))
+    const evidenceNamesSpecificTerm = evidenceTerms.some((evidenceTerm) => (
+      evidenceTerm.term.term.id === specificTermId && evidenceTerm.evidence
+    ))
+
+    return requirementNamesSpecificTerm && !evidenceNamesSpecificTerm
+  })
 }
 
 function findDirectTextMatch(
@@ -705,7 +738,7 @@ function toRequirementEvidence({
   catalogIndex: CatalogIndex
   candidate: MatchCandidate
 }): RequirementEvidence {
-  const finalCandidate = applyEvidenceStrengthPolicy(requirement, candidate)
+  const finalCandidate = applyEvidenceStrengthPolicy(requirement, candidate, catalogIndex)
   const requirementTermLabels = labelsForTermIds(finalCandidate.requirementTermIds, catalogIndex)
   const resumeTermLabels = labelsForTermIds(finalCandidate.resumeTermIds, catalogIndex)
   const extractedSignals = unique([
@@ -760,52 +793,86 @@ function toRequirementEvidence({
 function applyEvidenceStrengthPolicy(
   requirement: MatcherRequirement,
   candidate: MatchCandidate,
+  catalogIndex: CatalogIndex,
 ): MatchCandidate {
   if (candidate.group === 'unsupported' || candidate.evidence.length === 0) {
     return candidate
   }
 
-  const strongestSourceConfidence = Math.max(
-    ...candidate.evidence.map((item) => item.sourceConfidence ?? 0.75),
-  )
-  const qualifiers = candidate.evidence.map((item) => item.qualifier ?? 'unknown')
-  const hasNegativeEvidence = qualifiers.includes('negative')
-  const hasWeakEvidence = qualifiers.some(isWeakEvidenceQualifier)
-  const confidence = roundTo(candidate.confidence * strongestSourceConfidence, 2)
+  const relevantTerms = unique([
+    requirement.text,
+    ...labelsForTermIds(candidate.requirementTermIds, catalogIndex),
+    ...labelsForTermIds(candidate.resumeTermIds, catalogIndex),
+  ])
+  const positiveEvidence = candidate.evidence.filter((item) => (
+    !isNegativeEvidenceForTerms(item.text, relevantTerms)
+  ))
 
-  if (hasNegativeEvidence) {
+  if (positiveEvidence.length === 0) {
     return {
       ...candidate,
       group: 'unsupported',
       level: 'unsupported_gap',
       permission: 'must_not_claim',
       prohibitedTerms: unique([...candidate.prohibitedTerms, requirement.text]),
-      confidence: Math.min(confidence, 0.2),
+      confidence: Math.min(candidate.confidence, 0.2),
       rationaleCode: `${candidate.rationaleCode}:negative_evidence`,
     }
   }
 
+  const candidateWithPositiveEvidence = positiveEvidence.length === candidate.evidence.length
+    ? candidate
+    : {
+        ...candidate,
+        evidence: positiveEvidence,
+        rationaleCode: `${candidate.rationaleCode}:negative_evidence_filtered`,
+      }
+
+  const strongestSourceConfidence = Math.max(
+    ...candidateWithPositiveEvidence.evidence.map((item) => item.sourceConfidence ?? 0.75),
+  )
+  const qualifiers = candidateWithPositiveEvidence.evidence.map((item) => item.qualifier ?? 'unknown')
+  const hasNegativeEvidence = qualifiers.includes('negative')
+  const hasWeakEvidence = qualifiers.some(isWeakEvidenceQualifier)
+  const confidence = roundTo(candidateWithPositiveEvidence.confidence * strongestSourceConfidence, 2)
+
+  if (hasNegativeEvidence) {
+    return {
+      ...candidateWithPositiveEvidence,
+      group: 'unsupported',
+      level: 'unsupported_gap',
+      permission: 'must_not_claim',
+      prohibitedTerms: unique([...candidateWithPositiveEvidence.prohibitedTerms, requirement.text]),
+      confidence: Math.min(confidence, 0.2),
+      rationaleCode: `${candidateWithPositiveEvidence.rationaleCode}:negative_evidence`,
+    }
+  }
+
   if (
-    candidate.group === 'supported'
+    candidateWithPositiveEvidence.group === 'supported'
     && (
       confidence < 0.6
       || (hasWeakEvidence && !requirementAllowsWeakEvidence(requirement.text))
     )
   ) {
     return {
-      ...candidate,
+      ...candidateWithPositiveEvidence,
       group: 'adjacent',
       level: 'semantic_bridge_only',
       permission: 'can_bridge_carefully',
       confidence,
-      rationaleCode: `${candidate.rationaleCode}:reduced_by_evidence_strength`,
+      rationaleCode: `${candidateWithPositiveEvidence.rationaleCode}:reduced_by_evidence_strength`,
     }
   }
 
   return {
-    ...candidate,
+    ...candidateWithPositiveEvidence,
     confidence,
   }
+}
+
+function isNegativeEvidenceForTerms(text: string, terms: string[]): boolean {
+  return terms.some((term) => detectEvidencePolarity(text, term) === 'negative')
 }
 
 function requirementAllowsWeakEvidence(value: string): boolean {

@@ -156,6 +156,29 @@ function buildJobTargetingExplanation(): JobTargetingExplanation {
   }
 }
 
+function buildJobTargetingExplanationWithReview(): JobTargetingExplanation {
+  return {
+    ...buildJobTargetingExplanation(),
+    userFriendlyReview: {
+      title: "Antes de gerar, precisamos revisar alguns pontos",
+      description: "A vaga pede algumas experiências que ainda não aparecem claramente no seu currículo. Para proteger sua candidatura, não vamos afirmar algo sem evidência.",
+      fitLevel: "partial",
+      canGenerateConservativeVersion: true,
+      requirements: [
+        {
+          id: "sap-fi",
+          label: "SAP FI",
+          status: "needs_evidence",
+          explanation: "A vaga pede SAP FI, mas não encontramos essa experiência no seu currículo.",
+          foundEvidence: [],
+          safeSuggestion: "Vamos gerar uma versão honesta, destacando experiências próximas sem afirmar SAP FI diretamente.",
+          canAddEvidence: true,
+        },
+      ],
+    },
+  }
+}
+
 describe('ResumeComparisonView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -344,6 +367,27 @@ describe('ResumeComparisonView', () => {
     expect(screen.getByTestId('job-target-resume-frame')).toHaveAttribute('data-collapsed', 'false')
     expect(screen.getByTestId('job-target-resume-frame')).toHaveClass('overflow-visible')
     expect(screen.getByRole('button', { name: /ocultar currículo/i })).toBeInTheDocument()
+  })
+
+  it('renders a user-friendly job review when the explanation includes requirement evidence', () => {
+    render(
+      <ResumeComparisonView
+        originalCvState={buildCvState('Original summary')}
+        optimizedCvState={buildCvState('Optimized summary')}
+        generationType="JOB_TARGETING"
+        sessionId="sess_explanation_review"
+        jobTargetingExplanation={buildJobTargetingExplanationWithReview()}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    const panel = screen.getByTestId('job-targeting-review-panel')
+    expect(screen.getByTestId('job-targeting-diagnostic-column')).toContainElement(panel)
+    expect(panel).toHaveTextContent('Revisão antes de gerar')
+    expect(panel).toHaveTextContent('Precisa de evidência')
+    expect(panel).toHaveTextContent('SAP FI')
+    expect(panel.textContent ?? '').not.toMatch(/forbidden_term|claim_policy|unsupported_claim|validation block|override|gerar mesmo assim/i)
+    expect(screen.getByTestId('job-targeting-score-card')).toBeInTheDocument()
   })
 
   it('keeps the original resume comparison for ATS enhancement generations', () => {

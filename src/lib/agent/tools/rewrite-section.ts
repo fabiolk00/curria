@@ -279,6 +279,7 @@ function normalizeExperienceEntry(
     ) || (currentValue ? 'present' : ''),
     bullets: normalizeBullets(
       record.bullets
+      ?? record.bullet
       ?? record.achievements
       ?? record.highlights
       ?? record.responsibilities
@@ -309,9 +310,44 @@ function normalizeExperienceSectionData(
         .map((entry, index) => normalizeExperienceEntry(entry, fallbackEntries[index]))
         .filter((entry): entry is ExperienceEntry => entry !== null)
     }
+
+    const singleEntry = normalizeExperienceEntry(record, fallbackEntries[0])
+    if (singleEntry) {
+      return [singleEntry]
+    }
   }
 
   return value
+}
+
+function formatExperienceContent(entries: ExperienceEntry[]): string {
+  return entries
+    .map((entry) => [
+      [entry.title, entry.company].filter(Boolean).join(' - '),
+      ...entry.bullets.map((bullet) => `- ${bullet}`),
+    ].filter(Boolean).join('\n'))
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function buildPreservedExperiencePayload(
+  currentContent: string,
+): Extract<ValidatedRewritePayload, { section: 'experience' }> | null {
+  const entries = parseCurrentExperienceEntries(currentContent)
+    .map((entry) => normalizeExperienceEntry(entry))
+    .filter((entry): entry is ExperienceEntry => entry !== null)
+
+  if (entries.length === 0) {
+    return null
+  }
+
+  return {
+    section: 'experience',
+    rewritten_content: formatExperienceContent(entries),
+    section_data: entries,
+    keywords_added: [],
+    changes_made: ['Preserved original experience after invalid structured rewrite payload'],
+  }
 }
 
 function getSectionDataDescription(section: RewriteSectionInput['section']): string {
@@ -359,6 +395,10 @@ function buildSectionPromptInstructions(section: RewriteSectionInput['section'])
       ]
     case 'experience':
       return [
+        'Experience schema: section_data must always be an array of objects, never a single object.',
+        'Experience schema: each object must include title, company, startDate, endDate, and bullets.',
+        'Experience schema: bullets must always be string[], never one string.',
+        'Experience trace paths for bullets must be experience.N.bullets.M.',
         'Experiência: mantenha ferramentas, métricas, senioridade, escopo e contexto de negócio em cada bullet.',
         'Experiência: preserve percentuais, reduções de tempo, economia, throughput, SLA, volumes e impacto regional/global sempre que forem reais.',
         'Experiência: escreva bullets concisos com estrutura de ação + contexto + impacto quando houver suporte factual no original.',
@@ -431,6 +471,9 @@ Claim-policy trace contract when requested:
 - For new factual text, choose usedClaimPolicyIds before writing the line.
 - For each output item, emit one claim_trace_items entry with the exact targetPath used by section_data.
 - Exact targetPath formats: summary; skills.N; experience.N.title; experience.N.bullets.M; education.N; certifications.N.
+- For experience section_data, return an array even when there is only one job entry.
+- For experience bullets, always return "bullets": ["..."] and never "bullet": "..." or "bullets": "...".
+- For experience claim_trace_items, use "experience.N.bullets.M"; never use "experience.N.bullet.M" or "experience[N].bullet[M]".
 - expressedSignals must be copied from selected claimPolicy.signal values.
 - evidenceBasis must be copied from selected claimPolicy.evidenceBasis values and should appear in the generated sentence when possible.
 - If source=new_generated_text, usedClaimPolicyIds, expressedSignals, and evidenceBasis must be non-empty.
@@ -576,6 +619,7 @@ function normalizeTraceTargetPath(value: string): string {
     .replace(/\[(\d+)\]/gu, '.$1')
     .replace(/\bexperiences\b/giu, 'experience')
     .replace(/\bexperience\.(\d+)\.bullet\./giu, 'experience.$1.bullets.')
+    .replace(/\bexperience\.(\d+)\.bullet(\d+)\b/giu, 'experience.$1.bullets.$2')
     .replace(/\bskills?\.(\d+)/iu, 'skills.$1')
     .replace(/\beducations?\.(\d+)/iu, 'education.$1')
     .replace(/\bcertifications?\.(\d+)/iu, 'certifications.$1')
@@ -639,7 +683,7 @@ function validateRewritePayload(
 
       return result.success
         ? { ...result.data, section }
-        : null
+        : buildPreservedExperiencePayload(currentContent)
     }
 
     case 'education': {

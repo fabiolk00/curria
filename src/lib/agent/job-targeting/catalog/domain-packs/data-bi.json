@@ -185,6 +185,60 @@
       }
     },
     {
+      "id": "data-bi.dashboards",
+      "label": "Dashboards",
+      "goldenCaseIds": [
+        "data-bi-good-fit-with-specific-gaps"
+      ],
+      "aliases": [
+        {
+          "value": "visualizacoes",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-04",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Portuguese visualization delivery wording can support a generic dashboard requirement without implying a named BI tool.",
+            "goldenCaseIds": [
+              "data-bi-good-fit-with-specific-gaps"
+            ]
+          }
+        },
+        {
+          "value": "visualizacao de dados",
+          "goldenCaseIds": [
+            "data-bi-good-fit-with-specific-gaps"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-04",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Generic data visualization wording can support a generic dashboard requirement without implying a named BI tool.",
+            "goldenCaseIds": [
+              "data-bi-good-fit-with-specific-gaps"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [
+        "data-bi.dashboarding"
+      ],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-04",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Generic dashboard requirements can be evidenced by explicit dashboard or visualization delivery, but this term is separate from named tools such as Power BI.",
+        "goldenCaseIds": [
+          "data-bi-good-fit-with-specific-gaps"
+        ]
+      }
+    },
+    {
       "id": "data-bi.excel",
       "label": "Excel",
       "goldenCaseIds": [
@@ -1087,6 +1141,42 @@
         "reviewRequired": true,
         "semanticRiskLevel": "medium",
         "rationale": "Power BI reporting evidence must not imply Power Query transformation experience.",
+        "goldenCaseIds": [
+          "data-bi-tool-without-related-transform-tool"
+        ]
+      }
+    },
+    {
+      "leftTermId": "data-bi.power-bi",
+      "rightTermId": "data-bi.dashboards",
+      "goldenCaseIds": [
+        "data-bi-tool-without-related-transform-tool"
+      ],
+      "rationale": "Generic dashboard or visualization evidence must not imply hands-on Power BI experience.",
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-04",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Generic dashboard or visualization evidence must not imply hands-on Power BI experience.",
+        "goldenCaseIds": [
+          "data-bi-tool-without-related-transform-tool"
+        ]
+      }
+    },
+    {
+      "leftTermId": "data-bi.tableau",
+      "rightTermId": "data-bi.dashboards",
+      "goldenCaseIds": [
+        "data-bi-tool-without-related-transform-tool"
+      ],
+      "rationale": "Generic dashboard or visualization evidence must not imply hands-on Tableau experience.",
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-04",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Generic dashboard or visualization evidence must not imply hands-on Tableau experience.",
         "goldenCaseIds": [
           "data-bi-tool-without-related-transform-tool"
         ]

@@ -85,6 +85,71 @@ describe('requirement decomposition', () => {
     }))
   })
 
+  it('strips generic vacancy title leads before extracting requirements', () => {
+    const requirements = decomposeJobRequirements(
+      'Vaga de SDR com prospeccao outbound, qualificacao de leads, CRM, cadencias comerciais, pipeline e metas de conversao.',
+    )
+
+    expect(requirements.map((requirement) => requirement.text)).toEqual([
+      'Prospeccao outbound',
+      'Qualificacao de leads',
+      'CRM',
+      'Cadencias comerciais',
+      'Pipeline e metas de conversao',
+    ])
+  })
+
+  it('ignores generic prose headings and company-intro noise without domain rules', () => {
+    const requirements = decomposeJobRequirements(`
+      About the job
+      Junte-se ao nosso time global.
+      Qual sera o seu papel
+      Sera o principal ponto de contato
+      Requisitos:
+      - Structured planning
+      - Measurable delivery outcomes
+    `)
+
+    expect(requirements.map((requirement) => requirement.text)).toEqual([
+      'Structured planning',
+      'Measurable delivery outcomes',
+    ])
+  })
+
+  it('ignores seed metadata and title labels while keeping real job requirements', () => {
+    const requirements = decomposeJobRequirements(`
+      Cargo: Analista de BI Shadow
+      Empresa: Empresa Ficticia Shadow
+      Contexto: vaga ficticia criada apenas para seed de teste anonimo.
+      Requisitos principais: Power BI, SQL, dashboards.
+      Diferenciais: Power Query, Tableau.
+      Observacao: nao usar dados reais; caso marcado como shadow_seed.
+    `)
+
+    expect(requirements.map((requirement) => requirement.text)).toEqual([
+      'Power BI',
+      'SQL',
+      'Dashboards',
+      'Power Query',
+      'Tableau',
+    ])
+  })
+
+  it('keeps dotted technology names together when splitting requirements', () => {
+    const requirements = decomposeJobRequirements(`
+      Requisitos principais: TypeScript, Node.js, APIs REST.
+      Diferenciais: Docker, Kubernetes.
+    `)
+
+    expect(requirements.map((requirement) => requirement.text)).toEqual([
+      'TypeScript',
+      'Node.js',
+      'APIs REST',
+      'Docker',
+      'Kubernetes',
+    ])
+  })
+
   it('keeps compatibility runtime free from fixture-specific domain hardcodes', () => {
     const runtimeSources = [
       'src/lib/agent/job-targeting/compatibility/requirement-decomposition.ts',

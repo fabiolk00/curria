@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronDown, Download, Highlighter, Loader2, Pencil } from "
 import { ARTIFACT_REFRESH_EVENT, type ArtifactRefreshDetail } from "@/components/dashboard/events"
 import { ResumeEditorModal } from "@/components/dashboard/resume-editor-modal"
 import Logo from "@/components/logo"
+import { JobTargetingReviewPanel } from "@/components/resume/job-targeting-review-panel"
 import { JobTargetingScoreCard } from "@/components/resume/job-targeting-score-card"
 import { ReviewWarningPanel } from "@/components/resume/review-warning-panel"
 import { Button } from "@/components/ui/button"
@@ -633,9 +634,12 @@ export function ResumeComparisonView({
     && (reviewCardCount > 0 || compatibilityStatus === "likely_with_gaps")
   const visibleReviewItems = hasOverrideReviewBoard ? reviewItems : []
   const hasJobTargetingScore = isJobTargeting && !previewLock?.locked && Boolean(jobTargetingExplanation?.scoreBreakdown)
+  const hasJobTargetingReview = isJobTargeting
+    && !previewLock?.locked
+    && Boolean(jobTargetingExplanation?.userFriendlyReview)
   const hasJobTargetingDiagnostics = isJobTargeting
     && !previewLock?.locked
-    && (hasJobTargetingScore || hasOverrideReviewBoard)
+    && (hasJobTargetingScore || hasJobTargetingReview || hasOverrideReviewBoard)
   const reviewPanelScrollClassName = cn(
     "lg:overflow-y-auto",
     isJobTargetResumeOpen ? "lg:max-h-[min(52vh,32rem)]" : "lg:max-h-[min(76vh,46rem)]",
@@ -756,6 +760,9 @@ export function ResumeComparisonView({
               data-testid="job-targeting-diagnostic-column"
               className="order-1 space-y-4 lg:col-start-2 lg:row-start-1"
             >
+              {hasJobTargetingReview && jobTargetingExplanation?.userFriendlyReview ? (
+                <JobTargetingReviewPanel review={jobTargetingExplanation.userFriendlyReview} />
+              ) : null}
               {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
                 <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
               ) : null}
@@ -768,9 +775,17 @@ export function ResumeComparisonView({
                 scrollClassName={reviewPanelScrollClassName}
               />
             </section>
-          ) : hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
-            <div className="order-1 lg:col-start-2 lg:row-start-1">
-              <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
+          ) : (hasJobTargetingScore || hasJobTargetingReview) ? (
+            <div
+              data-testid={hasJobTargetingReview ? "job-targeting-diagnostic-column" : undefined}
+              className="order-1 space-y-4 lg:col-start-2 lg:row-start-1"
+            >
+              {hasJobTargetingReview && jobTargetingExplanation?.userFriendlyReview ? (
+                <JobTargetingReviewPanel review={jobTargetingExplanation.userFriendlyReview} />
+              ) : null}
+              {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
+                <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
+              ) : null}
             </div>
           ) : null}
 

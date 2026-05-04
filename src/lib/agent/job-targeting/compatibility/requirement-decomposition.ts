@@ -31,6 +31,7 @@ const DEFAULT_SECTION = 'general'
 const listItemPattern = /^\s*(?:[-*]|\d+[.)])\s+/
 const headingOnlyPattern = /^\s*(?:#{1,6}\s*)?([^:\n]{2,80}):\s*$/
 const inlineHeadingPattern = /^\s*(?:#{1,6}\s*)?([^:\n]{2,80}):\s*(.+)$/
+const standaloneHeadingPattern = /^\s*(?:#{1,6}\s*)?([^:\n.?!]{2,80})\s*$/
 
 const coreImportancePatterns = [
   { id: 'must', pattern: /\bmust\b/i },
@@ -67,6 +68,29 @@ const kindPatterns: Array<{
 ]
 
 const requirementLeadPattern = /^(?:the\s+role\s+)?(?:must\s+have|must\s+include|must|requires?|required|needs?|should\s+have|preferred|nice\s+to\s+have|desirable|mandatory|essential)\s*:?\s+/i
+const jobTitleLeadPattern = /^(?:vaga|cargo|role|position|job)\s+(?:para|de|as|for)?\s*.{2,80}?\s+(?:com|with|para)\s+/i
+const standaloneSectionHeadings = [
+  /^(?:about the job|about the role|job description)$/i,
+  /^(?:qual sera o seu papel|como sera seu dia a dia|o que esperamos de voce)$/i,
+  /^(?:responsabilidades?|responsabilidades da posicao|atividades|atribuicoes)$/i,
+  /^(?:requisitos?|requisitos do perfil|requisitos e qualificacoes|qualificacoes)$/i,
+]
+const noiseLinePatterns = [
+  /^(?:junte-se|sobre nos|quem somos|todos os dias)\b/i,
+  /^(?:com mais de|esta posicao|com reporte para)\b/i,
+  /^(?:na relacao com|na gestao|na rotina)\b/i,
+  /^(?:sera o principal ponto de contato|voce sera responsavel por conectar)\b/i,
+]
+const metadataOnlyHeadingPattern = /^(?:cargo|vaga|role|position|job title|target role|empresa|company|contexto|context|observacao|observation|source|testonly|anonymized|metadata)$/i
+const seedMetadataLinePatterns = [
+  /^empresa ficticia shadow$/i,
+  /\bseed de teste anonimo\b/i,
+  /\bnao usar dados reais\b/i,
+  /\bcaso marcado como shadow_seed\b/i,
+  /\bsource\s*:?\s*shadow_seed\b/i,
+  /\btestonly\b/i,
+  /\banonymized\b/i,
+]
 
 export function decomposeJobRequirements(input: RequirementDecompositionInput): JobCompatibilityRequirement[] {
   const targetJobDescription = typeof input === 'string' ? input : input.targetJobDescription
@@ -85,17 +109,31 @@ export function decomposeJobRequirements(input: RequirementDecompositionInput): 
       return
     }
 
+    const standaloneHeading = line.match(standaloneHeadingPattern)
+    if (standaloneHeading?.[1] && isStandaloneSectionHeading(standaloneHeading[1])) {
+      updateSection(sectionState, standaloneHeading[1])
+      return
+    }
+
     const inlineHeading = line.match(inlineHeadingPattern)
     const contentLine = inlineHeading?.[2] ?? line
 
     if (inlineHeading?.[1]) {
       updateSection(sectionState, inlineHeading[1])
+
+      if (isMetadataOnlyHeading(inlineHeading[1])) {
+        return
+      }
     }
 
     const isListItem = listItemPattern.test(contentLine)
     const text = contentLine.replace(listItemPattern, '').trim()
 
     if (!text) {
+      return
+    }
+
+    if (isNoiseRequirementText(text)) {
       return
     }
 
@@ -199,14 +237,34 @@ function appendRequirements({
 }
 
 function splitSentences(value: string): string[] {
-  return value
+  const protectedDotTerms: string[] = []
+  const protectedValue = value.replace(
+    /\b[\p{L}\p{N}][\p{L}\p{N}+#-]*\.[\p{L}\p{N}][\p{L}\p{N}+#-]*(?:\.[\p{L}\p{N}][\p{L}\p{N}+#-]*)*\b/gu,
+    (match) => {
+      const placeholder = `__DOT_TERM_${protectedDotTerms.length}__`
+      protectedDotTerms.push(match)
+      return placeholder
+    },
+  )
+
+  return protectedValue
     .split(/[.!?]+/)
+    .map((sentence) => restoreProtectedDotTerms(sentence, protectedDotTerms))
     .map(cleanRequirementText)
     .filter(Boolean)
 }
 
+function restoreProtectedDotTerms(value: string, protectedDotTerms: string[]): string {
+  return protectedDotTerms.reduce(
+    (restoredValue, term, index) => restoredValue.replaceAll(`__DOT_TERM_${index}__`, term),
+    value,
+  )
+}
+
 function splitCompositeRequirement(value: string): string[] {
-  const withoutLead = cleanRequirementText(value).replace(requirementLeadPattern, '')
+  const withoutLead = cleanRequirementText(value)
+    .replace(requirementLeadPattern, '')
+    .replace(jobTitleLeadPattern, '')
 
   if (educationRequirementPattern.test(withoutLead)) {
     return [capitalizeFirstLetter(withoutLead)]
@@ -222,6 +280,28 @@ function splitCompositeRequirement(value: string): string[] {
     .map(cleanRequirementText)
     .filter(Boolean)
     .map(capitalizeFirstLetter)
+}
+
+function isStandaloneSectionHeading(value: string): boolean {
+  const normalizedValue = normalizeCompatibilityText(value)
+
+  return standaloneSectionHeadings.some((pattern) => pattern.test(normalizedValue))
+}
+
+function isNoiseRequirementText(value: string): boolean {
+  const normalizedValue = normalizeCompatibilityText(cleanRequirementText(value))
+
+  if (!normalizedValue) {
+    return true
+  }
+
+  return standaloneSectionHeadings.some((pattern) => pattern.test(normalizedValue))
+    || noiseLinePatterns.some((pattern) => pattern.test(normalizedValue))
+    || seedMetadataLinePatterns.some((pattern) => pattern.test(normalizedValue))
+}
+
+function isMetadataOnlyHeading(value: string): boolean {
+  return metadataOnlyHeadingPattern.test(normalizeCompatibilityText(value))
 }
 
 function detectImportance(value: string): SignalResult<JobCompatibilityRequirementImportance> {

@@ -375,6 +375,114 @@ describe('rewriteSection', () => {
     })
   })
 
+  it('normalizes a single experience object with singular bullet fields and trace paths', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      rewritten_content: 'Experiencia profissional reestruturada.',
+      section_data: {
+        title: 'Analista de Operacoes',
+        company: 'Empresa',
+        startDate: '2021',
+        endDate: 'present',
+        bullet: 'Organizei rotinas operacionais com acompanhamento de indicadores.',
+      },
+      claim_trace_items: [{
+        targetPath: 'experience[0].bullet[0]',
+        source: 'formatting_only',
+        usedClaimPolicyIds: [],
+        expressedSignals: [],
+        evidenceBasis: [],
+        permissionLevel: 'formatting_only',
+      }],
+      keywords_added: [],
+      changes_made: ['Padronizou estrutura de experiencia'],
+    })))
+
+    const result = await rewriteSection({
+      section: 'experience',
+      current_content: JSON.stringify([{
+        title: 'Analista',
+        company: 'Empresa',
+        startDate: '2021',
+        endDate: 'present',
+        bullets: ['Organizou rotinas operacionais.'],
+      }]),
+      instructions: 'Rewrite experience',
+      claim_policy_trace_contract: {
+        required: true,
+        allowedClaims: [],
+        cautiousClaims: [],
+        forbiddenClaims: [],
+      },
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output.success).toBe(true)
+    if (!result.output.success) {
+      throw new Error('Expected rewrite to succeed')
+    }
+
+    expect(result.output.section_data).toEqual([{
+      title: 'Analista de Operacoes',
+      company: 'Empresa',
+      location: undefined,
+      startDate: '2021',
+      endDate: 'present',
+      bullets: ['Organizei rotinas operacionais com acompanhamento de indicadores.'],
+    }])
+    expect(result.output.claim_trace_items).toEqual([expect.objectContaining({
+      targetPath: 'experience.0.bullets.0',
+      source: 'formatting_only',
+    })])
+  })
+
+  it('preserves original experience when an experience payload remains structurally invalid', async () => {
+    createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
+      rewritten_content: 'Payload invalido.',
+      section_data: {
+        unexpected: true,
+      },
+      claim_trace_items: 'invalid',
+      keywords_added: ['nova keyword'],
+      changes_made: ['Tentou reescrever experiencia'],
+    })))
+
+    const result = await rewriteSection({
+      section: 'experience',
+      current_content: JSON.stringify([{
+        title: 'Analista',
+        company: 'Empresa',
+        startDate: '2021',
+        endDate: 'present',
+        bullets: ['Organizou rotinas operacionais.'],
+      }]),
+      instructions: 'Rewrite experience',
+      claim_policy_trace_contract: {
+        required: true,
+        allowedClaims: [],
+        cautiousClaims: [],
+        forbiddenClaims: [],
+      },
+    }, 'usr_123', 'sess_123')
+
+    expect(result.output.success).toBe(true)
+    if (!result.output.success) {
+      throw new Error('Expected rewrite to succeed')
+    }
+
+    expect(result.output.section_data).toEqual([{
+      title: 'Analista',
+      company: 'Empresa',
+      location: undefined,
+      startDate: '2021',
+      endDate: 'present',
+      bullets: ['Organizou rotinas operacionais.'],
+    }])
+    expect(result.output.keywords_added).toEqual([])
+    expect(result.output.changes_made).toEqual([
+      'Preserved original experience after invalid structured rewrite payload',
+    ])
+    expect(result.output.claim_trace_items).toBeUndefined()
+  })
+
   it('limits changes_made to a short factual list', async () => {
     createCompletion.mockResolvedValue(buildOpenAIResponse(JSON.stringify({
       rewritten_content: 'TypeScript, PostgreSQL, Redis',

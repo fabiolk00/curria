@@ -502,6 +502,102 @@ describe('catalog-driven requirement evidence matcher', () => {
     })
   })
 
+  it('supports generic dashboard evidence from visualization wording without implying named BI tools', async () => {
+    const catalog = await loadJobTargetingCatalog()
+
+    expect(classifyRequirementEvidence({
+      requirement: requirement({ id: 'dashboards', text: 'Dashboards' }),
+      resumeEvidence: evidence([{
+        id: 'visualizacoes',
+        text: 'Tratou bases em planilhas e criou visualizacoes simples em Looker Studio',
+      }]),
+      catalog,
+    })).toMatchObject({
+      productGroup: 'supported',
+      evidenceLevel: 'catalog_alias',
+      rewritePermission: 'can_claim_normalized',
+    })
+
+    expect(classifyRequirementEvidence({
+      requirement: requirement({ id: 'power-bi', text: 'Power BI' }),
+      resumeEvidence: evidence([{
+        id: 'visualizacoes',
+        text: 'Tratou bases em planilhas e criou visualizacoes simples em Looker Studio',
+      }]),
+      catalog,
+    })).toMatchObject({
+      productGroup: 'unsupported',
+      evidenceLevel: 'unsupported_gap',
+      rewritePermission: 'must_not_claim',
+    })
+  })
+
+  it('normalizes healthcare agenda control requirements to scheduling evidence', async () => {
+    const catalog = await loadJobTargetingCatalog()
+
+    expect(classifyRequirementEvidence({
+      requirement: requirement({ id: 'controle-agendas', text: 'Controle de agendas' }),
+      resumeEvidence: evidence([{ id: 'agendamento', text: 'agendamento' }]),
+      catalog,
+    })).toMatchObject({
+      productGroup: 'supported',
+      evidenceLevel: 'catalog_alias',
+      rewritePermission: 'can_claim_normalized',
+    })
+  })
+
+  it('does not treat term mentions in negative evidence as support', async () => {
+    const catalog = await loadJobTargetingCatalog({ domainPackPaths })
+
+    const negativeCases = [
+      {
+        requirementText: 'SQL',
+        evidenceText: 'Nao possui experiencia registrada com SQL',
+      },
+      {
+        requirementText: 'SAP FI',
+        evidenceText: 'Sem experiencia com SAP FI',
+      },
+      {
+        requirementText: 'Node.js',
+        evidenceText: 'Ainda nao registra experiencia direta com Node.js',
+      },
+      {
+        requirementText: 'Kubernetes',
+        evidenceText: 'Without experience in Kubernetes',
+      },
+      {
+        requirementText: 'Salesforce',
+        evidenceText: 'Sem foco em Salesforce',
+      },
+    ]
+
+    negativeCases.forEach(({ requirementText, evidenceText }) => {
+      expect(classifyRequirementEvidence({
+        requirement: requirement({ id: requirementText, text: requirementText }),
+        resumeEvidence: evidence([{ id: requirementText, text: evidenceText }]),
+        catalog,
+      }), requirementText).toMatchObject({
+        productGroup: 'unsupported',
+        evidenceLevel: 'unsupported_gap',
+        rewritePermission: 'must_not_claim',
+      })
+    })
+  })
+
+  it('keeps normal positive evidence supporting the same terms', async () => {
+    const catalog = await loadJobTargetingCatalog({ domainPackPaths })
+
+    expect(classifyRequirementEvidence({
+      requirement: requirement({ id: 'sql-positive', text: 'SQL' }),
+      resumeEvidence: evidence([{ id: 'sql-positive', text: 'Criou consultas SQL para relatorios gerenciais' }]),
+      catalog,
+    })).toMatchObject({
+      productGroup: 'supported',
+      rewritePermission: 'can_claim_directly',
+    })
+  })
+
   it('runs all locked golden fixtures through matcher-level classifications', async () => {
     const catalog = await loadJobTargetingCatalog({ domainPackPaths })
     const fixtures = readGoldenCases()

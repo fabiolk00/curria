@@ -1,0 +1,994 @@
+{
+  "id": "business-admin",
+  "version": "2026-05-02",
+  "domain": "business-admin",
+  "goldenCaseIds": [
+    "marketing-ads-good-fit-with-missing-crm"
+  ],
+  "requirementKinds": [
+    "skill",
+    "experience",
+    "education",
+    "responsibility",
+    "preferred"
+  ],
+  "scoreDimensions": [
+    {
+      "id": "skills",
+      "weight": 0.34
+    },
+    {
+      "id": "experience",
+      "weight": 0.46
+    },
+    {
+      "id": "education",
+      "weight": 0.2
+    }
+  ],
+  "sectionWeights": {
+    "skills": 0.34,
+    "experience": 0.46,
+    "education": 0.2
+  },
+  "adjacentDiscount": 0.5,
+  "terms": [
+    {
+      "id": "business-admin.google-analytics",
+      "label": "Google Analytics",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "GA4",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for common marketing analytics terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for common marketing analytics terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.paid-media",
+      "label": "Paid Media",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "midia paga",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for common marketing channel terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for common marketing channel terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.ab-testing",
+      "label": "Experimentos A/B",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "A/B Testing",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for experimentation terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for experimentation terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.performance-reporting",
+      "label": "Relatorios de performance",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for performance reporting evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.outbound-prospecting",
+      "label": "Prospeccao outbound",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Outbound Prospecting",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for sales prospecting terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for sales prospecting terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.lead-qualification",
+      "label": "Qualificacao de leads",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Lead Qualification",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for lead qualification terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for lead qualification terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.sales-cadence",
+      "label": "Cadencias comerciais",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Follow-up",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for follow-up cadence evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for follow-up cadence evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.sales-pipeline",
+      "label": "Pipeline e metas de conversao",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Pipeline Management",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for sales pipeline and conversion target evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for sales pipeline and conversion target evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.continuous-improvement",
+      "label": "Melhoria continua",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Process Improvement",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for operational improvement terminology.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for operational improvement terminology.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.kpi-reporting",
+      "label": "KPIs",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "KPI Monitoring",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for KPI monitoring evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for KPI reporting evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.routine-management",
+      "label": "Gestao de rotina",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Customer Operations",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for routine customer operations evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Scheduling",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for routine scheduling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for routine operations evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.inventory-control",
+      "label": "Controle de estoque",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Warehouse",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for inventory and warehouse evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Inventory Control",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for inventory and warehouse evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for inventory and warehouse evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.hr-onboarding",
+      "label": "Onboarding",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "People Operations",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for people operations and onboarding evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for people operations and onboarding evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.contract-management",
+      "label": "Controle de contratos",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Contract Management",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for legal administrative contract work.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for legal administrative contract work.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.legal-documents",
+      "label": "Documentos legais",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Legal Documents",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for legal document handling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Document Control",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for legal document handling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+        ,
+        {
+          "value": "Administrative Routines",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for administrative legal document routines.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for legal document handling evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.legal-deadlines",
+      "label": "Prazos processuais",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Deadlines Control",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for deadline control evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Scheduling",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for deadline scheduling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for deadline control evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.compliance-support",
+      "label": "Compliance",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Compliance Support",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for compliance support evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for compliance support evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.legal-file-organization",
+      "label": "Organizacao de arquivos e suporte a advogados",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Administrative Routines",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for legal file organization and administrative support evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for legal file organization and administrative support evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.patient-scheduling",
+      "label": "Agendamento",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Patient Scheduling",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for healthcare scheduling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Reception",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for front-desk scheduling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        },
+        {
+          "value": "Controle de agendas",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-04",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Portuguese agenda control wording maps to healthcare scheduling evidence without implying hospital system expertise.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for healthcare scheduling evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.health-insurance-authorization",
+      "label": "Autorizacao de convenio",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Health Insurance Authorization",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for healthcare authorization evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for healthcare authorization evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.medical-records",
+      "label": "Prontuario",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Medical Records",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for medical record handling evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for medical record handling evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.patient-service",
+      "label": "Atendimento ao paciente",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "Customer Service",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for patient-facing service evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+        ,
+        {
+          "value": "Administrative Support",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for administrative patient support evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for patient-facing service evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    },
+    {
+      "id": "business-admin.sla-monitoring",
+      "label": "Indicadores de SLA",
+      "goldenCaseIds": [
+        "marketing-ads-good-fit-with-missing-crm"
+      ],
+      "aliases": [
+        {
+          "value": "SLA Monitoring",
+          "goldenCaseIds": [
+            "marketing-ads-good-fit-with-missing-crm"
+          ],
+          "governance": {
+            "validatedBy": "curria-job-targeting-hardening",
+            "validatedAt": "2026-05-02",
+            "reviewRequired": true,
+            "semanticRiskLevel": "medium",
+            "rationale": "Seeded zero-cost coverage for SLA monitoring evidence.",
+            "goldenCaseIds": [
+              "marketing-ads-good-fit-with-missing-crm"
+            ]
+          }
+        }
+      ],
+      "categoryIds": [],
+      "governance": {
+        "validatedBy": "curria-job-targeting-hardening",
+        "validatedAt": "2026-05-02",
+        "reviewRequired": true,
+        "semanticRiskLevel": "medium",
+        "rationale": "Seeded zero-cost coverage for SLA monitoring evidence.",
+        "goldenCaseIds": [
+          "marketing-ads-good-fit-with-missing-crm"
+        ]
+      }
+    }
+  ],
+  "categories": [],
+  "antiEquivalences": [],
+  "audit": {
+    "source": "zero-cost-shadow-validation",
+    "updatedAt": "2026-05-02"
+  },
+  "governance": {
+    "validatedBy": "curria-job-targeting-hardening",
+    "validatedAt": "2026-05-02",
+    "reviewRequired": true,
+    "semanticRiskLevel": "medium",
+    "rationale": "Supplemental zero-cost catalog coverage for common business, administrative, legal-admin, health-admin, and seeded validation terminology. It preserves explicit/alias matching only and does not convert unsupported evidence into claims without textual support.",
+    "goldenCaseIds": [
+      "marketing-ads-good-fit-with-missing-crm"
+    ]
+  }
+}

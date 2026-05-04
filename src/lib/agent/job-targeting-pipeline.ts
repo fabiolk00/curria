@@ -24,6 +24,10 @@ import {
 } from '@/lib/agent/job-targeting/target-recommendations'
 import { buildJobTargetingScoreBreakdownFromPlan } from '@/lib/agent/job-targeting/score-breakdown'
 import {
+  buildUserFriendlyJobReviewFromAssessment,
+  buildUserFriendlyJobReviewFromTargetingEvidence,
+} from '@/lib/agent/job-targeting/user-friendly-review'
+import {
   applyLowFitWarningGateToValidation,
   shouldPreRewriteLowFitBlock,
 } from '@/lib/agent/job-targeting/low-fit-warning-gate'
@@ -501,6 +505,9 @@ function buildJobTargetingExplanation(params: {
       cvState: params.session.cvState,
       jobCompatibilityAssessment: assessment,
     }),
+    userFriendlyReview: assessment
+      ? buildUserFriendlyJobReviewFromAssessment(assessment)
+      : undefined,
     targetRecommendations: assessment
       ? buildTargetRecommendationsFromAssessment(assessment)
       : buildTargetRecommendations({
@@ -1085,6 +1092,10 @@ export async function runJobTargetingPipeline(
           .replace(/^Profissional com experi[êe]ncia em\s*/i, '')
           .replace(/[.]$/u, '') || undefined,
       }),
+      userFriendlyReview: buildUserFriendlyJobReviewFromTargetingEvidence({
+        targetEvidence: targetingPlan.targetEvidence,
+        lowFitWarningGate: targetingPlan.lowFitWarningGate,
+      }),
       expiresAt: blockedDraft.expiresAt,
     }
     const validationIssueMessages = validation.issues.map((issue) => issue.message)
@@ -1653,6 +1664,10 @@ export async function runJobTargetingPipeline(
         originalProfileLabel: sanitizeText(targetingPlan.targetRolePositioning?.safeRolePositioning ?? '')
           .replace(/^Profissional com experi[êe]ncia em\s*/i, '')
           .replace(/[.]$/u, '') || undefined,
+      }),
+      userFriendlyReview: buildUserFriendlyJobReviewFromTargetingEvidence({
+        targetEvidence: targetingPlan.targetEvidence,
+        lowFitWarningGate: targetingPlan.lowFitWarningGate,
       }),
       expiresAt: blockedDraft.expiresAt,
     }

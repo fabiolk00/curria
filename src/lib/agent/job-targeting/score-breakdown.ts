@@ -1,5 +1,8 @@
 import { buildCanonicalSignal } from '@/lib/agent/job-targeting/semantic-normalization'
 import { buildDisplayScoreFromAssessment } from '@/lib/agent/job-targeting/compatibility/legacy-adapters'
+import {
+  buildGapPresentationFromSignals,
+} from '@/lib/agent/job-targeting/compatibility/presentation'
 import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compatibility/types'
 import type {
   CoreRequirement,
@@ -207,7 +210,7 @@ function dedupeGaps(values: string[]): string[] {
     result.push(cleaned)
   }
 
-  return result.slice(0, 3)
+  return result.slice(0, 5)
 }
 
 export function buildJobTargetingScoreBreakdown(
@@ -228,12 +231,16 @@ export function buildJobTargetingScoreBreakdown(
         findEvidenceForRequirement(requirement, targetEvidence),
       ) <= 25)
       .map((requirement) => requirement.signal)
+  const criticalGaps = dedupeGaps(unsupportedSignals)
 
   return {
     total: clampScore(total),
+    technicalScore: clampScore(total),
+    displayScore: clampScore(total),
     maxTotal: 100,
     items,
-    criticalGaps: dedupeGaps(unsupportedSignals),
+    criticalGaps,
+    gapPresentation: buildGapPresentationFromSignals({ criticalSignals: criticalGaps }),
   }
 }
 

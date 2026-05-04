@@ -288,6 +288,52 @@ describe('structured compatibility validation', () => {
     expect(result.issues).toEqual([])
   })
 
+  it('does not block preserved original cautious wording as a newly unsafe direct claim', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'experience',
+        itemPath: 'experience.0.bullets.0',
+        generatedText: 'Adjacent target signal',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: [],
+        validationStatus: 'valid',
+        rationale: 'original_preserved_without_new_claim',
+        source: 'preserved_original',
+        classificationStatus: 'original_preserved',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.blocked).toBe(false)
+    expect(result.issues).toEqual([])
+  })
+
+  it('does not block a preserved original unsupported term as a newly added forbidden claim', () => {
+    const result = validateGeneratedClaims({
+      generatedClaimTraces: [{
+        section: 'skills',
+        itemPath: 'skills.1',
+        generatedText: 'Unsupported signal',
+        expressedSignals: [],
+        usedClaimPolicyIds: [],
+        evidenceBasis: [],
+        prohibitedTermsFound: ['Unsupported signal'],
+        validationStatus: 'invalid',
+        rationale: 'original_preserved_without_new_claim',
+        source: 'preserved_original',
+        classificationStatus: 'original_preserved',
+      }],
+      claimPolicy: policy,
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.blocked).toBe(false)
+    expect(result.issues).toEqual([])
+  })
+
   it('keeps forbidden terms blocked even when a trace claims formatting-only', () => {
     const result = validateGeneratedClaims({
       generatedClaimTraces: [{

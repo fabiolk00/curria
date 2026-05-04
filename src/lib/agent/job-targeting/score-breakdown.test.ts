@@ -243,8 +243,10 @@ describe('buildJobTargetingScoreBreakdown', () => {
   it('uses assessment-derived deterministic display score when an assessment is present', () => {
     const source = assessment()
 
-    expect(buildJobTargetingScoreBreakdownFromAssessment(source)).toEqual({
+    expect(buildJobTargetingScoreBreakdownFromAssessment(source)).toMatchObject({
       total: 42,
+      technicalScore: 42,
+      displayScore: 42,
       maxTotal: 100,
       items: [
         { id: 'skills', label: 'Habilidades', score: 30, max: 100 },
@@ -252,6 +254,13 @@ describe('buildJobTargetingScoreBreakdown', () => {
         { id: 'education', label: 'Formação', score: 70, max: 100 },
       ],
       criticalGaps: ['Unsupported requirement'],
+      gapPresentation: {
+        criticalGroups: [{
+          title: 'Responsabilidades-chave não evidenciadas',
+          items: ['Unsupported requirement'],
+        }],
+        reviewNeededGroups: [],
+      },
     })
 
     expect(buildJobTargetingScoreBreakdownFromPlan({

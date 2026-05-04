@@ -10,9 +10,11 @@ import type {
 import type { AtsReadinessScoreContract } from '@/lib/ats/scoring/types'
 import type {
   GeneratedClaimTrace,
+  GapPresentation,
   JobCompatibilityAssessment,
   SectionRewritePlan,
 } from '@/lib/agent/job-targeting/compatibility/types'
+import type { UserFriendlyJobReview } from '@/lib/agent/job-targeting/user-friendly-review'
 import type { CvHighlightState } from '@/lib/resume/cv-highlight-artifact'
 import type { ToolErrorCode, ToolFailure } from '@/lib/agent/tool-errors'
 
@@ -204,6 +206,7 @@ export type JobTargetingExplanation = {
   targetRole?: string
   targetRoleConfidence?: 'low' | 'medium' | 'high'
   scoreBreakdown?: JobTargetingScoreBreakdown
+  userFriendlyReview?: UserFriendlyJobReview
   targetRecommendations: TargetRecommendation[]
   generatedAt: string
   source: 'job_targeting'
@@ -219,9 +222,13 @@ export type JobTargetingScoreBreakdownItem = {
 
 export type JobTargetingScoreBreakdown = {
   total: number
+  technicalScore?: number
+  displayScore?: number
+  scoreLabel?: string
   maxTotal: 100
   items: JobTargetingScoreBreakdownItem[]
   criticalGaps: string[]
+  gapPresentation?: GapPresentation
 }
 
 export type EvidenceLevel =
@@ -440,6 +447,7 @@ export type RecoverableValidationBlock = {
   kind?: RecoverableValidationBlockKind
   overrideToken: string
   modal: UserFacingValidationModalPayload
+  userFriendlyReview?: UserFriendlyJobReview
   overrideProcessing?: OverrideProcessingState
   expiresAt: string
 }

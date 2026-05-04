@@ -4,6 +4,12 @@
  * Remove by 2026-07-31 after UI/rewrite/validation consume JobCompatibilityAssessment directly.
  */
 import { buildCanonicalSignal } from '@/lib/agent/job-targeting/semantic-normalization'
+import {
+  buildAssessmentDisplayScore,
+  buildGapPresentation,
+  displayGapSignal,
+} from '@/lib/agent/job-targeting/compatibility/presentation'
+import { buildUserFriendlyJobReviewFromAssessment } from '@/lib/agent/job-targeting/user-friendly-review'
 import type {
   JobCompatibilityAssessment,
   JobCompatibilityGap,
@@ -84,8 +90,7 @@ function firstSignal(requirement: RequirementEvidence): string {
 }
 
 function displaySignal(value: string): string {
-  const cleaned = value.replace(/\s+/gu, ' ').trim()
-  return cleaned ? `${cleaned.charAt(0).toLocaleUpperCase('pt-BR')}${cleaned.slice(1)}` : cleaned
+  return displayGapSignal(value)
 }
 
 function mapEvidenceLevel(requirement: RequirementEvidence): EvidenceLevel {
@@ -570,15 +575,28 @@ export function buildTargetRolePositioningFromAssessment(
 export function buildDisplayScoreFromAssessment(
   assessment: JobCompatibilityAssessment,
 ): JobTargetingScoreBreakdown {
+  const displayScore = {
+    ...buildAssessmentDisplayScore(assessment.scoreBreakdown.total),
+    ...(assessment.displayScore === undefined ? {} : { displayScore: assessment.displayScore }),
+    ...(assessment.scoreLabel === undefined ? {} : { scoreLabel: assessment.scoreLabel }),
+  }
+  const gapPresentation = assessment.gapPresentation ?? buildGapPresentation({
+    criticalGaps: assessment.criticalGaps,
+    reviewNeededGaps: assessment.reviewNeededGaps,
+  })
+
   return {
     total: assessment.scoreBreakdown.total,
+    technicalScore: assessment.scoreBreakdown.total,
+    ...displayScore,
     maxTotal: assessment.scoreBreakdown.maxTotal,
     items: SCORE_ITEMS.map((item) => ({
       ...item,
       score: assessment.scoreBreakdown.dimensions[item.id],
       max: 100,
     })),
-    criticalGaps: dedupe(assessment.criticalGaps.map((gap) => displaySignal(gap.signal))).slice(0, 3),
+    criticalGaps: gapPresentation.criticalGroups.flatMap((group) => group.items),
+    gapPresentation,
   }
 }
 
@@ -634,6 +652,7 @@ export function buildJobTargetingExplanationFromAssessment(
     targetRole: assessment.targetRole,
     targetRoleConfidence: assessment.targetRoleConfidence,
     scoreBreakdown: buildDisplayScoreFromAssessment(assessment),
+    userFriendlyReview: buildUserFriendlyJobReviewFromAssessment(assessment),
     targetRecommendations: buildTargetRecommendationsFromAssessment(assessment),
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     source: 'job_targeting',

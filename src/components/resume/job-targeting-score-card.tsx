@@ -46,7 +46,17 @@ export function JobTargetingScoreCard({
   breakdown,
   className,
 }: JobTargetingScoreCardProps) {
-  const totalPercentage = toPercentage(breakdown.total, breakdown.maxTotal)
+  const technicalScore = breakdown.technicalScore ?? breakdown.total
+  const displayScore = breakdown.displayScore ?? breakdown.total
+  const totalPercentage = toPercentage(displayScore, breakdown.maxTotal)
+  const criticalGroups = breakdown.gapPresentation?.criticalGroups.length
+    ? breakdown.gapPresentation.criticalGroups
+    : breakdown.criticalGaps.length
+      ? [{
+        title: "Gaps críticos",
+        items: breakdown.criticalGaps.slice(0, 5),
+      }]
+      : []
 
   return (
     <section
@@ -67,9 +77,19 @@ export function JobTargetingScoreCard({
         </div>
         <div className="shrink-0 text-right">
           <span className={cn("text-4xl font-bold leading-none tabular-nums sm:text-[2.75rem]", scoreTextColor(totalPercentage))}>
-            {breakdown.total}
+            {displayScore}
           </span>
           <span className="ml-1 align-baseline text-sm font-medium text-zinc-300 sm:text-base">/{breakdown.maxTotal}</span>
+          {breakdown.scoreLabel ? (
+            <p className="mt-1 max-w-32 text-right text-[11px] font-semibold leading-tight text-red-600 dark:text-red-300">
+              {breakdown.scoreLabel}
+            </p>
+          ) : null}
+          {displayScore !== technicalScore ? (
+            <p className="mt-0.5 text-[10px] leading-tight text-zinc-400">
+              Técnico: {technicalScore}/{breakdown.maxTotal}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -109,21 +129,30 @@ export function JobTargetingScoreCard({
         })}
       </div>
 
-      {breakdown.criticalGaps.length > 0 ? (
+      {criticalGroups.length > 0 ? (
         <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
             Gaps críticos
           </p>
-          <ul className="mt-2 space-y-2">
-            {breakdown.criticalGaps.map((gap) => (
-              <li key={gap} className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
-                <span className="text-xs leading-relaxed text-red-700 dark:text-red-300">
-                  {gap}
-                </span>
-              </li>
+          <div className="mt-2 space-y-3">
+            {criticalGroups.map((group) => (
+              <div key={group.title} className="space-y-1.5">
+                <p className="text-xs font-semibold leading-snug text-zinc-700 dark:text-zinc-200">
+                  {group.title}
+                </p>
+                <ul className="space-y-2">
+                  {group.items.map((gap) => (
+                    <li key={`${group.title}-${gap}`} className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                      <span className="text-xs leading-relaxed text-red-700 dark:text-red-300">
+                        {gap}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       ) : null}
     </section>

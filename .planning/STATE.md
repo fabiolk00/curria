@@ -6,8 +6,8 @@ current_phase: 108
 current_phase_name: adicionar camada dinamica de evidencia semantica para targeted rewrite de job_targeting
 current_plan: 01 completed
 status: verifying
-stopped_at: Completed quick task 260504-0rx
-last_updated: "2026-05-04T03:35:17.1625439Z"
+stopped_at: Completed quick task 260504-1tr
+last_updated: "2026-05-04T04:29:23.6495765Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 73
@@ -36,7 +36,7 @@ Current Plan: 01 completed
 Total Plans in Phase: 1
 Status: Phase complete — ready for verification
 Last activity: 2026-05-04
-Last Activity Description: Completed quick task 260504-0rx: aligned `/termos` to the standard public site header and made the last-updated month/year dynamic from the current date.
+Last Activity Description: Completed quick task 260504-1tr: added a user-friendly Job Targeting review panel, evidence modal, assessment/targeting-evidence mappers, comparison integration, and pre-generation validation-modal integration for proven, related, and needs-evidence requirements.
 
 Progress: [##########] 100%
 
@@ -205,8 +205,15 @@ Baseline carried forward from earlier shipped milestones:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260504-1tr | Criar experiencia user-friendly de Revisao Inteligente da Vaga | 2026-05-04 | working-tree | Completed | [260504-1tr-criar-experiencia-user-friendly-de-revis](./quick/260504-1tr-criar-experiencia-user-friendly-de-revis/) |
+| 260504-1fi | Rodar seeded 10 rewrite validation multidominio com budget LLM | 2026-05-04 | working-tree | Completed | [260504-1fi-rodar-seeded-10-rewrite-validation-multi](./quick/260504-1fi-rodar-seeded-10-rewrite-validation-multi/) |
+| 260504-198 | Investigar missed_clear_evidence e score_too_harsh seeded fixed sem LLM | 2026-05-04 | working-tree | Completed | [260504-198-investigar-missed-clear-evidence-e-score](./quick/260504-198-investigar-missed-clear-evidence-e-score/) |
+| 260504-0zh | Corrigir metadata em targetJobDescription e negative evidence no matcher | 2026-05-04 | working-tree | Completed | [260504-0zh-corrigir-metadata-em-targetjobdescriptio](./quick/260504-0zh-corrigir-metadata-em-targetjobdescriptio/) |
+| 260504-0vb | Revisar seeded-30 compatibility quality sem usar legado | 2026-05-04 | working-tree | Completed | [260504-0vb-revisar-seeded-30-compatibility-quality-](./quick/260504-0vb-revisar-seeded-30-compatibility-quality-/) |
+| 260504-0sl | Exportar seed shadow multidominio e rodar compatibility sem LLM | 2026-05-04 | working-tree | Completed | [260504-0sl-exportar-seed-shadow-multidominio-e-roda](./quick/260504-0sl-exportar-seed-shadow-multidominio-e-roda/) |
 | 260504-0rx | Ajustar pagina de termos para header padrao publico e data atual dinamica | 2026-05-04 | 48a921c | Validated | [260504-0rx-ajustar-pagina-de-termos-para-header-pad](./quick/260504-0rx-ajustar-pagina-de-termos-para-header-pad/) |
 | 260504-0fd | Criar rota publica de termos usando ZIP fornecido e adaptar marca CurrIA | 2026-05-04 | b89bf07 | Validated | [260504-0fd-criar-rota-publica-de-termos-usando-zip-](./quick/260504-0fd-criar-rota-publica-de-termos-usando-zip-/) |
+| 260504-0kg | Inserir usuarios ficticios e sessoes Job Targeting multi-dominio no banco | 2026-05-04 | working-tree | Completed | [260504-0kg-inserir-usuarios-ficticios-e-sessoes-job](./quick/260504-0kg-inserir-usuarios-ficticios-e-sessoes-job/) |
 | 260504-04f | Simplificar layout de configuracoes inspirado na referencia com avatar, nome, sobrenome, email, plano, creditos e 2 curriculos recentes | 2026-05-04 | a864143 | Validated | [260504-04f-simplificar-layout-de-configuracoes-insp](./quick/260504-04f-simplificar-layout-de-configuracoes-insp/) |
 | 260503-qzm | Redesign authenticated settings page for CurrIA account, credits, profile and safety | 2026-05-03 | 8beb8d2 | Validated | [260503-qzm-redesign-authenticated-settings-page-int](./quick/260503-qzm-redesign-authenticated-settings-page-int/) |
 | 260503-m0c | Corrigir bugs de UI e redirecionamento: botao voltar ao perfil preto, overflow tablet generate/auth, welcome guide, Google redirect, historico gerar, loading em cliques | 2026-05-03 | 468e44a | Validated | [260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b](./quick/260503-m0c-corrigir-bugs-de-ui-e-redirecionamento-b/) |

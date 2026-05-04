@@ -355,8 +355,10 @@ describe('legacy assessment adapters', () => {
       ]),
       lowFitWarningGate: expect.objectContaining({ matchScore: 68 }),
     }))
-    expect(buildDisplayScoreFromAssessment(source)).toEqual({
+    expect(buildDisplayScoreFromAssessment(source)).toMatchObject({
       total: 68,
+      technicalScore: 68,
+      displayScore: 68,
       maxTotal: 100,
       items: [
         { id: 'skills', label: 'Habilidades', score: 80, max: 100 },
@@ -364,6 +366,13 @@ describe('legacy assessment adapters', () => {
         { id: 'education', label: 'Formação', score: 100, max: 100 },
       ],
       criticalGaps: ['Unsupported requirement'],
+      gapPresentation: {
+        criticalGroups: [{
+          title: 'Responsabilidades-chave não evidenciadas',
+          items: ['Unsupported requirement'],
+        }],
+        reviewNeededGroups: [],
+      },
     })
     expect(explanation).toEqual(expect.objectContaining({
       targetRole: 'Target Role',

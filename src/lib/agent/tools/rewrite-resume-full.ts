@@ -322,6 +322,7 @@ function repairUnclassifiedGeneratedText(params: {
   originalCvState: CVState
   generatedCvState: CVState
   sectionPlan: SectionRewritePlan
+  claimPolicy?: JobCompatibilityAssessment['claimPolicy']
   targetRole?: {
     value?: string
     permission?: string
@@ -329,6 +330,7 @@ function repairUnclassifiedGeneratedText(params: {
 }): CVState {
   const unclassifiedItems = params.sectionPlan.items.filter((item) => shouldRepairGeneratedItem({
     item,
+    claimPolicy: params.claimPolicy,
     targetRole: params.targetRole,
   }))
 
@@ -448,6 +450,7 @@ function repairUnclassifiedGeneratedText(params: {
 
 function shouldRepairGeneratedItem(params: {
   item: SectionRewritePlan['items'][number]
+  claimPolicy?: JobCompatibilityAssessment['claimPolicy']
   targetRole?: {
     value?: string
     permission?: string
@@ -464,6 +467,22 @@ function shouldRepairGeneratedItem(params: {
     params.item.classificationStatus !== 'original_preserved'
     && params.item.source !== 'preserved_original'
     && params.item.prohibitedTermsAcknowledged.length > 0
+  ) {
+    return true
+  }
+
+  if (
+    params.item.source === 'new_generated_text'
+    && params.item.permissionLevel === 'cautious'
+    && !hasSafeCautiousClaimLanguage(params.item.intendedText, params.item.evidenceBasis)
+  ) {
+    return true
+  }
+
+  if (
+    params.item.source === 'new_generated_text'
+    && params.claimPolicy
+    && mentionsUnsafeCautiousClaim(params.item, params.claimPolicy)
   ) {
     return true
   }
@@ -496,6 +515,61 @@ function hasCautiousTargetRoleLanguage(value: string): boolean {
     'perfil',
     'experiencia aplicavel',
   ].some((cue) => normalized.includes(cue))
+}
+
+function hasSafeCautiousClaimLanguage(value: string, evidenceBasis: string[]): boolean {
+  const normalized = normalizeForKeywordVisibility(value)
+  const hasCautiousCue = [
+    'aplicavel',
+    'aplicaveis',
+    'contexto',
+    'relacionad',
+    'proximo',
+    'proxima',
+    'demandas',
+    'perfil',
+    'com base',
+    'a partir',
+    'por meio',
+    'conectad',
+  ].some((cue) => normalized.includes(cue))
+  const hasEvidenceBasis = evidenceBasis.some((basis) => {
+    const normalizedBasis = normalizeForKeywordVisibility(basis)
+    return normalizedBasis.length >= 3 && normalized.includes(normalizedBasis)
+  })
+
+  return hasCautiousCue && hasEvidenceBasis
+}
+
+function mentionsUnsafeCautiousClaim(
+  item: SectionRewritePlan['items'][number],
+  claimPolicy: JobCompatibilityAssessment['claimPolicy'],
+): boolean {
+  return claimPolicy.cautiousClaims.some((claim) => {
+    const mentioned = [
+      claim.signal,
+      ...claim.prohibitedTerms,
+      ...claim.allowedTerms,
+      ...claim.evidenceBasis.map((basis) => basis.text),
+    ].some((term) => containsNormalizedTerm(item.intendedText, term))
+
+    if (!mentioned && !item.claimPolicyIds.includes(claim.id)) {
+      return false
+    }
+
+    return !hasSafeCautiousClaimLanguage(item.intendedText, [
+      ...item.evidenceBasis,
+      ...claim.allowedTerms,
+      ...claim.evidenceBasis.map((basis) => basis.text),
+    ])
+  })
+}
+
+function containsNormalizedTerm(source: string, term: string): boolean {
+  const normalizedSource = normalizeForKeywordVisibility(source)
+  const normalizedTerm = normalizeForKeywordVisibility(term)
+
+  return normalizedTerm.length >= 3 && normalizedSource.includes(normalizedTerm)
 }
 
 function splitTargetRequirements(targetingPlan: TargetingPlan): {
@@ -763,6 +837,64 @@ function applySectionData(
       return { ...cvState, education: sectionData as CVState['education'] }
     case 'certifications':
       return { ...cvState, certifications: sectionData as CVState['certifications'] }
+  }
+}
+
+function formatExperienceSectionContent(experience: CVState['experience']): string {
+  return experience
+    .map((entry) => [
+      [entry.title, entry.company].filter(Boolean).join(' - '),
+      ...entry.bullets.map((bullet) => `- ${bullet}`),
+    ].filter(Boolean).join('\n'))
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function buildPreservedSectionOutput(
+  cvState: CVState,
+  section: RewriteSectionName,
+): Extract<RewriteSectionOutput, { success: true }> {
+  switch (section) {
+    case 'summary':
+      return {
+        success: true,
+        rewritten_content: cvState.summary,
+        section_data: cvState.summary,
+        keywords_added: [],
+        changes_made: ['Preserved original summary after invalid structured rewrite payload'],
+      }
+    case 'experience':
+      return {
+        success: true,
+        rewritten_content: formatExperienceSectionContent(cvState.experience),
+        section_data: cvState.experience,
+        keywords_added: [],
+        changes_made: ['Preserved original experience after invalid structured rewrite payload'],
+      }
+    case 'skills':
+      return {
+        success: true,
+        rewritten_content: cvState.skills.join(', '),
+        section_data: cvState.skills,
+        keywords_added: [],
+        changes_made: ['Preserved original skills after invalid structured rewrite payload'],
+      }
+    case 'education':
+      return {
+        success: true,
+        rewritten_content: JSON.stringify(cvState.education),
+        section_data: cvState.education,
+        keywords_added: [],
+        changes_made: ['Preserved original education after invalid structured rewrite payload'],
+      }
+    case 'certifications':
+      return {
+        success: true,
+        rewritten_content: JSON.stringify(cvState.certifications ?? []),
+        section_data: cvState.certifications ?? [],
+        keywords_added: [],
+        changes_made: ['Preserved original certifications after invalid structured rewrite payload'],
+      }
   }
 }
 
@@ -1130,20 +1262,30 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
         attempts = execution.attempts
       } catch (error) {
         sectionAttempts[section] = Math.max(1, sectionAttempts[section] ?? 0, retriedSections.includes(section) ? 2 : 1)
-        return {
-          success: false,
-          diagnostics: {
-            sectionAttempts,
-            retriedSections,
-            compactedSections,
-          },
-          error: error instanceof Error ? error.message : 'Failed to rewrite full resume.',
-          ...(error instanceof RewriteSectionFailureError
-            ? {
-              errorCode: error.code,
-              failedSection: error.section,
-            }
-            : {}),
+        if (
+          error instanceof RewriteSectionFailureError
+          && error.code === 'LLM_INVALID_OUTPUT'
+        ) {
+          result = {
+            output: buildPreservedSectionOutput(optimizedCvState, section),
+          }
+          attempts = sectionAttempts[section] ?? 1
+        } else {
+          return {
+            success: false,
+            diagnostics: {
+              sectionAttempts,
+              retriedSections,
+              compactedSections,
+            },
+            error: error instanceof Error ? error.message : 'Failed to rewrite full resume.',
+            ...(error instanceof RewriteSectionFailureError
+              ? {
+                errorCode: error.code,
+                failedSection: error.section,
+              }
+              : {}),
+          }
         }
       }
 
@@ -1238,18 +1380,17 @@ export async function rewriteResumeFull(params: AtsRewriteParams | JobTargetingR
           claimPolicy: params.jobCompatibilityAssessment.claimPolicy,
           modelClaimTraceItems,
         })
-        const repairedCvState = (modelClaimTraceItems?.length ?? 0) === 0
-          ? optimizedCvState
-          : repairUnclassifiedGeneratedText({
-              section,
-              originalCvState: params.cvState,
-              generatedCvState: optimizedCvState,
-              sectionPlan: sectionRewritePlan,
-              targetRole: {
-                value: params.jobCompatibilityAssessment.targetRole,
-                permission: targetingPlan?.targetRolePositioning?.permission,
-              },
-            })
+        const repairedCvState = repairUnclassifiedGeneratedText({
+          section,
+          originalCvState: params.cvState,
+          generatedCvState: optimizedCvState,
+          sectionPlan: sectionRewritePlan,
+          claimPolicy: params.jobCompatibilityAssessment.claimPolicy,
+          targetRole: {
+            value: params.jobCompatibilityAssessment.targetRole,
+            permission: targetingPlan?.targetRolePositioning?.permission,
+          },
+        })
 
         if (repairedCvState !== optimizedCvState) {
           optimizedCvState = repairedCvState
