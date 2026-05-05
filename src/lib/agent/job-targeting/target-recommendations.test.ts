@@ -171,7 +171,7 @@ describe('buildTargetRecommendations', () => {
     expect(recommendations[0].suggestedUserAction).toMatch(/apenas se/i)
   })
 
-  it('creates a safe adjacent DAX recommendation from Power BI, dashboards, and SQL evidence', () => {
+  it('creates a conservative DAX recommendation without catalog adjacency', () => {
     const recommendations = buildTargetRecommendations({
       targetRole: 'Analista de BI',
       coreRequirements: [buildRequirement({ signal: 'DAX' })],
@@ -183,17 +183,14 @@ describe('buildTargetRecommendations', () => {
 
     expect(recommendations).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        kind: 'adjacent_skill',
+        kind: 'missing_explicit_skill',
         jobRequirement: 'DAX',
         mustNotInvent: true,
       }),
     ]))
-    expect(recommendations[0].suggestedUserAction).toMatch(/deixe isso expl[ií]cito/i)
-    expect(recommendations[0].suggestedUserAction).toMatch(/DAX|Power Query|linguagem M/i)
-    expect(recommendations[0].currentEvidence).toEqual(expect.arrayContaining([
-      'Power BI',
-      'SQL',
-    ]))
+    expect(recommendations[0].suggestedUserAction).toMatch(/somente se/i)
+    expect(recommendations[0].suggestedUserAction).toMatch(/deixe fora/i)
+    expect(recommendations[0].currentEvidence).toEqual([])
   })
 
   it('does not use direct-order wording that would tell the user to invent a skill', () => {

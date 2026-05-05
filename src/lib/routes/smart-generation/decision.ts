@@ -204,6 +204,7 @@ export async function executeSmartGenerationDecision(
       patchedSession,
       optimizedCvState: pipeline.optimizedCvState,
       idempotencyKey: smartGenerationArtifactIdempotencyKey,
+      workflowMode,
     })
 
     if (generationResult.outputFailure) {

@@ -2007,6 +2007,7 @@ describe('ATS enhancement reliability hardening', () => {
     const session = buildSession()
     const jobCompatibilityAssessment = buildPipelineAssessment()
     session.agentState.workflowMode = 'job_targeting'
+    session.agentState.jobTargetingEngineVersion = 'canonical-v1'
     session.agentState.targetJobDescription = [
       'Cargo: Analytics Engineer',
       'Responsabilidades: construir dashboards e automacoes de dados.',
@@ -2055,6 +2056,7 @@ describe('ATS enhancement reliability hardening', () => {
         weakAreas: ['summary'],
         improvementSuggestions: [expect.stringContaining('Aproxime o resumo da vaga')],
       }),
+      matcherEngine: 'llm',
       userId: session.userId,
       sessionId: session.id,
     })
@@ -2062,6 +2064,7 @@ describe('ATS enhancement reliability hardening', () => {
       jobCompatibilityAssessment,
     }))
     expect(session.agentState.workflowMode).toBe('job_targeting')
+    expect(session.agentState.jobTargetingEngineVersion).toBe('canonical-v1')
     expect(session.agentState.jobCompatibilityAssessment).toBe(jobCompatibilityAssessment)
     expect(session.agentState.targetingPlan).toMatchObject({
       targetRole: expect.any(String),
@@ -2261,6 +2264,7 @@ describe('ATS enhancement reliability hardening', () => {
     expect(result.success).toBe(true)
     expect(buildPlanInput.jobCompatibilityAssessment).toBeUndefined()
     expect(session.agentState.jobCompatibilityAssessment).toBeUndefined()
+    expect(session.agentState.jobTargetingEngineVersion).toBe('legacy-v1')
     expect(session.agentState.jobCompatibilityAssessmentShadow).toBe(jobCompatibilityAssessment)
     expect(mockValidateRewrite).toHaveBeenCalledWith(
       session.cvState,
@@ -3182,6 +3186,7 @@ describe('ATS enhancement reliability hardening', () => {
     const session = buildSession()
     const jobCompatibilityAssessment = buildPipelineAssessment()
     session.agentState.workflowMode = 'job_targeting'
+    session.agentState.jobTargetingEngineVersion = 'canonical-v1'
     session.agentState.targetJobDescription = [
       'Cargo: Desenvolvedor Java',
       'Requisitos: 5+ anos em Java, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsserviços, Docker e CI/CD.',

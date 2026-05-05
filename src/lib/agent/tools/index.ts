@@ -186,7 +186,12 @@ const TOOL_DEFINITIONS: OpenAITool[] = [
         type: 'object',
         properties: {
           cv_state: { type: 'object', description: 'Final structured resume data' },
-          target_id: { type: 'string', description: 'Optional target resume id to generate from a derived variant' },
+          target_id: { type: 'string', description: 'Target resume id. Required when source_scope is job-targeting.' },
+          source_scope: {
+            type: 'string',
+            enum: ['ats-enhancement', 'job-targeting'],
+            description: 'Workflow source for the export handoff.',
+          },
         },
         required: ['cv_state'],
       },

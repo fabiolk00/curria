@@ -858,3 +858,17 @@ Plans:
 
 Plans:
 - [ ] 110-01-PLAN.md - Add safe targeting emphasis, core-requirement coverage, low-fit recoverable gating, human modal reuse, billing-safe override handoff, and focused regression proof for off-target and partially-adherent vacancies
+
+### Phase 111: Refatorar job-targeting matcher para LLM source-of-truth sem catalogo
+
+**Goal:** Replace the catalog-driven job-targeting compatibility critical path with a guarded semantic LLM matcher, preserving rollback, shadow measurement, cost/latency gates, and honest rewrite safety.
+**Requirements**: PR 1 hardens generate_file/target_id handoff; PR 2 introduces the versioned LLM matcher contract in shadow only; PR 3 adds shadow instrumentation and operational gates; PR 4 cuts over only with owner approval; PR 5 removes catalog dependencies from matching by graph audit.
+**Depends on:** Phase 110
+**Plans:** 5 plans
+
+Plans:
+- [x] PR 1: Corrigir handoff generate_file / target_id
+- [x] PR 2: LLM matcher principal sem catalogo
+- [x] PR 3: Shadow e instrumentacao operacional implementada; cost gate real depende de 50 sessoes/3 dias e owner
+- [ ] PR 4: Cutover sourceOfTruth=true pendente dos gates reais de shadow, golden LLM, revisao manual e owner
+- [x] PR 5: Remover catalogo do matching com auditoria por grafo

@@ -40,6 +40,7 @@ export type RequirementEvidenceSource =
   | 'catalog_category'
   | 'catalog_anti_equivalence'
   | 'composite_decomposition'
+  | 'llm_semantic'
   | 'llm_ambiguous'
   | 'fallback'
 
@@ -201,6 +202,10 @@ export interface RequirementEvidenceAudit {
   catalogCategoryIds: string[]
   antiEquivalenceTermIds?: string[]
   ambiguityResolved?: boolean
+  promptVersion?: string
+  model?: string
+  fallbackReason?: string
+  reasonCode?: string
 }
 
 export interface RequirementEvidence {
@@ -336,6 +341,9 @@ export interface JobCompatibilityAssessment {
     matcherVersion: string
     claimPolicyVersion: JobCompatibilityClaimPolicyVersion
     scoreVersion: JobCompatibilityScoreVersion
+    matcherEngine?: 'legacy' | 'llm'
+    matcherModel?: string
+    matcherPromptVersion?: string
     counters: {
       requirements: number
       resumeEvidence: number
