@@ -26,12 +26,12 @@ export default function AuthShell({
 }) {
   return (
     <main className="flex h-[100dvh] overflow-hidden flex-col items-center bg-gray-50 px-[clamp(0.75rem,2vw,3rem)] py-[clamp(0.5rem,1.6vh,1.5rem)] text-slate-900 selection:bg-gray-200 selection:text-gray-900 md:bg-white">
-      <div className="mb-[clamp(0.25rem,1.4vh,1.25rem)] flex shrink-0 items-center justify-center">
+      <div className="mb-[clamp(0.25rem,1.4vh,1.25rem)] flex w-full shrink-0 items-center justify-center">
         <Logo
           linkTo="/"
           className="justify-center"
-          textClassName="text-[clamp(42px,8vh,82px)]"
-          iconClassName="max-h-[clamp(2.625rem,8vh,5.125rem)]"
+          textClassName="text-[clamp(42px,8vh,72px)]"
+          iconClassName="max-h-[clamp(2.625rem,8vh,4.5rem)]"
         />
       </div>
 
