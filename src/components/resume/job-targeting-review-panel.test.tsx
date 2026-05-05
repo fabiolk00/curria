@@ -48,7 +48,7 @@ describe("JobTargetingReviewPanel", () => {
     render(<JobTargetingReviewPanel review={buildReview()} />)
 
     expect(screen.getByTestId("job-targeting-review-panel")).toBeInTheDocument()
-    expect(screen.getByText("Revisão antes de gerar")).toBeInTheDocument()
+    expect(screen.getByText("RevisÃ£o antes de gerar")).toBeInTheDocument()
     expect(screen.getByText("Antes de gerar, precisamos revisar alguns pontos")).toBeInTheDocument()
     expect(screen.getByText("Comprovado")).toBeInTheDocument()
     expect(screen.getByText("Experiência relacionada")).toBeInTheDocument()
@@ -86,5 +86,14 @@ describe("JobTargetingReviewPanel", () => {
     expect(onContinueWithoutRequirement).toHaveBeenCalledWith(expect.objectContaining({ label: "SAP FI" }))
     expect(onGenerateConservativeVersion).toHaveBeenCalledTimes(1)
     expect(onChooseAnotherJob).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses post-generation diagnostic copy after a successful generation", () => {
+    render(<JobTargetingReviewPanel review={buildReview()} surface="post_generation" />)
+
+    expect(screen.getByText("Diagnostico da versao gerada")).toBeInTheDocument()
+    expect(screen.getByText("Pontos de aderencia para revisar")).toBeInTheDocument()
+    expect(screen.queryByText("RevisÃ£o antes de gerar")).not.toBeInTheDocument()
+    expect(screen.queryByText("Antes de gerar, precisamos revisar alguns pontos")).not.toBeInTheDocument()
   })
 })

@@ -858,3 +858,13 @@ Plans:
 
 Plans:
 - [ ] 110-01-PLAN.md - Add safe targeting emphasis, core-requirement coverage, low-fit recoverable gating, human modal reuse, billing-safe override handoff, and focused regression proof for off-target and partially-adherent vacancies
+
+### Phase 111: Job targeting matcher rework retry 2
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 110
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 111 to break down)

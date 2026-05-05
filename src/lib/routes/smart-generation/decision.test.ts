@@ -5,6 +5,8 @@ import { buildGenerationCopy, resolveWorkflowMode } from './decision'
 import { dispatchSmartGenerationArtifact, runSmartGenerationPipeline } from './dispatch'
 import { bootstrapSmartGenerationSession } from './session-bootstrap'
 import { resetSmartGenerationStartLocksForTests } from '@/lib/agent/smart-generation-start-lock'
+import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
+import { createResumeTarget } from '@/lib/db/resume-targets'
 
 vi.mock('./readiness', () => ({
   evaluateSmartGenerationResumeReadiness: vi.fn(() => null),
@@ -62,6 +64,10 @@ vi.mock('./dispatch', () => ({
 
 vi.mock('@/lib/db/cv-versions', () => ({
   getLatestCvVersionForScope: vi.fn(async () => null),
+}))
+
+vi.mock('@/lib/db/resume-targets', () => ({
+  createResumeTarget: vi.fn(),
 }))
 
 describe('smart-generation helpers', () => {
@@ -392,6 +398,167 @@ describe('smart-generation helpers', () => {
     expect(dispatchSmartGenerationArtifact).not.toHaveBeenCalled()
   })
 
+  it('creates a resume target and dispatches generate_file with target_id for job-targeting', async () => {
+    const originalCvState = {
+      fullName: 'Ana',
+      email: 'ana@example.com',
+      phone: '555-0100',
+      summary: 'Resumo base',
+      experience: [{ title: 'Analista', company: 'Acme', startDate: '2022', endDate: '2024', bullets: ['Entrega'] }],
+      skills: ['SQL'],
+      education: [],
+    }
+    const optimizedCvState = {
+      ...originalCvState,
+      summary: 'Resumo otimizado',
+      skills: ['SQL', 'Qlik'],
+    }
+
+    vi.mocked(bootstrapSmartGenerationSession).mockResolvedValueOnce({
+      session: { id: 'sess_target' } as never,
+      patchedSession: {
+        id: 'sess_target',
+        userId: 'usr_1',
+        phase: 'intake',
+        stateVersion: 1,
+        cvState: originalCvState,
+        agentState: {
+          parseStatus: 'parsed',
+          rewriteHistory: {},
+          optimizedCvState,
+          gapAnalysis: {
+            result: {
+              matchScore: 88,
+              missingSkills: [],
+              weakAreas: [],
+              improvementSuggestions: [],
+            },
+            analyzedAt: '2026-05-05T00:00:00.000Z',
+          },
+        },
+        generatedOutput: { status: 'idle' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never,
+    })
+    vi.mocked(runSmartGenerationPipeline).mockResolvedValueOnce({
+      success: true,
+      optimizedCvState,
+    } as never)
+    vi.mocked(createResumeTarget).mockResolvedValueOnce({
+      id: 'target_1',
+    } as never)
+    vi.mocked(getLatestCvVersionForScope).mockResolvedValueOnce({
+      id: 'version_target_1',
+      sessionId: 'sess_target',
+      targetResumeId: 'target_1',
+      source: 'target-derived',
+      snapshot: optimizedCvState,
+      createdAt: new Date(),
+    } as never)
+    vi.mocked(dispatchSmartGenerationArtifact).mockResolvedValueOnce({
+      output: {
+        success: true,
+        creditsUsed: 1,
+        resumeGenerationId: 'gen_1',
+      },
+      outputJson: '{}',
+    } as never)
+
+    const decision = await executeSmartGenerationDecision({
+      request: {} as never,
+      appUser: { id: 'usr_1' } as never,
+      cvState: originalCvState,
+      targetJobDescription: 'Cargo: BI com Qlik',
+    })
+
+    expect(createResumeTarget).toHaveBeenCalledWith({
+      sessionId: 'sess_target',
+      userId: 'usr_1',
+      targetJobDescription: 'Cargo: BI com Qlik',
+      derivedCvState: optimizedCvState,
+      gapAnalysis: {
+        matchScore: 88,
+        missingSkills: [],
+        weakAreas: [],
+        improvementSuggestions: [],
+      },
+    })
+    expect(getLatestCvVersionForScope).toHaveBeenCalledWith('sess_target', 'target_1')
+    expect(dispatchSmartGenerationArtifact).toHaveBeenCalledWith(expect.objectContaining({
+      workflowMode: 'job_targeting',
+      targetId: 'target_1',
+      optimizedCvState,
+    }))
+    expect(decision).toEqual(expect.objectContaining({
+      kind: 'success',
+      body: expect.objectContaining({
+        generationType: 'JOB_TARGETING',
+        sessionId: 'sess_target',
+      }),
+    }))
+  })
+
+  it('fails job-targeting explicitly before generate_file when target creation does not produce target_id', async () => {
+    const originalCvState = {
+      fullName: 'Ana',
+      email: 'ana@example.com',
+      phone: '555-0100',
+      summary: 'Resumo base',
+      experience: [{ title: 'Analista', company: 'Acme', startDate: '2022', endDate: '2024', bullets: ['Entrega'] }],
+      skills: ['SQL'],
+      education: [],
+    }
+    const optimizedCvState = {
+      ...originalCvState,
+      summary: 'Resumo otimizado',
+    }
+
+    vi.mocked(bootstrapSmartGenerationSession).mockResolvedValueOnce({
+      session: { id: 'sess_target_missing' } as never,
+      patchedSession: {
+        id: 'sess_target_missing',
+        userId: 'usr_1',
+        phase: 'intake',
+        stateVersion: 1,
+        cvState: originalCvState,
+        agentState: {
+          parseStatus: 'parsed',
+          rewriteHistory: {},
+          optimizedCvState,
+        },
+        generatedOutput: { status: 'idle' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never,
+    })
+    vi.mocked(runSmartGenerationPipeline).mockResolvedValueOnce({
+      success: true,
+      optimizedCvState,
+    } as never)
+    vi.mocked(createResumeTarget).mockResolvedValueOnce({
+      id: '',
+    } as never)
+
+    const decision = await executeSmartGenerationDecision({
+      request: {} as never,
+      appUser: { id: 'usr_1' } as never,
+      cvState: originalCvState,
+      targetJobDescription: 'Cargo: BI com Qlik',
+    })
+
+    expect(decision).toEqual({
+      kind: 'validation_error',
+      status: 409,
+      body: {
+        error: 'Job-targeting artifact generation requires a target_id handoff.',
+        code: 'PRECONDITION_FAILED',
+        workflowMode: 'job_targeting',
+      },
+    })
+    expect(dispatchSmartGenerationArtifact).not.toHaveBeenCalled()
+  })
+
   it('marks the start lock failed when session bootstrap throws after acquisition', async () => {
     const context = {
       request: {} as never,
@@ -409,6 +576,7 @@ describe('smart-generation helpers', () => {
     }
 
     vi.mocked(bootstrapSmartGenerationSession).mockRejectedValueOnce(new Error('bootstrap failed'))
+    vi.mocked(createResumeTarget).mockResolvedValueOnce({ id: 'target_retry' } as never)
 
     await expect(executeSmartGenerationDecision(context)).rejects.toThrow('bootstrap failed')
     const retryDecision = await executeSmartGenerationDecision(context)
@@ -441,6 +609,7 @@ describe('smart-generation helpers', () => {
     }
 
     vi.mocked(runSmartGenerationPipeline).mockRejectedValueOnce(new Error('pipeline failed'))
+    vi.mocked(createResumeTarget).mockResolvedValueOnce({ id: 'target_retry' } as never)
 
     await expect(executeSmartGenerationDecision(context)).rejects.toThrow('pipeline failed')
     const retryDecision = await executeSmartGenerationDecision(context)

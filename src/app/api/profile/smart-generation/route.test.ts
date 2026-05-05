@@ -7,6 +7,7 @@ import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
+import { createResumeTarget } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, checkUserQuota, createSession } from '@/lib/db/sessions'
 import { resetSmartGenerationStartLocksForTests } from '@/lib/agent/smart-generation-start-lock'
 
@@ -26,6 +27,10 @@ vi.mock('@/lib/db/sessions', () => ({
 
 vi.mock('@/lib/db/cv-versions', () => ({
   getLatestCvVersionForScope: vi.fn(),
+}))
+
+vi.mock('@/lib/db/resume-targets', () => ({
+  createResumeTarget: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/ats-enhancement-pipeline', () => ({
@@ -130,6 +135,9 @@ describe('POST /api/profile/smart-generation', () => {
     } as never)
     vi.mocked(checkUserQuota).mockResolvedValue(true)
     vi.mocked(createSession).mockResolvedValue(buildSession() as never)
+    vi.mocked(createResumeTarget).mockResolvedValue({
+      id: 'target_123',
+    } as never)
     vi.mocked(dispatchToolWithContext).mockResolvedValue({
       output: {
         success: true,
@@ -144,11 +152,12 @@ describe('POST /api/profile/smart-generation', () => {
         resumeGenerationId: 'gen_123',
       }),
     } as never)
-    vi.mocked(getLatestCvVersionForScope).mockImplementation(async () => ({
+    vi.mocked(getLatestCvVersionForScope).mockImplementation(async (_sessionId, targetResumeId) => ({
       id: 'ver_123',
       sessionId: 'sess_generation_123',
+      targetResumeId,
       snapshot: latestCvVersionSnapshot,
-      source: latestCvVersionSource,
+      source: targetResumeId ? 'target-derived' : latestCvVersionSource,
       createdAt: new Date(),
     }) as never)
   })
@@ -273,6 +282,7 @@ describe('POST /api/profile/smart-generation', () => {
       'generate_file',
       expect.objectContaining({
         idempotency_key: expect.stringMatching(/^job-targeting-start:usr_123:[a-f0-9]{32}:[a-f0-9]{32}:artifact$/),
+        target_id: 'target_123',
       }),
       expect.objectContaining({ id: 'sess_generation_123' }),
     )

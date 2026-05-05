@@ -13,6 +13,7 @@ import type {
 type JobTargetingReviewPanelProps = {
   review: UserFriendlyJobReview
   className?: string
+  surface?: "pre_generation" | "post_generation"
   onAddEvidence?: (requirement: UserFriendlyRequirementCard) => void
   onContinueWithoutRequirement?: (requirement: UserFriendlyRequirementCard) => void
   onGenerateConservativeVersion?: () => void
@@ -136,12 +137,24 @@ function RequirementCard({
 export function JobTargetingReviewPanel({
   review,
   className,
+  surface = "pre_generation",
   onAddEvidence,
   onContinueWithoutRequirement,
   onGenerateConservativeVersion,
   onChooseAnotherJob,
 }: JobTargetingReviewPanelProps) {
   const isLowFit = review.fitLevel === "low"
+  const isPostGeneration = surface === "post_generation"
+  const eyebrow = isPostGeneration ? "Diagnostico da versao gerada" : "RevisÃ£o antes de gerar"
+  const title = isPostGeneration && review.title.includes("Antes de gerar")
+    ? "Pontos de aderencia para revisar"
+    : review.title
+  const description = isPostGeneration
+    ? "A versao gerada evita afirmar requisitos sem evidencia direta. Estes pontos ficaram como diagnostico para ajuste manual do perfil."
+    : review.description
+  const helperText = isPostGeneration
+    ? "Use estes gaps como checklist de evidencias reais que podem melhorar proximas versoes."
+    : "VocÃª pode adicionar uma evidÃªncia real ao seu perfil ou continuar com uma versÃ£o mais conservadora."
 
   return (
     <section
@@ -155,16 +168,16 @@ export function JobTargetingReviewPanel({
         <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-300" />
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
-            Revisão antes de gerar
+            {eyebrow}
           </p>
           <h2 className="mt-1 text-xl font-bold leading-tight text-zinc-950 dark:text-zinc-50">
-            {review.title}
+            {title}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-            {review.description}
+            {description}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Você pode adicionar uma evidência real ao seu perfil ou continuar com uma versão mais conservadora.
+            {helperText}
           </p>
         </div>
       </div>

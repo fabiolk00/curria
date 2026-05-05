@@ -761,7 +761,10 @@ export function ResumeComparisonView({
               className="order-1 space-y-4 lg:col-start-2 lg:row-start-1"
             >
               {hasJobTargetingReview && jobTargetingExplanation?.userFriendlyReview ? (
-                <JobTargetingReviewPanel review={jobTargetingExplanation.userFriendlyReview} />
+                <JobTargetingReviewPanel
+                  review={jobTargetingExplanation.userFriendlyReview}
+                  surface="post_generation"
+                />
               ) : null}
               {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
                 <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />
@@ -781,7 +784,10 @@ export function ResumeComparisonView({
               className="order-1 space-y-4 lg:col-start-2 lg:row-start-1"
             >
               {hasJobTargetingReview && jobTargetingExplanation?.userFriendlyReview ? (
-                <JobTargetingReviewPanel review={jobTargetingExplanation.userFriendlyReview} />
+                <JobTargetingReviewPanel
+                  review={jobTargetingExplanation.userFriendlyReview}
+                  surface="post_generation"
+                />
               ) : null}
               {hasJobTargetingScore && jobTargetingExplanation?.scoreBreakdown ? (
                 <JobTargetingScoreCard breakdown={jobTargetingExplanation.scoreBreakdown} />

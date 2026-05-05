@@ -80,4 +80,64 @@ describe('user friendly job review', () => {
       }),
     ])
   })
+
+  it('filters noisy generic cards and keeps at most five actionable gaps first', () => {
+    const review = buildUserFriendlyJobReviewFromTargetingEvidence({
+      targetEvidence: [
+        {
+          jobSignal: 'Atividades',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'Identificar',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'BI',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'Conhecimento na ferramenta Qlik',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'Conformidade com LGPD/proteÃ§Ã£o de dados',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'HomologaÃ§Ã£o/testes de dados com Ã¡reas de negÃ³cio',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'SeguranÃ§a e privacidade de dados',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'GestÃ£o de prazos e estimativa de esforÃ§o',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+        {
+          jobSignal: 'Modelagem dimensional',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+        },
+      ],
+    })
+
+    expect(review?.requirements.map((card) => card.label)).toEqual([
+      'Conhecimento na ferramenta Qlik',
+      'Conformidade com LGPD/proteÃ§Ã£o de dados',
+      'HomologaÃ§Ã£o/testes de dados com Ã¡reas de negÃ³cio',
+      'SeguranÃ§a e privacidade de dados',
+      'GestÃ£o de prazos e estimativa de esforÃ§o',
+    ])
+  })
 })

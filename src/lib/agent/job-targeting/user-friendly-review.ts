@@ -28,8 +28,25 @@ export type UserFriendlyJobReview = {
   canGenerateConservativeVersion: boolean
 }
 
-const MAX_REQUIREMENT_CARDS = 8
+const MAX_REQUIREMENT_CARDS = 5
 const MAX_EVIDENCE_ITEMS = 2
+const ACTIONABLE_LABEL_PATTERNS = [
+  /\bqlik\b/iu,
+  /\blgpd\b|\bgdpr\b|\bprote[cç][aã]o\b|\bcompliance\b/iu,
+  /\bhomologa[cç][aã]o\b|\bvalida[cç][aã]o\b|\btestes?\b/iu,
+  /\bseguran[cç]a\b|\bprivacidade\b/iu,
+]
+const NOISY_LABELS = new Set([
+  'atividades',
+  'atividade',
+  'identificar',
+  'bi',
+  'business intelligence bi',
+  'dados ou areas correlatas',
+  'areas correlatas',
+  'requisitos',
+  'responsabilidades',
+])
 
 type TargetingEvidenceLike = {
   jobSignal: string
@@ -56,6 +73,31 @@ function normalizeForDedupe(value: string): string {
     .replace(/[^\p{L}\p{N}\s/+.-]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim()
+}
+
+function isNoisyRequirementLabel(label: string, targetRole?: string): boolean {
+  const key = normalizeForDedupe(label)
+  const targetRoleKey = normalizeForDedupe(targetRole ?? '')
+
+  if (!key) {
+    return true
+  }
+
+  if (NOISY_LABELS.has(key)) {
+    return true
+  }
+
+  if (targetRoleKey && key === targetRoleKey) {
+    return true
+  }
+
+  return key.length < 4
+}
+
+function getActionablePriority(label: string): number {
+  const index = ACTIONABLE_LABEL_PATTERNS.findIndex((pattern) => pattern.test(label))
+
+  return index === -1 ? ACTIONABLE_LABEL_PATTERNS.length : index
 }
 
 function dedupe(values: Array<string | undefined>): string[] {
@@ -142,14 +184,27 @@ function toRequirementCard(requirement: RequirementEvidence): UserFriendlyRequir
   }
 }
 
-function sortRequirementCards(cards: UserFriendlyRequirementCard[]): UserFriendlyRequirementCard[] {
+function sortRequirementCards(
+  cards: UserFriendlyRequirementCard[],
+  targetRole?: string,
+): UserFriendlyRequirementCard[] {
   const order: Record<UserFriendlyRequirementStatus, number> = {
     needs_evidence: 0,
     related: 1,
     proven: 2,
   }
 
-  return [...cards].sort((a, b) => order[a.status] - order[b.status])
+  return cards
+    .filter((card) => !isNoisyRequirementLabel(card.label, targetRole))
+    .sort((a, b) => {
+      const priorityDelta = getActionablePriority(a.label) - getActionablePriority(b.label)
+
+      if (priorityDelta !== 0) {
+        return priorityDelta
+      }
+
+      return order[a.status] - order[b.status]
+    })
 }
 
 function statusFromTargetingEvidence(evidence: TargetingEvidenceLike): UserFriendlyRequirementStatus {
@@ -267,6 +322,7 @@ export function buildUserFriendlyJobReviewFromAssessment(
   const fitLevel = resolveFitLevel(assessment)
   const cards = dedupeCards(sortRequirementCards(
     assessment.requirements.map(toRequirementCard),
+    assessment.targetRole,
   )).slice(0, MAX_REQUIREMENT_CARDS)
 
   return {

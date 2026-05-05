@@ -7,6 +7,7 @@ import {
   type SmartGenerationStartLockBackend,
 } from '@/lib/agent/smart-generation-start-lock'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
+import { createResumeTarget } from '@/lib/db/resume-targets'
 import type { CVState } from '@/types/cv'
 
 import type { PatchedSmartGenerationSession, SmartGenerationContext, SmartGenerationDecision } from './types'
@@ -25,7 +26,7 @@ import { bootstrapSmartGenerationSession } from './session-bootstrap'
 import { buildGenerationCopy, resolveWorkflowMode } from './workflow-mode'
 export { buildGenerationCopy, resolveWorkflowMode } from './workflow-mode'
 
-const SMART_GENERATION_VERSION_SOURCES = new Set(['ats-enhancement', 'job-targeting'])
+const SMART_GENERATION_VERSION_SOURCES = new Set(['ats-enhancement', 'job-targeting', 'target-derived'])
 
 function areCvStatesEqual(left: CVState, right: CVState): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
@@ -42,8 +43,23 @@ function buildSmartGenerationHandoffFailure(): Extract<SmartGenerationDecision, 
   }
 }
 
+function buildJobTargetingArchitectureFailure(
+  message = 'Job-targeting artifact generation requires a target_id handoff.',
+): Extract<SmartGenerationDecision, { kind: 'validation_error' }> {
+  return {
+    kind: 'validation_error',
+    status: getHttpStatusForToolError(TOOL_ERROR_CODES.PRECONDITION_FAILED),
+    body: {
+      error: message,
+      code: TOOL_ERROR_CODES.PRECONDITION_FAILED,
+      workflowMode: 'job_targeting',
+    },
+  }
+}
+
 async function evaluateSmartGenerationHandoff(input: {
   sessionId: string
+  targetId?: string
   patchedSession: PatchedSmartGenerationSession
   optimizedCvState: CVState
 }): Promise<Extract<SmartGenerationDecision, { kind: 'validation_error' }> | null> {
@@ -52,7 +68,7 @@ async function evaluateSmartGenerationHandoff(input: {
     return buildSmartGenerationHandoffFailure()
   }
 
-  const latestCvVersion = await getLatestCvVersionForScope(input.sessionId)
+  const latestCvVersion = await getLatestCvVersionForScope(input.sessionId, input.targetId)
   if (
     !latestCvVersion
     || !SMART_GENERATION_VERSION_SOURCES.has(latestCvVersion.source)
@@ -62,6 +78,44 @@ async function evaluateSmartGenerationHandoff(input: {
   }
 
   return null
+}
+
+async function createJobTargetingHandoffTarget(input: {
+  sessionId: string
+  userId: string
+  targetJobDescription?: string
+  patchedSession: PatchedSmartGenerationSession
+  optimizedCvState: CVState
+}): Promise<
+  | { kind: 'ok'; targetId: string }
+  | { kind: 'error'; failure: Extract<SmartGenerationDecision, { kind: 'validation_error' }> }
+> {
+  if (!input.targetJobDescription?.trim()) {
+    return {
+      kind: 'error',
+      failure: buildJobTargetingArchitectureFailure('Job-targeting artifact generation requires a target job description.'),
+    }
+  }
+
+  const target = await createResumeTarget({
+    sessionId: input.sessionId,
+    userId: input.userId,
+    targetJobDescription: input.targetJobDescription,
+    derivedCvState: input.optimizedCvState,
+    gapAnalysis: input.patchedSession.agentState.gapAnalysis?.result,
+  })
+
+  if (!target?.id) {
+    return {
+      kind: 'error',
+      failure: buildJobTargetingArchitectureFailure(),
+    }
+  }
+
+  return {
+    kind: 'ok',
+    targetId: target.id,
+  }
 }
 
 export async function executeSmartGenerationDecision(
@@ -190,8 +244,27 @@ export async function executeSmartGenerationDecision(
       })
     }
 
+    let targetId: string | undefined
+    if (workflowMode === 'job_targeting') {
+      const handoffTarget = await createJobTargetingHandoffTarget({
+        sessionId: session.id,
+        userId: context.appUser.id,
+        targetJobDescription: context.targetJobDescription,
+        patchedSession,
+        optimizedCvState: pipeline.optimizedCvState,
+      })
+
+      if (handoffTarget.kind === 'error') {
+        await markStartLockFailed()
+        return handoffTarget.failure
+      }
+
+      targetId = handoffTarget.targetId
+    }
+
     const handoffFailure = await evaluateSmartGenerationHandoff({
       sessionId: session.id,
+      targetId,
       patchedSession,
       optimizedCvState: pipeline.optimizedCvState,
     })
@@ -201,9 +274,11 @@ export async function executeSmartGenerationDecision(
     }
 
     const generationResult = await dispatchSmartGenerationArtifact({
+      workflowMode,
       patchedSession,
       optimizedCvState: pipeline.optimizedCvState,
       idempotencyKey: smartGenerationArtifactIdempotencyKey,
+      targetId,
     })
 
     if (generationResult.outputFailure) {
