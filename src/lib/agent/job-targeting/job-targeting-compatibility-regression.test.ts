@@ -166,7 +166,7 @@ describe('job targeting compatibility regression', () => {
     mockTrackApiUsage.mockResolvedValue(undefined)
   })
 
-  it('keeps compound BI requirements conservative in the non-LLM evidence classifier', async () => {
+  it('does not classify compound Power BI requirements as unsupported when BI evidence exists', async () => {
     const targetEvidence = await classifyTargetEvidence({
       cvState,
       targetingPlan: buildTargetingPlan({ missingButCannotInvent: [] }),
@@ -175,8 +175,9 @@ describe('job targeting compatibility regression', () => {
     })
     const evidence = findEvidence(targetEvidence, 'Experiência com ferramentas de BI como Power BI, Tableau ou similares')
 
-    expect(evidence.evidenceLevel).toBe('unsupported_gap')
-    expect(evidence.rewritePermission).toBe('must_not_claim')
+    expect(evidence.evidenceLevel).not.toBe('unsupported_gap')
+    expect(evidence.rewritePermission).not.toBe('must_not_claim')
+    expect(['explicit', 'technical_equivalent']).toContain(evidence.evidenceLevel)
   })
 
   it('treats ADS graduation as related technology education', async () => {
@@ -191,8 +192,8 @@ describe('job targeting compatibility regression', () => {
       'Formação em Administração, Engenharia, Estatística, Economia, Sistemas de Informação, Ciência de Dados ou áreas correlatas',
     )
 
-    expect(evidence.evidenceLevel).toBe('strong_contextual_inference')
-    expect(evidence.rewritePermission).toBe('can_bridge_carefully')
+    expect(evidence.evidenceLevel).toBe('technical_equivalent')
+    expect(evidence.rewritePermission).toBe('can_claim_normalized')
   })
 
   it('does not turn Power Query into a direct claim because Power BI exists', async () => {
@@ -243,8 +244,11 @@ describe('job targeting compatibility regression', () => {
       criticalGapSignals: coverage.topUnsupportedSignalsForDisplay,
     })
 
-    expect(score.total).toBeGreaterThanOrEqual(40)
-    expect(score.total).toBeLessThanOrEqual(60)
+    expect(score.total).toBeGreaterThanOrEqual(60)
+    expect(score.total).toBeLessThanOrEqual(80)
+    expect(score.criticalGaps).not.toContain('Experiência com ferramentas de BI como Power BI')
+    expect(score.criticalGaps).not.toContain('Experiência com bases de dados')
+    expect(score.criticalGaps).not.toContain('Formação em Administração, Engenharia, Estatística, Economia, Sistemas de Informação, Ciência de Dados ou áreas correlatas')
     expect(coverage.topUnsupportedSignalsForDisplay).toEqual(expect.arrayContaining([
       'Power Query',
       'Totvs Protheus',

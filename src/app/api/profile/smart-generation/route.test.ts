@@ -7,7 +7,6 @@ import { runJobTargetingPipeline } from '@/lib/agent/job-targeting-pipeline'
 import { dispatchToolWithContext } from '@/lib/agent/tools'
 import { getCurrentAppUser } from '@/lib/auth/app-user'
 import { getLatestCvVersionForScope } from '@/lib/db/cv-versions'
-import { createResumeTarget } from '@/lib/db/resume-targets'
 import { applyToolPatchWithVersion, checkUserQuota, createSession } from '@/lib/db/sessions'
 import { resetSmartGenerationStartLocksForTests } from '@/lib/agent/smart-generation-start-lock'
 
@@ -27,10 +26,6 @@ vi.mock('@/lib/db/sessions', () => ({
 
 vi.mock('@/lib/db/cv-versions', () => ({
   getLatestCvVersionForScope: vi.fn(),
-}))
-
-vi.mock('@/lib/db/resume-targets', () => ({
-  createResumeTarget: vi.fn(),
 }))
 
 vi.mock('@/lib/agent/ats-enhancement-pipeline', () => ({
@@ -156,14 +151,6 @@ describe('POST /api/profile/smart-generation', () => {
       source: latestCvVersionSource,
       createdAt: new Date(),
     }) as never)
-    vi.mocked(createResumeTarget).mockResolvedValue({
-      id: 'target_123',
-      sessionId: 'sess_generation_123',
-      targetJobDescription: 'Vaga para analista de dados senior com foco em produto e SQL.',
-      derivedCvState: latestCvVersionSnapshot,
-      createdAt: new Date('2026-03-27T12:00:00.000Z'),
-      updatedAt: new Date('2026-03-27T12:00:00.000Z'),
-    } as never)
   })
 
   it('uses ATS enhancement when no target job description is provided', async () => {
@@ -211,7 +198,6 @@ describe('POST /api/profile/smart-generation', () => {
       }),
     }))
     expect(runJobTargetingPipeline).not.toHaveBeenCalled()
-    expect(createResumeTarget).not.toHaveBeenCalled()
     expect(applyToolPatchWithVersion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'sess_generation_123' }),
       expect.objectContaining({
@@ -283,18 +269,9 @@ describe('POST /api/profile/smart-generation', () => {
       }),
     }))
     expect(runAtsEnhancementPipeline).not.toHaveBeenCalled()
-    expect(createResumeTarget).toHaveBeenCalledWith({
-      sessionId: 'sess_generation_123',
-      userId: 'usr_123',
-      targetJobDescription: 'Vaga para analista de dados senior com foco em produto e SQL.',
-      derivedCvState: latestCvVersionSnapshot,
-      gapAnalysis: undefined,
-    })
     expect(dispatchToolWithContext).toHaveBeenCalledWith(
       'generate_file',
       expect.objectContaining({
-        source_scope: 'job-targeting',
-        target_id: 'target_123',
         idempotency_key: expect.stringMatching(/^job-targeting-start:usr_123:[a-f0-9]{32}:[a-f0-9]{32}:artifact$/),
       }),
       expect.objectContaining({ id: 'sess_generation_123' }),

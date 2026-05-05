@@ -951,7 +951,6 @@ describe('agent tool dispatch', () => {
 
   it('generates files from the selected target derived cvState without overwriting the base resume', async () => {
     const session = buildSession()
-    session.agentState.workflowMode = 'job_targeting'
     const originalCvState = structuredClone(session.cvState)
     const targetDerivedCvState = {
       ...session.cvState,
@@ -984,7 +983,6 @@ describe('agent tool dispatch', () => {
     const execution = await executeTool('generate_file', {
       cv_state: targetDerivedCvState,
       target_id: 'target_123',
-      source_scope: 'job-targeting',
     }, session)
 
     expect(getResumeTargetForSession).toHaveBeenCalledWith(session.id, 'target_123')
@@ -999,7 +997,7 @@ describe('agent tool dispatch', () => {
       latestVersionSource: 'ats-enhancement',
       sourceScope: 'target',
       historyContext: {
-        workflowMode: 'job_targeting',
+        workflowMode: undefined,
         lastRewriteMode: undefined,
         targetJobDescription: undefined,
         targetRole: undefined,
@@ -1024,31 +1022,6 @@ describe('agent tool dispatch', () => {
     })
     expect(execution.patch).toBeUndefined()
     expect(session.cvState).toEqual(originalCvState)
-  })
-
-  it('fails explicitly when job-targeting generate_file omits target_id', async () => {
-    const session = buildSession()
-    session.agentState.workflowMode = 'job_targeting'
-    session.agentState.targetJobDescription = 'AWS backend role'
-    session.agentState.optimizedCvState = {
-      ...session.cvState,
-      summary: 'Target-specific AWS summary.',
-      skills: ['TypeScript', 'AWS'],
-    }
-
-    const execution = await executeTool('generate_file', {
-      cv_state: session.agentState.optimizedCvState,
-      source_scope: 'job-targeting',
-    }, session)
-
-    expect(execution.output).toEqual({
-      success: false,
-      code: 'PRECONDITION_FAILED',
-      error: 'Job-targeting generate_file handoff requires target_id; refusing to export as ATS enhancement.',
-    })
-    expect(getResumeTargetForSession).not.toHaveBeenCalled()
-    expect(generateBillableResume).not.toHaveBeenCalled()
-    expect(recordMetricCounter).toHaveBeenCalledWith('architecture.generate_file.precondition_failed')
   })
 
   it('persists target generatedOutput on failure without updating the session generatedOutput', async () => {

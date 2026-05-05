@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
-import type { LlmRequirementResolver } from '@/lib/agent/job-targeting/compatibility/llm-matcher'
 import { calculateJobCompatibilityScore } from '@/lib/agent/job-targeting/compatibility/score'
 import type {
   ClaimPolicyItem,
@@ -156,49 +155,6 @@ function fixtureIdsForClaims(
     .sort()
 }
 
-function buildFixtureLlmResolver(fixture: GoldenCase): LlmRequirementResolver {
-  const outcomes = new Map<string, {
-    evidenceLevel: 'supported' | 'adjacent' | 'unsupported'
-    rewritePermission: 'can_claim_directly' | 'can_bridge_to_target_role' | 'must_not_claim'
-  }>()
-
-  for (const requirement of fixture.input.job.requirements) {
-    if (fixture.expected.supportedRequirementIds.includes(requirement.id)) {
-      outcomes.set(requirement.text, {
-        evidenceLevel: 'supported',
-        rewritePermission: 'can_claim_directly',
-      })
-      continue
-    }
-
-    if (fixture.expected.adjacentRequirementIds.includes(requirement.id)) {
-      outcomes.set(requirement.text, {
-        evidenceLevel: 'adjacent',
-        rewritePermission: 'can_bridge_to_target_role',
-      })
-      continue
-    }
-
-    outcomes.set(requirement.text, {
-      evidenceLevel: 'unsupported',
-      rewritePermission: 'must_not_claim',
-    })
-  }
-
-  return async ({ requirement }) => ({
-    content: JSON.stringify({
-      ...(outcomes.get(requirement.text) ?? {
-        evidenceLevel: 'unsupported',
-        rewritePermission: 'must_not_claim',
-      }),
-      confidence: 0.9,
-      reasoning: 'fixture_expected_outcome',
-    }),
-    inputTokens: 10,
-    outputTokens: 10,
-  })
-}
-
 describe('job compatibility assessment', () => {
   it('runs every locked golden fixture through the public assessment entrypoint', async () => {
     const fixtures = readGoldenCases()
@@ -210,8 +166,6 @@ describe('job compatibility assessment', () => {
         cvState: toCvState(fixture),
         targetJobDescription: toTargetJobDescription(fixture),
         gapAnalysis: fixture.input.gapAnalysis,
-        matcherEngine: 'llm',
-        llmResolver: buildFixtureLlmResolver(fixture),
         userId: `user-${fixture.id}`,
         sessionId: `session-${fixture.id}`,
       })
@@ -253,8 +207,7 @@ describe('job compatibility assessment', () => {
         userId: `user-${fixture.id}`,
         sessionId: `session-${fixture.id}`,
       })
-      expect(assessment.catalog.catalogIds, fixture.id).toEqual([])
-      expect(assessment.audit.matcherEngine, fixture.id).toBe('llm')
+      expect(assessment.catalog.catalogIds.length, fixture.id).toBeGreaterThan(0)
     }
   })
 

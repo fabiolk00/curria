@@ -1,10 +1,11 @@
+import type { LoadedJobTargetingCatalog } from '@/lib/agent/job-targeting/catalog/catalog-types'
+import { loadJobTargetingCatalog } from '@/lib/agent/job-targeting/catalog/catalog-loader'
 import type {
   JobCompatibilityAssessment,
   JobCompatibilityGap,
   RequirementEvidence,
 } from '@/lib/agent/job-targeting/compatibility/types'
 import type { CVState } from '@/types/cv'
-import { includesNormalizedPhrase } from '@/lib/agent/job-targeting/semantic-normalization'
 
 import {
   buildJobCompatibilityClaimPolicy,
@@ -15,13 +16,9 @@ import {
   extractResumeEvidence,
 } from './evidence-extraction'
 import {
-  classifyRequirementsWithLlm,
-  type LlmRequirementResolver,
-} from './llm-matcher'
-import {
-  JOB_MATCHER_LLM_MODEL,
-  JOB_MATCHER_PROMPT_VERSION,
-} from './llm-config'
+  classifyRequirementEvidence,
+  JOB_COMPATIBILITY_MATCHER_VERSION,
+} from './matcher'
 import {
   extractJobRequirements,
   REQUIREMENT_EXTRACTION_VERSION,
@@ -53,9 +50,7 @@ export interface EvaluateJobCompatibilityInput {
   cvState: CVState
   targetJobDescription: string
   gapAnalysis?: CompatibilityGapAnalysisInput
-  catalog?: unknown
-  matcherEngine?: 'legacy' | 'llm'
-  llmResolver?: LlmRequirementResolver
+  catalog?: LoadedJobTargetingCatalog
   userId?: string
   sessionId?: string
 }
@@ -65,158 +60,19 @@ export async function evaluateJobCompatibility({
   targetJobDescription,
   gapAnalysis,
   catalog,
-  matcherEngine = 'legacy',
-  llmResolver,
   userId,
   sessionId,
 }: EvaluateJobCompatibilityInput): Promise<JobCompatibilityAssessment> {
+  const loadedCatalog = catalog ?? await loadJobTargetingCatalog()
   const targetRole = extractTargetRole(targetJobDescription)
   const extractedRequirements = extractJobRequirements({ targetJobDescription })
   const resumeEvidence = extractResumeEvidence(cvState)
-
-  if (matcherEngine === 'llm') {
-    const result = await classifyRequirementsWithLlm({
-      requirements: extractedRequirements,
-      resumeEvidence,
-      userId,
-      sessionId,
-      resolver: llmResolver,
-    })
-
-    return buildJobCompatibilityAssessment({
-      targetRole,
-      requirements: result.requirements,
-      resumeEvidenceCount: resumeEvidence.length,
-      gapAnalysis,
-      userId,
-      sessionId,
-      matcherEngine,
-      catalogIds: [],
-      catalogVersions: {},
-      matcherVersion: JOB_MATCHER_PROMPT_VERSION,
-      matcherModel: JOB_MATCHER_LLM_MODEL,
-      matcherPromptVersion: JOB_MATCHER_PROMPT_VERSION,
-    })
-  }
-
-  const requirements = extractedRequirements.map((requirement) => classifyRequirementEvidenceWithoutCatalog(
+  const requirements = extractedRequirements.map((requirement) => classifyRequirementEvidence({
     requirement,
+    decomposedSignals: extractedRequirements,
     resumeEvidence,
-  ))
-
-  return buildJobCompatibilityAssessment({
-    targetRole,
-    requirements,
-    resumeEvidenceCount: resumeEvidence.length,
-    gapAnalysis,
-    userId,
-    sessionId,
-    matcherEngine,
-    catalogIds: [],
-    catalogVersions: {},
-    matcherVersion: 'job-compat-matcher-no-catalog-v1',
-  })
-}
-
-function classifyRequirementEvidenceWithoutCatalog(
-  requirement: ReturnType<typeof extractJobRequirements>[number],
-  resumeEvidence: ReturnType<typeof extractResumeEvidence>,
-): RequirementEvidence {
-  const requirementTokens = meaningfulTokens(requirement.text)
-  const matches = resumeEvidence
-    .map((item) => ({
-      item,
-      overlap: requirementTokens.filter((token) => meaningfulTokens(item.text).includes(token)).length,
-    }))
-    .filter((item) => item.overlap > 0)
-    .sort((left, right) => right.overlap - left.overlap)
-  const bestMatch = matches[0]
-  const supported = Boolean(
-    bestMatch
-    && (
-      includesNormalizedPhrase(normalize(requirement.text), normalize(bestMatch.item.text))
-      || includesNormalizedPhrase(normalize(bestMatch.item.text), normalize(requirement.text))
-      || bestMatch.overlap >= Math.min(2, requirementTokens.length)
-    )
-  )
-  const adjacent = !supported && Boolean(bestMatch)
-  const productGroup = supported ? 'supported' : adjacent ? 'adjacent' : 'unsupported'
-  const evidenceLevel = supported
-    ? 'strong_contextual_inference'
-    : adjacent
-      ? 'semantic_bridge_only'
-      : 'unsupported_gap'
-  const rewritePermission = supported
-    ? 'can_claim_directly'
-    : adjacent
-      ? 'can_bridge_carefully'
-      : 'must_not_claim'
-  const supportingEvidence = productGroup === 'unsupported'
-    ? []
-    : matches.slice(0, 3).map(({ item }) => item)
-
-  return {
-    id: requirement.id,
-    originalRequirement: requirement.text,
-    normalizedRequirement: requirement.normalizedText,
-    extractedSignals: [requirement.text],
-    kind: requirement.kind,
-    importance: requirement.importance,
-    productGroup,
-    evidenceLevel,
-    rewritePermission,
-    matchedResumeTerms: supportingEvidence.map((item) => item.text),
-    supportingResumeSpans: supportingEvidence.map((item) => ({
-      id: item.id,
-      text: item.text,
-      section: item.section,
-      sourceKind: item.sourceKind,
-      cvPath: item.cvPath,
-    })),
-    confidence: supported ? 0.72 : adjacent ? 0.52 : 0,
-    rationale: supported ? 'no_catalog_text_match' : adjacent ? 'no_catalog_text_overlap' : 'unsupported_fallback',
-    source: supported ? 'exact' : adjacent ? 'composite_decomposition' : 'fallback',
-    catalogTermIds: [],
-    catalogCategoryIds: [],
-    prohibitedTerms: productGroup === 'unsupported' ? [requirement.text] : [],
-    audit: {
-      matcherVersion: 'job-compat-matcher-no-catalog-v1',
-      precedence: ['exact', 'composite_decomposition', 'fallback'],
-      catalogIds: [],
-      catalogVersions: {},
-      catalogTermIds: [],
-      catalogCategoryIds: [],
-    },
-  }
-}
-
-function buildJobCompatibilityAssessment({
-  targetRole,
-  requirements,
-  resumeEvidenceCount,
-  gapAnalysis,
-  userId,
-  sessionId,
-  matcherEngine,
-  catalogIds,
-  catalogVersions,
-  matcherVersion,
-  matcherModel,
-  matcherPromptVersion,
-}: {
-  targetRole: Pick<JobCompatibilityAssessment, 'targetRole' | 'targetRoleConfidence' | 'targetRoleSource'>
-  requirements: RequirementEvidence[]
-  resumeEvidenceCount: number
-  gapAnalysis?: CompatibilityGapAnalysisInput
-  userId?: string
-  sessionId?: string
-  matcherEngine: 'legacy' | 'llm'
-  catalogIds: string[]
-  catalogVersions: Record<string, string>
-  matcherVersion: string
-  matcherModel?: string
-  matcherPromptVersion?: string
-}): JobCompatibilityAssessment {
+    catalog: loadedCatalog,
+  }))
   const supportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'supported')
   const adjacentRequirements = requirements.filter((requirement) => requirement.productGroup === 'adjacent')
   const unsupportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'unsupported')
@@ -253,23 +109,20 @@ function buildJobCompatibilityAssessment({
     reviewNeededGaps,
     lowFit: calculateLowFitState(requirements, scoreBreakdown.total),
     catalog: {
-      catalogIds,
-      catalogVersions,
+      catalogIds: loadedCatalog.metadata.catalogIds,
+      catalogVersions: loadedCatalog.metadata.catalogVersions,
     },
     audit: {
       generatedAt: new Date().toISOString(),
       assessmentVersion: JOB_COMPATIBILITY_ASSESSMENT_VERSION,
       requirementExtractionVersion: REQUIREMENT_EXTRACTION_VERSION,
       evidenceExtractionVersion: EVIDENCE_EXTRACTION_VERSION,
-      matcherVersion,
+      matcherVersion: JOB_COMPATIBILITY_MATCHER_VERSION,
       claimPolicyVersion: JOB_COMPATIBILITY_CLAIM_POLICY_VERSION,
       scoreVersion: JOB_COMPATIBILITY_SCORE_VERSION,
-      matcherEngine,
-      ...(matcherModel === undefined ? {} : { matcherModel }),
-      ...(matcherPromptVersion === undefined ? {} : { matcherPromptVersion }),
       counters: {
         requirements: requirements.length,
-        resumeEvidence: resumeEvidenceCount,
+        resumeEvidence: resumeEvidence.length,
         supported: supportedRequirements.length,
         adjacent: adjacentRequirements.length,
         unsupported: unsupportedRequirements.length,
@@ -549,29 +402,6 @@ function normalize(value: string): string {
     .replace(/[^\w\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function meaningfulTokens(value: string): string[] {
-  const stopWords = new Set([
-    'a',
-    'as',
-    'com',
-    'da',
-    'de',
-    'do',
-    'dos',
-    'e',
-    'em',
-    'para',
-    'por',
-    'the',
-    'to',
-    'with',
-  ])
-
-  return normalize(value)
-    .split(/\s+/u)
-    .filter((token) => token && !stopWords.has(token))
 }
 
 function unique(items: string[]): string[] {

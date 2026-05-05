@@ -52,23 +52,6 @@ import type { JobTargetingTrace } from '@/types/trace'
 type JobTargetingTraceDraft = Pick<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt'>
   & Partial<Omit<JobTargetingTrace, 'sessionId' | 'userId' | 'startedAt' | 'status'>>
 
-type JobTargetingEngineVersion = NonNullable<Session['agentState']['jobTargetingEngineVersion']>
-
-export function resolveJobTargetingEngineVersion(
-  session: Session,
-  compatibilityMode: ReturnType<typeof getJobCompatibilityAssessmentMode>,
-): JobTargetingEngineVersion {
-  if (session.agentState.jobTargetingEngineVersion) {
-    return session.agentState.jobTargetingEngineVersion
-  }
-
-  if (session.agentState.atsWorkflowRun?.status === 'running') {
-    return 'legacy-v1'
-  }
-
-  return compatibilityMode.sourceOfTruth ? 'canonical-v1' : 'legacy-v1'
-}
-
 function buildWorkflowRun(
   session: Session,
   patch: Partial<NonNullable<Session['agentState']['atsWorkflowRun']>>,
@@ -811,8 +794,6 @@ export async function runJobTargetingPipeline(
     },
   })
   const compatibilityMode = getJobCompatibilityAssessmentMode()
-  const jobTargetingEngineVersion = resolveJobTargetingEngineVersion(session, compatibilityMode)
-  const useCanonicalCompatibility = jobTargetingEngineVersion === 'canonical-v1'
   let evaluatedJobCompatibilityAssessment: JobCompatibilityAssessment | undefined
 
   if (compatibilityMode.sourceOfTruthBlocked) {
@@ -823,7 +804,6 @@ export async function runJobTargetingPipeline(
       sourceOfTruthRequested: compatibilityMode.sourceOfTruthRequested,
       cutoverApproved: compatibilityMode.cutoverApproved,
       effectiveShadowMode: compatibilityMode.shadowMode,
-      jobTargetingEngineVersion,
     })
   }
 
@@ -837,23 +817,19 @@ export async function runJobTargetingPipeline(
       gapAnalysisPresent: true,
       careerFitEvaluationPresent: Boolean(careerFitEvaluation),
       shadowMode: compatibilityMode.shadowMode,
-      sourceOfTruth: useCanonicalCompatibility,
-      sourceOfTruthRequested: compatibilityMode.sourceOfTruthRequested,
-      sourceOfTruthBlocked: compatibilityMode.sourceOfTruthBlocked,
-      jobTargetingEngineVersion,
+      sourceOfTruth: compatibilityMode.sourceOfTruth,
     })
     evaluatedJobCompatibilityAssessment = await evaluateJobCompatibility({
       cvState: session.cvState,
       targetJobDescription,
       gapAnalysis: gapAnalysisResult,
-      matcherEngine: 'llm',
       userId: session.userId,
       sessionId: session.id,
     })
     logCompatibilityAssessmentLifecycle(session, evaluatedJobCompatibilityAssessment)
   }
 
-  const jobCompatibilityAssessment = useCanonicalCompatibility
+  const jobCompatibilityAssessment = compatibilityMode.sourceOfTruth
     ? evaluatedJobCompatibilityAssessment
     : undefined
   const compatibilityStatePatch: Partial<Session['agentState']> = {
@@ -866,7 +842,6 @@ export async function runJobTargetingPipeline(
   await persistPipelineAgentState({
     ...session.agentState,
     workflowMode: 'job_targeting',
-    jobTargetingEngineVersion,
     gapAnalysis,
     targetFitAssessment,
     careerFitEvaluation: careerFitEvaluation ?? undefined,

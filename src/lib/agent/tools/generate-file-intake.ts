@@ -67,43 +67,12 @@ function buildGenerateFileMismatchMessage(sourceScope: GenerateFileSourceScope):
   }
 }
 
-function isJobTargetingHandoff(input: GenerateFileInput, session: Session): boolean {
-  return input.source_scope === 'job-targeting'
-    || session.agentState.workflowMode === 'job_targeting'
-    || session.agentState.lastRewriteMode === 'job_targeting'
-    || typeof session.agentState.targetJobDescription === 'string'
-}
-
 export async function resolveGenerateFileExecutionContext(
   input: GenerateFileInput,
   session: Session,
 ): Promise<GenerateFileExecutionContextResult> {
   const targetId = typeof input.target_id === 'string' ? input.target_id : undefined
   const idempotencyKey = typeof input.idempotency_key === 'string' ? input.idempotency_key : undefined
-
-  if (!targetId && isJobTargetingHandoff(input, session)) {
-    const diagnostics: GenerateFileExecutionDiagnostics = {
-      sessionId: session.id,
-      appUserId: session.userId,
-      targetId,
-      resolvedSourceScope: 'target',
-      requestedCvStateProvided: input.cv_state !== undefined,
-      payloadMatchesResolvedSource: false,
-      latestVersionId: null,
-      latestVersionSource: null,
-      latestVersionFound: false,
-    }
-
-    return {
-      kind: 'error',
-      failure: toolFailure(
-        TOOL_ERROR_CODES.PRECONDITION_FAILED,
-        'Job-targeting generate_file handoff requires target_id; refusing to export as ATS enhancement.',
-      ),
-      diagnostics,
-    }
-  }
-
   const target = targetId
     ? await getResumeTargetForSession(session.id, targetId)
     : null

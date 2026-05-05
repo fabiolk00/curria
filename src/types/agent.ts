@@ -455,7 +455,6 @@ export type RecoverableValidationBlock = {
 export type AgentState = {
   sourceResumeText?: string
   workflowMode?: WorkflowMode
-  jobTargetingEngineVersion?: 'legacy-v1' | 'canonical-v1'
   targetJobDescription?: string
   targetFitAssessment?: TargetFitAssessment
   careerFitEvaluation?: CareerFitEvaluation
@@ -801,7 +800,6 @@ type SetPhaseOutput =
 export type GenerateFileInput = {
   cv_state: CVState
   target_id?: string
-  source_scope?: 'ats-enhancement' | 'job-targeting'
   idempotency_key?: string
 }
 
