@@ -30,7 +30,7 @@ export default function AuthShell({
         <Logo linkTo="/" variant="auth" className="justify-center" />
       </div>
 
-      <section className="flex min-h-0 w-full max-w-[1120px] flex-1 flex-col overflow-hidden rounded-[clamp(16px,2vw,28px)] border border-gray-200/80 bg-white shadow-sm md:flex-row md:shadow-[0_2px_40px_-12px_rgba(0,0,0,0.04)]">
+      <section className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[clamp(16px,2vw,28px)] border border-gray-200/80 bg-white shadow-sm md:flex-row md:shadow-[0_2px_40px_-12px_rgba(0,0,0,0.04)]">
         <div className="relative flex min-h-0 flex-1 flex-col border-gray-100/70 p-[clamp(1rem,3vh,3.5rem)] md:border-r">
           <div className="mb-[clamp(0.75rem,2vh,1.75rem)] flex w-full shrink-0 justify-center">
             <div className="relative flex w-full max-w-[280px] rounded-xl bg-gray-100/80 p-1">

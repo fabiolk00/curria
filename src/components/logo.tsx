@@ -20,12 +20,12 @@ const logoSizeClasses: Record<LogoSize, { text: string; accent: string }> = {
 const logoPresetClasses: Record<LogoPreset, { text: string; accent: string }> = {
   default: logoSizeClasses.default,
   auth: {
-    text: "text-[clamp(42px,8vh,82px)]",
-    accent: "max-h-[clamp(2.625rem,8vh,5.125rem)]",
+    text: "text-[clamp(40px,6vh,64px)]",
+    accent: "max-h-[clamp(2.5rem,6vh,4rem)]",
   },
   navbar: {
-    text: "text-[46px] md:text-[54px]",
-    accent: "max-h-12 md:max-h-14",
+    text: "text-[38px] md:text-[44px]",
+    accent: "max-h-10 md:max-h-11",
   },
 }
 
