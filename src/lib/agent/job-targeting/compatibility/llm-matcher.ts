@@ -109,6 +109,8 @@ export const JOB_MATCHER_SYSTEM_PROMPT = [
   'Mantenha consistencia entre campos: supported usa can_claim_directly, adjacent usa can_bridge_to_target_role, unsupported usa must_not_claim.',
   'Experiencia end-to-end pode ser supported quando a evidencia cobre claramente o ciclo desde requisitos/concepcao/coleta ate entrega/implementacao/visualizacao.',
   'Quando a evidencia disser desde a coleta/levantamento/concepcao de requisitos ate visualizacao/implementacao/entrega, nao classifique como adjacent: classifique como supported.',
+  'Formacao academica futura, prevista ou em andamento nao comprova requisito de ensino superior completo.',
+  'Se o requisito pedir formacao completa/concluida e a evidencia indicar in progress, cursando, estudando, previsao ou data futura, classifique no maximo como adjacent e nunca como supported.',
   'Responda somente no JSON solicitado pelo contrato.',
 ].join('\n')
 
@@ -145,6 +147,7 @@ export function buildJobMatcherUserPrompt(requirement: MatcherRequirement, evide
     '- Se o unico suporte para uma ferramenta especifica for uma ferramenta concorrente, retorne unsupported/must_not_claim.',
     '- Se o suporte for tecnologia base ou plataforma relacionada, mas nao a ferramenta exata, retorne adjacent/can_bridge_to_target_role.',
     '- Certificacao formal exige evidencia de certificacao formal; conhecimento ou uso da ferramenta nao basta.',
+    '- Ensino superior completo exige evidencia de formacao concluida; formacao com data futura ou marcada como in progress/cursando nao pode ser supported.',
     '- Requisito end-to-end deve ser supported/can_claim_directly se a evidencia cobrir o ciclo completo com outras palavras equivalentes.',
   ].join('\n')
 }
@@ -358,6 +361,51 @@ function rewritePermissionForOutput(output: MatcherOutput): ClaimPermission {
   return 'must_not_claim'
 }
 
+function applyConservativeOutputGuards(input: {
+  requirement: MatcherRequirement
+  resumeEvidence: MatcherResumeEvidence[]
+  output: MatcherOutput
+}): MatcherOutput {
+  if (
+    input.output.evidenceLevel !== 'supported'
+    || !requiresCompletedEducation(input.requirement.text)
+    || hasCompletedEducationEvidence(input.resumeEvidence)
+  ) {
+    return input.output
+  }
+
+  if (hasInProgressEducationEvidence(input.resumeEvidence)) {
+    return {
+      evidenceLevel: 'adjacent',
+      rewritePermission: 'can_bridge_to_target_role',
+      confidence: Math.min(input.output.confidence, 0.74),
+      reasoning: 'education_in_progress_not_completed',
+    }
+  }
+
+  return input.output
+}
+
+function requiresCompletedEducation(value: string): boolean {
+  return /\b(?:ensino|formacao|graduacao|superior|degree|education)\b.*\b(?:completo|completa|concluido|concluida|completed|complete)\b/iu
+    .test(value)
+}
+
+function hasCompletedEducationEvidence(resumeEvidence: MatcherResumeEvidence[]): boolean {
+  return resumeEvidence.some((item) => (
+    item.sourceKind === 'education_entry'
+    && /\b(?:completed|concluido|concluida|formado|formada)\b/iu.test(item.text)
+    && !/\b(?:in\s+progress|em\s+andamento|cursando|previs[aã]o|expected)\b/iu.test(item.text)
+  ))
+}
+
+function hasInProgressEducationEvidence(resumeEvidence: MatcherResumeEvidence[]): boolean {
+  return resumeEvidence.some((item) => (
+    item.sourceKind === 'education_entry'
+    && /\b(?:in\s+progress|em\s+andamento|cursando|previs[aã]o|expected)\b/iu.test(item.text)
+  ))
+}
+
 function buildRequirementEvidence(input: {
   requirement: MatcherRequirement
   resumeEvidence: MatcherResumeEvidence[]
@@ -487,7 +535,11 @@ export async function classifyRequirementWithLlm(input: {
             confidence: parsed.confidence,
             reasoning: 'low_confidence_reclassified',
           } satisfies MatcherOutput
-        : parsed
+        : applyConservativeOutputGuards({
+            requirement: input.requirement,
+            resumeEvidence: input.resumeEvidence,
+            output: parsed,
+          })
       const inputTokens = response.inputTokens ?? 0
       const outputTokens = response.outputTokens ?? 0
 

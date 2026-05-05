@@ -56,7 +56,7 @@ export function extractResumeEvidence(cvState: CVState): JobCompatibilityEvidenc
 
   cvState.education.forEach((entry, entryIndex) => {
     addEvidence(evidence, {
-      text: joinEvidenceParts([entry.degree, entry.institution]),
+      text: buildEducationEvidenceText(entry),
       sourceKind: 'education_entry',
       section: 'education',
       cvPath: `education[${entryIndex}]`,
@@ -118,6 +118,49 @@ function splitSentences(value: string): string[] {
 
 function joinEvidenceParts(parts: string[]): string {
   return parts.map(cleanEvidenceText).filter(Boolean).join(', ')
+}
+
+function buildEducationEvidenceText(entry: CVState['education'][number]): string {
+  const base = joinEvidenceParts([entry.degree, entry.institution, entry.year])
+  const status = educationCompletionStatus(entry.year)
+
+  if (!base || status === 'unknown') {
+    return base
+  }
+
+  return `${base} (${status})`
+}
+
+function educationCompletionStatus(year: string): 'completed' | 'in progress' | 'unknown' {
+  const date = parseEducationDate(year)
+  if (!date) {
+    return 'unknown'
+  }
+
+  const current = new Date()
+  const currentMonth = new Date(current.getFullYear(), current.getMonth(), 1).getTime()
+
+  return date.getTime() > currentMonth ? 'in progress' : 'completed'
+}
+
+function parseEducationDate(value: string): Date | null {
+  const cleaned = value.trim()
+  const monthYear = /^(\d{1,2})[/-](\d{4})$/u.exec(cleaned)
+  if (monthYear) {
+    const month = Number(monthYear[1])
+    const year = Number(monthYear[2])
+
+    if (month >= 1 && month <= 12) {
+      return new Date(year, month - 1, 1)
+    }
+  }
+
+  const yearOnly = /^(\d{4})$/u.exec(cleaned)
+  if (yearOnly) {
+    return new Date(Number(yearOnly[1]), 11, 1)
+  }
+
+  return null
 }
 
 function cleanEvidenceText(value: string): string {

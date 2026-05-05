@@ -32,7 +32,7 @@ const QUALIFIER_PATTERNS: Array<{
   },
   {
     qualifier: 'learning',
-    pattern: /\b(?:aprendendo|learning|studying|estudando)\b/iu,
+    pattern: /\b(?:aprendendo|learning|studying|estudando|cursando|em\s+andamento|in\s+progress)\b/iu,
   },
   {
     qualifier: 'basic',
@@ -78,6 +78,9 @@ const weakCueTokenSequences = [
   ['aprendendo'],
   ['learning'],
   ['estudando'],
+  ['cursando'],
+  ['em', 'andamento'],
+  ['in', 'progress'],
   ['familiarity'],
   ['familiarizado'],
   ['familiarizada'],

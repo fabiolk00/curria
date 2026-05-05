@@ -66,6 +66,73 @@ describe('LLM job matcher', () => {
     }))
   })
 
+  it('downgrades completed education claims when education evidence is still in progress', async () => {
+    const result = await classifyRequirementWithLlm({
+      requirement: {
+        id: 'req-education',
+        text: 'Ensino superior completo em TI',
+        normalizedText: 'ensino superior completo em ti',
+        kind: 'education',
+        importance: 'core',
+      },
+      resumeEvidence: [{
+        id: 'ev-education',
+        text: 'Graduação - Análise e Desenvolvimento de Sistemas, UniCesumar, 12/2026 (in progress)',
+        normalizedText: 'graduacao analise e desenvolvimento de sistemas unicesumar 12 2026 in progress',
+        section: 'education',
+        sourceKind: 'education_entry',
+        cvPath: 'education[0]',
+      }],
+      evidenceBullets: ['Graduação - Análise e Desenvolvimento de Sistemas, UniCesumar, 12/2026 (in progress)'],
+      resolver: resolverWith(JSON.stringify({
+        evidenceLevel: 'supported',
+        rewritePermission: 'can_claim_directly',
+        confidence: 0.96,
+        reasoning: 'A graduação sustenta ensino superior completo.',
+      })),
+    })
+
+    expect(result.requirement).toEqual(expect.objectContaining({
+      productGroup: 'adjacent',
+      rewritePermission: 'can_bridge_carefully',
+      confidence: 0.74,
+      rationale: 'education_in_progress_not_completed',
+    }))
+  })
+
+  it('keeps completed education supported when completion evidence is present', async () => {
+    const result = await classifyRequirementWithLlm({
+      requirement: {
+        id: 'req-education',
+        text: 'Ensino superior completo em TI',
+        normalizedText: 'ensino superior completo em ti',
+        kind: 'education',
+        importance: 'core',
+      },
+      resumeEvidence: [{
+        id: 'ev-education',
+        text: 'Bacharelado em Sistemas de Informação, Universidade Exemplo, 2020 (completed)',
+        normalizedText: 'bacharelado sistemas de informacao universidade exemplo 2020 completed',
+        section: 'education',
+        sourceKind: 'education_entry',
+        cvPath: 'education[0]',
+      }],
+      evidenceBullets: ['Bacharelado em Sistemas de Informação, Universidade Exemplo, 2020 (completed)'],
+      resolver: resolverWith(JSON.stringify({
+        evidenceLevel: 'supported',
+        rewritePermission: 'can_claim_directly',
+        confidence: 0.96,
+        reasoning: 'Formação concluída sustenta o requisito.',
+      })),
+    })
+
+    expect(result.requirement).toEqual(expect.objectContaining({
+      productGroup: 'supported',
+      rewritePermission: 'can_claim_directly',
+      confidence: 0.96,
+    }))
+  })
+
   it('accepts a balanced JSON object wrapped by defensive provider text', async () => {
     const result = await classifyRequirementWithLlm({
       requirement,

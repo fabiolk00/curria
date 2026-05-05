@@ -85,7 +85,7 @@ describe('resume evidence extraction', () => {
         bulletIndex: 1,
       }),
       expect.objectContaining({
-        text: 'Bachelor degree, Example Institution',
+        text: 'Bachelor degree, Example Institution, 2020 (completed)',
         section: 'education',
         sourceKind: 'education_entry',
         cvPath: 'education[0]',
@@ -182,5 +182,36 @@ describe('resume evidence extraction', () => {
         qualifier: 'strong',
       }),
     ]))
+  })
+
+  it('includes education dates and marks future education as in progress', () => {
+    const nextYear = String(new Date().getFullYear() + 1)
+    const cvState: CVState = {
+      fullName: 'Candidate Name',
+      email: 'candidate@example.com',
+      phone: '+55 11 99999-0000',
+      summary: '',
+      skills: [],
+      experience: [],
+      education: [
+        {
+          degree: 'Graduação - Análise e Desenvolvimento de Sistemas',
+          institution: 'UniCesumar',
+          year: `12/${nextYear}`,
+        },
+      ],
+      certifications: [],
+    }
+
+    const evidence = extractResumeEvidence(cvState)
+
+    expect(evidence).toEqual([
+      expect.objectContaining({
+        text: `Graduação - Análise e Desenvolvimento de Sistemas, UniCesumar, 12/${nextYear} (in progress)`,
+        section: 'education',
+        sourceKind: 'education_entry',
+        qualifier: 'learning',
+      }),
+    ])
   })
 })
