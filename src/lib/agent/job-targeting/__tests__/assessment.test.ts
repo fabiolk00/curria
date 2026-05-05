@@ -224,7 +224,7 @@ describe('job compatibility assessment', () => {
         .toEqual([...fixture.expected.criticalGapIds].sort())
       expect(assessment.reviewNeededGaps.map((gap) => gap.id).sort(), fixture.id)
         .toEqual([...fixture.expected.reviewNeededGapIds].sort())
-      expect(assessment.targetRole, fixture.id).toBe('Vaga Alvo')
+      expect(assessment.targetRole, fixture.id).toBe('Vaga Desconhecida')
       expect(assessment.targetRoleConfidence, fixture.id).toBe('low')
       expect(assessment.targetRoleSource, fixture.id).toBe('fallback')
       expect(assessment.lowFit.blocking, fixture.id).toBe(fixture.expected.lowFit.expected)
@@ -283,7 +283,7 @@ describe('job compatibility assessment', () => {
       gapAnalysis: fixture!.input.gapAnalysis,
     })
 
-    expect(assessment.targetRole).toBe('Vaga Alvo')
+    expect(assessment.targetRole).toBe('Vaga Desconhecida')
     expect(assessment.targetRoleConfidence).toBe('low')
     expect(assessment.targetRoleSource).toBe('fallback')
   })

@@ -34,7 +34,7 @@ import {
 } from './presentation'
 
 export const JOB_COMPATIBILITY_ASSESSMENT_VERSION = 'job-compat-assessment-v1'
-const FALLBACK_TARGET_ROLE = 'Vaga Alvo'
+const FALLBACK_TARGET_ROLE = 'Vaga Desconhecida'
 const TARGET_ROLE_MAX_LENGTH = 90
 const TARGET_ROLE_MAX_WORDS = 12
 

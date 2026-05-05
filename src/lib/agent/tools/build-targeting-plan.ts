@@ -17,7 +17,7 @@ import type { JobCompatibilityAssessment } from '@/lib/agent/job-targeting/compa
 import type { TargetingPlan } from '@/types/agent'
 import type { CVState, GapAnalysisResult } from '@/types/cv'
 
-const FALLBACK_TARGET_ROLE = 'Vaga Alvo'
+const FALLBACK_TARGET_ROLE = 'Vaga Desconhecida'
 const UNKNOWN_TARGET_ROLE = 'Unknown Role'
 const TARGET_ROLE_EXTRACTION_MAX_COMPLETION_TOKENS = 120
 

@@ -5,7 +5,9 @@ import { getDisplayableTargetRole, isPlaceholderTargetRole, isSuspiciousTargetRo
 describe('target-role helpers', () => {
   it('hides internal placeholder roles from display surfaces', () => {
     expect(isPlaceholderTargetRole('Vaga Alvo')).toBe(true)
+    expect(isPlaceholderTargetRole('Vaga Desconhecida')).toBe(true)
     expect(getDisplayableTargetRole('Vaga Alvo')).toBeNull()
+    expect(getDisplayableTargetRole('Vaga Desconhecida')).toBeNull()
   })
 
   it('still marks section headings as suspicious without hiding the raw text', () => {

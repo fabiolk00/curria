@@ -389,7 +389,7 @@ describe('buildTargetingPlan', () => {
     expect(mockTrackApiUsage).toHaveBeenCalled()
   })
 
-  it('falls back to Vaga Alvo when heuristic and LLM both fail', async () => {
+  it('falls back to Vaga Desconhecida when heuristic and LLM both fail', async () => {
     mockOpenAICompletionCreate.mockResolvedValue({
       choices: [{
         message: {
@@ -415,7 +415,7 @@ describe('buildTargetingPlan', () => {
       rewriteIntent: 'targeted_rewrite',
     })
 
-    expect(plan.targetRole).toBe('Vaga Alvo')
+    expect(plan.targetRole).toBe('Vaga Desconhecida')
     expect(plan.targetRoleConfidence).toBe('low')
     expect(plan.targetRoleSource).toBe('fallback')
     expect(plan.focusKeywords).toEqual(expect.arrayContaining(['power bi']))

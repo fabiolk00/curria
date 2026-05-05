@@ -13,7 +13,7 @@ export function isPlaceholderTargetRole(value?: string | null): boolean {
     return false
   }
 
-  return /^(vaga\s+alvo|cargo\s+alvo|target\s+role)$/.test(normalized)
+  return /^(vaga\s+alvo|vaga\s+desconhecida|cargo\s+alvo|cargo\s+desconhecido|target\s+role|unknown\s+role)$/.test(normalized)
 }
 
 export function isSuspiciousTargetRole(value?: string | null): boolean {
@@ -23,7 +23,7 @@ export function isSuspiciousTargetRole(value?: string | null): boolean {
     return false
   }
 
-  return /^(responsabilidades?(?:\s+e\s+atribuicoes)?|atribuicoes|requisitos(?:\s+e\s+qualificacoes)?|qualificacoes|descricao|atividades|about\s+the\s+job|about\s+the\s+role|job\s+description|responsibilities|requirements|qualifications|vaga\s+alvo|cargo\s+alvo|target\s+role)$/.test(normalized)
+  return /^(responsabilidades?(?:\s+e\s+atribuicoes)?|atribuicoes|requisitos(?:\s+e\s+qualificacoes)?|qualificacoes|descricao|atividades|about\s+the\s+job|about\s+the\s+role|job\s+description|responsibilities|requirements|qualifications|vaga\s+alvo|vaga\s+desconhecida|cargo\s+alvo|cargo\s+desconhecido|target\s+role|unknown\s+role)$/.test(normalized)
 }
 
 export function getDisplayableTargetRole(value?: string | null): string | null {
