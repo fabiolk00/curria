@@ -137,11 +137,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       >
         <div className="flex h-16 items-center justify-between px-4 md:h-[72px] md:px-6">
           <div className="flex min-w-0 items-center gap-6 lg:gap-8">
-            <Logo
-              className="shrink-0"
-              textClassName="text-[46px] md:text-[54px]"
-              iconClassName="max-h-12 md:max-h-14"
-            />
+            <Logo variant="navbar" className="shrink-0" />
 
             <nav className="hidden min-w-0 items-center gap-1 lg:flex">
               <Link
