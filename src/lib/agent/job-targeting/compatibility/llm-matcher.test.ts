@@ -66,6 +66,31 @@ describe('LLM job matcher', () => {
     }))
   })
 
+  it('accepts a balanced JSON object wrapped by defensive provider text', async () => {
+    const result = await classifyRequirementWithLlm({
+      requirement,
+      resumeEvidence,
+      evidenceBullets: resumeEvidence.map((item) => item.text),
+      resolver: resolverWith([
+        '```json',
+        JSON.stringify({
+          evidenceLevel: 'supported',
+          rewritePermission: 'can_claim_directly',
+          confidence: 0.93,
+          reasoning: 'Qlik citado diretamente.',
+        }),
+        '```',
+      ].join('\n')),
+    })
+
+    expect(result.fallbackReason).toBeUndefined()
+    expect(result.requirement).toEqual(expect.objectContaining({
+      productGroup: 'supported',
+      rewritePermission: 'can_claim_directly',
+      source: 'llm_semantic',
+    }))
+  })
+
   it('falls back conservatively on invalid JSON and invalid enum', async () => {
     await expect(classifyRequirementWithLlm({
       requirement,

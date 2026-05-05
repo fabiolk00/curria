@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import OpenAI from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
 
 import { getChatCompletionText, getChatCompletionUsage } from '@/lib/openai/chat'
 import type {
@@ -32,7 +33,7 @@ export const MatcherOutputSchema = z.object({
   ]),
   confidence: z.number().min(0).max(1),
   reasoning: z.string().max(200),
-})
+}).strict()
 
 export type MatcherOutput = z.infer<typeof MatcherOutputSchema>
 
@@ -169,7 +170,10 @@ async function defaultLlmRequirementResolver(input: {
     const response = await openai.chat.completions.create({
       model: input.model,
       temperature: 0,
-      response_format: { type: 'json_object' },
+      response_format: zodResponseFormat(
+        MatcherOutputSchema,
+        'job_matcher_classification',
+      ),
       messages: [
         { role: 'system', content: input.systemPrompt },
         { role: 'user', content: input.userPrompt },
@@ -266,13 +270,73 @@ function providerErrorKindForReason(
   return undefined
 }
 
+function extractJsonObjectCandidate(content: string): string | null {
+  const trimmed = content.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    return trimmed
+  }
+
+  let depth = 0
+  let start = -1
+  let inString = false
+  let escaped = false
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const char = trimmed[index]
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+
+    if (char === '\\') {
+      escaped = inString
+      continue
+    }
+
+    if (char === '"') {
+      inString = !inString
+      continue
+    }
+
+    if (inString) {
+      continue
+    }
+
+    if (char === '{') {
+      if (depth === 0) {
+        start = index
+      }
+      depth += 1
+      continue
+    }
+
+    if (char === '}') {
+      depth -= 1
+      if (depth === 0 && start >= 0) {
+        return trimmed.slice(start, index + 1)
+      }
+      if (depth < 0) {
+        return null
+      }
+    }
+  }
+
+  return null
+}
+
 function parseMatcherOutput(content: string): MatcherOutput | null {
-  if (!content.trim()) {
+  const candidate = extractJsonObjectCandidate(content)
+  if (!candidate) {
     return null
   }
 
   try {
-    return MatcherOutputSchema.parse(JSON.parse(content))
+    return MatcherOutputSchema.parse(JSON.parse(candidate))
   } catch {
     return null
   }

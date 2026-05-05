@@ -55,6 +55,18 @@ export interface EvaluateJobCompatibilityInput {
   sessionId?: string
 }
 
+export interface BuildJobCompatibilityAssessmentInput {
+  targetJobDescription: string
+  requirements: RequirementEvidence[]
+  resumeEvidenceCount: number
+  gapAnalysis?: CompatibilityGapAnalysisInput
+  catalog: JobCompatibilityAssessment['catalog']
+  matcherVersion: string
+  auditWarnings?: string[]
+  userId?: string
+  sessionId?: string
+}
+
 export async function evaluateJobCompatibility({
   cvState,
   targetJobDescription,
@@ -64,7 +76,6 @@ export async function evaluateJobCompatibility({
   sessionId,
 }: EvaluateJobCompatibilityInput): Promise<JobCompatibilityAssessment> {
   const loadedCatalog = catalog ?? await loadJobTargetingCatalog()
-  const targetRole = extractTargetRole(targetJobDescription)
   const extractedRequirements = extractJobRequirements({ targetJobDescription })
   const resumeEvidence = extractResumeEvidence(cvState)
   const requirements = extractedRequirements.map((requirement) => classifyRequirementEvidence({
@@ -73,6 +84,34 @@ export async function evaluateJobCompatibility({
     resumeEvidence,
     catalog: loadedCatalog,
   }))
+
+  return buildJobCompatibilityAssessmentFromRequirements({
+    targetJobDescription,
+    requirements,
+    resumeEvidenceCount: resumeEvidence.length,
+    gapAnalysis,
+    catalog: {
+      catalogIds: loadedCatalog.metadata.catalogIds,
+      catalogVersions: loadedCatalog.metadata.catalogVersions,
+    },
+    matcherVersion: JOB_COMPATIBILITY_MATCHER_VERSION,
+    userId,
+    sessionId,
+  })
+}
+
+export function buildJobCompatibilityAssessmentFromRequirements({
+  targetJobDescription,
+  requirements,
+  resumeEvidenceCount,
+  gapAnalysis,
+  catalog,
+  matcherVersion,
+  auditWarnings = [],
+  userId,
+  sessionId,
+}: BuildJobCompatibilityAssessmentInput): JobCompatibilityAssessment {
+  const targetRole = extractTargetRole(targetJobDescription)
   const supportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'supported')
   const adjacentRequirements = requirements.filter((requirement) => requirement.productGroup === 'adjacent')
   const unsupportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'unsupported')
@@ -108,21 +147,18 @@ export async function evaluateJobCompatibility({
     criticalGaps,
     reviewNeededGaps,
     lowFit: calculateLowFitState(requirements, scoreBreakdown.total),
-    catalog: {
-      catalogIds: loadedCatalog.metadata.catalogIds,
-      catalogVersions: loadedCatalog.metadata.catalogVersions,
-    },
+    catalog,
     audit: {
       generatedAt: new Date().toISOString(),
       assessmentVersion: JOB_COMPATIBILITY_ASSESSMENT_VERSION,
       requirementExtractionVersion: REQUIREMENT_EXTRACTION_VERSION,
       evidenceExtractionVersion: EVIDENCE_EXTRACTION_VERSION,
-      matcherVersion: JOB_COMPATIBILITY_MATCHER_VERSION,
+      matcherVersion,
       claimPolicyVersion: JOB_COMPATIBILITY_CLAIM_POLICY_VERSION,
       scoreVersion: JOB_COMPATIBILITY_SCORE_VERSION,
       counters: {
         requirements: requirements.length,
-        resumeEvidence: resumeEvidence.length,
+        resumeEvidence: resumeEvidenceCount,
         supported: supportedRequirements.length,
         adjacent: adjacentRequirements.length,
         unsupported: unsupportedRequirements.length,
@@ -132,7 +168,10 @@ export async function evaluateJobCompatibility({
         criticalGaps: criticalGaps.length,
         reviewNeededGaps: reviewNeededGaps.length,
       },
-      warnings: scoreBreakdown.warnings,
+      warnings: unique([
+        ...scoreBreakdown.warnings,
+        ...auditWarnings,
+      ]),
       ...buildRunIds({ userId, sessionId }),
     },
   }

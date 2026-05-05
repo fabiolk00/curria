@@ -36,6 +36,8 @@ const {
   mockAnalyzeAtsGeneral,
   mockAnalyzeGap,
   mockEvaluateJobCompatibility,
+  mockRunJobCompatibilityLlmAssessment,
+  mockRunJobCompatibilityLlmShadow,
   mockBuildTargetingPlan,
   mockBuildTargetedRewritePlan,
   mockDeriveTargetFitAssessment,
@@ -54,6 +56,8 @@ const {
   mockAnalyzeAtsGeneral: vi.fn(),
   mockAnalyzeGap: vi.fn(),
   mockEvaluateJobCompatibility: vi.fn(),
+  mockRunJobCompatibilityLlmAssessment: vi.fn(),
+  mockRunJobCompatibilityLlmShadow: vi.fn(),
   mockBuildTargetingPlan: vi.fn(),
   mockBuildTargetedRewritePlan: vi.fn(),
   mockDeriveTargetFitAssessment: vi.fn(),
@@ -80,6 +84,11 @@ vi.mock('@/lib/agent/tools/gap-analysis', () => ({
 
 vi.mock('@/lib/agent/job-targeting/compatibility/assessment', () => ({
   evaluateJobCompatibility: mockEvaluateJobCompatibility,
+}))
+
+vi.mock('@/lib/agent/job-targeting/compatibility/llm-shadow', () => ({
+  runJobCompatibilityLlmAssessment: mockRunJobCompatibilityLlmAssessment,
+  runJobCompatibilityLlmShadow: mockRunJobCompatibilityLlmShadow,
 }))
 
 vi.mock('@/lib/agent/tools/build-targeting-plan', () => ({
@@ -600,6 +609,8 @@ describe('ATS enhancement reliability hardening', () => {
     })
     mockValidateRewrite.mockReturnValue(buildRewriteValidationResult())
     mockEvaluateJobCompatibility.mockResolvedValue(buildPipelineAssessment())
+    mockRunJobCompatibilityLlmAssessment.mockResolvedValue(buildPipelineAssessment())
+    mockRunJobCompatibilityLlmShadow.mockResolvedValue(undefined)
     mockBuildTargetingPlan.mockReturnValue(buildDefaultTargetingPlan())
     mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan())
     mockDeriveTargetFitAssessment.mockReturnValue({
@@ -2039,14 +2050,14 @@ describe('ATS enhancement reliability hardening', () => {
         }],
       })
     })
-    mockEvaluateJobCompatibility.mockResolvedValue(jobCompatibilityAssessment)
+    mockRunJobCompatibilityLlmAssessment.mockResolvedValue(jobCompatibilityAssessment)
 
     const result = await runJobTargetingPipeline(session)
     expect(result.success).toBe(true)
     expect(mockAnalyzeGap.mock.invocationCallOrder[0]).toBeLessThan(
-      mockEvaluateJobCompatibility.mock.invocationCallOrder[0]!,
+      mockRunJobCompatibilityLlmAssessment.mock.invocationCallOrder[0]!,
     )
-    expect(mockEvaluateJobCompatibility).toHaveBeenCalledWith({
+    expect(mockRunJobCompatibilityLlmAssessment).toHaveBeenCalledWith({
       cvState: session.cvState,
       targetJobDescription: session.agentState.targetJobDescription,
       gapAnalysis: expect.objectContaining({
@@ -2058,6 +2069,7 @@ describe('ATS enhancement reliability hardening', () => {
       userId: session.userId,
       sessionId: session.id,
     })
+    expect(mockEvaluateJobCompatibility).not.toHaveBeenCalled()
     expect(mockBuildTargetedRewritePlan).toHaveBeenCalledWith(expect.objectContaining({
       jobCompatibilityAssessment,
     }))
@@ -2259,6 +2271,12 @@ describe('ATS enhancement reliability hardening', () => {
     }
 
     expect(result.success).toBe(true)
+    expect(mockRunJobCompatibilityLlmShadow).toHaveBeenCalledWith({
+      cvState: session.cvState,
+      targetJobDescription: session.agentState.targetJobDescription,
+      userId: session.userId,
+      sessionId: session.id,
+    })
     expect(buildPlanInput.jobCompatibilityAssessment).toBeUndefined()
     expect(session.agentState.jobCompatibilityAssessment).toBeUndefined()
     expect(session.agentState.jobCompatibilityAssessmentShadow).toBe(jobCompatibilityAssessment)
@@ -2290,6 +2308,52 @@ describe('ATS enhancement reliability hardening', () => {
       }),
       assessment: jobCompatibilityAssessment,
     }))
+  })
+
+  it('falls back to legacy assessment when LLM source-of-truth assessment fails unexpectedly', async () => {
+    vi.stubEnv('JOB_COMPATIBILITY_ASSESSMENT_ENABLED', 'true')
+    vi.stubEnv('JOB_COMPATIBILITY_ASSESSMENT_SHADOW_MODE', 'false')
+    vi.stubEnv('JOB_COMPATIBILITY_ASSESSMENT_SOURCE_OF_TRUTH', 'true')
+    vi.stubEnv('JOB_COMPATIBILITY_ASSESSMENT_CUTOVER_APPROVED', 'true')
+
+    const session = buildSession()
+    const legacyAssessment = buildPipelineAssessment()
+    session.agentState.workflowMode = 'job_targeting'
+    session.agentState.targetJobDescription = [
+      'Cargo: Analytics Engineer',
+      'Responsabilidades: construir dashboards e automacoes de dados.',
+      'Requisitos: SQL, Power BI, BigQuery.',
+    ].join('\n')
+    session.agentState.rewriteStatus = 'pending'
+    mockRunJobCompatibilityLlmAssessment.mockRejectedValue(new Error('llm assessment unavailable'))
+    mockEvaluateJobCompatibility.mockResolvedValue(legacyAssessment)
+    mockRewriteSection.mockImplementation(async ({ section }: { section: string }) => ({
+      output: buildSuccessfulRewriteOutput({
+        ...buildCvState(),
+        summary: 'Analista de dados com foco em SQL, Power BI e automacao orientada a negocio.',
+      }, section),
+    }))
+
+    const result = await runJobTargetingPipeline(session)
+
+    expect(result.success).toBe(true)
+    expect(mockEvaluateJobCompatibility).toHaveBeenCalledWith(expect.objectContaining({
+      cvState: session.cvState,
+      targetJobDescription: session.agentState.targetJobDescription,
+      userId: session.userId,
+      sessionId: session.id,
+    }))
+    expect(mockBuildTargetedRewritePlan).toHaveBeenCalledWith(expect.objectContaining({
+      jobCompatibilityAssessment: legacyAssessment,
+    }))
+    expect(session.agentState.jobCompatibilityAssessment).toBe(legacyAssessment)
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      'job_targeting.compatibility.llm_source_of_truth_failed_legacy_fallback',
+      expect.objectContaining({
+        sessionId: session.id,
+        userId: session.userId,
+      }),
+    )
   })
 
   it('replaces a previous ATS highlight artifact with a job_targeting highlight on successful targeting', async () => {
@@ -2787,7 +2851,7 @@ describe('ATS enhancement reliability hardening', () => {
           },
         ],
       }
-      mockEvaluateJobCompatibility.mockResolvedValue(editorialAssessment)
+      mockRunJobCompatibilityLlmAssessment.mockResolvedValue(editorialAssessment)
       mockAnalyzeGap.mockResolvedValue({
         output: {
           success: true,
@@ -3187,7 +3251,7 @@ describe('ATS enhancement reliability hardening', () => {
       'Requisitos: 5+ anos em Java, Spring Boot, JPA/Hibernate, Kafka/RabbitMQ, microsserviços, Docker e CI/CD.',
     ].join('\n')
     session.agentState.rewriteStatus = 'pending'
-    mockEvaluateJobCompatibility.mockResolvedValue(jobCompatibilityAssessment)
+    mockRunJobCompatibilityLlmAssessment.mockResolvedValue(jobCompatibilityAssessment)
 
     mockBuildTargetedRewritePlan.mockReturnValue(buildDefaultTargetingPlan({
       targetRole: 'Desenvolvedor Java',

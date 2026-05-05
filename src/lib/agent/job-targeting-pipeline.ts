@@ -3,7 +3,10 @@ import { buildOverrideReviewHighlightState } from '@/lib/agent/highlight/overrid
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
 import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
 import { getJobCompatibilityAssessmentMode } from '@/lib/agent/job-targeting/compatibility/feature-flags'
-import { runJobCompatibilityLlmShadow } from '@/lib/agent/job-targeting/compatibility/llm-shadow'
+import {
+  runJobCompatibilityLlmAssessment,
+  runJobCompatibilityLlmShadow,
+} from '@/lib/agent/job-targeting/compatibility/llm-shadow'
 import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
 import { evaluateCareerFitRisk } from '@/lib/agent/profile-review'
 import {
@@ -362,7 +365,7 @@ function countAssessmentRequirementSources(
       counts.deterministicCount += 1
     } else if (catalogSources.has(requirement.source)) {
       counts.catalogCount += 1
-    } else if (requirement.source === 'llm_ambiguous') {
+    } else if (requirement.source === 'llm_ambiguous' || requirement.source === 'llm_semantic') {
       counts.llmCount += 1
     } else {
       counts.fallbackCount += 1
@@ -875,13 +878,38 @@ export async function runJobTargetingPipeline(
       shadowMode: compatibilityMode.shadowMode,
       sourceOfTruth: compatibilityMode.sourceOfTruth,
     })
-    evaluatedJobCompatibilityAssessment = await evaluateJobCompatibility({
-      cvState: session.cvState,
-      targetJobDescription,
-      gapAnalysis: gapAnalysisResult,
-      userId: session.userId,
-      sessionId: session.id,
-    })
+    if (compatibilityMode.sourceOfTruth) {
+      evaluatedJobCompatibilityAssessment = await runJobCompatibilityLlmAssessment({
+        cvState: session.cvState,
+        targetJobDescription,
+        gapAnalysis: gapAnalysisResult,
+        userId: session.userId,
+        sessionId: session.id,
+      }).catch(async (error) => {
+        logWarn('job_targeting.compatibility.llm_source_of_truth_failed_legacy_fallback', {
+          workflowMode: 'job_targeting',
+          sessionId: session.id,
+          userId: session.userId,
+          ...serializeError(error),
+        })
+
+        return evaluateJobCompatibility({
+          cvState: session.cvState,
+          targetJobDescription,
+          gapAnalysis: gapAnalysisResult,
+          userId: session.userId,
+          sessionId: session.id,
+        })
+      })
+    } else {
+      evaluatedJobCompatibilityAssessment = await evaluateJobCompatibility({
+        cvState: session.cvState,
+        targetJobDescription,
+        gapAnalysis: gapAnalysisResult,
+        userId: session.userId,
+        sessionId: session.id,
+      })
+    }
     logCompatibilityAssessmentLifecycle(session, evaluatedJobCompatibilityAssessment)
   }
 
