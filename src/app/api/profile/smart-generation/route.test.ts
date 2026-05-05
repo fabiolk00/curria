@@ -288,6 +288,32 @@ describe('POST /api/profile/smart-generation', () => {
     )
   })
 
+  it('rejects conversational technical text as target job description before creating a session', async () => {
+    const response = await POST(new NextRequest('https://example.com/api/profile/smart-generation', {
+      method: 'POST',
+      headers: buildTrustedHeaders(),
+      body: JSON.stringify({
+        ...buildCvState(),
+        targetJobDescription: [
+          'Sim, tem hardcode semantico, mas em lugares diferentes:',
+          'No LLM matcher runtime nao tem lista hardcoded de ferramentas tipo Qlik.',
+          'Na UI/review, user-friendly-review.ts filtra Atividades, Identificar e BI.',
+          'Nos golden cases, run-llm-golden-cases.ts tem Qlik/Tableau/PySpark/etc.',
+        ].join('\n'),
+      }),
+    }))
+
+    expect(response.status).toBe(422)
+    expect(await response.json()).toEqual(expect.objectContaining({
+      code: 'INVALID_TARGET_JOB_DESCRIPTION',
+      workflowMode: 'job_targeting',
+      error: expect.stringContaining('descri'),
+    }))
+    expect(createSession).not.toHaveBeenCalled()
+    expect(runJobTargetingPipeline).not.toHaveBeenCalled()
+    expect(dispatchToolWithContext).not.toHaveBeenCalled()
+  })
+
   it('marks a newly acquired lock failed when credits are exhausted so the same request can retry', async () => {
     vi.mocked(checkUserQuota).mockResolvedValue(false)
     const optimizedCvState = {

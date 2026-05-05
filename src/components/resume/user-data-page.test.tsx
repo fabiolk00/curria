@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
@@ -722,6 +722,33 @@ describe("UserDataPage", () => {
       "aria-describedby",
       expect.stringContaining("target-job-description-error"),
     )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it("blocks conversational technical text before sending target-job generation", async () => {
+    const user = userEvent.setup()
+    const fetchMock = buildFetchMock(createJsonResponse(buildProfileResponse()))
+
+    render(<UserDataPage currentCredits={2} />)
+
+    await openEnhancementMode(user)
+    await user.click(screen.getByTestId("enhancement-intent-target-job"))
+    const targetJobTextarea = screen.getByTestId("target-job-description-input")
+    fireEvent.change(targetJobTextarea, {
+      target: {
+        value: [
+          "Sim, tem hardcode semantico, mas em lugares diferentes:",
+          "No LLM matcher runtime nao tem lista hardcoded de ferramentas tipo Qlik.",
+          "Na UI/review, user-friendly-review.ts filtra Atividades e Identificar.",
+          "Nos golden cases, run-llm-golden-cases.ts tem Qlik/Tableau/PySpark/etc.",
+        ].join("\n"),
+      },
+    })
+    await user.click(screen.getByTestId("ats-panel-cta"))
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Cole a descri")
+    expect(targetJobTextarea).toHaveFocus()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(mockPush).not.toHaveBeenCalled()
   })

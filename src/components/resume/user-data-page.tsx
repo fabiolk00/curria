@@ -41,6 +41,7 @@ import {
 } from "@/lib/dashboard/workspace-client"
 import { startNavigationFeedback } from "@/lib/navigation/feedback"
 import { resolveValidationOverrideCta } from "@/lib/dashboard/validation-override-cta"
+import { assessTargetJobDescriptionPreflight } from "@/lib/job-targeting/target-job-description-preflight"
 import { assessAtsEnhancementReadiness, getAtsEnhancementBlockingItems } from "@/lib/profile/ats-enhancement"
 import type { PlanSlug } from "@/lib/plans"
 import { GENERATE_RESUME_PATH, PROFILE_SETUP_PATH, buildResumeComparisonPath } from "@/lib/routes/app"
@@ -946,6 +947,16 @@ export default function UserDataPage({
       return
     }
 
+    if (enhancementIntent === "target_job") {
+      const preflight = assessTargetJobDescriptionPreflight(targetJobDescription)
+
+      if (!preflight.ok) {
+        setTargetJobValidationMessage(preflight.message)
+        targetJobDescriptionRef.current?.focus()
+        return
+      }
+    }
+
     setTargetJobValidationMessage(null)
     void handleSetupGeneration()
   }
@@ -991,6 +1002,12 @@ export default function UserDataPage({
       if (response.status === 400 && (data.missingItems?.length || data.reasons?.length)) {
         setAtsMissingItems(data.missingItems ?? data.reasons ?? [])
         setIsAtsRequirementsOpen(true)
+        return
+      }
+
+      if (response.status === 422 && data.code === "INVALID_TARGET_JOB_DESCRIPTION") {
+        setTargetJobValidationMessage(extractErrorMessage(data.error, "Cole a descricao real da vaga."))
+        targetJobDescriptionRef.current?.focus()
         return
       }
 
