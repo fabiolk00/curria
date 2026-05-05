@@ -136,11 +136,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
         )}
       >
         <div className="flex h-16 items-center justify-between px-4 md:h-[72px] md:px-6">
-          <div className="flex min-w-0 items-center gap-6 lg:gap-8">
+          <div className="flex min-w-0 items-center gap-4 lg:gap-6">
             <Logo
               className="shrink-0"
-              textClassName="text-[46px] md:text-[54px]"
-              iconClassName="max-h-12 md:max-h-14"
+              textClassName="text-[40px] md:text-[46px]"
+              iconClassName="max-h-10 md:max-h-12"
             />
 
             <nav className="hidden min-w-0 items-center gap-1 lg:flex">
@@ -211,7 +211,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </nav>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-[132px] items-center justify-end gap-1.5 lg:min-w-[164px]">
             {showAuthButtons ? (
               <>
                 <Button
