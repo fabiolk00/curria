@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildConservativeSummaryFallback,
   buildTargetRolePositioning,
   buildUserFacingValidationBlockModal,
 } from '@/lib/agent/job-targeting/recoverable-validation'
-import type { TargetEvidence } from '@/types/agent'
+import type { TargetEvidence, TargetingPlan } from '@/types/agent'
 
 describe('buildTargetRolePositioning', () => {
   it('uses proportional role positioning when match is high and core coverage is partial', () => {
@@ -213,5 +214,71 @@ describe('buildTargetRolePositioning', () => {
       'Sem evidência direta de Gestão de contratos, renovações, aditivos e medições.',
     ])
     expect(modal.problemBullets.join(' ')).not.toContain('Encontramos poucos pontos comprovados')
+  })
+})
+
+describe('buildConservativeSummaryFallback', () => {
+  it('builds a conservative summary from supported signals without claiming forbidden target gaps', () => {
+    const targetingPlan = {
+      targetRole: 'Business Intelligence (BI) Desde A Concepcao Ate A Implementacao',
+      rewritePermissions: {
+        directClaimsAllowed: ['SQL', 'ETL', 'modelagem de dados dimensional', 'analise e interpretacao de dados'],
+        normalizedClaimsAllowed: [],
+        bridgeClaimsAllowed: [],
+        relatedButNotClaimable: [],
+        forbiddenClaims: ['BI', 'Conhecimento na ferramenta Qlik', 'Certificacao Qlik'],
+        skillsSurfaceAllowed: ['SQL', 'ETL', 'modelagem de dados dimensional', 'analise e interpretacao de dados'],
+      },
+      safeTargetingEmphasis: {
+        safeDirectEmphasis: ['SQL', 'ETL', 'modelagem de dados dimensional'],
+        cautiousBridgeEmphasis: [],
+      },
+      targetEvidence: [
+        {
+          jobSignal: 'SQL',
+          canonicalSignal: 'SQL',
+          evidenceLevel: 'explicit',
+          rewritePermission: 'can_claim_directly',
+          matchedResumeTerms: ['SQL'],
+          supportingResumeSpans: ['SQL'],
+          rationale: 'Evidencia explicita.',
+          confidence: 1,
+          allowedRewriteForms: ['SQL'],
+          forbiddenRewriteForms: [],
+          validationSeverityIfViolated: 'none',
+        },
+        {
+          jobSignal: 'Conhecimento na ferramenta Qlik',
+          canonicalSignal: 'Conhecimento na ferramenta Qlik',
+          evidenceLevel: 'unsupported_gap',
+          rewritePermission: 'must_not_claim',
+          matchedResumeTerms: [],
+          supportingResumeSpans: [],
+          rationale: 'Sem evidencia.',
+          confidence: 0.95,
+          allowedRewriteForms: [],
+          forbiddenRewriteForms: ['Qlik'],
+          validationSeverityIfViolated: 'critical',
+        },
+      ],
+      targetRolePositioning: {
+        targetRole: 'Business Intelligence (BI) Desde A Concepcao Ate A Implementacao',
+        permission: 'can_bridge_to_target_role',
+        reason: 'partial_fit_supported_by_core_evidence',
+        safeRolePositioning: 'Profissional com experiencia em SQL, ETL e modelagem de dados dimensional.',
+        forbiddenRoleClaims: ['Business Intelligence (BI) Desde A Concepcao Ate A Implementacao'],
+      },
+    } as unknown as TargetingPlan
+
+    const summary = buildConservativeSummaryFallback({
+      originalSummary: 'Resumo original.',
+      targetingPlan,
+    })
+
+    expect(summary).toContain('SQL')
+    expect(summary).toContain('ETL')
+    expect(summary).toContain('modelagem de dados dimensional')
+    expect(summary).not.toMatch(/\bQlik\b/i)
+    expect(summary).not.toContain('Business Intelligence (BI) Desde')
   })
 })

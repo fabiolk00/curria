@@ -10,6 +10,7 @@ import {
   type HighlightDetectionOutcome,
 } from '@/lib/agent/tools/detect-cv-highlights'
 import {
+  buildConservativeSummaryFallback,
   buildSummaryRetryInstructions,
   sanitizeText,
   sanitizeValidationResultForLogging,
@@ -44,6 +45,7 @@ import { recordMetricCounter } from '@/lib/observability/metric-events'
 import { logError, logInfo, logWarn, serializeError } from '@/lib/observability/structured-log'
 import type { CoreRequirement, JobTargetingExplanation, Session, TargetEvidence } from '@/types/agent'
 import type {
+  GeneratedClaimTrace,
   JobCompatibilityAssessment,
   RequirementEvidenceSource,
 } from '@/lib/agent/job-targeting/compatibility/types'
@@ -535,6 +537,59 @@ function resolveEvidenceRatios(targetEvidence: NonNullable<Session['agentState']
     explicitEvidenceRatio: total > 0 ? explicitEvidenceCount / total : 0,
     unsupportedGapRatio: total > 0 ? unsupportedGapCount / total : 0,
   }
+}
+
+function replaceSummaryGeneratedClaimTrace(
+  traces: GeneratedClaimTrace[] | undefined,
+  summary: string,
+): GeneratedClaimTrace[] | undefined {
+  if (!traces) {
+    return undefined
+  }
+
+  let replaced = false
+  const nextTraces = traces.map((trace) => {
+    if (trace.section !== 'summary') {
+      return trace
+    }
+
+    replaced = true
+    return {
+      ...trace,
+      itemPath: trace.itemPath || 'summary',
+      generatedText: summary,
+      expressedSignals: [],
+      usedClaimPolicyIds: [],
+      evidenceBasis: [],
+      prohibitedTermsFound: [],
+      validationStatus: 'valid' as const,
+      source: 'formatting_only' as const,
+      classificationStatus: 'formatting_only' as const,
+      rationale: 'summary_rewritten_after_validation_retry',
+      unclassifiedText: undefined,
+    }
+  })
+
+  if (replaced) {
+    return nextTraces
+  }
+
+  return [
+    ...nextTraces,
+    {
+      section: 'summary',
+      itemPath: 'summary',
+      generatedText: summary,
+      expressedSignals: [],
+      usedClaimPolicyIds: [],
+      evidenceBasis: [],
+      prohibitedTermsFound: [],
+      validationStatus: 'valid',
+      source: 'formatting_only',
+      classificationStatus: 'formatting_only',
+      rationale: 'summary_rewritten_after_validation_retry',
+    },
+  ]
 }
 
 const ACCEPTED_LOW_FIT_AUDIT_ONLY_ISSUE_TYPES = new Set([
@@ -1309,6 +1364,10 @@ export async function runJobTargetingPipeline(
         ...finalizedOptimizedCvState,
         summary: retryExecution.output.section_data,
       }
+      finalizedGeneratedClaimTrace = replaceSummaryGeneratedClaimTrace(
+        finalizedGeneratedClaimTrace,
+        retryExecution.output.section_data,
+      )
       finalizedOptimizationSummary = {
         changedSections: Array.from(new Set([
           ...(finalizedOptimizationSummary?.changedSections ?? []),
@@ -1352,6 +1411,61 @@ export async function runJobTargetingPipeline(
         error: 'Summary retry rewrite did not produce a valid summary payload.',
       })
     }
+  }
+
+  if (
+    !options?.userAcceptedLowFit
+    && summaryRetryAttempted
+    && validation.blocked
+    && isSummaryOnlyRecoverableValidation(validation)
+  ) {
+    const fallbackSummary = buildConservativeSummaryFallback({
+      originalSummary: session.cvState.summary,
+      targetingPlan,
+    })
+
+    finalizedOptimizedCvState = {
+      ...finalizedOptimizedCvState,
+      summary: fallbackSummary,
+    }
+    finalizedGeneratedClaimTrace = replaceSummaryGeneratedClaimTrace(
+      finalizedGeneratedClaimTrace,
+      fallbackSummary,
+    )
+    finalizedOptimizationSummary = {
+      changedSections: Array.from(new Set([
+        ...(finalizedOptimizationSummary?.changedSections ?? []),
+        'summary',
+      ])),
+      notes: [
+        ...(finalizedOptimizationSummary?.notes ?? []),
+        'Conservative summary fallback applied after targeted factual validation block.',
+      ],
+      keywordCoverageImprovement: finalizedOptimizationSummary?.keywordCoverageImprovement,
+    }
+    validation = validateRewrite(session.cvState, finalizedOptimizedCvState, {
+      mode: 'job_targeting',
+      targetJobDescription,
+      gapAnalysis: gapAnalysisResult,
+      targetingPlan,
+      jobCompatibilityAssessment,
+      generatedClaimTrace: finalizedGeneratedClaimTrace,
+    })
+    summaryRetrySucceeded = !validation.blocked
+
+    logInfo(
+      summaryRetrySucceeded
+        ? 'agent.job_targeting.summary_conservative_fallback_succeeded'
+        : 'agent.job_targeting.summary_conservative_fallback_failed',
+      {
+        sessionId: session.id,
+        userId: session.userId,
+        targetRole: targetingPlan.targetRole,
+        issueCount: validation.issues.length,
+        hardIssueCount: validation.hardIssues.length,
+        issueTypes: getIssueTypeList(validation.hardIssues).join(', ') || undefined,
+      },
+    )
   }
   validation = applyLowFitWarningGateToValidation({
     validation,

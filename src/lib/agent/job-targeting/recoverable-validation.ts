@@ -586,6 +586,44 @@ export function buildSummaryRetryInstructions(targetingPlan: TargetingPlan): str
     .join('\n')
 }
 
+export function buildConservativeSummaryFallback(params: {
+  originalSummary: string
+  targetingPlan: TargetingPlan
+}): string {
+  const forbiddenSignals = new Set([
+    ...(params.targetingPlan.rewritePermissions?.forbiddenClaims ?? []),
+    ...(params.targetingPlan.targetEvidence ?? [])
+      .filter((evidence) => evidence.rewritePermission === 'must_not_claim')
+      .flatMap((evidence) => [evidence.jobSignal, evidence.canonicalSignal, ...evidence.forbiddenRewriteForms]),
+    ...(params.targetingPlan.targetRolePositioning?.permission === 'can_claim_target_role'
+      ? []
+      : [params.targetingPlan.targetRolePositioning?.targetRole ?? params.targetingPlan.targetRole]),
+  ].map(normalizeSemanticText))
+
+  const supportedSignals = dedupe([
+    ...(params.targetingPlan.rewritePermissions?.directClaimsAllowed ?? []),
+    ...(params.targetingPlan.rewritePermissions?.normalizedClaimsAllowed ?? []),
+    ...(params.targetingPlan.safeTargetingEmphasis?.safeDirectEmphasis ?? []),
+    ...(params.targetingPlan.targetEvidence ?? [])
+      .filter((evidence) =>
+        evidence.rewritePermission === 'can_claim_directly'
+        || evidence.rewritePermission === 'can_claim_normalized')
+      .flatMap((evidence) => [evidence.canonicalSignal, ...evidence.allowedRewriteForms]),
+  ])
+    .filter((signal) => !isWeakLowFitCareerEvidenceSignal(signal))
+    .filter((signal) => !forbiddenSignals.has(normalizeSemanticText(signal)))
+    .slice(0, 4)
+
+  if (supportedSignals.length === 0) {
+    return params.originalSummary
+  }
+
+  return [
+    `Profissional com experiencia em ${listToSentence(supportedSignals)}.`,
+    'Atuacao direcionada a clareza analitica, organizacao de informacoes e suporte a decisoes de negocio.',
+  ].join(' ')
+}
+
 export function buildValidationOverrideMetadata(params: {
   userId: string
   targetRole?: string
