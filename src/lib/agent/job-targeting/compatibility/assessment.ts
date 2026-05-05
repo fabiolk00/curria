@@ -3,6 +3,7 @@ import { loadJobTargetingCatalog } from '@/lib/agent/job-targeting/catalog/catal
 import type {
   JobCompatibilityAssessment,
   JobCompatibilityGap,
+  RequirementKind,
   RequirementEvidence,
 } from '@/lib/agent/job-targeting/compatibility/types'
 import type { CVState } from '@/types/cv'
@@ -112,18 +113,19 @@ export function buildJobCompatibilityAssessmentFromRequirements({
   sessionId,
 }: BuildJobCompatibilityAssessmentInput): JobCompatibilityAssessment {
   const targetRole = extractTargetRole(targetJobDescription)
-  const supportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'supported')
-  const adjacentRequirements = requirements.filter((requirement) => requirement.productGroup === 'adjacent')
-  const unsupportedRequirements = requirements.filter((requirement) => requirement.productGroup === 'unsupported')
-  const claimPolicy = buildJobCompatibilityClaimPolicy(requirements)
-  const scoreBreakdown = calculateJobCompatibilityScore(requirements)
+  const normalizedRequirements = normalizeRequirementKinds(requirements)
+  const supportedRequirements = normalizedRequirements.filter((requirement) => requirement.productGroup === 'supported')
+  const adjacentRequirements = normalizedRequirements.filter((requirement) => requirement.productGroup === 'adjacent')
+  const unsupportedRequirements = normalizedRequirements.filter((requirement) => requirement.productGroup === 'unsupported')
+  const claimPolicy = buildJobCompatibilityClaimPolicy(normalizedRequirements)
+  const scoreBreakdown = calculateJobCompatibilityScore(normalizedRequirements)
   const criticalGaps = buildGaps({
-    requirements,
+    requirements: normalizedRequirements,
     gapAnalysis,
     severity: 'critical',
   })
   const reviewNeededGaps = buildGaps({
-    requirements,
+    requirements: normalizedRequirements,
     gapAnalysis,
     severity: 'review',
   })
@@ -136,7 +138,7 @@ export function buildJobCompatibilityAssessmentFromRequirements({
   return {
     version: JOB_COMPATIBILITY_ASSESSMENT_VERSION,
     ...targetRole,
-    requirements,
+    requirements: normalizedRequirements,
     supportedRequirements,
     adjacentRequirements,
     unsupportedRequirements,
@@ -146,7 +148,7 @@ export function buildJobCompatibilityAssessmentFromRequirements({
     gapPresentation,
     criticalGaps,
     reviewNeededGaps,
-    lowFit: calculateLowFitState(requirements, scoreBreakdown.total),
+    lowFit: calculateLowFitState(normalizedRequirements, scoreBreakdown.total),
     catalog,
     audit: {
       generatedAt: new Date().toISOString(),
@@ -157,7 +159,7 @@ export function buildJobCompatibilityAssessmentFromRequirements({
       claimPolicyVersion: JOB_COMPATIBILITY_CLAIM_POLICY_VERSION,
       scoreVersion: JOB_COMPATIBILITY_SCORE_VERSION,
       counters: {
-        requirements: requirements.length,
+        requirements: normalizedRequirements.length,
         resumeEvidence: resumeEvidenceCount,
         supported: supportedRequirements.length,
         adjacent: adjacentRequirements.length,
@@ -252,6 +254,42 @@ function isTitleLikeTargetRoleLine(line: string): boolean {
 
   return !/^(?:we|we're|we are|looking for|somos|buscamos|procuramos|estamos)\b/iu
     .test(normalize(targetRole))
+}
+
+function normalizeRequirementKinds(requirements: RequirementEvidence[]): RequirementEvidence[] {
+  return requirements.map((requirement) => {
+    const normalizedKind = inferRequirementKind(requirement)
+
+    return normalizedKind === requirement.kind
+      ? requirement
+      : { ...requirement, kind: normalizedKind }
+  })
+}
+
+function inferRequirementKind(requirement: RequirementEvidence): RequirementKind {
+  if (requirement.kind !== 'unknown' && requirement.kind !== 'skill') {
+    return requirement.kind
+  }
+
+  const text = normalize([
+    requirement.originalRequirement,
+    requirement.normalizedRequirement,
+    ...requirement.extractedSignals,
+  ].join(' '))
+
+  if (/\b(?:certificacao|certificacoes|certificado|certificada|certified|qualification|accreditation)\b/u.test(text)) {
+    return 'certification'
+  }
+
+  if (/\b(?:ensino|formacao|graduacao|bacharelado|licenciatura|superior|faculdade|universidade|degree|education)\b/u.test(text)) {
+    return 'education'
+  }
+
+  if (/\b(?:areas correlatas|area correlata|correlatas|correlatos)\b/u.test(text)) {
+    return 'education'
+  }
+
+  return requirement.kind
 }
 
 function isRequirementLikeTargetRoleLine(value: string): boolean {

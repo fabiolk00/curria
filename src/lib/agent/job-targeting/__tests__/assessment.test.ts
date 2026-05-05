@@ -3,7 +3,10 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
+import {
+  buildJobCompatibilityAssessmentFromRequirements,
+  evaluateJobCompatibility,
+} from '@/lib/agent/job-targeting/compatibility/assessment'
 import { calculateJobCompatibilityScore } from '@/lib/agent/job-targeting/compatibility/score'
 import type {
   ClaimPolicyItem,
@@ -155,6 +158,41 @@ function fixtureIdsForClaims(
     .sort()
 }
 
+function requirement(
+  overrides: Partial<RequirementEvidence> & Pick<RequirementEvidence, 'id' | 'originalRequirement'>,
+): RequirementEvidence {
+  return {
+    normalizedRequirement: overrides.originalRequirement.toLocaleLowerCase('pt-BR'),
+    extractedSignals: [overrides.originalRequirement],
+    kind: 'unknown',
+    importance: 'secondary',
+    productGroup: 'supported',
+    evidenceLevel: 'strong_contextual_inference',
+    rewritePermission: 'can_claim_directly',
+    matchedResumeTerms: ['Graduação - Análise e Desenvolvimento de Sistemas, UniCesumar'],
+    supportingResumeSpans: [{
+      id: `span-${overrides.id}`,
+      text: 'Graduação - Análise e Desenvolvimento de Sistemas, UniCesumar',
+      section: 'education',
+    }],
+    confidence: 1,
+    rationale: 'Supported by education evidence.',
+    source: 'llm_semantic',
+    catalogTermIds: [],
+    catalogCategoryIds: [],
+    prohibitedTerms: [],
+    audit: {
+      matcherVersion: 'test',
+      precedence: ['llm_semantic'],
+      catalogIds: [],
+      catalogVersions: {},
+      catalogTermIds: [],
+      catalogCategoryIds: [],
+    },
+    ...overrides,
+  }
+}
+
 describe('job compatibility assessment', () => {
   it('runs every locked golden fixture through the public assessment entrypoint', async () => {
     const fixtures = readGoldenCases()
@@ -248,5 +286,44 @@ describe('job compatibility assessment', () => {
     expect(assessment.targetRole).toBe('Vaga Alvo')
     expect(assessment.targetRoleConfidence).toBe('low')
     expect(assessment.targetRoleSource).toBe('fallback')
+  })
+
+  it('normalizes LLM unknown education and certification requirements before scoring', () => {
+    const assessment = buildJobCompatibilityAssessmentFromRequirements({
+      targetJobDescription: [
+        'Cargo: Analista de BI',
+        'Ensino superior completo em TI, Dados ou areas correlatas',
+        'Desejavel certificacoes Qlik e Power BI',
+      ].join('\n'),
+      resumeEvidenceCount: 2,
+      catalog: { catalogIds: [], catalogVersions: {} },
+      matcherVersion: 'job-matcher-llm-v4',
+      requirements: [
+        requirement({
+          id: 'req-education',
+          originalRequirement: 'Ensino superior completo em TI',
+        }),
+        requirement({
+          id: 'req-correlated-area',
+          originalRequirement: 'Dados ou areas correlatas',
+        }),
+        requirement({
+          id: 'req-certification',
+          originalRequirement: 'Desejavel certificacoes Qlik e Power BI',
+        }),
+      ],
+    })
+
+    expect(assessment.requirements.map((item) => item.kind)).toEqual([
+      'education',
+      'education',
+      'certification',
+    ])
+    expect(assessment.scoreBreakdown.audit.dimensionDetails.education).toMatchObject({
+      requirementCount: 3,
+      supportedCount: 3,
+      rawScore: 1,
+    })
+    expect(assessment.scoreBreakdown.dimensions.education).toBe(100)
   })
 })
