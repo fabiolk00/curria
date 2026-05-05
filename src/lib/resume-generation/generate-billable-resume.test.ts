@@ -499,6 +499,75 @@ describe('generateBillableResume', () => {
     expect(mockReserveCreditForGenerationIntent).not.toHaveBeenCalled()
   })
 
+  it('scopes job-targeting idempotency to the resume target', async () => {
+    const cvState = buildCvState()
+    mockCheckUserQuota.mockResolvedValue(true)
+    mockCreatePendingResumeGeneration.mockResolvedValue({
+      generation: buildPendingGeneration(cvState, {
+        id: 'gen_pending_target',
+        type: 'JOB_TARGETING',
+        resumeTargetId: 'target_123',
+        idempotencyKey: 'dup_key:target:target_123',
+      }),
+      wasCreated: true,
+    })
+    mockGenerateFile.mockResolvedValue({
+      output: {
+        success: true,
+        pdfUrl: 'https://example.com/target-resume.pdf',
+        docxUrl: null,
+      },
+      generatedOutput: {
+        status: 'ready',
+        pdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
+        docxPath: null,
+        generatedAt: '2026-04-12T12:01:00.000Z',
+      },
+    })
+    mockUpdateResumeGeneration.mockResolvedValue({
+      ...buildPendingGeneration(cvState, {
+        id: 'gen_pending_target',
+        type: 'JOB_TARGETING',
+        resumeTargetId: 'target_123',
+        status: 'completed',
+      }),
+      generatedCvState: cvState,
+      outputPdfPath: 'usr_123/sess_123/targets/target_123/resume.pdf',
+      outputDocxPath: null,
+      updatedAt: new Date('2026-04-12T12:01:00.000Z'),
+    })
+
+    const result = await generateBillableResume({
+      userId: 'usr_123',
+      sessionId: 'sess_123',
+      targetId: 'target_123',
+      sourceCvState: cvState,
+      idempotencyKey: 'dup_key',
+      latestVersionId: 'ver_target',
+      latestVersionSource: 'target-derived',
+    })
+
+    expect(result.output).toEqual(expect.objectContaining({
+      success: true,
+      resumeGenerationId: 'gen_pending_target',
+    }))
+    expect(mockGetResumeGenerationByIdempotencyKey).toHaveBeenCalledWith(
+      'usr_123',
+      'dup_key:target:target_123',
+    )
+    expect(mockCreatePendingResumeGeneration).toHaveBeenCalledWith(expect.objectContaining({
+      idempotencyKey: 'dup_key:target:target_123',
+      resumeTargetId: 'target_123',
+      type: 'JOB_TARGETING',
+    }))
+    expect(mockReserveCreditForGenerationIntent).toHaveBeenCalledWith(expect.objectContaining({
+      generationIntentKey: 'dup_key:target:target_123',
+      generationType: 'JOB_TARGETING',
+      resumeTargetId: 'target_123',
+      resumeGenerationId: 'gen_pending_target',
+    }))
+  })
+
   it('stops before creating a generation when the user has no credits', async () => {
     const cvState = buildCvState()
     mockGetLatestCvVersionForScope.mockResolvedValue({

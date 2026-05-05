@@ -394,6 +394,19 @@ function resolveGenerationType(scope: ArtifactScope): ResumeGenerationType {
   return scope.type === 'target' ? 'JOB_TARGETING' : 'ATS_ENHANCEMENT'
 }
 
+function resolveResumeGenerationIdempotencyKey(input: {
+  idempotencyKey?: string
+  targetId?: string
+}): string | undefined {
+  if (!input.idempotencyKey) {
+    return undefined
+  }
+
+  return input.targetId
+    ? `${input.idempotencyKey}:target:${input.targetId}`
+    : input.idempotencyKey
+}
+
 function buildCompletedGenerationArtifacts(existing: ResumeGeneration): Pick<BillableGenerationResult, 'generatedOutput' | 'patch'> | null {
   if (existing.status !== 'completed' || !existing.outputPdfPath) {
     return null
@@ -791,9 +804,13 @@ export async function generateBillableResume(input: {
     targetId: input.targetId,
     generationType,
   }
+  const resumeGenerationIdempotencyKey = resolveResumeGenerationIdempotencyKey({
+    idempotencyKey: input.idempotencyKey,
+    targetId: input.targetId,
+  })
   const historyMetadata = buildResumeGenerationHistoryMetadata({
     ...input.historyContext,
-    idempotencyKey: input.idempotencyKey ?? input.historyContext?.idempotencyKey,
+    idempotencyKey: resumeGenerationIdempotencyKey ?? input.historyContext?.idempotencyKey,
     resumeTargetId: input.targetId ?? input.historyContext?.resumeTargetId,
     generationType,
   })
@@ -881,14 +898,14 @@ export async function generateBillableResume(input: {
     }
   }
 
-  if (input.idempotencyKey && !resumeGenerationSchemaUnavailable) {
+  if (resumeGenerationIdempotencyKey && !resumeGenerationSchemaUnavailable) {
     const existing = await runBillableStage(
       stageContext,
       stageState,
       'lookup_idempotent_generation',
       async () => {
         try {
-          return await getResumeGenerationByIdempotencyKey(input.userId, input.idempotencyKey!)
+          return await getResumeGenerationByIdempotencyKey(input.userId, resumeGenerationIdempotencyKey)
         } catch (error) {
           if (isMissingResumeGenerationSchemaError(error)) {
             logWarn('resume_generation.schema_unavailable', {
@@ -896,7 +913,7 @@ export async function generateBillableResume(input: {
               sessionId: input.sessionId,
               targetId: input.targetId,
               stage: 'lookup_idempotency',
-              idempotencyKey: input.idempotencyKey,
+              idempotencyKey: resumeGenerationIdempotencyKey,
               ...serializeError(error),
             })
             resumeGenerationSchemaUnavailable = true
@@ -1006,7 +1023,7 @@ export async function generateBillableResume(input: {
       sourceCvState: input.sourceCvState,
       targetId: input.targetId,
       generationType,
-      idempotencyKey: input.idempotencyKey,
+      idempotencyKey: resumeGenerationIdempotencyKey,
       templateTargetSource: input.templateTargetSource,
     })
   }
@@ -1023,7 +1040,7 @@ export async function generateBillableResume(input: {
             sessionId: input.sessionId,
             resumeTargetId: input.targetId,
             type: generationType,
-            idempotencyKey: input.idempotencyKey,
+            idempotencyKey: resumeGenerationIdempotencyKey,
             historyKind: historyMetadata.historyKind,
             historyTitle: historyMetadata.historyTitle,
             historyDescription: historyMetadata.historyDescription,
@@ -1038,7 +1055,7 @@ export async function generateBillableResume(input: {
               sessionId: input.sessionId,
               targetId: input.targetId,
               stage: 'create_pending',
-              idempotencyKey: input.idempotencyKey,
+              idempotencyKey: resumeGenerationIdempotencyKey,
               ...serializeError(error),
             })
             resumeGenerationSchemaUnavailable = true
@@ -1055,7 +1072,7 @@ export async function generateBillableResume(input: {
               userId: input.userId,
               sessionId: input.sessionId,
               targetId: input.targetId,
-              generationIntentKey: input.idempotencyKey,
+              generationIntentKey: resumeGenerationIdempotencyKey,
               resumeGenerationId: stageState.resumeGenerationId,
               latestVersionId: input.latestVersionId,
               sourceScope: input.sourceScope,
@@ -1067,7 +1084,7 @@ export async function generateBillableResume(input: {
               code: failureCode,
               message: error.message,
               billableStage,
-              generationIntentKey: input.idempotencyKey,
+              generationIntentKey: resumeGenerationIdempotencyKey,
               resumeGenerationId: stageState.resumeGenerationId,
               cause: error,
             })
@@ -1089,7 +1106,7 @@ export async function generateBillableResume(input: {
         sourceCvState: input.sourceCvState,
         targetId: input.targetId,
         generationType,
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: resumeGenerationIdempotencyKey,
         templateTargetSource: input.templateTargetSource,
       })
     }
@@ -1124,7 +1141,7 @@ export async function generateBillableResume(input: {
   }
 
   const generationIntentKey = resolveGenerationIntentKey({
-    idempotencyKey: input.idempotencyKey,
+    idempotencyKey: resumeGenerationIdempotencyKey,
     resumeGeneration,
   })
   stageState.generationIntentKey = generationIntentKey
