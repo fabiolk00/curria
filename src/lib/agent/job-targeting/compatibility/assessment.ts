@@ -190,7 +190,11 @@ function extractTargetRole(
     const candidate = line.match(explicitLabelPattern)?.[1]
     const targetRole = candidate === undefined ? '' : cleanTargetRole(candidate)
 
-    if (targetRole && !isGenericSectionLabel(targetRole)) {
+    if (
+      targetRole
+      && !isGenericSectionLabel(targetRole)
+      && !isRequirementLikeTargetRoleLine(targetRole)
+    ) {
       return {
         targetRole,
         targetRoleConfidence: 'high',
@@ -234,7 +238,7 @@ function isTitleLikeTargetRoleLine(line: string): boolean {
   const targetRole = cleanTargetRole(line)
   const wordCount = targetRole.split(/\s+/u).filter(Boolean).length
 
-  if (!targetRole || isGenericSectionLabel(targetRole)) {
+  if (!targetRole || isGenericSectionLabel(targetRole) || isRequirementLikeTargetRoleLine(targetRole)) {
     return false
   }
 
@@ -248,6 +252,25 @@ function isTitleLikeTargetRoleLine(line: string): boolean {
 
   return !/^(?:we|we're|we are|looking for|somos|buscamos|procuramos|estamos)\b/iu
     .test(normalize(targetRole))
+}
+
+function isRequirementLikeTargetRoleLine(value: string): boolean {
+  const normalizedValue = normalize(value)
+
+  if (/^(?:atividade|atividades|responsabilidade|responsabilidades|requisito|requisitos|qualificacao|qualificacoes|desejavel|obrigatorio|necessario)\b/u.test(normalizedValue)) {
+    return true
+  }
+
+  if (/^(?:ensino|formacao|graduacao|bacharelado|licenciatura|curso|superior|certificacao|certificacoes|conhecimento|conhecimentos|experiencia|experiencias|habilidade|habilidades)\b/u.test(normalizedValue)) {
+    return true
+  }
+
+  if (/^(?:conduzir|identificar|realizar|criar|fornecer|garantir|coletar|integrar|aplicar|desenvolver|implementar|estimar|otimizar|atuar|liderar|gerenciar|definir|documentar|facilitar|avaliar)\b/u.test(normalizedValue)) {
+    return true
+  }
+
+  return /\b(?:completo|completa|correlatas|correlatos|conhecimento em|conhecimento na|experiencia em|certificacao|certificacoes|desejavel|obrigatorio)\b/u
+    .test(normalizedValue)
 }
 
 function buildGaps({

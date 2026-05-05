@@ -229,4 +229,24 @@ describe('job compatibility assessment', () => {
     expect(assessment.targetRoleConfidence).toBe('medium')
     expect(assessment.targetRoleSource).toBe('heuristic')
   })
+
+  it('does not promote education or responsibility requirements into the target role', async () => {
+    const fixture = readGoldenCases().find((candidate) => candidate.id === 'data-bi-good-fit-with-specific-gaps')
+
+    expect(fixture).toBeDefined()
+
+    const assessment = await evaluateJobCompatibility({
+      cvState: toCvState(fixture!),
+      targetJobDescription: [
+        'Ensino superior completo em TI, Dados ou areas correlatas',
+        'Conduzir desenvolvimentos de aplicacoes de Business Intelligence (BI) desde a concepcao ate a implementacao',
+        'Conhecimento na ferramenta Qlik',
+      ].join('\n'),
+      gapAnalysis: fixture!.input.gapAnalysis,
+    })
+
+    expect(assessment.targetRole).toBe('Vaga Alvo')
+    expect(assessment.targetRoleConfidence).toBe('low')
+    expect(assessment.targetRoleSource).toBe('fallback')
+  })
 })
