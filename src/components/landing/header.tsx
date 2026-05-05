@@ -129,14 +129,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
     <div className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 pt-4">
       <header
         className={cn(
-          "w-full max-w-5xl rounded-2xl border border-border/50 bg-white/80 backdrop-blur-xl transition-all duration-300",
+          "w-full max-w-[1100px] rounded-2xl border border-border/50 bg-white/80 backdrop-blur-xl transition-all duration-300",
           scrolled
             ? "border-border/60 bg-white/90 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
             : "shadow-[0_2px_16px_rgba(0,0,0,0.06)]",
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 md:h-[72px] md:px-6">
-          <div className="flex min-w-0 items-center gap-6 lg:gap-8">
+        <div className="flex h-16 items-center justify-between px-4 md:h-[72px] md:px-5">
+          <div className="flex min-w-0 items-center gap-4 lg:gap-6">
             <Logo variant="navbar" className="shrink-0" />
 
             <nav className="hidden min-w-0 items-center gap-1 lg:flex">
