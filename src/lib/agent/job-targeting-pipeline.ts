@@ -3,6 +3,7 @@ import { buildOverrideReviewHighlightState } from '@/lib/agent/highlight/overrid
 import { buildTargetedRewritePlan } from '@/lib/agent/tools/build-targeting-plan'
 import { evaluateJobCompatibility } from '@/lib/agent/job-targeting/compatibility/assessment'
 import { getJobCompatibilityAssessmentMode } from '@/lib/agent/job-targeting/compatibility/feature-flags'
+import { runJobCompatibilityLlmShadow } from '@/lib/agent/job-targeting/compatibility/llm-shadow'
 import { summarizeHighlightState } from '@/lib/agent/highlight-observability'
 import { evaluateCareerFitRisk } from '@/lib/agent/profile-review'
 import {
@@ -882,6 +883,22 @@ export async function runJobTargetingPipeline(
       sessionId: session.id,
     })
     logCompatibilityAssessmentLifecycle(session, evaluatedJobCompatibilityAssessment)
+  }
+
+  if (compatibilityMode.shadowMode) {
+    await runJobCompatibilityLlmShadow({
+      cvState: session.cvState,
+      targetJobDescription,
+      userId: session.userId,
+      sessionId: session.id,
+    }).catch((error) => {
+      logWarn('job_targeting.matcher.llm.shadow_failed', {
+        workflowMode: 'job_targeting',
+        sessionId: session.id,
+        userId: session.userId,
+        ...serializeError(error),
+      })
+    })
   }
 
   const jobCompatibilityAssessment = compatibilityMode.sourceOfTruth

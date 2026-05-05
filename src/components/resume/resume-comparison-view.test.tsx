@@ -383,7 +383,8 @@ describe('ResumeComparisonView', () => {
 
     const panel = screen.getByTestId('job-targeting-review-panel')
     expect(screen.getByTestId('job-targeting-diagnostic-column')).toContainElement(panel)
-    expect(panel).toHaveTextContent('Revisão antes de gerar')
+    expect(panel).toHaveTextContent('Diagnostico da versao gerada')
+    expect(panel).not.toHaveTextContent('Revisão antes de gerar')
     expect(panel).toHaveTextContent('Precisa de evidência')
     expect(panel).toHaveTextContent('SAP FI')
     expect(panel.textContent ?? '').not.toMatch(/forbidden_term|claim_policy|unsupported_claim|validation block|override|gerar mesmo assim/i)

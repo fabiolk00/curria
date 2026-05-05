@@ -29,6 +29,7 @@
     "test": "vitest run",
     "test:copy-audit": "vitest run scripts/lib/copy-audit.test.ts src/lib/resume/cv-highlight-artifact.test.ts src/components/dashboard/session-list.test.tsx",
     "test:architecture-proof-pack": "node scripts/run-architecture-proof-pack.mjs",
+    "test:job-matcher:llm": "tsx scripts/job-targeting/run-llm-golden-cases.ts",
     "test:profile:non-e2e": "vitest run --reporter=verbose",
     "test:profile:resume-builder": "vitest run --reporter=verbose src/components/resume/resume-builder.test.tsx",
     "test:e2e": "playwright test",
