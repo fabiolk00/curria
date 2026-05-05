@@ -8,6 +8,9 @@
   "functions": {
     "src/app/api/agent/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/profile/smart-generation/route.ts": {
+      "maxDuration": 300
     }
   }
 }

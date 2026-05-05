@@ -5,6 +5,8 @@ import { resolveSmartGenerationContext } from '@/lib/routes/smart-generation/con
 import { executeSmartGenerationDecision } from '@/lib/routes/smart-generation/decision'
 import { toSmartGenerationResponse } from '@/lib/routes/smart-generation/response'
 
+export const maxDuration = 300
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // Execution order:
   // 1. resolve request context
